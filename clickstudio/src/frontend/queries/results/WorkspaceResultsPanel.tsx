@@ -80,6 +80,7 @@ export function WorkspaceResultsPanel({
     viewState: WorkspaceViewState;
 }) {
     const [tableToolbar, setTableToolbar] = useState<HTMLDivElement | null>(null);
+    const [tableRowCount, setTableRowCount] = useState<HTMLSpanElement | null>(null);
     const {
         active,
         connection,
@@ -167,6 +168,7 @@ export function WorkspaceResultsPanel({
             {renderResultsHeader({
                 showFailure,
                 setTableToolbar,
+                setTableRowCount,
                 panels,
                 previousSuccessfulResult,
                 actions,
@@ -264,6 +266,7 @@ export function WorkspaceResultsPanel({
                                             showPagination={!showPreviousResult}
                                             obscured={showPreviousResult}
                                             toolbarContainer={tableToolbar}
+                                            rowCountContainer={tableRowCount}
                                             previousRunLabel={
                                                 previousSuccessfulResult
                                                     ? copy.common.previousRun
@@ -331,6 +334,7 @@ export function WorkspaceResultsPanel({
                                             }
                                             onPage={actions.onPage}
                                             toolbarContainer={tableToolbar}
+                                            rowCountContainer={tableRowCount}
                                             previousRunLabel={
                                                 previousSuccessfulResult
                                                     ? copy.common.previousRun
@@ -407,6 +411,7 @@ export function WorkspaceResultsPanel({
 function renderResultsHeader({
     showFailure,
     setTableToolbar,
+    setTableRowCount,
     panels,
     previousSuccessfulResult,
     actions,
@@ -416,6 +421,9 @@ function renderResultsHeader({
     showFailure: boolean;
     setTableToolbar: import('react').Dispatch<
         import('react').SetStateAction<HTMLDivElement | null>
+    >;
+    setTableRowCount: import('react').Dispatch<
+        import('react').SetStateAction<HTMLSpanElement | null>
     >;
     panels: WorkspacePanelController;
     previousSuccessfulResult: boolean;
@@ -516,6 +524,11 @@ function renderResultsHeader({
                     </div>
                 )}
                 {queryCard}
+                <span
+                    ref={setTableRowCount}
+                    className="results-row-summary"
+                    hidden={panels.resultsCollapsed || showFailure}
+                />
             </div>
             <div className="results-actions">
                 {headerView === 'results' && script && (

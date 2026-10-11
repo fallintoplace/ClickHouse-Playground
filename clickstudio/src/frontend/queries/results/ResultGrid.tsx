@@ -1,5 +1,5 @@
 import { DEFAULT_RESULT_PAGE_ROWS } from '../../../shared/queries/execution/limits';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { displayValue, filterRows } from '../../../shared/queries/results/results';
 import type { ResultPage } from '../../../shared/queries/results/types';
@@ -78,6 +78,10 @@ function emptyRetainedRowsMessage(page: ResultPage): string {
     return emptyRowsMessage;
 }
 
+function renderInContainer(content: ReactNode, container?: HTMLElement | null) {
+    return container ? createPortal(content, container) : content;
+}
+
 export function ResultGrid({
     run,
     page,
@@ -87,6 +91,7 @@ export function ResultGrid({
     showPagination = true,
     obscured = false,
     toolbarContainer,
+    rowCountContainer,
     previousRunLabel,
 }: {
     run: Run;
@@ -97,6 +102,7 @@ export function ResultGrid({
     showPagination?: boolean;
     obscured?: boolean;
     toolbarContainer?: HTMLElement | null;
+    rowCountContainer?: HTMLElement | null;
     previousRunLabel?: string;
 }) {
     const [filter, setFilter] = useState('');
@@ -171,19 +177,21 @@ export function ResultGrid({
     } else {
         rowCount = `${page.totalRows.toLocaleString()} ${page.totalRows === 1 ? 'row' : 'rows'}`;
     }
+    const rowCountLabel = (
+        <span
+            className="result-row-count"
+            role="status"
+            aria-live="polite"
+            inert={obscured || undefined}
+            title={pageCount > 1 ? retainedRange : undefined}
+        >
+            {rowCount}
+            {previousRunLabel && <> · {previousRunLabel}</>}
+        </span>
+    );
     const toolbar = showPagination && (
         <div className="result-table-toolbar" inert={obscured || undefined}>
-            {showPagination && (
-                <span
-                    className="result-row-count"
-                    role="status"
-                    aria-live="polite"
-                    title={pageCount > 1 ? retainedRange : undefined}
-                >
-                    {rowCount}
-                    {previousRunLabel && <> · {previousRunLabel}</>}
-                </span>
-            )}
+            {renderInContainer(rowCountLabel, rowCountContainer)}
             {showPagination && pageCount > 1 && (
                 <nav className="result-pagination" aria-label="Result pagination">
                     <Button
@@ -296,7 +304,7 @@ export function ResultGrid({
             aria-busy={obscured || undefined}
             inert={obscured || undefined}
         >
-            {toolbarContainer ? createPortal(toolbar, toolbarContainer) : toolbar}
+            {renderInContainer(toolbar, toolbarContainer)}
             <ScrollEdgeFrame<HTMLDivElement> className="data-table-scroll-frame">
                 {(ref, edges) => (
                     <div

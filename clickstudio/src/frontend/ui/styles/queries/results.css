@@ -21,6 +21,15 @@
     min-width: 0;
     flex: 1;
   }
+  .results-row-summary {
+    flex: none;
+    color: var(--text-soft);
+    font-size: 11px;
+  }
+  .results-row-summary:empty,
+  .results-row-summary[hidden] {
+    display: none;
+  }
   .results-actions {
     min-width: 0;
     flex-wrap: wrap;
