@@ -451,17 +451,12 @@ export const copy = {
         fallbackNoMeasure:
             'This result has no numeric measure to chart, so the typed table is shown.',
         queryResult: 'Query result',
-        chartDetails: 'Chart details',
         closeControls: 'Close',
         setup: 'Setup',
         measureLimit: 'Select up to {count} measures.',
         rowsOverTime: 'Rows over time',
         rowsOverTimeBy: 'Rows over time by {dimension}',
         rowsBy: 'Rows by {dimension}',
-        timeCountDescription:
-            'Rows are counted in time buckets ({unit}) from the retained result. No aggregate query is sent.',
-        categoryCountDescription:
-            'Rows are counted by {dimension} from the retained result. No aggregate query is sent.',
         xAxis: 'X axis',
         yAxis: 'Y axis',
         breakdownBy: 'Break down by',
@@ -482,13 +477,6 @@ export const copy = {
         completeQueryResult: 'complete query result',
         timePointTooltip: '{bucket} · {series}: {count} rows',
         categoryBarTooltip: '{category}: {count} rows',
-        reasonSingleNumber: 'One row with a numeric measure.',
-        reasonTimeMeasure: 'A date/time dimension with numeric measures.',
-        reasonDimensionMeasure:
-            'A dimension with numeric measures; no hidden aggregation is performed.',
-        heatmapReturnedRows:
-            'Cells come from returned rows; duplicate X/Y cells are summed and missing groups are left blank.',
-        sampledForDisplay: 'Long results are evenly sampled for display.',
         xAxisMeasure: 'X measure',
         measures: 'Measures',
         measure: 'Measure',
@@ -511,8 +499,6 @@ export const copy = {
         spreadUnavailable: 'No spread column is mapped.',
         returnedData: 'Returned data',
         midpointCandles: 'OHLC candles',
-        candlestickDisplayNote:
-            'Large results are combined into wider OHLC display candles. The query is not rerun.',
         candlesLabel: 'candles',
         candlestickSummary: '{candles} displayed candles from {rows} retained rows',
         noValidCandles:

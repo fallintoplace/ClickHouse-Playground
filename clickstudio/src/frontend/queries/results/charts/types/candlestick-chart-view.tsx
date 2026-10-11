@@ -136,11 +136,7 @@ function renderCandlestickControls({
         <ScrollEdgeFrame<HTMLDivElement> className="chart-workspace-frame">
             {ref => (
                 <div ref={ref} className="chart-workspace animate-enter">
-                    <ChartToolbar
-                        title={chart.title !== 'Query result' ? chart.title : undefined}
-                        description={`${chartCopy.returnedData}. ${chartCopy.candlestickDisplayNote}`}
-                        copy={chartCopy}
-                    >
+                    <ChartToolbar title={chart.title !== 'Query result' ? chart.title : undefined}>
                         <label>
                             {chartCopy.type}
                             <select

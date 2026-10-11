@@ -10,9 +10,7 @@ import { HeatmapGrid } from '../types/HeatmapGrid';
 
 export function renderChartWorkspace({
     chartTitle,
-    suggestionReason,
     chartKind,
-    chartRows,
     result,
     chartCopy,
     canChooseCandlestick,
@@ -245,9 +243,7 @@ export function renderChartWorkspace({
                     <div ref={ref} className="chart-workspace animate-enter">
                         {renderChartControls({
                             chartTitle,
-                            suggestionReason,
                             chartKind,
-                            chartRows,
                             result,
                             chartCopy,
                             canChooseCandlestick,

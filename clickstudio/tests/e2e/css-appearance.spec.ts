@@ -25,6 +25,7 @@ for (const theme of ['Light', 'Dark']) {
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
             await page.getByText(mode, { exact: true }).click();
             await expectReferenceStyles(page, info, 'empty-workspace');
+            if (mode === 'Standard') await page.getByText('Experimental', { exact: true }).click();
             const inspector = page.locator('.inspector-pane');
             if (!(await inspector.isVisible()))
                 await page
@@ -53,6 +54,7 @@ for (const theme of ['Light', 'Dark']) {
             await expect(inspector.getByLabel('Selected object')).toBeVisible();
             await expectReferenceStyles(page, info, 'object-details');
             await inspector.getByRole('button', { name: '‹ Objects', exact: true }).click();
+            if (mode === 'Standard') await page.getByText(mode, { exact: true }).click();
             await runButton(page).click();
             await expect(page.locator('.execution-bar')).toHaveAttribute(
                 'data-run-status',
@@ -101,14 +103,11 @@ for (const theme of ['Light', 'Dark']) {
             ).toBeVisible();
             await expectReferenceStyles(page, info, 'chart-measures');
             await page.keyboard.press('Escape');
-            await results.getByRole('button', { name: 'Chart details', exact: true }).click();
             await expect(
-                results.getByRole('dialog', { name: 'Chart details', exact: true }),
-            ).toBeVisible();
-            await expectReferenceStyles(page, info, 'chart-details');
-            await page.keyboard.press('Escape');
-            await inspector
-                .getByRole('navigation', { name: 'Workspace browser', exact: true })
+                results.getByRole('button', { name: 'Chart details', exact: true }),
+            ).toHaveCount(0);
+            await page
+                .locator('.icon-rail')
                 .getByRole('button', { name: 'AI', exact: true })
                 .click();
             await expect(page.getByRole('textbox', { name: 'Ask AI', exact: true })).toBeVisible();

@@ -253,17 +253,6 @@ export function prepareChartView({
             x,
         });
 
-    let suggestionReason: string;
-
-    if (chartKind === 'heatmap') {
-        suggestionReason = chartCopy.heatmapReturnedRows;
-    } else if (result.rows.length === 1) {
-        suggestionReason = chartCopy.reasonSingleNumber;
-    } else if (temporalType(result.columns[suggestion.config.x]?.type ?? '')) {
-        suggestionReason = chartCopy.reasonTimeMeasure;
-    } else {
-        suggestionReason = chartCopy.reasonDimensionMeasure;
-    }
     const chartTitle = chart.title && chart.title !== 'Query result' ? chart.title : undefined;
     const chartAriaLabel = chartText(chartCopy.chartComparing, {
         type: chartTypeLabel(chartKind, chartCopy).toLocaleLowerCase(),
@@ -299,7 +288,6 @@ export function prepareChartView({
     };
     return {
         chartTitle,
-        suggestionReason,
         chartKind,
         chartRows,
         result,

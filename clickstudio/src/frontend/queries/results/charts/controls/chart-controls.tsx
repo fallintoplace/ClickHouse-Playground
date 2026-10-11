@@ -3,7 +3,6 @@ import type { CSSProperties } from 'react';
 import { MAX_CHART_SERIES } from '../../../../../shared/queries/results/results';
 import type { CandlestickConfig } from '../../../../../shared/queries/results/chart-settings';
 import type { Result } from '../../../../../shared/queries/results/types';
-import type { Row } from '../../../../../shared/common/values';
 import type { Draft } from '../../../editor/drafts/workspace-state';
 import type { Copy } from '../../../../ui/copy';
 import { ChartPopover, ChartToolbar } from '../ChartToolbar';
@@ -11,9 +10,7 @@ import { chartKindOptions, chartText, chartTypeLabel, seriesColor } from '../cha
 
 export function renderChartControls({
     chartTitle,
-    suggestionReason,
     chartKind,
-    chartRows,
     result,
     chartCopy,
     canChooseCandlestick,
@@ -29,9 +26,7 @@ export function renderChartControls({
     availableMeasures,
 }: {
     chartTitle: string | undefined;
-    suggestionReason: string;
     chartKind: Exclude<ChartKind, 'table'>;
-    chartRows: Row[];
     result: Result;
     chartCopy: Copy['chart'];
     canChooseCandlestick: boolean;
@@ -47,11 +42,7 @@ export function renderChartControls({
     availableMeasures: number[];
 }) {
     return (
-        <ChartToolbar
-            title={chartTitle}
-            description={`${suggestionReason}${chartKind !== 'heatmap' && chartRows.length < result.rows.length ? ` ${chartCopy.sampledForDisplay}` : ''}`}
-            copy={chartCopy}
-        >
+        <ChartToolbar title={chartTitle}>
             <label>
                 {chartCopy.type}
                 <select

@@ -29,6 +29,12 @@ async function openChart(page: Page) {
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();
     await snapshot;
     await expect(results.locator('.chart-toolbar')).toBeVisible();
+    await expect(results.getByRole('button', { name: 'Chart details', exact: true })).toHaveCount(
+        0,
+    );
+    await expect(
+        results.getByRole('dialog', { name: 'Chart details', exact: true, includeHidden: true }),
+    ).toHaveCount(0);
     return results;
 }
 
@@ -163,17 +169,9 @@ for (const mode of ['Standard', 'Experimental'])
                 await measures.click();
                 await expectPopoverFits(page, popup);
                 await popup.getByRole('button', { name: 'Close Measures', exact: true }).click();
-                await toolbar
-                    .getByRole('button', { name: 'Chart details', exact: true })
-                    .press('Enter');
-                const details = results.getByRole('dialog', {
-                    name: 'Chart details',
-                    exact: true,
-                });
-                await expect(details).toContainText('no hidden aggregation is performed');
-                await expectPopoverFits(page, details);
-                await page.keyboard.press('Escape');
-                await expect(details).toBeHidden();
+                await expect(
+                    toolbar.getByRole('button', { name: 'Chart details', exact: true }),
+                ).toHaveCount(0);
                 if (width === 1440)
                     await page.screenshot({
                         path: info.outputPath(`chart-toolbar-${width}.png`),
@@ -277,7 +275,7 @@ test('Candlestick mappings open under Setup and keep their selections', async ({
     await expectPopoverFits(page, popup);
 });
 
-test('Row-count charts use the compact toolbar and keep their counting explanation available', async ({
+test('Row-count charts use the compact toolbar and keep their grouping controls available', async ({
     page,
 }) => {
     await mockSnapshot(page, {
@@ -295,11 +293,6 @@ test('Row-count charts use the compact toolbar and keep their counting explanati
     const toolbar = results.locator('.chart-toolbar');
     await expect(toolbar.getByRole('heading')).toHaveText('Rows over time by service');
     await expect(toolbar.locator('.eyebrow')).toHaveCount(0);
-    await toolbar.getByRole('button', { name: 'Chart details', exact: true }).click();
-    await expect(results.getByRole('dialog', { name: 'Chart details', exact: true })).toContainText(
-        'No aggregate query is sent.',
-    );
-    await page.keyboard.press('Escape');
     await toolbar.getByLabel('Break down by', { exact: true }).selectOption('');
     await expect(toolbar.getByRole('heading')).toHaveText('Rows over time');
     await toolbar.getByLabel('X axis', { exact: true }).selectOption('1');
@@ -309,7 +302,7 @@ test('Row-count charts use the compact toolbar and keep their counting explanati
     await expectToolbarFits(toolbar);
 });
 
-test('Custom chart titles remain inline while explanations move to details', async ({ page }) => {
+test('Custom chart titles remain inline without the details popup', async ({ page }) => {
     const title = 'Events across European cities';
     await page.addInitScript(
         title =>
@@ -416,7 +409,7 @@ for (const count of [6, 20])
             await expect(popup.getByLabel('value_22', { exact: true })).toBeDisabled();
     });
 
-test('Scatter sampling stays visible outside Chart details', async ({ page }) => {
+test('Scatter sampling stays visible without the details popup', async ({ page }) => {
     await mockSnapshot(page, {
         columns: [
             { name: 'distance', type: 'Float64' },
@@ -430,7 +423,6 @@ test('Scatter sampling stays visible outside Chart details', async ({ page }) =>
     await expect(results.locator('.chart-footer')).toContainText(
         '240 plotted points · 240 sampled rows from 350 retained rows',
     );
-    await expect(results.getByRole('dialog', { name: 'Chart details', exact: true })).toBeHidden();
 });
 
 test('Row-count custom titles survive axis and breakdown changes', async ({ page }) => {

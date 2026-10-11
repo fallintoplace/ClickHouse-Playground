@@ -2122,6 +2122,12 @@ test('Single-row numeric results render as a number and expose supported chart t
     const results = await runQuery(page);
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();
     await expect(results.locator('.chart-number-card')).toContainText('42');
+    await expect(results.getByRole('button', { name: 'Chart details', exact: true })).toHaveCount(
+        0,
+    );
+    await expect(
+        results.getByRole('dialog', { name: 'Chart details', exact: true, includeHidden: true }),
+    ).toHaveCount(0);
     await expect(results.locator('.result-table-toolbar')).toHaveCount(0);
     await expect(results.locator('.results-table-tools')).toBeEmpty();
     await expect(results.getByLabel('Type').locator('option')).toHaveText([

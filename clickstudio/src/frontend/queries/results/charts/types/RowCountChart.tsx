@@ -279,19 +279,7 @@ export function RowCountChart({
                 };
                 return (
                     <div ref={ref} className="chart-workspace animate-enter">
-                        <ChartToolbar
-                            title={title}
-                            description={
-                                timeAxis
-                                    ? chartText(copy.timeCountDescription, {
-                                          unit: timeUnit || copy.days,
-                                      })
-                                    : chartText(copy.categoryCountDescription, {
-                                          dimension: dimensionName,
-                                      })
-                            }
-                            copy={copy}
-                        >
+                        <ChartToolbar title={title}>
                             <label>
                                 {copy.xAxis}
                                 <select

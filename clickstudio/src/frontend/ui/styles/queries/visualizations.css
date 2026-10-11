@@ -1317,9 +1317,6 @@
   .chart-toolbar .chart-controls {
     display: contents;
   }
-  .chart-toolbar .chart-controls > .chart-popover-control:last-child {
-    margin-left: auto;
-  }
   .chart-toolbar .chart-controls label {
     display: flex;
     min-width: 0;
@@ -1351,10 +1348,6 @@
     width: 14px;
     height: 14px;
     flex: none;
-  }
-  .chart-popover-trigger.is-icon-only {
-    width: 28px;
-    padding: 0;
   }
   .chart-popover-trigger:has(+ .chart-popover:popover-open) {
     border-color: var(--active-border);

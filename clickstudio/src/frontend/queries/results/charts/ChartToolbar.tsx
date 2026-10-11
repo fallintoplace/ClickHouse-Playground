@@ -1,5 +1,4 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
-import type { Copy } from '../../../ui/copy';
 import { Button } from '../../../ui/components/ui';
 import { Icon } from '../../../ui/components/icons';
 
@@ -22,13 +21,11 @@ export function ChartPopover({
     closeLabel,
     trigger,
     children,
-    iconOnly = false,
 }: {
     label: string;
     closeLabel: string;
     trigger: ReactNode;
     children: ReactNode;
-    iconOnly?: boolean;
 }) {
     const id = useId();
     const button = useRef<HTMLButtonElement>(null);
@@ -72,14 +69,14 @@ export function ChartPopover({
             <button
                 ref={button}
                 type="button"
-                className={`button-base button-secondary chart-popover-trigger${iconOnly ? ' is-icon-only' : ''}`}
+                className="button-base button-secondary chart-popover-trigger"
                 popoverTarget={id}
                 aria-label={label}
                 aria-haspopup="dialog"
                 title={label}
             >
                 {trigger}
-                {!iconOnly && <Icon name="chevron" />}
+                <Icon name="chevron" />
             </button>
             <div
                 ref={panel}
@@ -117,31 +114,11 @@ export function ChartPopover({
     );
 }
 
-export function ChartToolbar({
-    title,
-    description,
-    copy,
-    children,
-}: {
-    title?: string;
-    description: string;
-    copy: Copy['chart'];
-    children: ReactNode;
-}) {
+export function ChartToolbar({ title, children }: { title?: string; children: ReactNode }) {
     return (
         <div className="chart-toolbar">
             {title && <h3 title={title}>{title}</h3>}
-            <div className="chart-controls">
-                {children}
-                <ChartPopover
-                    label={copy.chartDetails}
-                    closeLabel={copy.closeControls}
-                    trigger={<Icon name="info" />}
-                    iconOnly
-                >
-                    <p>{description}</p>
-                </ChartPopover>
-            </div>
+            <div className="chart-controls">{children}</div>
         </div>
     );
 }
