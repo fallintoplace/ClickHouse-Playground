@@ -550,14 +550,17 @@ function createReferenceNavigation({
 }) {
     return (event: KeyboardEvent<HTMLElement>) => {
         if (event.key === 'Escape') {
-            event.preventDefault();
             if (selected || entryLoading || entryError) {
+                event.preventDefault();
                 entryRequest.current?.abort();
                 setSelected(undefined);
                 setActiveEntry(undefined);
                 setEntryError('');
                 setEntryLoading(false);
-            } else if (query) setQuery('');
+            } else if (query) {
+                event.preventDefault();
+                setQuery('');
+            }
             return;
         }
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {

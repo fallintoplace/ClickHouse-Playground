@@ -87,10 +87,6 @@
 .panel-window-button:active:not(:disabled) {
   transform: translateY(0) scale(0.97);
 }
-.panel-window-button:focus-visible {
-  outline: 2px solid var(--focus-color);
-  outline-offset: 2px;
-}
 .panel-window-button svg,
 .panel-collapse-button .panel-toggle-icon {
   width: 18px;

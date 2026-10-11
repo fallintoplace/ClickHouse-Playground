@@ -16,7 +16,16 @@ async function expectWrappedSearchFocus(input: Locator, wrapper: Locator) {
     await expect(input).toBeFocused();
     await expect(input).toHaveCSS('outline-style', 'none');
     await expect(input).toHaveCSS('box-shadow', 'none');
-    await expect.poll(() => shadow(wrapper)).toMatch(/0px 0px 0px 2px/);
+    await expect.poll(() => shadow(wrapper)).toMatch(/^(none|.+ 0px 0px 0px 0px)$/);
+    const focusColor = await wrapper.evaluate(element => {
+        const probe = document.createElement('span');
+        probe.style.color = 'var(--focus-color)';
+        element.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+    });
+    await expect(wrapper).toHaveCSS('border-color', focusColor);
     await input.press('Tab');
     await expect.poll(() => shadow(wrapper)).toMatch(/^(none|.+ 0px 0px 0px 0px)$/);
 }
@@ -166,9 +175,8 @@ for (const theme of ['Dark', 'Light'])
             await expect(filter).toHaveCSS('height', '26px');
             await page.keyboard.press('Tab');
             await filter.focus();
-            await expect(filter).toHaveCSS('outline-style', 'solid');
-            await expect(filter).toHaveCSS('outline-width', '2px');
-            expect(await shadow(filter)).toMatch(/0px 0px 0px 2px/);
+            await expect(filter).toHaveCSS('outline-style', 'none');
+            expect(await shadow(filter)).toMatch(/^(none|.+ 0px 0px 0px 0px)$/);
             await filter.fill('2026-01-02');
             await expect(page.locator('.data-table tbody tr')).toHaveCount(1);
             await filter.fill('');
@@ -245,7 +253,7 @@ for (const theme of ['Dark', 'Light'])
             await page.keyboard.press('Tab');
             await category.focus();
             await expect(category).toHaveCSS('outline-style', 'solid');
-            await expect(category).toHaveCSS('outline-offset', '-3px');
+            await expect(category).toHaveCSS('outline-offset', '-2px');
             await page.keyboard.press('Escape');
             await expect(help).toBeHidden();
             await expect(editor).toHaveCSS('border-radius', '4px');

@@ -1224,8 +1224,7 @@
     min-width: 0;
     border-radius: var(--radius-panel);
   }
-  .assistant-chat-history-item:hover,
-  .assistant-chat-history-item:focus-within {
+  .assistant-chat-history-item:hover {
     background: var(--panel-hover);
   }
   .assistant-chat-history-row {
@@ -1266,11 +1265,6 @@
   }
   .assistant-chat-history-select[aria-current="page"] {
     color: var(--text);
-  }
-  .assistant-chat-history-select:focus-visible,
-  .assistant-chat-history-actions-trigger:focus-visible {
-    border-color: var(--focus-color);
-    box-shadow: var(--focus-ring);
   }
   .assistant-chat-history-actions-trigger {
     display: grid;
@@ -1370,10 +1364,6 @@
     background: var(--control-well);
     color: var(--text);
     font-size: 8px;
-  }
-  .assistant-chat-rename-inline input:focus-visible {
-    border-color: var(--focus-color);
-    box-shadow: var(--focus-ring);
   }
   .assistant-chat-rename-inline .button-base {
     display: grid;
@@ -1651,10 +1641,6 @@
     padding-inline: 8px;
     font-size: 8px;
   }
-  .sql-proposal-diff-toggle:focus-visible {
-    outline: 2px solid color-mix(in srgb, var(--focus-color) 70%, transparent);
-    outline-offset: -2px;
-  }
   .assistant-pending {
     display: flex;
     align-items: center;
@@ -1734,9 +1720,6 @@
     color: var(--text);
     font-size: 9px;
     line-height: 1.5;
-  }
-  .assistant-question-frame .field-textarea:focus {
-    box-shadow: none;
   }
   .assistant-question-frame .field-textarea::placeholder {
     color: var(--muted);
@@ -2381,12 +2364,7 @@
     background: color-mix(in srgb, var(--accent) 11%, var(--panel-raised));
     color: var(--accent);
   }
-  .help-button:focus-visible {
-    outline: 2px solid var(--focus-color);
-    outline-offset: 3px;
-  }
   .help-button:hover,
-  .help-button:focus-visible,
   .help-button[aria-expanded="true"] {
     animation: none;
   }
@@ -2873,9 +2851,6 @@
   .help-button svg {
     width: 14px;
     height: 14px;
-  }
-  :is(.help-button, .execution-details-button):focus-visible {
-    outline-offset: 0;
   }
 }
 

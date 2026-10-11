@@ -301,10 +301,6 @@
     border-color: var(--line);
     background: var(--control-hover);
   }
-  .connection-switch-list > button:focus-visible {
-    outline: 2px solid var(--focus-color);
-    outline-offset: 1px;
-  }
   .connection-switch-list > button > span:first-child {
     display: grid;
     min-width: 0;
@@ -772,10 +768,6 @@
   .document-tabs-scroll-button.is-right svg {
     transform: rotate(-90deg);
   }
-  .document-tabs-scroll-button:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 1px;
-  }
   .document-tab:hover {
     background: var(--panel);
     color: var(--text-soft);
@@ -787,10 +779,6 @@
     background: var(--panel);
     color: var(--text);
     box-shadow: inset 0 2px var(--accent-mark);
-  }
-  .document-tab:focus-visible {
-    outline: 2px solid var(--focus-color);
-    outline-offset: 2px;
   }
   .document-tab-name {
     overflow: hidden;
@@ -808,9 +796,6 @@
     background: var(--panel-raised);
     color: var(--text);
     font: inherit;
-  }
-  .document-tab-rename:focus-visible {
-    box-shadow: var(--focus-ring);
   }
   .tab-unsaved {
     width: 7px;
@@ -835,7 +820,6 @@
     opacity: 0;
   }
   .document-tab:hover > button,
-  .document-tab:focus-within > button,
   .document-tab.is-active > button {
     opacity: 1;
   }
@@ -1088,10 +1072,6 @@
     row-gap: 2px;
     padding-block: 0;
     transition-property: border-color, background-color;
-  }
-  .connection-trigger:focus-visible {
-    outline: 2px solid var(--focus-color);
-    outline-offset: 0;
   }
   .cloud-topbar-action {
     min-height: 30px;

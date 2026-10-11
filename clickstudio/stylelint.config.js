@@ -1,5 +1,25 @@
+import stylelint from 'stylelint';
+
+const focusOwner = 'clickstudio/focus-owner';
+
 export default {
+    plugins: [
+        stylelint.createPlugin(focusOwner, () => (root, result) => {
+            if (root.source?.input.file?.endsWith('/base/focus.css')) return;
+            root.walkRules(rule => {
+                const selector = rule.selector.replace(/:not\([^)]*\)/g, '');
+                if (!/:focus(?:-visible|-within)?\b/.test(selector)) return;
+                stylelint.utils.report({
+                    message: 'Put focus states in base/focus.css.',
+                    node: rule,
+                    result,
+                    ruleName: focusOwner,
+                });
+            });
+        }),
+    ],
     rules: {
+        [focusOwner]: true,
         'at-rule-no-unknown': [true, { ignoreAtRules: ['theme'] }],
         'block-no-empty': true,
         'color-no-invalid-hex': true,

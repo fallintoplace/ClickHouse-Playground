@@ -2,7 +2,16 @@
 
 All application styles enter through `clickstudio/src/frontend/ui/styles/main.css`. Import order is part of the cascade: native and help feature styles load first, followed by Tailwind, shared tokens, component styles, responsive rules and panel chrome. Do not import styles from React components.
 
-`foundation.css` owns theme palettes, typography, spacing roles, borders, shadows and shared control tokens. Components consume these variables. Component-specific light rules and breakpoints live in their owning stylesheet. `responsive.css` contains only application layout and the global reduced-motion override; `animations.css` owns shared keyframes. `controls.css` owns the shared light input, focus, invalid and placeholder states; it loads last.
+`foundation.css` owns typography, spacing roles, borders, shadows and shared control tokens. `colors.css` owns theme palettes. Components consume these variables. Component-specific light rules and breakpoints live in their owning stylesheet. `responsive.css` contains only application layout and the global reduced-motion override; `animations.css` owns shared keyframes. `controls.css` owns shared light input, invalid and placeholder states. `focus.css` loads last and owns all focus states.
+
+## Focus
+
+- Actions use one outline for `:focus-visible`. Mouse clicks follow the browser's focus visibility preference.
+- Text inputs, selects and textareas use a border-only cue on focus. Invalid borders remain red. Search wrappers draw the border once around the visible control.
+- Hidden theme and import radios and the file picker draw one outline on their visible wrapper. Scrolling tables and lists use the shared inset offset.
+- Editors retain their caret and selection cues. SVG nodes use the shared focus color and width for their stroke; splitters highlight their handle.
+- Add focus selectors only to `base/focus.css`. Stylelint enforces this owner; the syntax check rejects JSX focus utilities. Keep hover, selected and expanded states in their feature stylesheet.
+- Custom modal overlays use `ui/focus/useDialogFocus.ts` to focus once on opening, contain Tab navigation and restore focus on close. State changes and background responses must not move focus. Native `<dialog>` elements use `showModal()` and their built-in focus handling.
 
 ## Changing styles
 

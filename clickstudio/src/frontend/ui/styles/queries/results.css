@@ -209,10 +209,6 @@
   .result-filter::placeholder {
     color: var(--muted);
   }
-  .result-filter:focus {
-    border-color: var(--active-border);
-    box-shadow: var(--focus-ring);
-  }
   .data-table-scroll {
     min-height: 0;
     flex: 1;
@@ -220,10 +216,6 @@
     border: 1px solid var(--line);
     background: var(--page);
     scrollbar-color: var(--scrollbar-thumb) transparent;
-  }
-  .data-table-scroll:focus-visible {
-    outline: 2px solid var(--focus-color);
-    outline-offset: -2px;
   }
   .data-table {
     --result-number: var(--accent-cyan);
@@ -273,10 +265,6 @@
   }
   .data-table th[data-type-group="complex"] {
     --result-type-accent: var(--result-complex);
-  }
-  .data-table th:focus-visible {
-    outline: 2px solid var(--focus-color);
-    outline-offset: -2px;
   }
   .result-column-heading {
     display: flex;
@@ -555,10 +543,6 @@
   .result-failure-diagnostics summary:hover {
     color: var(--text);
   }
-  .result-failure-diagnostics summary:focus-visible {
-    outline: 2px solid var(--focus-color);
-    outline-offset: 3px;
-  }
   .query-failed-status {
     display: inline-flex;
     width: max-content;
@@ -760,7 +744,6 @@
     cursor: pointer;
   }
   .script-statement:hover:not(:disabled),
-  .script-statement:focus-visible,
   .script-statement.is-active {
     border-color: var(--line-bright);
     background: var(--active-surface);

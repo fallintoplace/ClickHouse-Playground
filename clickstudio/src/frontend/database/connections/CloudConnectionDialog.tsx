@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import type { Connection } from '../../../shared/database/connections/types';
 import {
     connectClickHouseCloud,
@@ -11,6 +11,7 @@ import type { Connected } from '../../workspace/workspace-types';
 import { Button, Spinner } from '../../ui/components/ui';
 import { Icon } from '../../ui/components/icons';
 import { OverlayPortal } from '../../ui/components/OverlayPortal';
+import { useDialogFocus } from '../../ui/focus/useDialogFocus';
 
 export function CloudConnectionDialog({
     onClose,
@@ -27,47 +28,11 @@ export function CloudConnectionDialog({
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
     const dialog = useRef<HTMLElement>(null);
-    const close = useRef(onClose);
-    close.current = onClose;
-
-    useEffect(() => {
-        const previous =
-            document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
-        const root = dialog.current;
-        root?.focus();
-        const keydown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape' && !busy) {
-                event.preventDefault();
-                close.current();
-            }
-            if (event.key !== 'Tab' || !root) return;
-            const controls = [
-                ...root.querySelectorAll<HTMLElement>(
-                    'button:not(:disabled), input:not(:disabled)',
-                ),
-            ].filter(element => element.getClientRects().length > 0);
-            const first = controls[0],
-                last = controls.at(-1);
-            if (!first) {
-                event.preventDefault();
-                root.focus();
-            } else if (
-                event.shiftKey &&
-                (document.activeElement === first || document.activeElement === root)
-            ) {
-                event.preventDefault();
-                last?.focus();
-            } else if (!event.shiftKey && document.activeElement === last) {
-                event.preventDefault();
-                first.focus();
-            }
-        };
-        root?.addEventListener('keydown', keydown);
-        return () => {
-            root?.removeEventListener('keydown', keydown);
-            if (previous?.isConnected) previous.focus();
-        };
-    }, [busy]);
+    useDialogFocus(dialog, {
+        onClose,
+        canClose: !busy,
+        initialFocus: root => root.querySelector<HTMLInputElement>('input[name="host"]'),
+    });
 
     const connect = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -150,7 +115,6 @@ export function CloudConnectionDialog({
                                 autoCapitalize="none"
                                 spellCheck={false}
                                 required
-                                autoFocus
                             />
                         </label>
                         <div className="cloud-connect-fields">

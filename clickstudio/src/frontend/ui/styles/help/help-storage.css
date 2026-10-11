@@ -54,11 +54,6 @@
 .workspace-help-storage .help-parts-table-picker select:hover:not(:disabled) {
   border-color: var(--help-selected-border);
 }
-.workspace-help-storage .help-parts-table-picker select:focus-visible {
-  border-color: var(--help-selected-border);
-  outline: none;
-  box-shadow: var(--help-focus-ring);
-}
 .workspace-help-storage .native-storage {
   gap: 8px;
 }
@@ -239,7 +234,6 @@
     background-color 0.14s ease;
 }
 .workspace-help-storage .parts-map-row:hover,
-.workspace-help-storage .parts-map-row:focus-visible,
 .workspace-help-storage .parts-map-row.is-selected {
   border-color: var(--help-selected-border);
   background: var(--help-selected-surface);

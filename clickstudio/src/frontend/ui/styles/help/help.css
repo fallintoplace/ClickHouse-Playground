@@ -1195,10 +1195,6 @@
       border-color 0.14s ease,
       box-shadow 0.14s ease;
   }
-  .sql-example-search:focus-within {
-    border-color: var(--help-selected-border);
-    box-shadow: var(--help-focus-ring);
-  }
   .sql-example-search svg {
     width: 15px;
     height: 15px;
@@ -1439,10 +1435,6 @@
     font: inherit;
     font-size: var(--help-text-small);
   }
-  .help-parts-table-picker select:focus-visible {
-    border-color: var(--accent);
-    box-shadow: var(--help-focus-ring);
-  }
   .help-parts-table-picker select:disabled {
     color: var(--muted);
     opacity: 0.72;
@@ -1461,17 +1453,6 @@
     place-items: center;
     border: 1px dashed var(--help-border-strong);
     border-radius: var(--help-radius-card);
-  }
-
-  .workspace-help-panel :is(button, input, select, [tabindex]):focus-visible {
-    outline: 2px solid color-mix(in srgb, var(--accent) 82%, var(--text));
-    outline-offset: 2px;
-  }
-
-  .workspace-help-panel .workspace-help-tab:focus-visible,
-  .workspace-help-panel .sql-example-category:focus-visible,
-  .workspace-help-panel .sql-example-option:focus-visible {
-    outline-offset: -3px;
   }
 }
 
@@ -1750,10 +1731,6 @@
   .workspace-help-panel {
     animation: none;
   }
-}
-
-.sql-example-search input:focus-visible {
-  outline: none;
 }
 
 /* Light theme */

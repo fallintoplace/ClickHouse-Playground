@@ -253,10 +253,6 @@
   padding: 7px 10px;
   font: inherit;
 }
-.native-lineage-database select:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
 .native-lineage-primer {
   display: grid;
   gap: 11px;
@@ -442,8 +438,7 @@
 .native-lineage-node.result-table rect {
   stroke: var(--green);
 }
-.native-lineage-node.is-selected rect,
-.native-lineage-node:focus-visible rect {
+.native-lineage-node.is-selected rect {
   stroke: var(--accent);
   stroke-width: 3;
 }
@@ -581,11 +576,6 @@
 .native-activity summary {
   cursor: pointer;
   padding-block: 8px;
-}
-.native-dialog :focus-visible,
-.native-activity :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
 }
 @media (max-width: 850px) {
   .native-lineage-layout {

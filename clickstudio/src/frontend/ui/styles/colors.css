@@ -67,8 +67,6 @@
   --active-border: color-mix(in srgb, var(--accent) 42%, var(--line-bright));
   --active-inset: inset 0 0 0 1px color-mix(in srgb, var(--accent) 17%, var(--line));
   --focus-color: color-mix(in srgb, var(--accent) 84%, var(--text));
-  --focus-ring: 0 0 0 2px color-mix(in srgb, var(--focus-color) 28%, transparent);
-  --focus-ring-invalid: 0 0 0 2px color-mix(in srgb, var(--red) 28%, transparent);
   --browser-chrome: #151515;
   --brand-logo: #fff;
   --assistant-loading-highlight: #fff6;
@@ -190,7 +188,6 @@
     --help-border-strong: var(--line-bright);
     --help-selected-surface: var(--active-surface);
     --help-selected-border: var(--active-border);
-    --help-focus-ring: var(--focus-ring);
     --help-experimental: color-mix(in srgb, var(--accent) 54%, #c79aff);
     --help-experimental-surface: color-mix(
       in srgb,

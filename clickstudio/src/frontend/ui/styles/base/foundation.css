@@ -21,6 +21,9 @@
 :root {
   --scroll-edge-size: 12px;
   --status-ring-width: 2px;
+  --focus-width: 2px;
+  --focus-offset: 1px;
+  --focus-inset: -2px;
   --overlay-backdrop-filter: blur(4px);
   --radius-shell: 0px;
   --radius-panel: 4px;
@@ -139,14 +142,8 @@
   color: var(--text);
 }
 .topbar .navbar-mode-option.is-active > label {
-  border-color: var(--active-border);
   background: var(--active-surface);
   color: var(--text);
-  box-shadow: var(--active-inset);
-}
-.topbar .navbar-mode-option > button:focus-visible + label {
-  outline: 2px solid var(--focus-color);
-  outline-offset: 2px;
 }
 .topbar .navbar-mode-option > label::before {
   width: 7px;
@@ -195,14 +192,8 @@
   color: var(--text);
 }
 .topbar .theme-mode-option.is-active {
-  border-color: var(--active-border);
   background: var(--active-surface);
   color: var(--text);
-  box-shadow: var(--active-inset);
-}
-.topbar .theme-mode-option:focus-within {
-  outline: 2px solid var(--focus-color);
-  outline-offset: 2px;
 }
 .topbar .theme-mode-option input {
   position: absolute;
@@ -285,12 +276,6 @@
   button {
     color: inherit;
   }
-  button:focus-visible,
-  input:focus-visible,
-  select:focus-visible,
-  textarea:focus-visible {
-    outline-offset: 2px;
-  }
   ::selection {
     background: color-mix(in srgb, var(--accent) 40%, transparent);
   }
@@ -316,15 +301,4 @@
 dialog::backdrop {
   background: var(--overlay-backdrop);
   backdrop-filter: var(--overlay-backdrop-filter);
-}
-
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: 2px solid var(--focus-color);
-}
-
-:is(input, select, textarea)[aria-invalid="true"]:focus-visible {
-  outline-color: var(--red);
 }

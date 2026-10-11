@@ -20,7 +20,30 @@ const paths = [
     ...readdirSync('.').filter(p => p.endsWith('.ts')),
 ];
 for (const path of paths) {
-    const result = ts.transpileModule(readFileSync(path, 'utf8'), {
+    const source = readFileSync(path, 'utf8');
+    if (path.startsWith('src/frontend/') && path.endsWith('.tsx')) {
+        const file = ts.createSourceFile(
+            path,
+            source,
+            ts.ScriptTarget.ESNext,
+            true,
+            ts.ScriptKind.TSX,
+        );
+        const checkFocus = node => {
+            if (
+                ts.isJsxAttribute(node) &&
+                node.name.getText(file) === 'className' &&
+                node.initializer &&
+                /\bfocus(?:-visible|-within)?:/.test(node.initializer.getText(file))
+            ) {
+                console.error(path, 'Put focus styles in base/focus.css instead of JSX utilities.');
+                failed++;
+            }
+            ts.forEachChild(node, checkFocus);
+        };
+        checkFocus(file);
+    }
+    const result = ts.transpileModule(source, {
         fileName: path,
         reportDiagnostics: true,
         compilerOptions: {

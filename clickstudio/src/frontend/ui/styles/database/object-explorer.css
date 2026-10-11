@@ -58,18 +58,8 @@
   color: var(--muted);
   opacity: 0.78;
 }
-.create-table-control:focus-visible {
-  border-color: var(--focus-color);
-  outline: 2px solid var(--focus-color);
-  outline-offset: 2px;
-  box-shadow: var(--focus-ring);
-}
 .create-table-control[aria-invalid="true"] {
   border-color: var(--red);
-}
-.create-table-control[aria-invalid="true"]:focus-visible {
-  outline-color: var(--red);
-  box-shadow: var(--focus-ring-invalid);
 }
 .create-table-database-picker {
   position: relative;
@@ -96,12 +86,10 @@
     background 0.16s ease,
     color 0.16s ease;
 }
-.create-table-database-trigger:hover,
-.create-table-database-trigger:focus-visible {
+.create-table-database-trigger:hover {
   border-color: var(--line);
   background: var(--control-hover);
   color: var(--text);
-  outline: none;
 }
 .create-table-database-trigger svg {
   width: 16px;
@@ -260,11 +248,6 @@
   background: var(--control-hover);
   color: var(--text);
 }
-.create-table-dialog button:focus-visible {
-  border-color: var(--focus-color);
-  outline: 2px solid var(--focus-color);
-  outline-offset: 2px;
-}
 .create-table-secondary-button:disabled {
   cursor: not-allowed;
 }
@@ -278,11 +261,6 @@
 }
 .create-table-button:not(:disabled):hover {
   filter: brightness(1.07);
-}
-.create-table-button:focus-visible {
-  outline: 2px solid var(--focus-color);
-  outline-offset: 3px;
-  box-shadow: var(--focus-ring);
 }
 .create-table-button:disabled {
   background: color-mix(in srgb, var(--accent-action) 24%, var(--panel-raised));
@@ -390,21 +368,9 @@
   border-color: color-mix(in srgb, var(--explorer-signal) 24%, var(--line));
   background: var(--page);
 }
-.object-search:focus-within,
-.reference-search:focus-within {
-  border-color: var(--explorer-signal);
-  box-shadow: var(--focus-ring);
-}
 :root[data-theme="click-light"] :is(.object-search, .reference-search) {
   border-color: var(--control-border);
   background: var(--panel);
-}
-:root[data-theme="click-light"] :is(.object-search, .reference-search):focus-within {
-  border-color: var(--focus-color);
-}
-.object-search input:focus-visible,
-.reference-search input:focus-visible {
-  outline: none;
 }
 .object-search-clear {
   display: grid;
@@ -419,12 +385,10 @@
   font-size: 15px;
   cursor: pointer;
 }
-.object-search-clear:hover,
-.object-search-clear:focus-visible {
+.object-search-clear:hover {
   border-color: var(--line-bright);
   background: var(--panel-hover);
   color: var(--text);
-  outline: none;
 }
 .schema-heading.object-heading,
 .reference-list-heading {
@@ -546,7 +510,6 @@
   --tree-kind-color: var(--explorer-index);
 }
 .object-tree-row:hover,
-.object-tree-row:focus-within,
 .reference-result:hover {
   border-color: color-mix(in srgb, var(--explorer-row-accent) 42%, var(--line));
   background-color: color-mix(in srgb, var(--explorer-row-accent) 7%, var(--panel));
@@ -635,10 +598,6 @@
   background: color-mix(in srgb, var(--tree-kind-color) 10%, transparent);
   color: var(--tree-kind-color);
 }
-.object-tree-toggle:focus-visible {
-  outline: 2px solid var(--focus-color);
-  outline-offset: -2px;
-}
 .object-tree-toggle > span {
   display: grid;
   place-items: center;
@@ -669,11 +628,6 @@
   color: inherit;
   text-align: left;
   cursor: pointer;
-}
-.object-tree-main:focus-visible {
-  border-radius: var(--radius-panel);
-  outline: 2px solid color-mix(in srgb, var(--explorer-signal) 72%, transparent);
-  outline-offset: -2px;
 }
 .object-kind-glyph > svg {
   width: 15px;
@@ -734,18 +688,14 @@
   width: 13px;
   height: 13px;
 }
-.object-tree-row:hover .object-tree-inline-action,
-.object-tree-row:focus-within .object-tree-inline-action,
-.object-tree-inline-action:focus-visible {
+.object-tree-row:hover .object-tree-inline-action {
   opacity: 1;
 }
-.object-tree-inline-action:hover,
-.object-tree-inline-action:focus-visible {
+.object-tree-inline-action:hover {
   border-color: color-mix(in srgb, var(--tree-kind-color) 40%, var(--line-bright));
   background: color-mix(in srgb, var(--tree-kind-color) 10%, var(--panel-hover));
   color: var(--tree-kind-color);
   box-shadow: none;
-  outline: none;
 }
 .object-tree-children {
   min-width: 0;
@@ -820,12 +770,10 @@
   font-size: 17px;
   cursor: pointer;
 }
-.object-details-close:hover,
-.object-details-close:focus-visible {
+.object-details-close:hover {
   border-color: color-mix(in srgb, var(--object-detail-accent) 52%, var(--line));
   background: color-mix(in srgb, var(--object-detail-accent) 9%, var(--panel));
   color: var(--object-detail-accent);
-  outline: none;
 }
 .object-compact-details {
   display: flex;
@@ -971,12 +919,10 @@
     background 0.16s ease,
     color 0.16s ease;
 }
-.object-utility-actions .toolbar-small:hover:not(:disabled),
-.object-utility-actions .toolbar-small:focus-visible {
+.object-utility-actions .toolbar-small:hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--object-detail-accent) 55%, var(--line));
   background: color-mix(in srgb, var(--object-detail-accent) 10%, var(--panel));
   color: var(--object-detail-accent);
-  outline: none;
 }
 .object-utility-actions svg {
   width: 13px;
@@ -1204,10 +1150,6 @@
   width: 3px;
   opacity: 1;
 }
-.reference-result:focus-visible {
-  outline: 2px solid var(--reference-kind-color);
-  outline-offset: -2px;
-}
 .object-kind-glyph,
 .reference-result-glyph {
   display: grid;
@@ -1282,9 +1224,6 @@
   background: color-mix(in srgb, var(--reference-kind-color) 10%, var(--panel));
   color: var(--reference-kind-color);
 }
-.reference-result:focus-visible .history-open {
-  color: var(--reference-kind-color);
-}
 :root[data-theme="click-light"] :is(.object-kind-glyph, .reference-result-glyph) {
   border-color: var(--explorer-row-accent);
   background: var(--explorer-row-accent);
@@ -1311,8 +1250,7 @@
   border-color: color-mix(in srgb, var(--tree-kind-color) 48%, var(--line));
   background: color-mix(in srgb, var(--tree-kind-color) 12%, var(--panel));
 }
-:root[data-theme="click-light"]
-  :is(.object-tree-row:hover, .object-tree-row:focus-within, .reference-result:hover) {
+:root[data-theme="click-light"] :is(.object-tree-row:hover, .reference-result:hover) {
   border-color: color-mix(in srgb, var(--explorer-row-accent) 60%, var(--line));
   background-color: color-mix(in srgb, var(--explorer-row-accent) 8%, var(--panel));
 }
@@ -1359,11 +1297,8 @@
   cursor: pointer;
 }
 .object-back-button:hover,
-.object-back-button:focus-visible,
-.reference-back:hover,
-.reference-back:focus-visible {
+.reference-back:hover {
   color: var(--explorer-signal);
-  outline: none;
 }
 .object-back-button span,
 .reference-back span {
@@ -1636,11 +1571,6 @@
   color: var(--text);
   box-shadow: var(--active-inset);
 }
-.parts-view-control button:focus-visible,
-.parts-breadcrumb button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
 .parts-count-summary {
   margin-left: auto;
   color: var(--text-soft);
@@ -1801,10 +1731,8 @@
   cursor: pointer;
 }
 .parts-map-partition-heading:hover,
-.parts-map-partition-heading:focus-visible,
 .parts-map-partition-heading[aria-pressed="true"] {
   border-color: color-mix(in srgb, var(--accent) 55%, var(--line-bright));
-  outline: none;
   box-shadow: var(--active-inset);
 }
 .parts-map-partition-heading strong {
@@ -1838,11 +1766,9 @@
   cursor: pointer;
 }
 .parts-map-row:hover,
-.parts-map-row:focus-visible,
 .parts-map-row.is-selected {
   border-color: color-mix(in srgb, var(--accent) 44%, var(--line));
   background: color-mix(in srgb, var(--accent) 9%, var(--panel-raised));
-  outline: none;
 }
 .parts-map-identity {
   display: grid;
@@ -1946,8 +1872,7 @@
   stroke-width: 3px;
   filter: none;
 }
-.parts-map-cell:hover rect,
-.parts-map-cell:focus-visible rect {
+.parts-map-cell:hover rect {
   stroke: var(--accent);
   stroke-width: 2px;
 }
@@ -1970,8 +1895,7 @@
   fill: color-mix(in srgb, var(--part-color) 12%, var(--panel));
   stroke-width: 1.6px;
 }
-.parts-galaxy-cell:hover circle,
-.parts-galaxy-cell:focus-visible circle {
+.parts-galaxy-cell:hover circle {
   stroke: var(--accent);
   stroke-width: 2.4px;
 }
@@ -1995,8 +1919,7 @@
     stroke 0.16s ease,
     filter 0.16s ease;
 }
-.parts-partition-zoom:hover rect,
-.parts-partition-zoom:focus-visible rect {
+.parts-partition-zoom:hover rect {
   fill: color-mix(in srgb, var(--accent) 36%, var(--panel-raised));
   stroke: var(--accent);
   stroke-width: 1.8px;

@@ -1,3 +1,4 @@
+import { useDialogFocus } from '../../ui/focus/useDialogFocus';
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { MAX_ASSISTANT_CHAT_TITLE_LENGTH, type AssistantChat } from './assistant-chat-state';
 import { OverlayPortal } from '../../ui/components/OverlayPortal';
@@ -126,33 +127,12 @@ export function AssistantChatHistory({
         setPendingDeleteChat(null);
         focusHistoryTrigger();
     };
-    const handleDeleteDialogKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
-        if (event.key === 'Escape') {
-            event.preventDefault();
-            event.stopPropagation();
-            cancelDeleteChat();
-            return;
-        }
-        if (event.key !== 'Tab') return;
-        const controls = [
-            ...(deleteDialogRef.current?.querySelectorAll<HTMLButtonElement>(
-                'button:not(:disabled)',
-            ) ?? []),
-        ];
-        const first = controls[0],
-            last = controls.at(-1),
-            active = document.activeElement;
-        if (event.shiftKey && active === first) {
-            event.preventDefault();
-            last?.focus();
-        } else if (!event.shiftKey && active === last) {
-            event.preventDefault();
-            first?.focus();
-        } else if (!controls.some(control => control === active)) {
-            event.preventDefault();
-            (event.shiftKey ? last : first)?.focus();
-        }
-    };
+    useDialogFocus(deleteDialogRef, {
+        open: Boolean(pendingDeleteChat),
+        onClose: cancelDeleteChat,
+        restoreFocus: false,
+        initialFocus: root => root.querySelector<HTMLButtonElement>('.button-secondary'),
+    });
 
     return (
         <div
@@ -362,7 +342,6 @@ export function AssistantChatHistory({
                             aria-describedby="assistant-chat-delete-description"
                             tabIndex={-1}
                             className="assistant-chat-delete-dialog"
-                            onKeyDown={handleDeleteDialogKeyDown}
                         >
                             <h2 id="assistant-chat-delete-title">Delete this conversation?</h2>
                             <p id="assistant-chat-delete-description">
@@ -370,7 +349,7 @@ export function AssistantChatHistory({
                                 this browser. This can’t be undone.
                             </p>
                             <div className="assistant-chat-delete-actions">
-                                <Button variant="secondary" autoFocus onClick={cancelDeleteChat}>
+                                <Button variant="secondary" onClick={cancelDeleteChat}>
                                     Cancel
                                 </Button>
                                 <Button variant="danger" onClick={confirmDeleteChat}>

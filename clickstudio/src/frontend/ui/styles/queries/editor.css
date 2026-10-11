@@ -95,14 +95,9 @@
       background 0.16s ease,
       box-shadow 0.16s ease;
   }
-  .workspace-panel-splitter:hover::before,
-  .workspace-panel-splitter:focus-visible::before {
+  .workspace-panel-splitter:hover::before {
     width: min(220px, 40%);
     background: color-mix(in srgb, var(--accent) 62%, var(--line-bright));
-    box-shadow: var(--focus-ring);
-  }
-  .workspace-panel-splitter:focus-visible {
-    outline: none;
   }
   .editor-surface,
   .results-surface {
@@ -161,10 +156,6 @@
   .results-content-scrollable {
     overflow: auto;
     scrollbar-gutter: stable;
-  }
-  .editor-surface:focus-within {
-    border-color: var(--active-border);
-    box-shadow: none;
   }
   .detached-query-window-root {
     width: 100%;
@@ -313,9 +304,6 @@
     color: var(--text);
     font-size: 13px;
     font-weight: 630;
-  }
-  .document-name input:focus {
-    outline: 0;
   }
   .editor-heading-actions {
     padding-right: 42px;
@@ -537,11 +525,6 @@
     width: 100%;
     justify-content: center;
   }
-  .run-option-disabled-anchor:focus-visible {
-    border-radius: var(--radius-panel);
-    outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
-    outline-offset: 3px;
-  }
   .sql-ai-button {
     color: var(--violet);
   }
@@ -635,9 +618,6 @@
   .sql-editor .cm-scroller {
     overflow: auto;
   }
-  .sql-editor .cm-content:focus-visible {
-    outline: none;
-  }
   .sql-editor .cm-native-function {
     /* stylelint-disable-next-line declaration-no-important -- Override CodeMirror runtime styles outside the component layer. */
     color: var(--editor-function) !important;
@@ -678,9 +658,6 @@
   }
   .sql-editor .cm-activeLineGutter {
     background: var(--editor-active-gutter);
-  }
-  .sql-editor .cm-focused {
-    outline: none;
   }
   .sql-editor .cm-selectionBackground,
   .sql-editor ::selection {
@@ -812,12 +789,6 @@
     color: var(--text);
     font-size: 10px;
     transition: 0.18s ease;
-  }
-  .parameter-field input:focus,
-  .field-input:focus,
-  .field-textarea:focus {
-    border-color: var(--active-border);
-    box-shadow: var(--focus-ring);
   }
   .parameter-count {
     padding-bottom: 8px;

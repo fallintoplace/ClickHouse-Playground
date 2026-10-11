@@ -94,11 +94,6 @@
   opacity: 0.45;
 }
 
-.transfer-dialog :is(button, input, select):focus-visible {
-  outline: 2px solid var(--focus-color);
-  outline-offset: 2px;
-}
-
 .transfer-dialog .button-base:is(:hover, :active):not(:disabled) {
   transform: none;
 }

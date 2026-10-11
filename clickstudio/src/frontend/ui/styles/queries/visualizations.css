@@ -345,10 +345,6 @@
     cursor: not-allowed;
     opacity: 0.46;
   }
-  .sql-flow-mode-tabs button:focus-visible {
-    outline: 2px solid color-mix(in srgb, var(--accent) 65%, transparent);
-    outline-offset: 1px;
-  }
   .pipeline-graph-heading {
     display: flex;
     align-items: center;
@@ -415,10 +411,6 @@
     border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
     background: color-mix(in srgb, var(--accent) 7%, var(--panel));
     color: var(--accent);
-  }
-  .pipeline-graph-controls button:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 1px;
   }
   .pipeline-graph-controls button:disabled {
     cursor: not-allowed;
@@ -622,8 +614,7 @@
       stroke 0.18s ease,
       filter 0.18s ease;
   }
-  .pipeline-graph-node:hover .pipeline-node-face,
-  .pipeline-graph-node:focus-visible .pipeline-node-face {
+  .pipeline-graph-node:hover .pipeline-node-face {
     stroke: var(--accent);
     stroke-width: 2px;
   }
@@ -786,7 +777,7 @@
     fill: color-mix(in srgb, var(--accent) 5%, var(--panel-raised));
     stroke: color-mix(in srgb, var(--accent) 28%, var(--line-bright));
   }
-  .ast-graph-node:focus-visible rect,
+
   .ast-graph-node.is-selected rect {
     fill: color-mix(in srgb, var(--accent) 9%, var(--panel-raised));
     stroke: var(--accent);
@@ -965,10 +956,6 @@
     background: color-mix(in srgb, var(--accent) 9%, var(--panel-raised));
     color: var(--text);
   }
-  .explain-plan-view-switch button:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 1px;
-  }
   .explain-plan-tree,
   .explain-plan-tree ul {
     display: grid;
@@ -1002,11 +989,6 @@
   }
   .explain-plan-node > details > summary:hover {
     background: color-mix(in srgb, var(--accent) 5%, transparent);
-  }
-  .explain-plan-node > details > summary:focus-visible,
-  .explain-plan-property > summary:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: -2px;
   }
   .explain-plan-node > details > summary::-webkit-details-marker,
   .explain-plan-property > summary::-webkit-details-marker {

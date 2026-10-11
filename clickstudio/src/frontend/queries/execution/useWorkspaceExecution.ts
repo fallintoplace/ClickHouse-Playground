@@ -242,7 +242,6 @@ export function useWorkspaceExecution({
         setViewForDraft,
         setExampleChartRunId,
         trackSchemaRefresh,
-        editor,
         panels,
         loadHistory,
         evidence,
@@ -422,7 +421,6 @@ function createDraftExecutor({
     setViewForDraft,
     setExampleChartRunId,
     trackSchemaRefresh,
-    editor,
     panels,
     loadHistory,
     evidence,
@@ -442,7 +440,6 @@ function createDraftExecutor({
     setViewForDraft: WorkspaceExecutionOptions['setViewForDraft'];
     setExampleChartRunId: WorkspaceExecutionOptions['setExampleChartRunId'];
     trackSchemaRefresh: WorkspaceExecutionOptions['trackSchemaRefresh'];
-    editor: WorkspaceExecutionOptions['editor'];
     panels: WorkspaceExecutionOptions['panels'];
     loadHistory: WorkspaceExecutionOptions['loadHistory'];
     evidence: WorkspaceExecutionOptions['evidence'];
@@ -658,7 +655,6 @@ function createDraftExecutor({
                         scriptId: undefined,
                         runIds: rememberRunIds(current.runIds, [created.id]),
                     }));
-                    if (draft.id === active.id) editor.current?.focus();
                     if (options.trackChartRun)
                         setExampleChartRunId(options.view === 'chart' ? created.id : undefined);
                 };

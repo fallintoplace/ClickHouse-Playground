@@ -1,0 +1,143 @@
+:where(
+    button,
+    a[href],
+    summary,
+    .data-table-scroll,
+    [tabindex]:not([tabindex="-1"]),
+    input:is([type="radio"], [type="checkbox"], [type="file"], [type="range"])
+  ):focus:not(:focus-visible) {
+  outline: none;
+}
+
+:where(
+  button,
+  a[href],
+  summary,
+  .data-table-scroll,
+  [tabindex]:not([tabindex="-1"]),
+  input:is([type="radio"], [type="checkbox"], [type="file"], [type="range"])
+):focus-visible {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: var(--focus-offset);
+}
+
+:root
+  :is(
+    input:not([type="radio"], [type="checkbox"], [type="file"], [type="range"], [type="hidden"]),
+    select,
+    textarea
+  ):focus {
+  border-color: var(--focus-color);
+  outline: none;
+  box-shadow: none;
+}
+
+:root :is(input, select, textarea)[aria-invalid="true"]:focus {
+  border-color: var(--red);
+}
+
+:root
+  :is(.object-search, .reference-search, .sql-example-search, .assistant-chat-search):has(
+    input:focus
+  ) {
+  border-color: var(--focus-color);
+}
+
+:is(.object-search, .reference-search, .sql-example-search, .assistant-chat-search) input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.topbar .navbar-mode-option > button:focus-visible + label,
+.topbar .theme-mode-option:has(input:focus-visible),
+.import-destination-option:has(input:focus-visible),
+.import-file-picker:has(.import-file-input:focus-visible) {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: var(--focus-offset);
+}
+
+:is(.theme-mode-option, .import-destination-option, .import-file-picker) input:focus-visible {
+  outline: none;
+}
+
+:is(
+  .data-table-scroll,
+  .data-table th,
+  .document-tab,
+  .object-tree-toggle,
+  .object-tree-main,
+  .reference-result,
+  .sql-proposal-diff-toggle,
+  .workspace-help-tab,
+  .sql-example-category,
+  .sql-example-option,
+  .explain-plan-node > details > summary,
+  .explain-plan-property > summary
+):focus-visible {
+  outline-offset: var(--focus-inset);
+}
+
+.object-tree-row:focus-within .object-tree-inline-action,
+.object-tree-inline-action:focus-visible,
+.document-tab:focus-within > button {
+  opacity: 1;
+}
+
+.assistant-chat-history-item:focus-within {
+  background: var(--panel-hover);
+}
+
+.help-button:focus-visible {
+  animation: none;
+}
+
+.observability-tabpanel:focus-visible {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: var(--focus-inset);
+}
+
+.sql-editor .cm-focused,
+.sql-editor .cm-content:focus-visible,
+.workspace-panel-splitter:focus-visible,
+:is(
+  .native-lineage-node,
+  .pipeline-graph-node,
+  .ast-graph-node,
+  .workload-scatter-point,
+  .flamegraph-node rect,
+  .parts-map-cell,
+  .parts-galaxy-cell,
+  .parts-partition-zoom
+):focus-visible {
+  outline: none;
+}
+
+.workspace-panel-splitter:focus-visible::before {
+  width: min(220px, 40%);
+  background: var(--focus-color);
+}
+
+.native-lineage-node:focus-visible rect,
+.pipeline-graph-node:focus-visible .pipeline-node-face,
+.ast-graph-node:focus-visible rect,
+.workload-scatter-point:focus-visible,
+.flamegraph-node rect:focus-visible,
+.parts-map-cell:focus-visible rect,
+.parts-galaxy-cell:focus-visible circle,
+.parts-partition-zoom:focus-visible rect {
+  stroke: var(--focus-color);
+  stroke-width: var(--focus-width);
+}
+
+@media (forced-colors: active) {
+  :root,
+  :root[data-theme] {
+    --focus-color: Highlight;
+  }
+}
+
+@media (min-width: 851px) and (pointer: fine) {
+  .connection-trigger:focus-visible {
+    outline-offset: 0;
+  }
+}

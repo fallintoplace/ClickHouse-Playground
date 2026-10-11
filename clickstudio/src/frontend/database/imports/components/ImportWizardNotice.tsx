@@ -38,8 +38,7 @@ export function ImportWizardNotice({
                 <p
                     ref={errorAlertRef}
                     role="alert"
-                    tabIndex={-1}
-                    className="mb-4 whitespace-pre-wrap break-words rounded-lg border border-[var(--red)]/30 bg-[var(--red)]/5 px-3 py-2.5 text-xs leading-relaxed text-[var(--red)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[var(--red)]"
+                    className="mb-4 whitespace-pre-wrap break-words rounded-lg border border-[var(--red)]/30 bg-[var(--red)]/5 px-3 py-2.5 text-xs leading-relaxed text-[var(--red)]"
                 >
                     {error}
                 </p>

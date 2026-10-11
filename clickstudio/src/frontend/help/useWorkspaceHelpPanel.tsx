@@ -19,6 +19,7 @@ import {
 } from './workspace-help-model';
 import type { WorkspaceHelpPanelProps } from './workspace-help-types';
 import { createHelpExplainActions } from './examples/help-explain-actions';
+import { useDialogFocus } from '../ui/focus/useDialogFocus';
 
 export function useWorkspaceHelpPanel(props: WorkspaceHelpPanelProps) {
     const {
@@ -62,6 +63,14 @@ export function useWorkspaceHelpPanel(props: WorkspaceHelpPanelProps) {
         [examples],
     );
     const defaultExample = featuredExamples[0] ?? examples[0];
+    const openingDefaults = useRef({
+        id: defaultExample?.id ?? '',
+        featured: Boolean(featuredExamples.length),
+    });
+    openingDefaults.current = {
+        id: defaultExample?.id ?? '',
+        featured: Boolean(featuredExamples.length),
+    };
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState<CategoryFilter>(
         featuredExamples.length ? 'featured' : 'all',
@@ -135,74 +144,43 @@ export function useWorkspaceHelpPanel(props: WorkspaceHelpPanelProps) {
         if (selected && selected.id !== selectedId) setSelectedId(selected.id);
     }, [selected, selectedId]);
 
+    useDialogFocus(panelRef, {
+        open,
+        onClose,
+        restoreFocus: false,
+        initialFocus: panel => {
+            const currentSection = sectionRef.current;
+            if (currentSection === 'examples') return searchRef.current;
+            if (currentSection === 'storage')
+                return panel.querySelector<HTMLElement>(
+                    '.help-parts-table-picker select:not(:disabled)',
+                );
+            const activePanel = panel.querySelector<HTMLElement>(
+                '#workspace-help-panel-' + currentSection,
+            );
+            return (
+                activePanel?.querySelector<HTMLElement>(
+                    'button:not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex]:not([tabindex="-1"])',
+                ) ?? tabRefs.current.get(currentSection)
+            );
+        },
+    });
+
     useEffect(() => {
         if (!open) return;
         setSearch('');
-        setCategory(featuredExamples.length ? 'featured' : 'all');
-        setSelectedId(defaultExample?.id ?? '');
-
+        setCategory(openingDefaults.current.featured ? 'featured' : 'all');
+        setSelectedId(openingDefaults.current.id);
         const previousOverflow = document.body.style.overflow;
         const appRoot = document.getElementById('root');
         const previousInert = appRoot?.inert ?? false;
         document.body.style.overflow = 'hidden';
         if (appRoot) appRoot.inert = true;
-        const focusFrame = window.requestAnimationFrame(() => {
-            const currentSection = sectionRef.current;
-            if (currentSection === 'examples') {
-                searchRef.current?.focus();
-                return;
-            }
-            if (currentSection === 'storage') {
-                panelRef.current
-                    ?.querySelector<HTMLElement>('.help-parts-table-picker select:not(:disabled)')
-                    ?.focus();
-                return;
-            }
-            const activePanel = panelRef.current?.querySelector<HTMLElement>(
-                '#workspace-help-panel-' + currentSection,
-            );
-            const firstAction = activePanel?.querySelector<HTMLElement>(
-                'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
-            );
-            (firstAction ?? tabRefs.current.get(currentSection))?.focus();
-        });
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') {
-                event.preventDefault();
-                onClose();
-                return;
-            }
-            if (event.key !== 'Tab') return;
-
-            const panel = panelRef.current;
-            if (!panel) return;
-            const focusable = Array.from(
-                panel.querySelectorAll<HTMLElement>(
-                    'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-                ),
-            ).filter(element => !element.closest('[hidden]'));
-            const first = focusable[0];
-            const last = focusable[focusable.length - 1];
-            const focusIsOutside = !panel.contains(document.activeElement);
-            if (!first || !last) {
-                event.preventDefault();
-                panel.focus();
-            } else if (event.shiftKey && (document.activeElement === first || focusIsOutside)) {
-                event.preventDefault();
-                last.focus();
-            } else if (!event.shiftKey && (document.activeElement === last || focusIsOutside)) {
-                event.preventDefault();
-                first.focus();
-            }
-        };
-        document.addEventListener('keydown', onKeyDown);
         return () => {
-            window.cancelAnimationFrame(focusFrame);
-            document.removeEventListener('keydown', onKeyDown);
             document.body.style.overflow = previousOverflow;
             if (appRoot) appRoot.inert = previousInert;
         };
-    }, [defaultExample?.id, featuredExamples.length, open, onClose]);
+    }, [open]);
 
     const handleTabKeyDown = (
         event: ReactKeyboardEvent<HTMLButtonElement>,

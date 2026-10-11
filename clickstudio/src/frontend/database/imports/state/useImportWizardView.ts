@@ -123,7 +123,6 @@ export function useImportWizardView(
         if (!error || importKind !== 'rows' || recoveryState === 'failed') return;
         const alert = errorAlertRef.current;
         if (!alert) return;
-        alert.focus({ preventScroll: true });
         alert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, [error, importKind, recoveryState]);
 

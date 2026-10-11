@@ -82,11 +82,6 @@
     border-color 0.14s ease,
     box-shadow 0.14s ease;
 }
-.workspace-help-dependencies .native-lineage-controls .native-search input:focus-visible {
-  border-color: var(--help-selected-border);
-  outline: none;
-  box-shadow: var(--help-focus-ring);
-}
 .workspace-help-dependencies .native-lineage-controls > span {
   flex: none;
   padding: 6px 9px;
@@ -181,12 +176,10 @@
     fill 0.14s ease,
     stroke-width 0.14s ease;
 }
-.workspace-help-dependencies .native-lineage-node:hover rect,
-.workspace-help-dependencies .native-lineage-node:focus-visible rect {
+.workspace-help-dependencies .native-lineage-node:hover rect {
   fill: color-mix(in srgb, var(--help-selected-surface) 64%, var(--panel-raised));
 }
-.workspace-help-dependencies .native-lineage-node.is-selected rect,
-.workspace-help-dependencies .native-lineage-node:focus-visible rect {
+.workspace-help-dependencies .native-lineage-node.is-selected rect {
   stroke-width: 2.6;
 }
 .workspace-help-dependencies .native-node-details {

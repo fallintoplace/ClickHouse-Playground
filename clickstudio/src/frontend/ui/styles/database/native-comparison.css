@@ -36,12 +36,6 @@
 .native-run-picker select:hover {
   border-color: color-mix(in srgb, var(--accent) 34%, var(--line-bright));
 }
-.native-run-picker select:focus-visible {
-  border-color: color-mix(in srgb, var(--accent) 72%, var(--line-bright));
-  outline: 1px solid color-mix(in srgb, var(--accent) 78%, transparent);
-  outline-offset: 1px;
-  box-shadow: var(--focus-ring);
-}
 .native-run-pickers > .button-base {
   min-height: 34px;
   margin-bottom: 2px;
