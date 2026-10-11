@@ -1,5 +1,5 @@
 import type { QueryTree } from './query-tree';
-import type { Copy } from '../../../translations/i18n';
+import type { Copy } from '../../../ui/copy';
 import { TreeGraph } from '../../../ui/components/TreeGraph';
 
 function category(type: string) {

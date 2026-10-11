@@ -10,7 +10,6 @@ export function useWorkspaceSqlFormatter(
     active: Pick<Draft, 'id' | 'sql'>,
     setWorkspace: Dispatch<SetStateAction<WorkspaceState>>,
     editor: RefObject<EditorHandle | null>,
-    nativeParserEnabled: boolean,
     nativeParserStatus: NativeParserStatus,
     reviewingSql = false,
 ) {
@@ -36,18 +35,10 @@ export function useWorkspaceSqlFormatter(
                 applyBuiltIn();
                 return;
             }
-            if (!nativeParserEnabled || nativeParserStatus !== 'ready') return;
+            if (nativeParserStatus !== 'ready') return;
             const result = await editor.current?.formatNative();
             if (result === 'unavailable' || result === 'fallback') applyBuiltIn();
         },
-        [
-            active.id,
-            active.sql,
-            editor,
-            nativeParserEnabled,
-            nativeParserStatus,
-            setWorkspace,
-            reviewingSql,
-        ],
+        [active.id, active.sql, editor, nativeParserStatus, setWorkspace, reviewingSql],
     );
 }

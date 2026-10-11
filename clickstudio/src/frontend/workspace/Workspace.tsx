@@ -65,10 +65,8 @@ export function Workspace({
     testConnectionActionRef,
     demoMode,
     experience,
-    nativeParserEnabled,
     dark,
     copy,
-    locale,
 }: WorkspaceProps) {
     const model = useWorkspaceController({
         connection,
@@ -80,10 +78,8 @@ export function Workspace({
         testConnectionActionRef,
         demoMode,
         experience,
-        nativeParserEnabled,
         dark,
         copy,
-        locale,
     });
     const { active } = model.tabs;
 
@@ -138,7 +134,6 @@ export function Workspace({
         copy,
         connection,
         active,
-        nativeParserEnabled,
         experience,
         model,
     });
@@ -152,7 +147,6 @@ export function Workspace({
                 copy,
                 experience,
                 dark,
-                nativeParserEnabled,
                 nativeParserStatus,
                 trusted,
                 unsupportedParameters,
@@ -202,7 +196,6 @@ export function Workspace({
                 active,
                 connection,
                 copy,
-                locale,
                 run,
                 failedAttempt: failedQueryError,
                 script,
@@ -214,7 +207,6 @@ export function Workspace({
                 flamegraph,
                 profilesByRun,
                 pipelinesByRun,
-                nativeParserEnabled,
                 nativeParserStatus,
                 nativeParseSnapshot,
                 trusted,
@@ -303,8 +295,6 @@ export function Workspace({
         copy,
         connection,
         connectionLabel,
-        locale,
-        nativeParserEnabled,
         queryPanel,
         resultsPanel,
         inspectorProps,
@@ -318,8 +308,6 @@ function renderWorkspaceLayout({
     copy,
     connection,
     connectionLabel,
-    locale,
-    nativeParserEnabled,
     queryPanel,
     resultsPanel,
     inspectorProps,
@@ -330,8 +318,6 @@ function renderWorkspaceLayout({
     copy: WorkspaceProps['copy'];
     connection: WorkspaceProps['connection'];
     connectionLabel: WorkspaceProps['connectionLabel'];
-    locale: WorkspaceProps['locale'];
-    nativeParserEnabled: WorkspaceProps['nativeParserEnabled'];
     queryPanel: import('react').ReactElement;
     resultsPanel: import('react').ReactElement;
     inspectorProps: ReturnType<typeof createInspectorProps>;
@@ -495,8 +481,6 @@ function renderWorkspaceLayout({
                         connection,
                         copy,
                         connectionLabel,
-                        locale,
-                        nativeParserEnabled,
                         model,
                     })}
                     {workspace.tabs.length > 0 ? (
@@ -624,7 +608,6 @@ function renderWorkspaceLayout({
             />
             <RestoreRevisionDialog
                 revision={restoreRevisionConfirmation?.revision}
-                locale={locale}
                 onClose={() => setRestoreRevisionConfirmation(undefined)}
                 onConfirm={() => {
                     const revision = restoreRevisionConfirmation;
@@ -661,16 +644,12 @@ function renderDocumentTabs({
     connection,
     copy,
     connectionLabel,
-    locale,
-    nativeParserEnabled,
     model,
 }: {
     experience: WorkspaceProps['experience'];
     connection: WorkspaceProps['connection'];
     copy: WorkspaceProps['copy'];
     connectionLabel: WorkspaceProps['connectionLabel'];
-    locale: WorkspaceProps['locale'];
-    nativeParserEnabled: WorkspaceProps['nativeParserEnabled'];
     model: ReturnType<typeof useWorkspaceController>;
 }) {
     const {
@@ -776,7 +755,6 @@ function renderDocumentTabs({
                         sourceLabel={connectionLabel}
                         copy={copy.common}
                         experimentalLabel={copy.app.expert}
-                        locale={locale}
                         connection={connection}
                         databases={schema?.databases ?? [connection.database]}
                         tables={schema?.tables ?? []}
@@ -790,7 +768,6 @@ function renderDocumentTabs({
                             sql: helpStatementSql(sqlMapStatement, active.sql),
                             sourceOffset: helpStatementOffset(sqlMapStatement),
                             parseResult: helpParseResult(sqlMapParseStatement),
-                            parserEnabled: nativeParserEnabled,
                             parserStatus: nativeParserStatus,
                             parseDurationMs: helpParseDuration(nativeParseSnapshot),
                             connectionId: connection.id,
@@ -822,7 +799,7 @@ function renderDocumentTabs({
                             window.requestAnimationFrame(() => focusEditor(editor));
                         }}
                         onOpenExample={example => {
-                            const draft = createExampleDraft(example, locale, copy.common);
+                            const draft = createExampleDraft(example, copy.common);
                             if (!openNewDraft(draft, true)) return false;
                             window.requestAnimationFrame(() => editor.current?.focus());
                             return true;

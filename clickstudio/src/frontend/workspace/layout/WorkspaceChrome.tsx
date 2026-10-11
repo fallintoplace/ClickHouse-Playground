@@ -6,7 +6,7 @@ import { Icon } from '../../ui/components/icons';
 import { Status, terminal } from '../../queries/execution/status';
 import type { IconName } from '../../ui/components/icons';
 import type { RunEventState } from '../workspace-types';
-import type { Copy } from '../../translations/i18n';
+import type { Copy } from '../../ui/copy';
 
 export type RunAction = {
     id: string;

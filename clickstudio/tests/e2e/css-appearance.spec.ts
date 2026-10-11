@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { setAccentForStyles, runButton, trust } from './helpers.js';
+import { runButton, trust } from './helpers.js';
 import { chooseExistingTable, mockWritableWorkspace, previewCsv } from './import-helpers.js';
 import {
     chooseExistingCloudTable,
@@ -15,282 +15,270 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const theme of ['Light', 'Dark']) {
-    for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
-        for (const mode of ['Standard', 'Experimental']) {
-            test(`CSS preserves ${theme}, ${accent}, ${mode} workspace layouts`, async ({
-                page,
-            }, info) => {
-                await page.setViewportSize({ width: 1600, height: 1000 });
-                await trust(page);
-                await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
-                await page.getByText(mode, { exact: true }).click();
-                await setAccentForStyles(page, accent);
-                await expectReferenceStyles(page, info, 'empty-workspace');
-                const inspector = page.locator('.inspector-pane');
-                if (!(await inspector.isVisible()))
-                    await page
-                        .locator('.icon-rail')
-                        .getByRole('button', { name: 'Objects', exact: true })
-                        .click();
-                await inspector
-                    .getByRole('navigation', { name: 'Workspace browser', exact: true })
-                    .getByRole('button', { name: 'Reference', exact: true })
-                    .click();
-                const reference = inspector.locator('.reference-results');
-                await expect(reference).toBeVisible();
-                await expectReferenceStyles(page, info, 'reference-list');
-                await reference.getByRole('option').first().click();
-                await expect(inspector.locator('.reference-entry')).toBeVisible();
-                await expectReferenceStyles(page, info, 'reference-details');
-                await inspector.locator('.reference-back').click();
-                await inspector
-                    .getByRole('navigation', { name: 'Workspace browser', exact: true })
-                    .getByRole('button', { name: 'Objects', exact: true })
-                    .click();
-                await expect(
-                    inspector.locator('.object-tree-row.is-database .object-kind-glyph').first(),
-                ).toHaveCSS('color', theme === 'Dark' ? 'rgb(250, 255, 105)' : 'rgb(107, 93, 0)');
-                await inspector.getByText('events', { exact: true }).first().click();
-                await expect(inspector.getByLabel('Selected object')).toBeVisible();
-                await expectReferenceStyles(page, info, 'object-details');
-                await inspector.getByRole('button', { name: '‹ Objects', exact: true }).click();
-                await runButton(page).click();
-                await expect(page.locator('.execution-bar')).toHaveAttribute(
-                    'data-run-status',
-                    'succeeded',
-                );
-                await expectReferenceStyles(page, info, 'query-results');
-                await page.getByRole('button', { name: 'Collapse SQL query', exact: true }).click();
-                await expectReferenceStyles(page, info, 'collapsed-query');
-                await page.route(
-                    url => url.pathname.endsWith('/result'),
-                    async route => {
-                        const response = await route.fetch();
-                        await route.fulfill({
-                            response,
-                            json: {
-                                ...(await response.json()),
-                                columns: [{ name: 'label', type: 'String' }],
-                                rows: Array.from({ length: 200 }, (_, index) => [`row-${index}`]),
-                                totalRows: 240,
-                                offset: 0,
-                                nextOffset: 200,
-                            },
-                        });
-                    },
-                );
-                await runButton(page).click();
-                await expect(page.locator('.results-header .result-pagination')).toBeVisible();
-                await expectReferenceStyles(page, info, 'paged-results');
-                await page.setViewportSize({ width: 900, height: 740 });
-                await expectReferenceStyles(page, info, 'responsive-900');
-                await page.setViewportSize({ width: 1440, height: 1000 });
-                const results = page.getByRole('region', { name: 'Query results', exact: true });
-                await results.getByRole('tab', { name: 'Chart', exact: true }).click();
-                await expect(results.locator('.chart-toolbar')).toBeVisible();
-                await expectReferenceStyles(page, info, 'compact-chart');
-                await results.getByRole('button', { name: 'Measures', exact: true }).click();
-                await expect(
-                    results.getByRole('dialog', { name: 'Measures', exact: true }),
-                ).toBeVisible();
-                await expectReferenceStyles(page, info, 'chart-measures');
-                await page.keyboard.press('Escape');
-                await results.getByRole('button', { name: 'Chart details', exact: true }).click();
-                await expect(
-                    results.getByRole('dialog', { name: 'Chart details', exact: true }),
-                ).toBeVisible();
-                await expectReferenceStyles(page, info, 'chart-details');
-                await page.keyboard.press('Escape');
-                await inspector
-                    .getByRole('navigation', { name: 'Workspace browser', exact: true })
-                    .getByRole('button', { name: 'AI', exact: true })
-                    .click();
-                await expect(
-                    page.getByRole('textbox', { name: 'Ask AI', exact: true }),
-                ).toBeVisible();
-                await expect(page.locator('.assistant-context-meta')).toHaveCount(0);
-                await expectReferenceStyles(page, info, 'assistant-composer');
-            });
-        }
-
-        test(`CSS preserves ${theme}, ${accent} help and native explorers`, async ({
+    for (const mode of ['Standard', 'Experimental']) {
+        test(`CSS preserves ${theme}, yellow accent, ${mode} workspace layouts`, async ({
             page,
         }, info) => {
-            await page.setViewportSize({ width: 1440, height: 1000 });
+            await page.setViewportSize({ width: 1600, height: 1000 });
             await trust(page);
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
-            await setAccentForStyles(page, accent);
-            await page.getByRole('button', { name: 'Help', exact: true }).click();
-            const help = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });
-            for (const section of [
-                'tour',
-                'monitoring',
-                'query',
-                'geo',
-                'storage',
-                'dependencies',
-                'compare',
-            ]) {
-                await help.getByTestId(`help-section-${section}`).click();
-                await expect(help.getByTestId(`help-section-${section}`)).toHaveAttribute(
-                    'aria-selected',
-                    'true',
-                );
-                await expectReferenceStyles(page, info, `help-${section}`);
-            }
-            await page.keyboard.press('Escape');
-            await page.getByRole('button', { name: 'View dependencies', exact: true }).click();
-            const lineage = page.getByRole('dialog', {
-                name: 'Materialized view dependencies',
-                exact: true,
-            });
-            await expect(lineage.locator('.native-lineage-canvas')).toBeVisible();
-            await expect(
-                lineage.getByRole('button', { name: 'Refresh metadata', exact: true }),
-            ).toBeEnabled();
-            await expectReferenceStyles(page, info, 'native-dependencies');
-            await page.keyboard.press('Escape');
-            await page.getByRole('button', { name: 'events MergeTree', exact: true }).click();
-            await page.getByRole('button', { name: 'Visualize parts', exact: true }).click();
-            const storage = page.getByRole('dialog', { name: 'MergeTree parts', exact: true });
-            for (const section of ['Parts', 'Merges', 'Mutations']) {
-                await storage.getByRole('button', { name: section, exact: true }).click();
-                if (section === 'Parts')
-                    await expect(storage.locator('.parts-graph-viewport')).toBeVisible();
-                else {
-                    await expect(storage.locator('.native-snapshot-meta time')).toHaveAttribute(
-                        'datetime',
-                        /\d{4}-\d{2}-\d{2}/,
-                    );
-                    await expect(
-                        storage.getByRole('button', { name: 'Refresh', exact: true }),
-                    ).toBeEnabled();
-                }
-                await expectReferenceStyles(page, info, `native-${section}`);
-            }
-            await storage.getByRole('button', { name: 'Close', exact: true }).click();
-        });
-
-        test(`CSS preserves ${theme}, ${accent} Cloud import destinations`, async ({
-            page,
-        }, info) => {
-            await page.setViewportSize({ width: 1440, height: 1000 });
-            await mockWritableWorkspace(page);
-            await mockCloudEndpoint(page);
-            await connectPreviewCloud(page);
-            await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
-            await setAccentForStyles(page, accent);
-            await page.getByRole('button', { name: 'Import', exact: true }).last().click();
-            const dialog = await previewCsv(page);
-            await expect(dialog.locator('.import-destination-choice')).toBeVisible();
-            const compareStyles = (state: string) =>
-                expectReferenceStyles(page, info, `${state}-1440`);
-            await compareStyles('cloud-choose-table');
-            await chooseExistingCloudTable(dialog);
-            await expect(dialog.getByLabel('Map day to destination')).toHaveValue('day');
-            await compareStyles('cloud-existing-table');
-            await dialog.getByRole('radio', { name: /Create a table/ }).check();
-            await dialog.getByLabel('New table name').fill('imported_events');
-            await expect(dialog.getByLabel('Type for day')).toHaveValue('Date');
-            await compareStyles('cloud-create-table');
-            await dialog.getByRole('button', { name: 'Review import', exact: true }).click();
-            await expect(
-                dialog.getByRole('heading', {
-                    name: 'Ready to import into default.imported_events',
-                }),
-            ).toBeVisible();
-            await compareStyles('cloud-review');
-            await dialog
-                .getByRole('button', { name: 'Create table and import', exact: true })
+            await page.getByText(mode, { exact: true }).click();
+            await expectReferenceStyles(page, info, 'empty-workspace');
+            const inspector = page.locator('.inspector-pane');
+            if (!(await inspector.isVisible()))
+                await page
+                    .locator('.icon-rail')
+                    .getByRole('button', { name: 'Objects', exact: true })
+                    .click();
+            await inspector
+                .getByRole('navigation', { name: 'Workspace browser', exact: true })
+                .getByRole('button', { name: 'Reference', exact: true })
                 .click();
-            await expect(dialog).toContainText('2 source rows processed successfully');
-            await compareStyles('cloud-success');
-        });
-
-        test(`CSS preserves ${theme}, ${accent} import states on desktop`, async ({
-            page,
-        }, info) => {
-            await page.setViewportSize({ width: 1440, height: 1000 });
-            await mockWritableWorkspace(page);
-            await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
-            await setAccentForStyles(page, accent);
-            const rows = [
-                { day: '2026-01-01', events: '10' },
-                { day: '2026-01-02', events: '20' },
-            ];
-            await page.route('**/api/imports/preview', route =>
-                route.fulfill({
-                    status: 201,
-                    json: {
-                        id: 'input-1',
-                        name: 'events.csv',
-                        format: 'csv',
-                        columns: ['day', 'events'],
-                        rows,
-                        rowCount: 2,
-                    },
-                }),
-            );
-            await page.route('**/api/imports/input-1/mapping', route =>
-                route.fulfill({
-                    json: {
-                        id: 'mapping-1',
-                        inputId: 'input-1',
-                        connectionId: 'live',
-                        table: 'demo.events',
-                        fields: { day: 'day', events: 'events' },
-                        rows,
-                        rowCount: 2,
-                    },
-                }),
-            );
-            await page.route('**/api/imports/mapping-1/commit', route =>
-                route.fulfill({
-                    json: {
-                        id: 'mapping-1',
-                        table: 'demo.events',
-                        rows: 2,
-                        status: 'succeeded',
-                    },
-                }),
-            );
-            await page.getByRole('button', { name: 'Import', exact: true }).click();
-            const dialog = page.getByRole('dialog', { name: 'Import data', exact: true });
-            const compareStyles = (state: string) =>
-                expectReferenceStyles(page, info, `${state}-1440`);
-            await compareStyles('file');
-            await dialog.locator('.import-file-picker').hover();
-            await expectReferenceStyles(page, info, 'file-hover', page, false);
-            await dialog.locator('.import-kind-button.is-query').click();
-            await dialog.getByLabel('Choose a SQL query file').focus();
-            await compareStyles('sql-file-focus');
-            await dialog.getByLabel('Choose a SQL query file').setInputFiles({
-                name: 'notes.txt',
-                mimeType: 'text/plain',
-                buffer: Buffer.from('notes'),
-            });
-            await expect(dialog.getByRole('alert')).toBeVisible();
-            await compareStyles('sql-file-error');
-            await dialog.locator('.import-kind-button').first().click();
-            await previewCsv(page);
-            await compareStyles('mapping-disabled');
-            await chooseExistingTable(dialog);
-            const day = dialog.getByLabel('Map day to destination');
-            await day.selectOption('events');
-            await expect(day).toHaveAttribute('aria-invalid', 'true');
-            await day.focus();
-            await compareStyles('mapping-invalid');
-            await day.selectOption('day');
-            await dialog.getByLabel('Map day to destination').focus();
-            await compareStyles('mapping-focus');
-            await dialog.getByRole('button', { name: 'Review import', exact: true }).click();
+            const reference = inspector.locator('.reference-results');
+            await expect(reference).toBeVisible();
+            await expectReferenceStyles(page, info, 'reference-list');
+            await reference.getByRole('option').first().click();
+            await expect(inspector.locator('.reference-entry')).toBeVisible();
+            await expectReferenceStyles(page, info, 'reference-details');
+            await inspector.locator('.reference-back').click();
+            await inspector
+                .getByRole('navigation', { name: 'Workspace browser', exact: true })
+                .getByRole('button', { name: 'Objects', exact: true })
+                .click();
             await expect(
-                dialog.getByRole('region', { name: 'Review import', exact: true }),
+                inspector.locator('.object-tree-row.is-database .object-kind-glyph').first(),
+            ).toHaveCSS('color', theme === 'Dark' ? 'rgb(250, 255, 105)' : 'rgb(107, 93, 0)');
+            await inspector.getByText('events', { exact: true }).first().click();
+            await expect(inspector.getByLabel('Selected object')).toBeVisible();
+            await expectReferenceStyles(page, info, 'object-details');
+            await inspector.getByRole('button', { name: '‹ Objects', exact: true }).click();
+            await runButton(page).click();
+            await expect(page.locator('.execution-bar')).toHaveAttribute(
+                'data-run-status',
+                'succeeded',
+            );
+            await expectReferenceStyles(page, info, 'query-results');
+            await page.getByRole('button', { name: 'Collapse SQL query', exact: true }).click();
+            await expectReferenceStyles(page, info, 'collapsed-query');
+            await page.route(
+                url => url.pathname.endsWith('/result'),
+                async route => {
+                    const response = await route.fetch();
+                    await route.fulfill({
+                        response,
+                        json: {
+                            ...(await response.json()),
+                            columns: [{ name: 'label', type: 'String' }],
+                            rows: Array.from({ length: 200 }, (_, index) => [`row-${index}`]),
+                            totalRows: 240,
+                            offset: 0,
+                            nextOffset: 200,
+                        },
+                    });
+                },
+            );
+            await runButton(page).click();
+            await expect(page.locator('.results-header .result-pagination')).toBeVisible();
+            await expectReferenceStyles(page, info, 'paged-results');
+            await page.setViewportSize({ width: 900, height: 740 });
+            await expectReferenceStyles(page, info, 'responsive-900');
+            await page.setViewportSize({ width: 1440, height: 1000 });
+            const results = page.getByRole('region', { name: 'Query results', exact: true });
+            await results.getByRole('tab', { name: 'Chart', exact: true }).click();
+            await expect(results.locator('.chart-toolbar')).toBeVisible();
+            await expectReferenceStyles(page, info, 'compact-chart');
+            await results.getByRole('button', { name: 'Measures', exact: true }).click();
+            await expect(
+                results.getByRole('dialog', { name: 'Measures', exact: true }),
             ).toBeVisible();
-            await compareStyles('review');
-            await dialog.getByRole('button', { name: 'Import rows', exact: true }).click();
-            await expect(dialog).toContainText('2 source rows processed successfully');
-            await compareStyles('success');
+            await expectReferenceStyles(page, info, 'chart-measures');
+            await page.keyboard.press('Escape');
+            await results.getByRole('button', { name: 'Chart details', exact: true }).click();
+            await expect(
+                results.getByRole('dialog', { name: 'Chart details', exact: true }),
+            ).toBeVisible();
+            await expectReferenceStyles(page, info, 'chart-details');
+            await page.keyboard.press('Escape');
+            await inspector
+                .getByRole('navigation', { name: 'Workspace browser', exact: true })
+                .getByRole('button', { name: 'AI', exact: true })
+                .click();
+            await expect(page.getByRole('textbox', { name: 'Ask AI', exact: true })).toBeVisible();
+            await expect(page.locator('.assistant-context-meta')).toHaveCount(0);
+            await expectReferenceStyles(page, info, 'assistant-composer');
         });
     }
+
+    test(`CSS preserves ${theme}, yellow accent help and native explorers`, async ({
+        page,
+    }, info) => {
+        await page.setViewportSize({ width: 1440, height: 1000 });
+        await trust(page);
+        await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+        await page.getByRole('button', { name: 'Help', exact: true }).click();
+        const help = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });
+        for (const section of [
+            'tour',
+            'monitoring',
+            'query',
+            'geo',
+            'storage',
+            'dependencies',
+            'compare',
+        ]) {
+            await help.getByTestId(`help-section-${section}`).click();
+            await expect(help.getByTestId(`help-section-${section}`)).toHaveAttribute(
+                'aria-selected',
+                'true',
+            );
+            await expectReferenceStyles(page, info, `help-${section}`);
+        }
+        await page.keyboard.press('Escape');
+        await page.getByRole('button', { name: 'View dependencies', exact: true }).click();
+        const lineage = page.getByRole('dialog', {
+            name: 'Materialized view dependencies',
+            exact: true,
+        });
+        await expect(lineage.locator('.native-lineage-canvas')).toBeVisible();
+        await expect(
+            lineage.getByRole('button', { name: 'Refresh metadata', exact: true }),
+        ).toBeEnabled();
+        await expectReferenceStyles(page, info, 'native-dependencies');
+        await page.keyboard.press('Escape');
+        await page.getByRole('button', { name: 'events MergeTree', exact: true }).click();
+        await page.getByRole('button', { name: 'Visualize parts', exact: true }).click();
+        const storage = page.getByRole('dialog', { name: 'MergeTree parts', exact: true });
+        for (const section of ['Parts', 'Merges', 'Mutations']) {
+            await storage.getByRole('button', { name: section, exact: true }).click();
+            if (section === 'Parts')
+                await expect(storage.locator('.parts-graph-viewport')).toBeVisible();
+            else {
+                await expect(storage.locator('.native-snapshot-meta time')).toHaveAttribute(
+                    'datetime',
+                    /\d{4}-\d{2}-\d{2}/,
+                );
+                await expect(
+                    storage.getByRole('button', { name: 'Refresh', exact: true }),
+                ).toBeEnabled();
+            }
+            await expectReferenceStyles(page, info, `native-${section}`);
+        }
+        await storage.getByRole('button', { name: 'Close', exact: true }).click();
+    });
+
+    test(`CSS preserves ${theme}, yellow accent Cloud import destinations`, async ({
+        page,
+    }, info) => {
+        await page.setViewportSize({ width: 1440, height: 1000 });
+        await mockWritableWorkspace(page);
+        await mockCloudEndpoint(page);
+        await connectPreviewCloud(page);
+        await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+        await page.getByRole('button', { name: 'Import', exact: true }).last().click();
+        const dialog = await previewCsv(page);
+        await expect(dialog.locator('.import-destination-choice')).toBeVisible();
+        const compareStyles = (state: string) => expectReferenceStyles(page, info, `${state}-1440`);
+        await compareStyles('cloud-choose-table');
+        await chooseExistingCloudTable(dialog);
+        await expect(dialog.getByLabel('Map day to destination')).toHaveValue('day');
+        await compareStyles('cloud-existing-table');
+        await dialog.getByRole('radio', { name: /Create a table/ }).check();
+        await dialog.getByLabel('New table name').fill('imported_events');
+        await expect(dialog.getByLabel('Type for day')).toHaveValue('Date');
+        await compareStyles('cloud-create-table');
+        await dialog.getByRole('button', { name: 'Review import', exact: true }).click();
+        await expect(
+            dialog.getByRole('heading', {
+                name: 'Ready to import into default.imported_events',
+            }),
+        ).toBeVisible();
+        await compareStyles('cloud-review');
+        await dialog.getByRole('button', { name: 'Create table and import', exact: true }).click();
+        await expect(dialog).toContainText('2 source rows processed successfully');
+        await compareStyles('cloud-success');
+    });
+
+    test(`CSS preserves ${theme}, yellow accent import states on desktop`, async ({
+        page,
+    }, info) => {
+        await page.setViewportSize({ width: 1440, height: 1000 });
+        await mockWritableWorkspace(page);
+        await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+        const rows = [
+            { day: '2026-01-01', events: '10' },
+            { day: '2026-01-02', events: '20' },
+        ];
+        await page.route('**/api/imports/preview', route =>
+            route.fulfill({
+                status: 201,
+                json: {
+                    id: 'input-1',
+                    name: 'events.csv',
+                    format: 'csv',
+                    columns: ['day', 'events'],
+                    rows,
+                    rowCount: 2,
+                },
+            }),
+        );
+        await page.route('**/api/imports/input-1/mapping', route =>
+            route.fulfill({
+                json: {
+                    id: 'mapping-1',
+                    inputId: 'input-1',
+                    connectionId: 'live',
+                    table: 'demo.events',
+                    fields: { day: 'day', events: 'events' },
+                    rows,
+                    rowCount: 2,
+                },
+            }),
+        );
+        await page.route('**/api/imports/mapping-1/commit', route =>
+            route.fulfill({
+                json: {
+                    id: 'mapping-1',
+                    table: 'demo.events',
+                    rows: 2,
+                    status: 'succeeded',
+                },
+            }),
+        );
+        await page.getByRole('button', { name: 'Import', exact: true }).click();
+        const dialog = page.getByRole('dialog', { name: 'Import data', exact: true });
+        const compareStyles = (state: string) => expectReferenceStyles(page, info, `${state}-1440`);
+        await compareStyles('file');
+        await dialog.locator('.import-file-picker').hover();
+        await expectReferenceStyles(page, info, 'file-hover', page, false);
+        await dialog.locator('.import-kind-button.is-query').click();
+        await dialog.getByLabel('Choose a SQL query file').focus();
+        await compareStyles('sql-file-focus');
+        await dialog.getByLabel('Choose a SQL query file').setInputFiles({
+            name: 'notes.txt',
+            mimeType: 'text/plain',
+            buffer: Buffer.from('notes'),
+        });
+        await expect(dialog.getByRole('alert')).toBeVisible();
+        await compareStyles('sql-file-error');
+        await dialog.locator('.import-kind-button').first().click();
+        await previewCsv(page);
+        await compareStyles('mapping-disabled');
+        await chooseExistingTable(dialog);
+        const day = dialog.getByLabel('Map day to destination');
+        await day.selectOption('events');
+        await expect(day).toHaveAttribute('aria-invalid', 'true');
+        await day.focus();
+        await compareStyles('mapping-invalid');
+        await day.selectOption('day');
+        await dialog.getByLabel('Map day to destination').focus();
+        await compareStyles('mapping-focus');
+        await dialog.getByRole('button', { name: 'Review import', exact: true }).click();
+        await expect(
+            dialog.getByRole('region', { name: 'Review import', exact: true }),
+        ).toBeVisible();
+        await compareStyles('review');
+        await dialog.getByRole('button', { name: 'Import rows', exact: true }).click();
+        await expect(dialog).toContainText('2 source rows processed successfully');
+        await compareStyles('success');
+    });
 }

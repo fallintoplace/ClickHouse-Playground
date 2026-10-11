@@ -23,7 +23,7 @@ import {
 import type { CandlestickConfig } from '../../../../../shared/queries/results/chart-settings';
 import type { Column, Json } from '../../../../../shared/common/values';
 import type { Result } from '../../../../../shared/queries/results/types';
-import type { Copy, Locale } from '../../../../translations/i18n';
+import type { Copy } from '../../../../ui/copy';
 import { ScrollEdgeFrame } from '../../../../ui/components/ScrollEdgeShadows';
 
 interface Candle {
@@ -44,7 +44,6 @@ interface Props {
     config: CandlestickConfig;
     x: number;
     copy: Copy['chart'];
-    locale: Locale;
 }
 
 const WIDTH = 1280;
@@ -145,7 +144,7 @@ function labelFor(columns: Column[], index: number | undefined, fallback: string
     return index === undefined ? fallback : (columns[index]?.name ?? fallback);
 }
 
-export function CandlestickChart({ result, config, x, copy, locale }: Props) {
+export function CandlestickChart({ result, config, x, copy }: Props) {
     const svgRef = useRef<SVGSVGElement>(null);
     const candles = useMemo(
         () => aggregateForDisplay(toCandles(result, x, config)),
@@ -158,7 +157,6 @@ export function CandlestickChart({ result, config, x, copy, locale }: Props) {
         svgRef,
         candles,
         windowRange,
-        locale,
         copy,
         setWindowRange,
         setRangePreset,
@@ -264,8 +262,8 @@ export function CandlestickChart({ result, config, x, copy, locale }: Props) {
                 )}
                 <span className="market-chart-summary">
                     {copy.candlestickSummary
-                        .replace('{candles}', new Intl.NumberFormat(locale).format(candles.length))
-                        .replace('{rows}', new Intl.NumberFormat(locale).format(rawCount))}
+                        .replace('{candles}', new Intl.NumberFormat('en').format(candles.length))
+                        .replace('{rows}', new Intl.NumberFormat('en').format(rawCount))}
                 </span>
             </div>
             <p className="market-chart-note">{copy.brushRangeHint}</p>
@@ -277,7 +275,6 @@ function useCandlestickDrawing({
     svgRef,
     candles,
     windowRange,
-    locale,
     copy,
     setWindowRange,
     setRangePreset,
@@ -285,7 +282,6 @@ function useCandlestickDrawing({
     svgRef: import('react').RefObject<SVGSVGElement | null>;
     candles: Candle[];
     windowRange: [number, number] | undefined;
-    locale: Props['locale'];
     copy: Props['copy'];
     setWindowRange: import('react').Dispatch<
         import('react').SetStateAction<[number, number] | undefined>
@@ -338,11 +334,11 @@ function useCandlestickDrawing({
             .domain([low - padding, high + padding])
             .nice(6)
             .range([PRICE_BOTTOM, PRICE_TOP]);
-        const priceFormatter = new Intl.NumberFormat(locale, {
+        const priceFormatter = new Intl.NumberFormat('en', {
             useGrouping: false,
             maximumSignificantDigits: 8,
         });
-        const spreadFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 3 });
+        const spreadFormatter = new Intl.NumberFormat('en', { maximumFractionDigits: 3 });
         const priceTicks = axisLeft(price)
             .ticks(6)
             .tickSize(-(RIGHT - LEFT))
@@ -364,7 +360,7 @@ function useCandlestickDrawing({
             .attr('font-family', mono)
             .attr('font-size', 11)
             .attr('dx', -7);
-        const dateFormat = new Intl.DateTimeFormat(locale, {
+        const dateFormat = new Intl.DateTimeFormat('en', {
             month: 'short',
             day: '2-digit',
             hour: '2-digit',
@@ -609,7 +605,7 @@ function useCandlestickDrawing({
                     ...(candle.quoteActivity === undefined
                         ? []
                         : [
-                              `${copy.quoteActivity}: ${new Intl.NumberFormat(locale).format(candle.quoteActivity)}`,
+                              `${copy.quoteActivity}: ${new Intl.NumberFormat('en').format(candle.quoteActivity)}`,
                           ]),
                 ];
                 tooltip.select('rect').attr('height', 16 + tipRows.length * 15);
@@ -627,7 +623,7 @@ function useCandlestickDrawing({
                     .text(row => row);
             })
             .on('pointerleave', () => crosshair.style('display', 'none'));
-    }, [candles, copy, locale, windowRange, setRangePreset, setWindowRange, svgRef]);
+    }, [candles, copy, windowRange, setRangePreset, setWindowRange, svgRef]);
 }
 
 function drawCandleIndicators({

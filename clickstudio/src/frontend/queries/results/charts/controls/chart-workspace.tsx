@@ -30,7 +30,6 @@ export function renderChartWorkspace({
     heatmap,
     heatmapXLabels,
     heatmapYLabels,
-    locale,
     heatmapMaximum,
     compactNumber,
     values,
@@ -106,7 +105,6 @@ export function renderChartWorkspace({
                                         heatmapXLabels,
                                         heatmapYLabels,
                                         heatmap,
-                                        locale,
                                         heatmapMaximum,
                                         compactNumber,
                                     }}
@@ -225,13 +223,13 @@ export function renderChartWorkspace({
                             }
 
                             return chartText(chartCopy.retainedRows, {
-                                rows: formatCount(result.rows.length, locale),
+                                rows: formatCount(result.rows.length),
                             });
 
                         case 'heatmap':
                             return chartText(chartCopy.populatedCells, {
-                                cells: formatCount(heatmap?.cells.size ?? 0, locale),
-                                rows: formatCount(result.rows.length, locale),
+                                cells: formatCount(heatmap?.cells.size ?? 0),
+                                rows: formatCount(result.rows.length),
                             });
 
                         case 'scatter':

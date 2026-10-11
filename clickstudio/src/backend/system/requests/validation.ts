@@ -1,4 +1,3 @@
-import { ImportParseError, validateImportJson } from '../../../shared/database/imports/parser.js';
 import { RUN_KINDS } from '../../../shared/queries/execution/status.js';
 import { MAX_SQL_CHARS } from '../../../shared/queries/execution/limits.js';
 import {
@@ -7,8 +6,7 @@ import {
     type Limits,
 } from '../../../shared/queries/execution/settings.js';
 import { type RunRequest } from '../../../shared/queries/execution/types.js';
-import { type Json } from '../../../shared/common/values.js';
-import { AppError, requireThat } from './errors.js';
+import { requireThat } from './errors.js';
 
 const LIMIT_KEYS = [
     'rows',
@@ -152,13 +150,4 @@ export function runRequest(value: unknown): RunRequest {
             ? { parentRunId: identifier(v.parentRunId, 'parentRunId') }
             : {}),
     };
-}
-export function validateJson(value: unknown, depth = 0): Json {
-    try {
-        return validateImportJson(value, depth);
-    } catch (error) {
-        if (error instanceof ImportParseError)
-            throw new AppError(error.status, error.code, error.message);
-        throw error;
-    }
 }

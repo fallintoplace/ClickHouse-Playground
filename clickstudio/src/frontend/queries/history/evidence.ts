@@ -9,11 +9,3 @@ export function sameParameters(
         keys.every(key => Object.hasOwn(right, key) && left[key] === right[key])
     );
 }
-
-export function matchesDraft(
-    run: { sql: string; parameters: Readonly<Record<string, string>> },
-    sql: string,
-    parameters: Readonly<Record<string, string>>,
-): boolean {
-    return run.sql.trim() === sql.trim() && sameParameters(run.parameters, parameters);
-}

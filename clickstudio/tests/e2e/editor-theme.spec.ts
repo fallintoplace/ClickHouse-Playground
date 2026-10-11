@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { PNG } from 'pngjs';
-import { setAccentForStyles, replaceSql } from './helpers.js';
+import { replaceSql } from './helpers.js';
 
 const sql =
     "SELECT /* aggregate */ quantile(0.50)(number) AS p50_ms, 1000000, -2, 'frontend', 'it''s', true, NULL, {limit:UInt64}, \"quoted name\", `FROM`, `toDate`, `UInt64`, \"SELECT\" FROM numbers(7) -- latency";
@@ -136,9 +136,7 @@ async function expectThemeTokenColors(page: Page, theme: string) {
 }
 
 for (const parser of ['ready', 'unavailable']) {
-    test(`SQL tokens remain readable across themes and accents with the ${parser} parser`, async ({
-        page,
-    }) => {
+    test(`SQL tokens remain readable across themes with the ${parser} parser`, async ({ page }) => {
         if (parser === 'unavailable')
             await page
                 .context()
@@ -161,37 +159,32 @@ for (const parser of ['ready', 'unavailable']) {
         for (const theme of ['Dark', 'Light']) {
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
             await expectThemeTokenColors(page, theme);
-            for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
-                await setAccentForStyles(page, accent);
-                for (const state of ['normal', 'active', 'selected']) {
-                    const editor = page.locator('.cm-content');
-                    if (state !== 'normal') {
-                        await editor.focus();
-                        await page.keyboard.press('ControlOrMeta+End');
-                    }
-                    if (state === 'selected') {
-                        await page.keyboard.press('ControlOrMeta+a');
-                        await expect(page.locator('.cm-selectionBackground')).toBeVisible();
-                    }
-                    for (const { token, ratio } of await tokenContrast(
-                        page,
-                        state === 'selected',
-                    )) {
-                        expect(
-                            ratio,
-                            `${parser}, ${theme}, ${accent}, ${state}: ${token}`,
-                        ).toBeGreaterThanOrEqual(4.5);
-                    }
-                    await expect(editor).toHaveText(sql);
-                    if (state === 'selected') await page.keyboard.press('ArrowRight');
-                    await editor.evaluate(element => (element as HTMLElement).blur());
+
+            for (const state of ['normal', 'active', 'selected']) {
+                const editor = page.locator('.cm-content');
+                if (state !== 'normal') {
+                    await editor.focus();
+                    await page.keyboard.press('ControlOrMeta+End');
                 }
+                if (state === 'selected') {
+                    await page.keyboard.press('ControlOrMeta+a');
+                    await expect(page.locator('.cm-selectionBackground')).toBeVisible();
+                }
+                for (const { token, ratio } of await tokenContrast(page, state === 'selected')) {
+                    expect(
+                        ratio,
+                        `${parser}, ${theme}, yellow accent, ${state}: ${token}`,
+                    ).toBeGreaterThanOrEqual(4.5);
+                }
+                await expect(editor).toHaveText(sql);
+                if (state === 'selected') await page.keyboard.press('ArrowRight');
+                await editor.evaluate(element => (element as HTMLElement).blur());
             }
         }
     });
 }
 
-test('Light editor selections stay visible over the active line with both accents', async ({
+test('Light editor selections stay visible over the active line with the yellow accent', async ({
     page,
 }, info) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -199,35 +192,33 @@ test('Light editor selections stay visible over the active line with both accent
     await replaceSql(page, `SELECT${' '.repeat(20)}1`);
     await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
     const editor = page.locator('.cm-content');
-    for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
-        await setAccentForStyles(page, accent);
-        await editor.focus();
-        await page.keyboard.press('ControlOrMeta+End');
-        const before = PNG.sync.read(await page.screenshot({ caret: 'hide' }));
-        await page.keyboard.press('ControlOrMeta+a');
-        const selection = page.locator('.cm-selectionBackground');
-        await expect(selection).toBeVisible();
-        const bounds = (await selection.boundingBox())!;
-        const after = PNG.sync.read(
-            await page.screenshot({
-                caret: 'hide',
-                path: info.outputPath(`${accent}-selection.png`),
-            }),
-        );
-        const x = Math.floor(bounds.x + bounds.width / 2),
-            y = Math.floor(bounds.y + bounds.height / 2);
-        const offset = (y * after.width + x) * 4;
-        const change = [0, 1, 2].reduce(
-            (sum, channel) =>
-                sum + Math.abs(after.data[offset + channel]! - before.data[offset + channel]!),
-            0,
-        );
-        expect(
-            change,
-            `${accent}: selected whitespace must visibly differ from the active line`,
-        ).toBeGreaterThan(30);
-        await page.keyboard.press('ArrowRight');
-    }
+
+    await editor.focus();
+    await page.keyboard.press('ControlOrMeta+End');
+    const before = PNG.sync.read(await page.screenshot({ caret: 'hide' }));
+    await page.keyboard.press('ControlOrMeta+a');
+    const selection = page.locator('.cm-selectionBackground');
+    await expect(selection).toBeVisible();
+    const bounds = (await selection.boundingBox())!;
+    const after = PNG.sync.read(
+        await page.screenshot({
+            caret: 'hide',
+            path: info.outputPath(`yellow accent-selection.png`),
+        }),
+    );
+    const x = Math.floor(bounds.x + bounds.width / 2),
+        y = Math.floor(bounds.y + bounds.height / 2);
+    const offset = (y * after.width + x) * 4;
+    const change = [0, 1, 2].reduce(
+        (sum, channel) =>
+            sum + Math.abs(after.data[offset + channel]! - before.data[offset + channel]!),
+        0,
+    );
+    expect(
+        change,
+        `yellow accent: selected whitespace must visibly differ from the active line`,
+    ).toBeGreaterThan(30);
+    await page.keyboard.press('ArrowRight');
 });
 
 test('Switching the editor theme preserves the cursor and undo history', async ({ page }) => {

@@ -1,5 +1,5 @@
 import type { ExplainAnalyzeEvidence } from './explain-analyze';
-import type { Copy } from '../../../translations/i18n';
+import type { Copy } from '../../../ui/copy';
 import { PipelineGraph } from '../diagrams/PipelineGraph';
 
 export function ExplainAnalyzeView({

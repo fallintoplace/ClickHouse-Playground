@@ -23,7 +23,7 @@ import type { Run, Script } from '../../shared/queries/execution/types';
 import { message, post } from '../api/client';
 import type { EditorHandle } from '../queries/editor/components/SqlEditor';
 import { terminal } from '../queries/execution/status';
-import type { Copy, ExperienceLevel, Locale } from '../translations/i18n';
+import type { Copy, ExperienceLevel } from '../ui/copy';
 import { PLAYGROUND_CONNECTION_ID } from '../database/connections/playground';
 import { sqlExamplesFor } from '../help/examples/sql-examples';
 import {
@@ -78,10 +78,8 @@ export type WorkspaceProps = Readonly<{
     testConnectionActionRef: WorkspaceActionRef;
     demoMode: boolean;
     experience: ExperienceLevel;
-    nativeParserEnabled: boolean;
     dark: boolean;
     copy: Copy;
-    locale: Locale;
 }>;
 
 function workspaceWithUpdatedDraft(
@@ -147,9 +145,7 @@ export function useWorkspaceController({
     testConnectionActionRef,
     demoMode,
     experience,
-    nativeParserEnabled,
     copy,
-    locale,
 }: WorkspaceProps) {
     const key = workspaceStateKey(connection.id);
     const [workspace, setWorkspace] = useState(() => initialWorkspaceState(connection.id));
@@ -295,7 +291,6 @@ export function useWorkspaceController({
         active,
         setWorkspace,
         editor,
-        nativeParserEnabled,
         nativeParserStatus,
         Boolean(assistant.editorProposal),
     );
@@ -342,7 +337,6 @@ export function useWorkspaceController({
         pendingExecution,
         editor,
         demoMode,
-        locale,
         onSelectConnection,
         workspaceRef,
         setWorkspace,
@@ -631,7 +625,6 @@ function useWorkspaceExecutionView({
     pendingExecution,
     editor,
     demoMode,
-    locale,
     onSelectConnection,
     workspaceRef,
     setWorkspace,
@@ -661,7 +654,6 @@ function useWorkspaceExecutionView({
     pendingExecution: ReturnType<typeof usePendingExecution>;
     editor: import('react').RefObject<EditorHandle | null>;
     demoMode: WorkspaceProps['demoMode'];
-    locale: WorkspaceProps['locale'];
     onSelectConnection: WorkspaceProps['onSelectConnection'];
     workspaceRef: import('react').RefObject<WorkspaceState>;
     setWorkspace: import('react').Dispatch<import('react').SetStateAction<WorkspaceState>>;
@@ -764,7 +756,6 @@ function useWorkspaceExecutionView({
         trusted,
         experience,
         demoMode,
-        locale,
         copy,
         onSelectConnection,
         workspaceRef,

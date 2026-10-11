@@ -2,7 +2,7 @@ import type { ChartKind } from '../../../../../shared/queries/results/chart-type
 import { chartNumber, displayValue } from '../../../../../shared/queries/results/results.js';
 import type { Result } from '../../../../../shared/queries/results/types.js';
 import type { Row } from '../../../../../shared/common/values.js';
-import type { Copy, Locale } from '../../../../translations/i18n.js';
+import type { Copy } from '../../../../ui/copy.js';
 import { chartText, fitChartTicks, formatCount } from '../chart-helpers.js';
 
 export function prepareScatterAxes({
@@ -10,7 +10,6 @@ export function prepareScatterAxes({
     xIndex,
     yIndex,
     chartCopy,
-    locale,
     result,
     rowSummary,
     plotLeft,
@@ -32,7 +31,6 @@ export function prepareScatterAxes({
     xIndex: number;
     yIndex: number;
     chartCopy: Copy['chart'];
-    locale: Locale;
     result: Result;
     rowSummary: string;
     plotLeft: number;
@@ -64,7 +62,7 @@ export function prepareScatterAxes({
             (point): point is { x: number; y: number; label: string } =>
                 point.x !== null && point.y !== null,
         );
-    const scatterSummary = `${chartText(chartCopy.plottedPoints, { points: formatCount(scatterPoints.length, locale) })}${chartRows.length < result.rows.length ? ` · ${rowSummary}` : ''}`;
+    const scatterSummary = `${chartText(chartCopy.plottedPoints, { points: formatCount(scatterPoints.length) })}${chartRows.length < result.rows.length ? ` · ${rowSummary}` : ''}`;
     const scatterMinX = Math.min(...scatterPoints.map(point => point.x), 0);
     const scatterMaxX = Math.max(...scatterPoints.map(point => point.x), 0);
     const scatterMinY = Math.min(...scatterPoints.map(point => point.y), 0);

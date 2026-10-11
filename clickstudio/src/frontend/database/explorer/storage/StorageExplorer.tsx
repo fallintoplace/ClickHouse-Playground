@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Connection } from '../../../../shared/database/connections/types';
 import type { SchemaTable } from '../../../../shared/database/schema/types';
-import type { Copy } from '../../../translations/i18n';
+import type { Copy } from '../../../ui/copy';
 import { PartsExplorer } from './PartsExplorer';
 import { StorageActivityView } from './StorageActivityView';
 import { NativeExplorerDialog } from '../NativeExplorerDialog';

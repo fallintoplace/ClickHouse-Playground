@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Connection } from '../../../../shared/database/connections/types';
 import type { SchemaTable } from '../../../../shared/database/schema/types';
-import type { Copy } from '../../../translations/i18n';
+import type { Copy } from '../../../ui/copy';
 import { StorageExplorer } from './StorageExplorer';
 
 export function MergeTreePartsPanel({

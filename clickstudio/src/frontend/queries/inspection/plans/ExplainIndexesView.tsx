@@ -1,6 +1,6 @@
 import type { ProfilePipelineNode } from '../../../../shared/queries/inspection/types';
 import type { ExplainIndexAnalysis, ExplainIndexCount } from './explain-indexes';
-import type { Copy } from '../../../translations/i18n';
+import type { Copy } from '../../../ui/copy';
 import { PipelineGraph } from '../diagrams/PipelineGraph';
 
 function IndexCount({ label, count }: { label: string; count?: ExplainIndexCount }) {

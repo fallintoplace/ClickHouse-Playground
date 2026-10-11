@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
-import type { Copy } from '../../../translations/i18n';
+import type { Copy } from '../../../ui/copy';
 import { Button } from '../../../ui/components/ui';
 import { Icon } from '../../../ui/components/icons';
 

@@ -1,6 +1,6 @@
 import type { Schema, SchemaTable } from '../../../../../shared/database/schema/types';
 import type { Connected, ImportedTableTarget } from '../../../../workspace/workspace-types';
-import type { Copy } from '../../../../translations/i18n';
+import type { Copy } from '../../../../ui/copy';
 
 export type ObjectExplorerProps = {
     copy: Copy['common'];

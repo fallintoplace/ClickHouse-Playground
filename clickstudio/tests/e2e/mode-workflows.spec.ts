@@ -389,8 +389,16 @@ test('Switching to Experimental keeps the AI chat, query and run evidence', asyn
 
     await beginInCompactMode(page);
     await useAdvancedMode(page);
+    const saved = page.waitForResponse(
+        response =>
+            response.request().method() === 'POST' &&
+            new URL(response.url()).pathname === '/api/documents',
+    );
     await page.getByTestId('save-query').click();
-    await expect(page.getByRole('status').filter({ hasText: 'revision 1' })).toBeVisible();
+    const savedResponse = await saved;
+    expect(savedResponse.ok()).toBeTruthy();
+    expect(await savedResponse.json()).toMatchObject({ revision: 1 });
+    await expect(page.locator('.tab-unsaved')).toHaveCount(0);
     await page.getByTestId('open-ai').click();
     const prompt = page.getByRole('textbox', { name: 'Ask AI', exact: true });
     await prompt.fill('Show event counts by day');

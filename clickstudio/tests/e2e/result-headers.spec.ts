@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { setAccentForStyles, openResultFilter, runButton, trust } from './helpers.js';
+import { openResultFilter, runButton, trust } from './helpers.js';
 
 const longName = 'latency_for_all_frontend_services_over_the_current_observation_window';
 const longType =
@@ -96,48 +96,46 @@ for (const theme of ['Light', 'Dark'])
             await expect(headers.first().locator('small')).toHaveCSS('border-width', '1px');
             await expect(headers.first().locator('small')).toHaveCSS('border-radius', '2px');
             await expect(headers.first().locator('small')).toHaveCSS('padding', '1px 4px');
-            for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
-                await setAccentForStyles(page, accent);
-                const badges = await headers.evaluateAll(elements => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = canvas.height = 1;
-                    const context = canvas.getContext('2d')!;
-                    const luminance = (color: string) => {
-                        context.fillStyle = color;
-                        context.fillRect(0, 0, 1, 1);
-                        return [...context.getImageData(0, 0, 1, 1).data]
-                            .slice(0, 3)
-                            .map(value => {
-                                const channel = value / 255;
-                                return channel <= 0.04045
-                                    ? channel / 12.92
-                                    : ((channel + 0.055) / 1.055) ** 2.4;
-                            })
-                            .reduce(
-                                (sum, value, index) =>
-                                    sum + value * [0.2126, 0.7152, 0.0722][index]!,
-                                0,
-                            );
+
+            const badges = await headers.evaluateAll(elements => {
+                const canvas = document.createElement('canvas');
+                canvas.width = canvas.height = 1;
+                const context = canvas.getContext('2d')!;
+                const luminance = (color: string) => {
+                    context.fillStyle = color;
+                    context.fillRect(0, 0, 1, 1);
+                    return [...context.getImageData(0, 0, 1, 1).data]
+                        .slice(0, 3)
+                        .map(value => {
+                            const channel = value / 255;
+                            return channel <= 0.04045
+                                ? channel / 12.92
+                                : ((channel + 0.055) / 1.055) ** 2.4;
+                        })
+                        .reduce(
+                            (sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index]!,
+                            0,
+                        );
+                };
+                return elements.map(element => {
+                    const style = getComputedStyle(element.querySelector('small')!);
+                    const text = luminance(style.color);
+                    const fill = luminance(style.backgroundColor);
+                    return {
+                        color: style.color,
+                        accent: getComputedStyle(element).borderTopColor,
+                        contrast: (Math.max(text, fill) + 0.05) / (Math.min(text, fill) + 0.05),
                     };
-                    return elements.map(element => {
-                        const style = getComputedStyle(element.querySelector('small')!);
-                        const text = luminance(style.color);
-                        const fill = luminance(style.backgroundColor);
-                        return {
-                            color: style.color,
-                            accent: getComputedStyle(element).borderTopColor,
-                            contrast: (Math.max(text, fill) + 0.05) / (Math.min(text, fill) + 0.05),
-                        };
-                    });
                 });
-                for (const [index, badge] of badges.entries()) {
-                    expect(badge.color).toBe(badge.accent);
-                    expect(
-                        badge.contrast,
-                        `${theme} ${accent} column ${index} badge contrast`,
-                    ).toBeGreaterThanOrEqual(4.5);
-                }
+            });
+            for (const [index, badge] of badges.entries()) {
+                expect(badge.color).toBe(badge.accent);
+                expect(
+                    badge.contrast,
+                    `${theme} yellow accent column ${index} badge contrast`,
+                ).toBeGreaterThanOrEqual(4.5);
             }
+
             const shortHeader = headers.first();
             await shortHeader.hover();
             const shortTooltip = page.getByRole('tooltip');

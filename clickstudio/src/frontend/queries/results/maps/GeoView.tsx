@@ -20,14 +20,13 @@ import {
 import { geoHueForValue } from './geo-color';
 import type { Column } from '../../../../shared/common/values';
 import type { Result } from '../../../../shared/queries/results/types';
-import type { Locale } from '../../../translations/i18n';
 import { ScrollEdgeFrame } from '../../../ui/components/ScrollEdgeShadows';
 import { Spinner } from '../../../ui/components/ui';
 
 const WIDTH = 960;
 const HEIGHT = 470;
 const EMPTY_COLUMNS: Column[] = [];
-const formatCount = (value: number, locale: Locale) => new Intl.NumberFormat(locale).format(value);
+const formatCount = (value: number) => new Intl.NumberFormat('en').format(value);
 const geometryObject = (feature: GeoFeature): GeoPermissibleObjects =>
     ({ type: 'Feature', properties: {}, geometry: feature.geometry }) as GeoPermissibleObjects;
 type CountryFeature = GeoPermissibleObjects & { type: 'Feature'; properties?: { name?: string } };
@@ -45,13 +44,11 @@ function MapCanvas({
     columns,
     measureIndex,
     completeness,
-    locale,
 }: {
     prepared: ReturnType<typeof prepareGeoFeatures>;
     columns: Column[];
     measureIndex?: number;
     completeness: Result['completeness'];
-    locale: Locale;
 }) {
     const [selectedIndex, setSelectedIndex] = useState<number>();
     const [hoveredIndex, setHoveredIndex] = useState<number>();
@@ -140,7 +137,6 @@ function MapCanvas({
         selectedIndex,
         hoveredIndex,
         map,
-        locale,
         range,
         minimum,
     });
@@ -313,14 +309,14 @@ function MapCanvas({
                 </svg>
                 <div className="geo-map-caption">
                     <span>
-                        {formatCount(prepared.totalFeatures, locale)} valid features
+                        {formatCount(prepared.totalFeatures)} valid features
                         {prepared.sampled
-                            ? ` · ${formatCount(prepared.features.length, locale)} rendered`
+                            ? ` · ${formatCount(prepared.features.length)} rendered`
                             : ''}
                     </span>
                     <span>
                         {prepared.invalidRows
-                            ? `${formatCount(prepared.invalidRows, locale)} rows outside geographic bounds · `
+                            ? `${formatCount(prepared.invalidRows)} rows outside geographic bounds · `
                             : ''}
                         {completeness === 'truncated'
                             ? 'retained prefix only'
@@ -338,7 +334,7 @@ function MapCanvas({
                         <small>
                             {measureIndex === undefined || !measures.length
                                 ? 'Uniform styling'
-                                : `${minimum.toLocaleString(locale)} → ${maximum.toLocaleString(locale)}`}
+                                : `${minimum.toLocaleString('en')} → ${maximum.toLocaleString('en')}`}
                         </small>
                     </div>
                 </div>
@@ -372,7 +368,6 @@ function useMapLabelPlacements({
     selectedIndex,
     hoveredIndex,
     map,
-    locale,
     range,
     minimum,
 }: {
@@ -386,7 +381,6 @@ function useMapLabelPlacements({
         graticule: string | null;
         countries: { name: string | undefined; d: string }[];
     };
-    locale: Locale;
     range: number;
     minimum: number;
 }) {
@@ -416,7 +410,7 @@ function useMapLabelPlacements({
             const measure =
                 feature.measure === null
                     ? undefined
-                    : new Intl.NumberFormat(locale, {
+                    : new Intl.NumberFormat('en', {
                           notation: 'compact',
                           maximumSignificantDigits: 4,
                       }).format(feature.measure);
@@ -478,18 +472,10 @@ function useMapLabelPlacements({
             placements.set(index, { ...best, label, measure });
         }
         return placements;
-    }, [hoveredIndex, locale, map, minimum, prepared.features, range, selectedIndex]);
+    }, [hoveredIndex, map, minimum, prepared.features, range, selectedIndex]);
 }
 
-export function GeoView({
-    result,
-    loading,
-    locale,
-}: {
-    result?: Result;
-    loading: boolean;
-    locale: Locale;
-}) {
+export function GeoView({ result, loading }: { result?: Result; loading: boolean }) {
     const columns = result?.columns ?? EMPTY_COLUMNS;
     const recommendation = useMemo(() => recommendGeo(columns), [columns]);
     const geometryColumns = useMemo(() => nativeGeoColumns(columns), [columns]);
@@ -704,7 +690,6 @@ export function GeoView({
                             columns={columns}
                             measureIndex={config.measure}
                             completeness={result.completeness}
-                            locale={locale}
                         />
                     )}
                 </div>

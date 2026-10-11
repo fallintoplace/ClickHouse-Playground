@@ -21,7 +21,7 @@ import {
 } from '../../../../shared/database/explorer/storage/parts';
 import type { Connection } from '../../../../shared/database/connections/types';
 import type { SchemaTable } from '../../../../shared/database/schema/types';
-import type { Copy } from '../../../translations/i18n';
+import type { Copy } from '../../../ui/copy';
 import { loadTableParts } from './table-parts-provider';
 import { message } from '../../../api/client';
 import { Button } from '../../../ui/components/ui';

@@ -7,9 +7,8 @@ import { rememberRunIds } from '../saved-queries/draft-save';
 import { message, post } from '../../api/client';
 import type { EditorHandle } from '../editor/components/SqlEditor';
 import { terminal } from './status';
-import type { Copy, ExperienceLevel, Locale } from '../../translations/i18n';
+import type { Copy, ExperienceLevel } from '../../ui/copy';
 import type { SqlExample } from '../../help/examples/sql-examples';
-import { localizeSqlExample } from '../../help/examples/sql-examples-locales';
 import {
     isSchemaChangingSql,
     type useImportedTableReveal,
@@ -39,7 +38,6 @@ type WorkspaceExecutionOptions = {
     reviewingSql: boolean;
     experience: ExperienceLevel;
     demoMode: boolean;
-    locale: Locale;
     copy: Copy;
     onSelectConnection: (id: string) => void;
     workspaceRef: RefObject<WorkspaceState>;
@@ -66,15 +64,15 @@ type WorkspaceExecutionOptions = {
     setViewForDraft: ReturnType<typeof useScopedValue<ResultsView>>[1];
 };
 
-export function createExampleDraft(example: SqlExample, locale: Locale, copy: Copy['common']) {
+export function createExampleDraft(example: SqlExample, copy: Copy['common']) {
     const name =
         example.category === 'schema'
             ? copy.examplePreviewTable.replace('{table}', example.name.replace(/^Preview /, ''))
-            : localizeSqlExample(example, locale).name;
+            : example.name;
     const draft = newDraft(`${name}.sql`, example.sql);
     draft.chart = {
         ...example.chart,
-        title: locale === 'en' ? example.chart.title : name,
+        title: example.chart.title,
         ys: [...example.chart.ys],
         ...(example.chart.candlestick ? { candlestick: { ...example.chart.candlestick } } : {}),
     };
@@ -101,7 +99,6 @@ export function useWorkspaceExecution({
     trusted,
     reviewingSql,
     experience,
-    locale,
     copy,
     onSelectConnection,
     workspaceRef,
@@ -260,7 +257,7 @@ export function useWorkspaceExecution({
             setError(copy.common.runActionTrustRequired, { tone: 'warning', timeoutMs: 5000 });
             return true;
         }
-        const draft = createExampleDraft(example, locale, copy.common);
+        const draft = createExampleDraft(example, copy.common);
         if (!openNewDraft(draft, true)) return true;
         void executeSqlForDraft(draft, draft.sql, {
             view: output,

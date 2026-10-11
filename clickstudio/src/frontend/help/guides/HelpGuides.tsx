@@ -3,7 +3,7 @@ import { type HelpSectionDefinition } from '../workspace-help-model';
 import type { WorkspaceHelpPanelProps } from '../workspace-help-types';
 import type { HelpExplainAction } from '../workspace-help-types';
 import { HelpSectionHeading } from '../HelpSectionHeading';
-import type { Copy } from '../../translations/i18n';
+import type { Copy } from '../../ui/copy';
 
 export function HelpTour({
     copy,

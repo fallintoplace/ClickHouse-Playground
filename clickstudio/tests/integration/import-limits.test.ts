@@ -200,10 +200,10 @@ for (const format of ['json', 'ndjson'] as const) {
     });
 }
 
-test('Exported JSON validation preserves structured errors for unsupported values', async () => {
-    const { validateJson } = await import('../../src/backend/system/requests/validation.js');
+test('Shared import validation preserves structured errors for unsupported values', async () => {
+    const { validateImportJson } = await import('../../src/shared/database/imports/parser.js');
     for (const value of [undefined, Symbol('value'), () => undefined, 1n])
-        assert.throws(() => validateJson(value), {
+        assert.throws(() => validateImportJson(value), {
             status: 400,
             code: 'INVALID_REQUEST',
             message: 'request must be an object',

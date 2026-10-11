@@ -1,7 +1,7 @@
 import type { SchemaTable } from '../../../../shared/database/schema/types';
 import { tableQuerySql, type ExplorerSelection } from './model';
 import { quoteIdentifier } from '../../../../shared/sql/sql';
-import type { Copy } from '../../../translations/i18n';
+import type { Copy } from '../../../ui/copy';
 import { Button, cx } from '../../../ui/components/ui';
 import { formatBytes, formatCount } from '../../../browser/format';
 import { Icon } from '../../../ui/components/icons';

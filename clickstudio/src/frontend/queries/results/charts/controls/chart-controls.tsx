@@ -5,7 +5,7 @@ import type { CandlestickConfig } from '../../../../../shared/queries/results/ch
 import type { Result } from '../../../../../shared/queries/results/types';
 import type { Row } from '../../../../../shared/common/values';
 import type { Draft } from '../../../editor/drafts/workspace-state';
-import type { Copy } from '../../../../translations/i18n';
+import type { Copy } from '../../../../ui/copy';
 import { ChartPopover, ChartToolbar } from '../ChartToolbar';
 import { chartKindOptions, chartText, chartTypeLabel, seriesColor } from '../chart-helpers';
 

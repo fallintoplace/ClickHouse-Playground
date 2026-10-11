@@ -6,7 +6,7 @@ import {
     type ImportPreview,
 } from '../state/import-wizard-model';
 import { useImportWizardController } from '../useImportWizardController';
-import type { Copy } from '../../../translations/i18n';
+import type { Copy } from '../../../ui/copy';
 import type { SchemaColumn } from '../../../../shared/database/schema/types';
 
 function fillImportCopy(template: string, values: Record<string, string>) {

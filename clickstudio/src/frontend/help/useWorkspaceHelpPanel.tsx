@@ -24,7 +24,6 @@ export function useWorkspaceHelpPanel(props: WorkspaceHelpPanelProps) {
     const {
         examples,
         copy,
-        locale,
         open,
         section,
         onSectionChange,
@@ -82,7 +81,7 @@ export function useWorkspaceHelpPanel(props: WorkspaceHelpPanelProps) {
             )
                 return false;
             if (!term) return true;
-            const localized = exampleText(example, locale, copy);
+            const localized = exampleText(example, copy);
             return [
                 example.name,
                 localized.name,
@@ -95,7 +94,7 @@ export function useWorkspaceHelpPanel(props: WorkspaceHelpPanelProps) {
                 .toLocaleLowerCase()
                 .includes(term);
         });
-    }, [category, copy, examples, featuredExamples, locale, search]);
+    }, [category, copy, examples, featuredExamples, search]);
     const selected =
         filteredExamples.find(example => example.id === selectedId) ?? filteredExamples[0];
     const selectedIsScript = selected ? (safeStatementCount(selected.sql) ?? 0) > 1 : false;

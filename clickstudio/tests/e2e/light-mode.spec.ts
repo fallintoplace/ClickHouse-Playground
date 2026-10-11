@@ -1,5 +1,5 @@
 import { test, expect, type Locator } from '@playwright/test';
-import { setAccentForStyles, runButton, trust } from './helpers.js';
+import { runButton, trust } from './helpers.js';
 
 test.beforeEach(async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -109,144 +109,131 @@ async function expectReadableText(root: Locator, label: string) {
     expect.soft(result.violations, label).toEqual([]);
 }
 
-for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
-    test(`Light mode keeps workspace and help text readable with ${accent}`, async ({
-        page,
-    }, info) => {
-        await page.setViewportSize({ width: 1440, height: 1000 });
-        await trust(page);
-        await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
-        await setAccentForStyles(page, accent);
-        await runButton(page).click();
-        await expect(page.locator('.execution-bar')).toHaveAttribute(
-            'data-run-status',
-            'succeeded',
-        );
-        await expectReadableText(page.locator('.application'), 'Workspace and objects');
-        await expect(page.locator('.object-tree-scroll')).toHaveCSS(
-            'background-color',
-            'rgb(237, 243, 246)',
-        );
-        await page.screenshot({ path: info.outputPath('light-workspace.png') });
+test(`Light mode keeps workspace and help text readable with yellow accent`, async ({
+    page,
+}, info) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await trust(page);
+    await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
+    await runButton(page).click();
+    await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'succeeded');
+    await expectReadableText(page.locator('.application'), 'Workspace and objects');
+    await expect(page.locator('.object-tree-scroll')).toHaveCSS(
+        'background-color',
+        'rgb(237, 243, 246)',
+    );
+    await page.screenshot({ path: info.outputPath('light-workspace.png') });
 
-        await page.getByRole('button', { name: 'View dependencies', exact: true }).click();
-        const dependencies = page.getByRole('dialog', {
-            name: 'Materialized view dependencies',
-            exact: true,
-        });
-        await dependencies
-            .getByRole('button', { name: 'demo.monthly_report_mv: Refreshable MV', exact: true })
-            .click();
-        await expectReadableText(dependencies, 'Dependencies and selected object');
-        await page.keyboard.press('Escape');
-        await page.getByRole('button', { name: 'events MergeTree', exact: true }).click();
-        await page.getByRole('button', { name: 'Visualize parts', exact: true }).click();
-        const storage = page.getByRole('dialog', { name: 'MergeTree parts', exact: true });
-        await expectReadableText(storage, 'Storage parts');
-        for (const section of ['Merges', 'Mutations']) {
-            await storage.getByRole('button', { name: section, exact: true }).click();
-            await expectReadableText(storage, section);
-        }
-        await storage.getByRole('button', { name: 'Close', exact: true }).click();
-
-        for (const panel of ['Reference', 'AI']) {
-            await page
-                .locator('.icon-rail')
-                .getByRole('button', { name: panel, exact: true })
-                .click();
-            await expect(page.locator('.inspector-pane')).toBeVisible();
-            await expectReadableText(page.locator('.inspector-pane'), panel);
-            if (panel === 'Reference') {
-                const row = page.locator('.reference-result').nth(1);
-                await row.hover();
-                await expectReadableText(page.locator('.inspector-pane'), 'Reference hover');
-                await row.focus();
-                await expect(row).toBeFocused();
-                await expectReadableText(page.locator('.inspector-pane'), 'Reference focus');
-            }
-        }
-
-        await page.getByRole('button', { name: 'Help', exact: true }).click();
-        const help = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });
-        await expect(help).toBeVisible();
-        for (const section of [
-            'tour',
-            'examples',
-            'workflows',
-            'assistant',
-            'reference',
-            'monitoring',
-            'query',
-            'geo',
-            'explain',
-            'storage',
-            'dependencies',
-            'compare',
-        ]) {
-            await help.getByTestId('help-section-' + section).click();
-            await expect(help.getByTestId('help-section-' + section)).toHaveAttribute(
-                'aria-selected',
-                'true',
-            );
-            await expectReadableText(help, section);
-        }
-        await help.getByTestId('help-section-monitoring').click();
-        await page.screenshot({ path: info.outputPath('light-monitoring.png') });
-        await page.keyboard.press('Escape');
-        await page.getByRole('button', { name: 'Export', exact: true }).click();
-        await expectReadableText(
-            page.getByRole('dialog', { name: 'Export', exact: true }),
-            'Export',
-        );
-        await page.keyboard.press('Escape');
-        await page.route('**/api/session', route =>
-            route.fulfill({
-                json: {
-                    principal: { id: 'test-owner', role: 'owner' },
-                    requiresLogin: false,
-                    demo: false,
-                },
-            }),
-        );
-        await page.reload();
-        await page.getByRole('button', { name: 'Connect Cloud', exact: true }).click();
-        const connection = page.getByRole('dialog', {
-            name: 'Connect to your service',
-            exact: true,
-        });
-        await expect(connection).toBeVisible();
-        await expectReadableText(connection, 'Cloud connection');
-        await page.route('**/api/session', route =>
-            route.fulfill({ json: { principal: null, requiresLogin: true, demo: false } }),
-        );
-        await page.reload();
-        await expect(page.locator('.auth-card')).toBeVisible();
-        await expectReadableText(page.locator('.auth-screen'), 'Login');
+    await page.getByRole('button', { name: 'View dependencies', exact: true }).click();
+    const dependencies = page.getByRole('dialog', {
+        name: 'Materialized view dependencies',
+        exact: true,
     });
+    await dependencies
+        .getByRole('button', { name: 'demo.monthly_report_mv: Refreshable MV', exact: true })
+        .click();
+    await expectReadableText(dependencies, 'Dependencies and selected object');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'events MergeTree', exact: true }).click();
+    await page.getByRole('button', { name: 'Visualize parts', exact: true }).click();
+    const storage = page.getByRole('dialog', { name: 'MergeTree parts', exact: true });
+    await expectReadableText(storage, 'Storage parts');
+    for (const section of ['Merges', 'Mutations']) {
+        await storage.getByRole('button', { name: section, exact: true }).click();
+        await expectReadableText(storage, section);
+    }
+    await storage.getByRole('button', { name: 'Close', exact: true }).click();
 
-    test(`Light mode keeps import steps and query-file controls readable with ${accent}`, async ({
-        page,
-    }, info) => {
-        await page.setViewportSize({ width: 1440, height: 1000 });
-        await trust(page);
-        await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
-        await setAccentForStyles(page, accent);
-        await page.getByRole('button', { name: 'Import', exact: true }).click();
-        const dialog = page.getByRole('dialog', { name: 'Import data', exact: true });
-        await expect(dialog).toBeVisible();
-        await expectReadableText(dialog, 'File import');
-        await expect(dialog.locator('.import-step-item.is-current .import-step-number')).toHaveCSS(
-            'color',
-            accent === 'Cyan accent' ? 'rgb(0, 108, 131)' : 'rgb(107, 93, 0)',
+    for (const panel of ['Reference', 'AI']) {
+        await page.locator('.icon-rail').getByRole('button', { name: panel, exact: true }).click();
+        await expect(page.locator('.inspector-pane')).toBeVisible();
+        await expectReadableText(page.locator('.inspector-pane'), panel);
+        if (panel === 'Reference') {
+            const row = page.locator('.reference-result').nth(1);
+            await row.hover();
+            await expectReadableText(page.locator('.inspector-pane'), 'Reference hover');
+            await row.focus();
+            await expect(row).toBeFocused();
+            await expectReadableText(page.locator('.inspector-pane'), 'Reference focus');
+        }
+    }
+
+    await page.getByRole('button', { name: 'Help', exact: true }).click();
+    const help = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });
+    await expect(help).toBeVisible();
+    for (const section of [
+        'tour',
+        'examples',
+        'workflows',
+        'assistant',
+        'reference',
+        'monitoring',
+        'query',
+        'geo',
+        'explain',
+        'storage',
+        'dependencies',
+        'compare',
+    ]) {
+        await help.getByTestId('help-section-' + section).click();
+        await expect(help.getByTestId('help-section-' + section)).toHaveAttribute(
+            'aria-selected',
+            'true',
         );
-        await page.screenshot({ path: info.outputPath('light-import.png') });
-        await dialog.locator('.import-kind-button.is-query').click();
-        await expect(dialog.locator('.import-file-picker-query')).toBeVisible();
-        await expectReadableText(dialog, 'SQL file');
+        await expectReadableText(help, section);
+    }
+    await help.getByTestId('help-section-monitoring').click();
+    await page.screenshot({ path: info.outputPath('light-monitoring.png') });
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    await expectReadableText(page.getByRole('dialog', { name: 'Export', exact: true }), 'Export');
+    await page.keyboard.press('Escape');
+    await page.route('**/api/session', route =>
+        route.fulfill({
+            json: {
+                principal: { id: 'test-owner', role: 'owner' },
+                requiresLogin: false,
+                demo: false,
+            },
+        }),
+    );
+    await page.reload();
+    await page.getByRole('button', { name: 'Connect Cloud', exact: true }).click();
+    const connection = page.getByRole('dialog', {
+        name: 'Connect to your service',
+        exact: true,
     });
-}
+    await expect(connection).toBeVisible();
+    await expectReadableText(connection, 'Cloud connection');
+    await page.route('**/api/session', route =>
+        route.fulfill({ json: { principal: null, requiresLogin: true, demo: false } }),
+    );
+    await page.reload();
+    await expect(page.locator('.auth-card')).toBeVisible();
+    await expectReadableText(page.locator('.auth-screen'), 'Login');
+});
 
-test('Light heatmaps keep zero, null, missing, and saturated values readable with both accents', async ({
+test(`Light mode keeps import steps and query-file controls readable with yellow accent`, async ({
+    page,
+}, info) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await trust(page);
+    await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
+    await page.getByRole('button', { name: 'Import', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Import data', exact: true });
+    await expect(dialog).toBeVisible();
+    await expectReadableText(dialog, 'File import');
+    await expect(dialog.locator('.import-step-item.is-current .import-step-number')).toHaveCSS(
+        'color',
+        'rgb(107, 93, 0)',
+    );
+    await page.screenshot({ path: info.outputPath('light-import.png') });
+    await dialog.locator('.import-kind-button.is-query').click();
+    await expect(dialog.locator('.import-file-picker-query')).toBeVisible();
+    await expectReadableText(dialog, 'SQL file');
+});
+
+test('Light heatmaps keep zero, null, missing, and saturated values readable with the yellow accent', async ({
     page,
 }) => {
     await page.route('**/api/runs/*/snapshot', async route => {
@@ -279,18 +266,16 @@ test('Light heatmaps keep zero, null, missing, and saturated values readable wit
     await results.getByLabel('Type').selectOption('heatmap');
     await expect(results.locator('.heatmap-cell')).toHaveCount(6);
     await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
-    for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
-        await setAccentForStyles(page, accent);
-        await expectReadableText(results, `Heatmap, ${accent}`);
-        const fills = await results
-            .locator('.heatmap-cell')
-            .evaluateAll(cells => cells.map(cell => getComputedStyle(cell).backgroundColor));
-        expect(new Set(fills).size).toBeGreaterThanOrEqual(3);
-        expect(fills).not.toContain('rgba(0, 0, 0, 0)');
-    }
+
+    await expectReadableText(results, `Heatmap, yellow accent`);
+    const fills = await results
+        .locator('.heatmap-cell')
+        .evaluateAll(cells => cells.map(cell => getComputedStyle(cell).backgroundColor));
+    expect(new Set(fills).size).toBeGreaterThanOrEqual(3);
+    expect(fills).not.toContain('rgba(0, 0, 0, 0)');
 });
 
-test('Mounted candlesticks update their marks and labels when theme or accent changes', async ({
+test('Mounted candlesticks update their marks and labels when the theme changes', async ({
     page,
 }) => {
     await page.route('**/api/runs/*/snapshot', async route => {
@@ -334,9 +319,6 @@ test('Mounted candlesticks update their marks and labels when theme or accent ch
     await expect(up).toHaveCSS('fill', 'rgb(20, 108, 67)');
     await expect(down).toHaveCSS('fill', 'rgb(179, 48, 67)');
     await expect(page.locator('.market-axis text').first()).toHaveCSS('fill', 'rgb(83, 107, 121)');
-    await setAccentForStyles(page, 'Cyan accent');
-    await expect(page.locator('.market-bid-line')).toHaveCSS('stroke', 'rgb(0, 108, 131)');
-    await setAccentForStyles(page, 'ClickHouse yellow accent');
     await expect(page.locator('.market-bid-line')).toHaveCSS('stroke', 'rgb(107, 93, 0)');
     await page.getByRole('radio', { name: 'Dark theme', exact: true }).click();
     await expect(up).toHaveCSS('fill', 'rgb(53, 233, 120)');
@@ -344,7 +326,7 @@ test('Mounted candlesticks update their marks and labels when theme or accent ch
     await expect(page.locator('.market-candle')).toHaveCount(2);
 });
 
-test('Light mode preserves invalid field borders before and after focus with both accents', async ({
+test('Light mode preserves invalid field borders before and after focus with the yellow accent', async ({
     page,
 }) => {
     await page.route('**/api/connections', async route => {
@@ -362,22 +344,17 @@ test('Light mode preserves invalid field borders before and after focus with bot
     await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'New table', exact: true });
     const name = dialog.getByRole('textbox', { name: 'Table name', exact: true });
-    for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
-        await setAccentForStyles(page, accent);
-        await page.getByRole('button', { name: 'New table', exact: true }).click();
-        await name.fill('bad-name');
-        await dialog.getByRole('textbox', { name: 'Column 1 name', exact: true }).focus();
-        await expect(name).toHaveAttribute('aria-invalid', 'true');
-        await expect(name).toHaveCSS('border-color', 'rgb(179, 48, 67)');
-        await name.focus();
-        await expect(name).toHaveCSS('border-color', 'rgb(179, 48, 67)');
-        await expectReadableText(dialog, `Invalid field, ${accent}`);
-        await name.fill('events');
-        await expect(name).toHaveAttribute('aria-invalid', 'false');
-        await expect(name).toHaveCSS(
-            'border-color',
-            accent === 'Cyan accent' ? 'rgb(0, 108, 131)' : 'rgb(107, 93, 0)',
-        );
-        await page.keyboard.press('Escape');
-    }
+
+    await page.getByRole('button', { name: 'New table', exact: true }).click();
+    await name.fill('bad-name');
+    await dialog.getByRole('textbox', { name: 'Column 1 name', exact: true }).focus();
+    await expect(name).toHaveAttribute('aria-invalid', 'true');
+    await expect(name).toHaveCSS('border-color', 'rgb(179, 48, 67)');
+    await name.focus();
+    await expect(name).toHaveCSS('border-color', 'rgb(179, 48, 67)');
+    await expectReadableText(dialog, `Invalid field, yellow accent`);
+    await name.fill('events');
+    await expect(name).toHaveAttribute('aria-invalid', 'false');
+    await expect(name).toHaveCSS('border-color', 'rgb(107, 93, 0)');
+    await page.keyboard.press('Escape');
 });

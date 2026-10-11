@@ -4,7 +4,6 @@ import { Button, cx, Spinner } from '../../../ui/components/ui';
 import { Icon } from '../../../ui/components/icons';
 
 type Props = {
-    enabled: boolean;
     status: NativeParserStatus;
     snapshot?: NativeParseSnapshot;
     onRetry: () => void;
@@ -12,12 +11,8 @@ type Props = {
 
 const MAX_AST_PREVIEW_LENGTH = 100_000;
 
-export function NativeParserInspector({ enabled, status, snapshot, onRetry }: Props) {
+export function NativeParserInspector({ status, snapshot, onRetry }: Props) {
     const getParserTone = () => {
-        if (!enabled) {
-            return '';
-        }
-
         switch (status) {
             case 'ready':
                 return 'is-trusted';
@@ -30,67 +25,44 @@ export function NativeParserInspector({ enabled, status, snapshot, onRetry }: Pr
         }
     };
     const getParserStatusLabel = () => {
-        if (enabled) {
-            switch (status) {
-                case 'ready':
-                    return 'Ready · local WebAssembly';
-
-                case 'loading':
-                    return 'Loading parser…';
-
-                default:
-                    return 'Unavailable';
-            }
+        switch (status) {
+            case 'ready':
+                return 'Ready · local WebAssembly';
+            case 'loading':
+                return 'Loading parser…';
+            default:
+                return 'Unavailable';
         }
-
-        return 'WASM parser off';
     };
     return (
         <section
             className="inspector-section parser-inspector"
             aria-label="ClickHouse parser details"
         >
-            <div
-                className={cx(
-                    'parser-status-card',
-                    `parser-status-${enabled ? status : 'disabled'}`,
-                )}
-            >
+            <div className={cx('parser-status-card', `parser-status-${status}`)}>
                 <span className={cx('status-light', getParserTone())} />
                 <div>
-                    <strong>
-                        {enabled ? 'ClickHouse native parser' : 'CodeMirror SQL highlighting'}
-                    </strong>
+                    <strong>ClickHouse native parser</strong>
                     <small>{getParserStatusLabel()}</small>
                 </div>
-                {enabled && snapshot && (
+                {snapshot && (
                     <span className="parser-duration">{snapshot.elapsedMs.toFixed(1)} ms</span>
                 )}
-                {enabled && status === 'unavailable' && (
+                {status === 'unavailable' && (
                     <Button variant="ghost" className="toolbar-small" onClick={onRetry}>
                         Retry
                     </Button>
                 )}
             </div>
 
-            {!enabled && (
-                <div className="inspector-empty">
-                    <Icon name="parser" />
-                    <strong>CodeMirror mode active</strong>
-                    <p>
-                        CodeMirror provides SQL highlighting. ClickHouse-specific diagnostics and
-                        AST details are off; Format uses the fallback formatter.
-                    </p>
-                </div>
-            )}
-            {enabled && status === 'loading' && (
+            {status === 'loading' && (
                 <div className="inspector-empty">
                     <Spinner />
                     <strong>Loading parser</strong>
                     <p>SQL stays available while the native parser starts.</p>
                 </div>
             )}
-            {enabled && status === 'unavailable' && (
+            {status === 'unavailable' && (
                 <div className="inspector-empty">
                     <Icon name="parser" />
                     <strong>Parser unavailable</strong>
@@ -100,15 +72,14 @@ export function NativeParserInspector({ enabled, status, snapshot, onRetry }: Pr
                     </p>
                 </div>
             )}
-            {enabled && status === 'ready' && !snapshot && (
+            {status === 'ready' && !snapshot && (
                 <div className="inspector-empty">
                     <Icon name="parser" />
                     <strong>Waiting for SQL</strong>
                     <p>Native parse results appear here after the current SQL is checked.</p>
                 </div>
             )}
-            {enabled &&
-                status === 'ready' &&
+            {status === 'ready' &&
                 snapshot?.statements.map((statement, index) => {
                     const { result } = statement;
                     const astType =

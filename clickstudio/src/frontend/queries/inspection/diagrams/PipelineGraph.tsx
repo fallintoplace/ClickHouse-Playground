@@ -32,7 +32,7 @@ import {
     sqlFlowNodeStatus,
     type PipelineGraphKind,
 } from './pipeline-graph-model';
-import type { Copy } from '../../../translations/i18n';
+import type { Copy } from '../../../ui/copy';
 import { ScrollEdgeFrame } from '../../../ui/components/ScrollEdgeShadows';
 
 export function PipelineGraph({

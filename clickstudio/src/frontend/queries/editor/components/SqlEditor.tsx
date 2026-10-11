@@ -356,7 +356,6 @@ export interface SqlEditorProps {
     to: number;
     schema?: Schema;
     dark: boolean;
-    nativeParserEnabled: boolean;
     parserStatus: NativeParserStatus;
     error?: ApiError;
     errorRange?: SqlErrorRange;
@@ -536,11 +535,10 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
         }
     }, [props.value]);
     useEffect(() => {
-        if (!props.nativeParserEnabled) return;
         return clickHouseNativeParser.subscribe(status =>
             current.current.onNativeParserStatus?.(status),
         );
-    }, [props.nativeParserEnabled]);
+    }, []);
     useEffect(() => {
         const editor = view.current,
             revision = ++validationRevision.current;
@@ -548,7 +546,7 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
         applyDiagnostics();
         editor?.dispatch({ effects: setNativeDecorations.of(Decoration.none) });
         current.current.onNativeParseSnapshot?.(undefined);
-        if (!editor || !props.nativeParserEnabled || props.parserStatus !== 'ready') return;
+        if (!editor || props.parserStatus !== 'ready') return;
         const source = editor.state.doc.toString();
         const outline = editor.state.field(sqlStatementOutline);
         if (outline.error || !outline.statements.length) return;
@@ -608,13 +606,7 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
             invalidateNativeValidation();
             window.clearTimeout(timer);
         };
-    }, [
-        props.nativeParserEnabled,
-        props.parserStatus,
-        props.value,
-        applyDiagnostics,
-        invalidateNativeValidation,
-    ]);
+    }, [props.parserStatus, props.value, applyDiagnostics, invalidateNativeValidation]);
     useEffect(() => {
         const v = view.current;
         if (!v) return;

@@ -273,31 +273,6 @@ export function closeDraft(state: WorkspaceState, draftId: string): WorkspaceSta
     };
 }
 
-export function reopenDraft(state: WorkspaceState, draftId?: string): WorkspaceState {
-    const closedTabs = state.closedTabs ?? [];
-    let draftIndex: number;
-
-    if (draftId) {
-        draftIndex = closedTabs.findIndex(draft => draft.id === draftId);
-    } else if (closedTabs.length) {
-        draftIndex = 0;
-    } else {
-        draftIndex = -1;
-    }
-    const draft = closedTabs[draftIndex];
-    if (!draft || state.tabs.length >= MAX_TABS) return state;
-    // Keep the saved revision, selection, checkpoints and run references unchanged.
-    const reopened = state.tabs.some(d => d.id === draft.id)
-        ? { ...draft, id: crypto.randomUUID() }
-        : draft;
-    return {
-        ...state,
-        tabs: [...state.tabs, reopened],
-        activeId: reopened.id,
-        closedTabs: closedTabs.filter((_, index) => index !== draftIndex),
-    };
-}
-
 export function checkpoint(draft: Draft, reason: string): Draft {
     const point = {
         id: crypto.randomUUID(),

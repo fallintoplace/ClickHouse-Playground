@@ -1,5 +1,5 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
-import { setAccentForStyles, openBlankSql, openResultFilter, runButton, trust } from './helpers.js';
+import { openBlankSql, openResultFilter, runButton, trust } from './helpers.js';
 
 function countRuns(page: Page) {
     let count = 0;
@@ -219,32 +219,22 @@ for (const mode of ['Standard', 'Experimental'])
         await header.getByRole('button', { name: 'Close row filter', exact: true }).click();
         for (const theme of ['Dark', 'Light']) {
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
-            for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
-                await setAccentForStyles(page, accent);
-                for (const width of [1440, 900]) {
-                    await page.setViewportSize({ width, height: 1000 });
-                    await expectResultsToolbarFits(header);
-                    await openResultFilter(header);
-                    await filter.fill('row-199');
-                    await expect(header.locator('.result-row-count')).toHaveText(
-                        '1 of 200 rows on this page',
-                    );
-                    await expectResultsToolbarFits(header);
-                    await header
-                        .getByRole('button', { name: 'Clear row filter', exact: true })
-                        .click();
-                    expect(
-                        await page.evaluate(
-                            () => document.documentElement.scrollWidth - innerWidth,
-                        ),
-                    ).toBeLessThanOrEqual(1);
-                    if (
-                        theme === 'Light' &&
-                        accent === 'ClickHouse yellow accent' &&
-                        width === 1440
-                    )
-                        await page.screenshot({ path: info.outputPath('pagination-header.png') });
-                }
+
+            for (const width of [1440, 900]) {
+                await page.setViewportSize({ width, height: 1000 });
+                await expectResultsToolbarFits(header);
+                await openResultFilter(header);
+                await filter.fill('row-199');
+                await expect(header.locator('.result-row-count')).toHaveText(
+                    '1 of 200 rows on this page',
+                );
+                await expectResultsToolbarFits(header);
+                await header.getByRole('button', { name: 'Clear row filter', exact: true }).click();
+                expect(
+                    await page.evaluate(() => document.documentElement.scrollWidth - innerWidth),
+                ).toBeLessThanOrEqual(1);
+                if (theme === 'Light' && width === 1440)
+                    await page.screenshot({ path: info.outputPath('pagination-header.png') });
             }
         }
         expect(runs()).toBe(1);

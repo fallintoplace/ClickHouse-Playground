@@ -10,7 +10,7 @@ import {
 } from '../../../../../shared/queries/results/results.js';
 import type { Result } from '../../../../../shared/queries/results/types.js';
 import type { Draft } from '../../../editor/drafts/workspace-state.js';
-import type { Copy, Locale } from '../../../../translations/i18n.js';
+import type { Copy } from '../../../../ui/copy.js';
 import {
     categoryAxisLayout,
     chartText,
@@ -111,7 +111,6 @@ export function prepareChartView({
     result,
     chart,
     chartCopy,
-    locale,
     categoryViewportWidth,
     plotViewportWidth = 760,
     selection,
@@ -119,7 +118,6 @@ export function prepareChartView({
     result: Result;
     chart: Draft['chart'];
     chartCopy: Copy['chart'];
-    locale: Locale;
     categoryViewportWidth: number;
     plotViewportWidth?: number;
     selection: ReturnType<typeof prepareChartSelection>;
@@ -196,22 +194,22 @@ export function prepareChartView({
     const rowSummary =
         chartRows.length < result.rows.length
             ? chartText(chartCopy.sampledRowsSummary, {
-                  sampled: formatCount(chartRows.length, locale),
-                  rows: formatCount(result.rows.length, locale),
+                  sampled: formatCount(chartRows.length),
+                  rows: formatCount(result.rows.length),
               })
             : chartText(
                   measureIndexes.length === 1
                       ? chartCopy.retainedRowsAcrossOneMeasure
                       : chartCopy.retainedRowsAcrossManyMeasures,
                   {
-                      rows: formatCount(chartRows.length, locale),
-                      measures: formatCount(measureIndexes.length, locale),
+                      rows: formatCount(chartRows.length),
+                      measures: formatCount(measureIndexes.length),
                   },
               );
     const categoryStep =
         categoryLayout?.minimumSlotWidth ?? plotWidth / Math.max(1, chartRows.length);
     const barWidth = Math.min(28, (categoryStep * 0.68) / measureIndexes.length);
-    const collator = new Intl.Collator(locale, { numeric: true, sensitivity: 'base' });
+    const collator = new Intl.Collator('en', { numeric: true, sensitivity: 'base' });
     const heatmap =
         chartKind === 'heatmap' && groupByIndex !== undefined
             ? prepareHeatmap(result.rows, xIndex, groupByIndex, yIndex)
@@ -224,7 +222,7 @@ export function prepareChartView({
         : [...(heatmap?.yLabels ?? [])].sort(collator.compare);
     const heatmapMaximum = heatmap?.maximum ?? 0;
     const heatmapTooLarge = heatmap?.tooLarge ?? false;
-    const compactNumber = new Intl.NumberFormat(locale, {
+    const compactNumber = new Intl.NumberFormat('en', {
         notation: 'compact',
         maximumFractionDigits: 1,
     });
@@ -234,7 +232,6 @@ export function prepareChartView({
             xIndex,
             yIndex,
             chartCopy,
-            locale,
             result,
             rowSummary,
             plotLeft,
@@ -266,7 +263,7 @@ export function prepareChartView({
     }
     const chartTitle = chart.title && chart.title !== 'Query result' ? chart.title : undefined;
     const chartAriaLabel = chartText(chartCopy.chartComparing, {
-        type: chartTypeLabel(chartKind, chartCopy).toLocaleLowerCase(locale),
+        type: chartTypeLabel(chartKind, chartCopy).toLocaleLowerCase(),
         x: result.columns[xIndex]?.name ?? '',
         y: result.columns[yIndex]?.name ?? '',
     });
@@ -288,7 +285,6 @@ export function prepareChartView({
         scatterY,
         result,
         xIndex,
-        locale,
         yIndex,
         plotSeries,
         x,
@@ -318,7 +314,6 @@ export function prepareChartView({
         heatmap,
         heatmapXLabels,
         heatmapYLabels,
-        locale,
         heatmapMaximum,
         compactNumber,
         values,

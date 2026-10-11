@@ -3,7 +3,7 @@ import type {
     ProfilePipeline,
     ProfilePipelineNode,
 } from '../../../../shared/queries/inspection/types';
-import type { Copy } from '../../../translations/i18n';
+import type { Copy } from '../../../ui/copy';
 
 export const nodeWidth = 220;
 export const nodeHeight = 74;

@@ -2,11 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PLAYGROUND_STARTER_SQL } from '../../.workspace-build/src/frontend/database/connections/playground.js';
 import { sqlExamplesFor } from '../../.workspace-build/src/frontend/help/examples/sql-examples.js';
-import {
-    hasSqlExampleTranslation,
-    localizeSqlExample,
-} from '../../.workspace-build/src/frontend/help/examples/sql-examples-locales.js';
-import { supportedLocales } from '../../.workspace-build/src/frontend/translations/i18n.js';
 
 test('SQL example catalogs match the selected Playground or fixture source', () => {
     const playground = sqlExamplesFor({ id: 'playground', dataSource: 'clickhouse' });
@@ -200,28 +195,6 @@ test('Featured Playground examples lead with enterprise workflows', () => {
     );
 });
 
-test('curated, fixture, and generic SQL examples have localized titles and descriptions', () => {
-    const catalogs = [
-        sqlExamplesFor({ id: 'playground', dataSource: 'clickhouse' }),
-        sqlExamplesFor({ id: 'demo', dataSource: 'fixture' }),
-        sqlExamplesFor({ id: 'production', dataSource: 'clickhouse' }),
-    ];
-    const examples = [...new Map(catalogs.flat().map(example => [example.id, example])).values()];
-    const locales = supportedLocales.filter(locale => locale !== 'en');
-
-    for (const example of examples) {
-        for (const locale of locales) {
-            assert.ok(
-                hasSqlExampleTranslation(example.id, locale),
-                `${example.id} is missing ${locale} copy`,
-            );
-            const localized = localizeSqlExample(example, locale);
-            assert.ok(localized.name.trim().length > 0);
-            assert.ok(localized.description.trim().length > 0);
-        }
-    }
-});
-
 test('SQL examples use safe generic queries until a real connection schema is available', () => {
     const connection = { id: 'production', dataSource: 'clickhouse' };
     const generic = sqlExamplesFor(connection);
@@ -375,10 +348,6 @@ test('Empty Cloud schemas offer generated read queries and separately labeled wr
         ),
         false,
     );
-    for (const write of writes) {
-        assert.ok(hasSqlExampleTranslation(write.id, 'zh'));
-        assert.notEqual(localizeSqlExample(write, 'zh').name, write.name);
-    }
 });
 
 test('Schema examples use wrapped column types, exclude identifier dimensions, and retain native geometry', () => {

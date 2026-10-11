@@ -230,17 +230,6 @@
     flex: none;
     translate: 0 -50%;
   }
-  .editor-heading-tools {
-    display: flex;
-    min-width: 0;
-    align-items: center;
-    gap: 2px;
-    margin-inline: auto;
-    padding: 2px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-control);
-    background: color-mix(in srgb, var(--panel-raised) 58%, transparent);
-  }
   .editor-workspace-layout {
     display: grid;
     min-width: 0;
@@ -358,11 +347,6 @@
     background: var(--signal-accent);
     box-shadow: var(--status-ring);
     color: var(--signal-accent);
-  }
-  .toolbar-divider {
-    width: 1px;
-    height: 13px;
-    background: var(--line-bright);
   }
   .button-base {
     display: inline-flex;
@@ -893,12 +877,6 @@
   }
   .editor-file-heading {
     flex: 1 1 auto;
-  }
-  .editor-heading-tools {
-    order: 3;
-    flex: 1 0 100%;
-    justify-content: flex-end;
-    margin: 0;
   }
   .file-type-icon {
     width: 27px;

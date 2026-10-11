@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { buildNativeAstTree } from './ast';
-import type { Copy } from '../../../translations/i18n';
+import type { Copy } from '../../../ui/copy';
 import { TreeGraph } from '../../../ui/components/TreeGraph';
 
 function category(type: string) {

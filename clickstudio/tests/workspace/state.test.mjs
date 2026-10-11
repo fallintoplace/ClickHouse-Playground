@@ -8,7 +8,6 @@ import {
     MAX_TABS,
     newDraft,
     recover,
-    reopenDraft,
 } from '../../.workspace-build/src/frontend/queries/editor/drafts/workspace-state.js';
 
 const workspace = (...tabs) => ({ version: 1, tabs, activeId: tabs[0].id });
@@ -278,42 +277,41 @@ test('Closing the last tab keeps a usable editor and a recoverable closed draft'
     assert.equal(next.closedTabs[0], original);
 });
 
-test('Close/reopen preserves unsaved parameters, selection, checkpoints and run IDs', () => {
-    const draft = {
-        ...checkpoint(newDraft('Work.sql', 'SELECT 3'), 'Before change'),
-        from: 2,
-        to: 4,
-        activeRunId: 'run-1',
-        runIds: ['run-1'],
-        scriptId: 'script-1',
-        parameters: { n: '3' },
-    };
-    const other = newDraft();
-    const restored = reopenDraft(closeDraft(workspace(draft, other), draft.id));
-    assert.equal(restored.tabs.at(-1), draft);
-    assert.equal(restored.activeId, draft.id);
-    assert.deepEqual(restored.closedTabs, []);
-});
-
 test('Closed tabs survive serialization and recovery', () => {
-    const draft = newDraft('Return.sql', 'SELECT 1234');
+    const draft = checkpoint(
+        {
+            ...newDraft('Return.sql', 'SELECT {n:UInt64}'),
+            parameters: { n: '18446744073709551615' },
+            from: 7,
+            to: 17,
+            baseRevision: 3,
+            activeRunId: 'run-1',
+            runIds: ['run-1'],
+            scriptId: 'script-1',
+        },
+        'Before execution',
+    );
     const closed = closeDraft(workspace(draft, newDraft()), draft.id);
-    const recovered = reopenDraft(recover('key', read(closed)));
-    assert.equal(recovered.tabs.at(-1).sql, draft.sql);
-    assert.equal(recovered.activeId, draft.id);
+    const recovered = recover('key', read(closed));
+    for (const key of [
+        'id',
+        'name',
+        'sql',
+        'parameters',
+        'from',
+        'to',
+        'baseRevision',
+        'activeRunId',
+        'runIds',
+        'scriptId',
+        'checkpoints',
+    ])
+        assert.deepEqual(recovered.closedTabs[0][key], draft[key], key);
 });
 
-test('Reopening cannot exceed the active-tab cap or consume the closed draft', () => {
-    const state = workspace(...Array.from({ length: MAX_TABS }, () => newDraft()));
-    state.closedTabs = [newDraft('Closed.sql')];
-    assert.equal(reopenDraft(state), state);
-    assert.equal(state.closedTabs.length, 1);
-});
-
-test('Unknown close and empty reopen are no-ops', () => {
+test('Unknown close is a no-op', () => {
     const state = workspace(newDraft());
     assert.equal(closeDraft(state, 'missing'), state);
-    assert.equal(reopenDraft(state), state);
 });
 
 test('Closed history is newest-first and bounded without changing server references', () => {
@@ -325,15 +323,6 @@ test('Closed history is newest-first and bounded without changing server referen
     assert.equal(state.closedTabs.length, MAX_CLOSED_TABS);
     assert.equal(state.closedTabs[0].serverId, 'server-13');
     assert.equal(state.closedTabs.at(-1).serverId, 'server-4');
-});
-
-test('Reopening a duplicated local ID allocates a distinct ID without changing saved identity', () => {
-    const draft = { ...newDraft(), serverId: 'server-1' };
-    const state = { ...workspace(draft), closedTabs: [{ ...draft, sql: 'SELECT 99' }] };
-    const next = reopenDraft(state);
-    assert.notEqual(next.tabs[0].id, next.tabs[1].id);
-    assert.equal(next.tabs[1].serverId, 'server-1');
-    assert.equal(next.tabs[1].sql, 'SELECT 99');
 });
 
 test('Valid closed drafts survive when every open tab is malformed', () => {
@@ -349,9 +338,9 @@ test('Valid closed drafts survive when every open tab is malformed', () => {
     );
     assert.equal(recovered.tabs.length, 1);
     assert.equal(recovered.closedTabs.length, 1);
-    assert.equal(reopenDraft(recovered).tabs.at(-1).sql, draft.sql);
-    assert.deepEqual(reopenDraft(recovered).tabs.at(-1).parameters, draft.parameters);
-    assert.equal(reopenDraft(recovered).tabs.at(-1).baseRevision, 3);
+    assert.equal(recovered.closedTabs[0].sql, draft.sql);
+    assert.deepEqual(recovered.closedTabs[0].parameters, draft.parameters);
+    assert.equal(recovered.closedTabs[0].baseRevision, 3);
     assert.match(recovered.recoveryWarning, /could not be recovered/);
 });
 

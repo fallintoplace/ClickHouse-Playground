@@ -23,7 +23,6 @@ export function SqlExamplesHelp({
     setSelectedId,
     selectedIsScript,
     copy,
-    locale,
     schemaLoading,
     onRefreshSchema,
     onOpenExample,
@@ -43,7 +42,6 @@ export function SqlExamplesHelp({
     setSelectedId: import('react').Dispatch<import('react').SetStateAction<string>>;
     selectedIsScript: boolean;
     copy: WorkspaceHelpPanelProps['copy'];
-    locale: WorkspaceHelpPanelProps['locale'];
     schemaLoading: WorkspaceHelpPanelProps['schemaLoading'];
     onRefreshSchema: WorkspaceHelpPanelProps['onRefreshSchema'];
     onOpenExample: WorkspaceHelpPanelProps['onOpenExample'];
@@ -70,7 +68,7 @@ export function SqlExamplesHelp({
                             aria-pressed={category === value}
                             onClick={() => setCategory(value)}
                         >
-                            {categoryLabel(value, copy, locale)}
+                            {categoryLabel(value, copy)}
                         </button>
                     ))}
                 </div>
@@ -156,15 +154,14 @@ export function SqlExamplesHelp({
                                 }}
                             >
                                 <span className="sql-example-option-title">
-                                    {exampleText(example, locale, copy).name}
+                                    {exampleText(example, copy).name}
                                 </span>
                                 <span className="sql-example-option-description">
-                                    {exampleText(example, locale, copy).description}
+                                    {exampleText(example, copy).description}
                                 </span>
                                 <span className="sql-example-option-meta">
                                     <span className="sql-example-option-category">
-                                        {example.dataset ??
-                                            categoryLabel(example.category, copy, locale)}
+                                        {example.dataset ?? categoryLabel(example.category, copy)}
                                     </span>
                                     <span className="sql-example-chart-kind">
                                         {example.category === 'writeOperations'
@@ -180,11 +177,10 @@ export function SqlExamplesHelp({
                             <div className="sql-example-preview-heading">
                                 <div>
                                     <span className="eyebrow">
-                                        {selected.dataset ??
-                                            categoryLabel(selected.category, copy, locale)}
+                                        {selected.dataset ?? categoryLabel(selected.category, copy)}
                                     </span>
                                     <h3>
-                                        {exampleText(selected, locale, copy).name}
+                                        {exampleText(selected, copy).name}
                                         .sql
                                     </h3>
                                 </div>
@@ -194,7 +190,7 @@ export function SqlExamplesHelp({
                                         : chartLabel(selected, copy)}
                                 </span>
                             </div>
-                            <p>{exampleText(selected, locale, copy).description}</p>
+                            <p>{exampleText(selected, copy).description}</p>
                             <pre>
                                 <code>{selected.sql}</code>
                             </pre>

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { runButton, setAccentForStyles, trust } from './helpers.js';
+import { runButton, trust } from './helpers.js';
 
 const themes = [
     {
@@ -9,8 +9,6 @@ const themes = [
         panel: '#14232d',
         accent: '#faff69',
         action: '#faff69',
-        cyanAccent: '#68e5ff',
-        cyanAction: '#68e5ff',
         chrome: '#151515',
         logoColor: 'rgb(255, 255, 255)',
     },
@@ -21,8 +19,6 @@ const themes = [
         panel: '#ffffff',
         accent: '#6b5d00',
         action: '#edf249',
-        cyanAccent: '#006c83',
-        cyanAction: '#006c83',
         chrome: '#f3f7f9',
         logoColor: 'rgb(27, 48, 61)',
     },
@@ -31,6 +27,37 @@ const themes = [
 function themeOption(page: Page, value: string) {
     const label = value === 'click-dark' ? 'Dark theme' : 'Light theme';
     return page.getByRole('radiogroup', { name: 'Theme' }).getByRole('radio', { name: label });
+}
+
+for (const [browserLocale, savedLocale] of [
+    ['zh-CN', 'zh'],
+    ['zh-TW', null],
+    ['en-US', 'zh_Hant_TW'],
+    ['zh-CN', 'unknown-locale'],
+] as const) {
+    test(`English startup ignores ${savedLocale ?? 'missing'} language preference with ${browserLocale}`, async ({
+        browser,
+        baseURL,
+    }) => {
+        const context = await browser.newContext({ locale: browserLocale });
+        try {
+            await context.addInitScript(value => {
+                if (value !== null) localStorage.setItem('clickstudio:locale', value);
+                localStorage.setItem('clickstudio:accent', 'cyan');
+            }, savedLocale);
+            const page = await context.newPage();
+            await page.goto(baseURL!);
+            await expect(themeOption(page, 'click-dark')).toBeVisible();
+            await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+            await expect(page.locator('html')).toHaveAttribute('data-accent', 'clickhouse-yellow');
+            await page.reload();
+            await expect(themeOption(page, 'click-dark')).toBeChecked();
+            await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+            await expect(page.locator('html')).toHaveAttribute('data-accent', 'clickhouse-yellow');
+        } finally {
+            await context.close();
+        }
+    });
 }
 
 for (const theme of themes)
@@ -72,28 +99,6 @@ for (const theme of themes)
         await expect(themeOption(page, theme.value)).toBeChecked();
         await expect(page.locator('html')).toHaveAttribute('data-accent', 'clickhouse-yellow');
         await expect(page.locator('html')).toHaveAttribute('data-theme', theme.value);
-    });
-
-for (const theme of themes)
-    test(`${theme.value} retains the cyan palette for future use`, async ({ page }) => {
-        await page.goto('/');
-        await themeOption(page, theme.value).click();
-        await setAccentForStyles(page, 'Cyan accent');
-        await expect(page.locator('html')).toHaveAttribute('data-accent', 'cyan');
-
-        const palette = await page.locator('html').evaluate(element => {
-            const styles = getComputedStyle(element);
-            return {
-                accent: styles.getPropertyValue('--accent').trim(),
-                action: styles.getPropertyValue('--accent-action').trim(),
-            };
-        });
-        expect(palette.accent).toBe(theme.cyanAccent);
-        expect(palette.action).toBe(theme.cyanAction);
-
-        await page.reload();
-        await expect(themeOption(page, theme.value)).toBeChecked();
-        await expect(page.locator('html')).toHaveAttribute('data-accent', 'clickhouse-yellow');
     });
 
 for (const theme of themes) {
@@ -269,7 +274,6 @@ for (const mode of ['Standard', 'Experimental'])
         await themeOption(page, 'click-dark').click();
         await expect(run).toHaveCSS('background-image', /linear-gradient/);
         await themeOption(page, 'click-light').click();
-        await setAccentForStyles(page, 'Cyan accent');
         await expect(run).toHaveCSS('background-image', 'none');
         await page.reload();
         await expect(run).toHaveCSS('background-image', 'none');
@@ -298,7 +302,7 @@ for (const removedTheme of ['monokai', 'catppuccin-latte'])
         await expect(page.locator('html')).toHaveAttribute('data-theme', 'click-dark');
     });
 
-test('localized desktop header keeps the theme switch in view', async ({ page }) => {
+test('desktop header keeps the theme switch in view', async ({ page }) => {
     await page.setViewportSize({ width: 2048, height: 900 });
     await page.goto('/');
 
@@ -306,29 +310,25 @@ test('localized desktop header keeps the theme switch in view', async ({ page })
     const themeSwitch = page.locator('.theme-mode-control');
     const accentSwitch = page.locator('.accent-mode-control');
 
-    for (const locale of ['en', 'zh']) {
-        await page.evaluate(value => localStorage.setItem('clickstudio:locale', value), locale);
-        await page.reload();
-        await expect(page.locator('html')).toHaveAttribute('lang', locale);
-        await expect(page.locator('.topbar-preferences select')).toHaveCount(0);
-        await expect(themeSwitch).toBeVisible();
-        await expect(accentSwitch).toHaveCount(0);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page.locator('.topbar-preferences select')).toHaveCount(0);
+    await expect(themeSwitch).toBeVisible();
+    await expect(accentSwitch).toHaveCount(0);
 
-        const headerSize = await topbar.evaluate(element => ({
-            clientWidth: element.clientWidth,
-            scrollWidth: element.scrollWidth,
-        }));
-        expect(headerSize.scrollWidth, `${locale} header overflow`).toBeLessThanOrEqual(
-            headerSize.clientWidth,
-        );
+    const headerSize = await topbar.evaluate(element => ({
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+    }));
+    expect(headerSize.scrollWidth, `English header overflow`).toBeLessThanOrEqual(
+        headerSize.clientWidth,
+    );
 
-        const themeBounds = await themeSwitch.evaluate(element => {
-            const rect = element.getBoundingClientRect();
-            return { left: rect.left, right: rect.right, viewportWidth: window.innerWidth };
-        });
-        expect(themeBounds.left, `${locale} theme switch left edge`).toBeGreaterThanOrEqual(0);
-        expect(themeBounds.right, `${locale} theme switch right edge`).toBeLessThanOrEqual(
-            themeBounds.viewportWidth,
-        );
-    }
+    const themeBounds = await themeSwitch.evaluate(element => {
+        const rect = element.getBoundingClientRect();
+        return { left: rect.left, right: rect.right, viewportWidth: window.innerWidth };
+    });
+    expect(themeBounds.left, `English theme switch left edge`).toBeGreaterThanOrEqual(0);
+    expect(themeBounds.right, `English theme switch right edge`).toBeLessThanOrEqual(
+        themeBounds.viewportWidth,
+    );
 });

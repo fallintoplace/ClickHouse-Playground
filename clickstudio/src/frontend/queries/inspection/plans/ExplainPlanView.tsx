@@ -12,7 +12,7 @@ import type {
 import { PipelineGraph } from '../diagrams/PipelineGraph';
 import { ScrollEdgeFrame } from '../../../ui/components/ScrollEdgeShadows';
 import { Icon } from '../../../ui/components/icons';
-import type { Copy } from '../../../translations/i18n';
+import type { Copy } from '../../../ui/copy';
 
 const MAX_PROPERTY_TEXT = 12_000;
 

@@ -14,7 +14,7 @@ import {
     bundledProvider,
 } from './reference-provider';
 import type { Connected } from '../../workspace/workspace-types';
-import type { Copy } from '../../translations/i18n';
+import type { Copy } from '../../ui/copy';
 import { Button, cx, Spinner } from '../../ui/components/ui';
 import { Icon } from '../../ui/components/icons';
 

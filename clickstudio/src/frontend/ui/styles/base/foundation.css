@@ -221,55 +221,6 @@
   height: 18px;
   pointer-events: none;
 }
-.topbar .accent-mode-control {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-shell);
-  background: var(--control-well);
-}
-.topbar .accent-mode-option {
-  display: grid;
-  width: 30px;
-  height: 30px;
-  place-items: center;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--radius-control);
-  background: transparent;
-  cursor: pointer;
-  transition: 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.topbar .accent-mode-option:hover {
-  background: var(--control-hover);
-}
-.topbar .accent-mode-option.is-active {
-  border-color: var(--active-border);
-  background: var(--active-surface);
-  box-shadow: var(--active-inset);
-}
-.topbar .accent-mode-option:focus-visible {
-  outline: 2px solid var(--focus-color);
-  outline-offset: 2px;
-}
-.topbar .accent-mode-swatch {
-  width: 14px;
-  height: 14px;
-  border: 1px solid color-mix(in srgb, var(--text) 22%, transparent);
-  border-radius: 50%;
-}
-.topbar .accent-mode-swatch.is-cyan {
-  background: var(--accent-swatch-cyan);
-  box-shadow: var(--status-ring);
-  color: var(--accent-swatch-cyan);
-}
-.topbar .accent-mode-swatch.is-clickhouse-yellow {
-  background: var(--accent-swatch-clickhouse-yellow);
-  box-shadow: var(--status-ring);
-  color: var(--accent-swatch-clickhouse-yellow);
-}
 
 @media (max-width: 2100px) {
   .topbar {

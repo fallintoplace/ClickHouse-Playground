@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import type { QueryDocument } from '../../../shared/queries/saved-queries/types';
 import { useScopedValue } from '../../browser/useScopedValue';
 import type { HelpPanelSection } from '../../help/WorkspaceHelpPanel';
-import type { ExperienceLevel } from '../../translations/i18n';
+import type { ExperienceLevel } from '../../ui/copy';
 import type { Draft } from '../../queries/editor/drafts/workspace-state';
 import { useFailedQueryErrors } from '../../queries/execution/useFailedQueryErrors';
 import type { BusyAction, Inspector } from '../workspace-types';

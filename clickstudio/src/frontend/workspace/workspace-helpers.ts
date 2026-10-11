@@ -5,7 +5,7 @@ import type { NativeParseSnapshot } from '../../shared/sql/parser';
 import { selectedStatement, splitSql } from '../../shared/sql/sql';
 import { message, RequestError } from '../api/client';
 import type { EditorHandle } from '../queries/editor/components/SqlEditor';
-import type { Copy, ExperienceLevel } from '../translations/i18n';
+import type { Copy, ExperienceLevel } from '../ui/copy';
 import type { Connected, ResultsView } from './workspace-types';
 
 export function safeSelectedStatement(sql: string, from: number, to: number) {

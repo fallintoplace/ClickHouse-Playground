@@ -1,11 +1,13 @@
-export const english = {
+import { THEMES, EXPERIENCE_LEVELS } from './styles/appearance-types.js';
+import type { SelectOption } from '../workspace/workspace-types.js';
+import type { Theme, ExperienceLevel } from './styles/appearance-types.js';
+
+export type { Theme, ExperienceLevel } from './styles/appearance-types.js';
+
+export const copy = {
     app: {
         name: 'ClickStudio',
-        language: 'Language',
         theme: 'Theme',
-        accent: 'Accent color',
-        cyanAccent: 'Cyan accent',
-        clickhouseYellowAccent: 'ClickHouse yellow accent',
         darkTheme: 'Dark theme',
         lightTheme: 'Light theme',
         beginner: 'Standard',
@@ -52,10 +54,9 @@ export const english = {
         insights: 'Insights',
         newSql: 'New SQL',
         restore: 'Restore',
-        closedSqlTabs: 'Recently closed SQL tabs',
         startBlankSql: 'Blank SQL',
         noSqlTabsOpen: 'No SQL tabs open',
-        noSqlTabsOpenDescription: 'Start a blank query or restore a recently closed tab.',
+        noSqlTabsOpenDescription: 'Start a blank query.',
         help: 'Help',
         closeHelp: 'Close help',
         helpCenterTitle: 'Explore ClickStudio',
@@ -156,10 +157,6 @@ export const english = {
         detachedQueryStatus: 'Editor open in another window',
         focusQueryEditor: 'Focus editor',
         dockQueryEditor: 'Dock editor here',
-        queryWindowBlocked:
-            'The editor window was blocked. Allow pop-ups for ClickStudio and try again.',
-        queryWindowOpened: 'Editor opened in a separate window.',
-        queryWindowDocked: 'Editor docked back into the workspace.',
         format: 'Format',
         parserUnavailable: 'Parser unavailable',
         retryParser: 'Retry parser',
@@ -241,7 +238,6 @@ export const english = {
         incompleteSql: 'Incomplete SQL',
         oneStatement: '{count} statement',
         manyStatements: '{count} statements',
-        queryVisualization: 'QUERY VISUALIZATION',
         workspaceOutput: 'WORKSPACE OUTPUT',
         sqlStructure: 'SQL structure',
         queryResults: 'Query results',
@@ -255,7 +251,6 @@ export const english = {
         sqlFlowClickStage: 'Click a stage to jump to its SQL.',
         sqlFlowParserStarting: 'Parser starting',
         sqlFlowParserUnavailable: 'Parser unavailable',
-        sqlFlowCodeMirror: 'CodeMirror mode',
         sqlFlowEmpty: 'Write a SELECT query to build its structure map.',
         sqlFlowAstDetail: 'AST detail: ',
         sqlFlowSqlDetail: 'SQL detail: ',
@@ -308,7 +303,6 @@ export const english = {
         statusCancelled: 'Cancelled',
         statusTimedOut: 'Timed out',
         statusInterrupted: 'Interrupted',
-        statusComplete: 'Complete',
         statusLiveUpdates: 'Live updates',
         statusReconnecting: 'Reconnecting',
         rowsRead: 'rows read',
@@ -317,7 +311,6 @@ export const english = {
         import: 'Import',
         export: 'Export',
         refresh: 'Refresh',
-        workspaceInspector: 'WORKSPACE INSPECTOR',
         workspaceBrowser: 'Workspace browser',
         workspacePanels: 'More workspace panels',
         objects: 'Objects',
@@ -558,4 +551,15 @@ export const english = {
         retainedRowsAcrossOneMeasure: '{rows} retained rows across 1 measure',
         retainedRowsAcrossManyMeasures: '{rows} retained rows across {measures} measures',
     },
-} as const;
+};
+
+export type Copy = typeof copy;
+
+export const themeOptions = (labels: Copy): readonly SelectOption<Theme>[] =>
+    THEMES.map(value => ({
+        value,
+        label: value === 'click-dark' ? labels.app.darkTheme : labels.app.lightTheme,
+    }));
+
+export const experienceOptions = (labels: Copy): readonly SelectOption<ExperienceLevel>[] =>
+    EXPERIENCE_LEVELS.map(value => ({ value, label: labels.app[value] }));

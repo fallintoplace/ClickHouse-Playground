@@ -148,7 +148,6 @@ export function HelpSections({
                             setSelectedId,
                             selectedIsScript,
                             copy: props.copy,
-                            locale: props.locale,
                             schemaLoading: props.schemaLoading,
                             onRefreshSchema: props.onRefreshSchema,
                             onOpenExample: props.onOpenExample,

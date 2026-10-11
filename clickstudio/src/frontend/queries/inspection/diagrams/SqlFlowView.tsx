@@ -5,7 +5,7 @@ import { AnalyzerTreeView } from './AnalyzerTreeView';
 import { AstGraph } from '../../editor/parser/AstGraph';
 import { PipelineGraph } from './PipelineGraph';
 import { ScrollEdgeFrame } from '../../../ui/components/ScrollEdgeShadows';
-import type { Copy } from '../../../translations/i18n';
+import type { Copy } from '../../../ui/copy';
 
 type StructureView = 'flow' | 'ast' | 'analyzer';
 
@@ -18,7 +18,6 @@ export type SqlFlowViewProps = {
     analyzerAvailable: boolean;
     analyzerUnavailableReason?: string;
     parseResult?: NativeParseResult;
-    parserEnabled: boolean;
     parserStatus: NativeParserStatus;
     parseDurationMs?: number;
     onRevealRange: (from: number, to: number) => void;
@@ -29,7 +28,6 @@ export function SqlFlowView({
     sql,
     sourceOffset,
     parseResult,
-    parserEnabled,
     parserStatus,
     parseDurationMs,
     connectionId,
@@ -48,8 +46,6 @@ export function SqlFlowView({
 
     if (view === 'analyzer') {
         parserLabel = copy.queryTreeServer;
-    } else if (!parserEnabled) {
-        parserLabel = copy.sqlFlowCodeMirror;
     } else if (parserStatus === 'loading') {
         parserLabel = copy.sqlFlowParserStarting;
     } else if (parserStatus === 'unavailable') {
@@ -60,25 +56,21 @@ export function SqlFlowView({
         parserLabel = copy.sqlFlowKeywordEstimate;
     }
     const astAvailable = Boolean(
-        parserEnabled && parserStatus === 'ready' && !parseResult?.error && parseResult?.ast,
+        parserStatus === 'ready' && !parseResult?.error && parseResult?.ast,
     );
     let astUnavailableReason: string;
 
-    if (!parserEnabled) {
-        astUnavailableReason = copy.sqlFlowCodeMirror;
-    } else {
-        switch (parserStatus) {
-            case 'loading':
-                astUnavailableReason = copy.sqlFlowParserStarting;
-                break;
-            case 'unavailable':
-                astUnavailableReason = copy.sqlFlowParserUnavailable;
-                break;
-            default:
-                astUnavailableReason =
-                    parseResult?.error?.message ?? parseResult?.ast_error ?? copy.sqlAstUnavailable;
-                break;
-        }
+    switch (parserStatus) {
+        case 'loading':
+            astUnavailableReason = copy.sqlFlowParserStarting;
+            break;
+        case 'unavailable':
+            astUnavailableReason = copy.sqlFlowParserUnavailable;
+            break;
+        default:
+            astUnavailableReason =
+                parseResult?.error?.message ?? parseResult?.ast_error ?? copy.sqlAstUnavailable;
+            break;
     }
 
     return (

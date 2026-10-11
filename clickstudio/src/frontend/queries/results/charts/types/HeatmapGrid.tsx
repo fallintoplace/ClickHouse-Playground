@@ -3,7 +3,7 @@ import {
     heatmapCellKey,
 } from '../../../../../shared/queries/results/results';
 import type { Result } from '../../../../../shared/queries/results/types';
-import type { Copy, Locale } from '../../../../translations/i18n';
+import type { Copy } from '../../../../ui/copy';
 import { ScrollEdgeFrame } from '../../../../ui/components/ScrollEdgeShadows';
 import { chartText, formatCount } from '../chart-helpers';
 
@@ -16,7 +16,6 @@ export function HeatmapGrid({
     heatmapXLabels,
     heatmapYLabels,
     heatmap,
-    locale,
     heatmapMaximum,
     compactNumber,
 }: {
@@ -28,7 +27,6 @@ export function HeatmapGrid({
     heatmapXLabels: string[];
     heatmapYLabels: string[];
     heatmap: HeatmapPreparation;
-    locale: Locale;
     heatmapMaximum: number;
     compactNumber: Intl.NumberFormat;
 }) {
@@ -87,7 +85,7 @@ export function HeatmapGrid({
                                         } else if (value === undefined) {
                                             cellDescription = chartCopy.heatmapNullMeasure;
                                         } else {
-                                            cellDescription = formatCount(value, locale);
+                                            cellDescription = formatCount(value);
                                         }
                                         const plotted = value ?? 0;
                                         const intensity =
@@ -119,8 +117,8 @@ export function HeatmapGrid({
                     <div className="heatmap-caption">
                         {chartText(chartCopy.heatmapCaption, {
                             measure: result.columns[yIndex]?.name ?? '',
-                            rows: formatCount(heatmapYLabels.length, locale),
-                            columns: formatCount(heatmapXLabels.length, locale),
+                            rows: formatCount(heatmapYLabels.length),
+                            columns: formatCount(heatmapXLabels.length),
                             note:
                                 result.completeness === 'truncated'
                                     ? chartCopy.heatmapTruncatedNote

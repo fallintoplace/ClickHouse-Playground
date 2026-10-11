@@ -13,13 +13,12 @@ import {
 import { Workspace } from '../workspace/Workspace';
 import {
     experienceOptions,
-    getCopy,
-    resolveLocale,
+    copy,
+    type Copy,
     themeOptions,
     type ExperienceLevel,
-    type Locale,
     type Theme,
-} from '../translations/i18n';
+} from '../ui/copy';
 import { RadioGroup } from '@clickhouse/click-ui/RadioGroup';
 import type { Connected, Session } from '../workspace/workspace-types';
 import { resolveConnectionSelection } from '../database/connections/selection';
@@ -46,18 +45,6 @@ const pref = <T extends string>(key: string, values: readonly T[], fallback: T):
     const value = storedPreference(key);
     return values.find(candidate => candidate === value) ?? fallback;
 };
-const browserLocales = (): readonly string[] => {
-    if (typeof navigator === 'undefined') {
-        return [];
-    }
-
-    if (navigator.languages.length) {
-        return navigator.languages;
-    }
-
-    return [navigator.language];
-};
-
 function writeConnectionToUrl(id: string) {
     const url = new URL(window.location.href);
     if (id) url.searchParams.set('connection', id);
@@ -77,9 +64,6 @@ function cloudProfileDefaults(connection?: Connected): SavedCloudConnectionProfi
 }
 
 function App() {
-    const [locale] = useState<Locale>(() =>
-        resolveLocale(storedPreference('clickstudio:locale'), ...browserLocales()),
-    );
     const [theme, setTheme] = useState<Theme>(() =>
         pref('clickstudio:theme', THEMES, 'click-dark'),
     );
@@ -100,7 +84,6 @@ function App() {
     const [cloudConnectionError, setCloudConnectionError] = useState('');
     const trustActionRef = useRef<() => Promise<void>>(async () => undefined);
     const testConnectionActionRef = useRef<() => Promise<void>>(async () => undefined);
-    const copy = getCopy(locale);
     const connection = connections.find(item => item.id === connectionId) ?? connections[0];
     const hasPreviewSourceSwitcher = Boolean(
         session?.demo && connections.some(item => item.id === 'playground'),
@@ -179,7 +162,7 @@ function App() {
 
     useEffect(() => {
         document.documentElement.dataset.theme = theme;
-        document.documentElement.lang = locale;
+        document.documentElement.lang = 'en';
         document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
         document
             .querySelector('meta[name="theme-color"]')
@@ -191,10 +174,9 @@ function App() {
             );
         try {
             localStorage.setItem('clickstudio:theme', theme);
-            localStorage.setItem('clickstudio:locale', locale);
             localStorage.setItem('clickstudio:experience', experience);
         } catch {}
-    }, [dark, experience, locale, theme]);
+    }, [dark, experience, theme]);
 
     const loadSession = useCallback(async () => {
         const next = await api<Session>('/session');
@@ -430,10 +412,8 @@ function App() {
                     testConnectionActionRef={testConnectionActionRef}
                     demoMode={session.demo}
                     experience={experience}
-                    nativeParserEnabled
                     dark={dark}
                     copy={copy}
-                    locale={locale}
                 />
             ) : (
                 <div className="empty-connection">
@@ -480,7 +460,7 @@ function renderConnectionPicker({
     isPlayground: boolean;
     isCloudConnection: boolean;
     connection: Connected | undefined;
-    copy: ReturnType<typeof getCopy>;
+    copy: Copy;
     session: Session;
     connectionNeedsTest: boolean;
     connectionStatus:
@@ -776,7 +756,7 @@ function renderAppearanceControls({
     theme,
     setTheme,
 }: {
-    copy: ReturnType<typeof getCopy>;
+    copy: Copy;
     experience: 'beginner' | 'expert';
     setExperience: import('react').Dispatch<import('react').SetStateAction<'beginner' | 'expert'>>;
     theme: 'click-dark' | 'click-light';

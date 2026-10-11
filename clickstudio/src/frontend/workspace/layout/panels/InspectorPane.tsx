@@ -28,7 +28,7 @@ import { ObjectExplorer } from '../../../database/explorer/objects/ObjectExplore
 import { ReferenceExplorer } from '../../../help/reference/ReferenceExplorer';
 import { WorkspaceInlineNotice } from '../notifications/WorkspaceInlineNotice';
 import type { WorkspaceFeedback } from '../notifications/useWorkspaceNotifications';
-import type { Copy } from '../../../translations/i18n';
+import type { Copy } from '../../../ui/copy';
 import {
     inspectorMoreNavigation,
     PRIMARY_INSPECTOR_NAVIGATION,
@@ -100,7 +100,6 @@ export type InspectorPaneProps = {
     assistantPhase?: 'preparing' | 'generating' | 'deciding';
     assistantError: string;
     assistantNotice: string;
-    nativeParserEnabled: boolean;
     nativeParserStatus: NativeParserStatus;
     nativeParseSnapshot?: NativeParseSnapshot;
     onRetryParser: () => void;
@@ -200,7 +199,6 @@ export function InspectorPane({
     assistantPhase,
     assistantError,
     assistantNotice,
-    nativeParserEnabled,
     nativeParserStatus,
     nativeParseSnapshot,
     onRetryParser,
@@ -461,7 +459,6 @@ export function InspectorPane({
                     })}
                 {inspector === 'parser' && (
                     <NativeParserInspector
-                        enabled={nativeParserEnabled}
                         status={nativeParserStatus}
                         snapshot={nativeParseSnapshot}
                         onRetry={onRetryParser}

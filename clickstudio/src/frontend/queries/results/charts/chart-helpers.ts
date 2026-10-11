@@ -1,6 +1,6 @@
 import { CHART_KINDS } from '../../../../shared/queries/results/chart-types.js';
 import type { Draft } from '../../editor/drafts/workspace-state.js';
-import type { Copy, Locale } from '../../../translations/i18n.js';
+import type { Copy } from '../../../ui/copy.js';
 
 export const chartKindOptions = CHART_KINDS.filter(kind => kind !== 'table').map(value => ({
     value,
@@ -32,8 +32,8 @@ export function chartTypeLabel(kind: Draft['chart']['kind'], copy: Copy['chart']
     }[kind];
 }
 
-export function formatCount(value: number, locale: Locale) {
-    return new Intl.NumberFormat(locale).format(value);
+export function formatCount(value: number) {
+    return new Intl.NumberFormat('en').format(value);
 }
 
 export function categoryAxisLayout(labels: readonly string[], minimumWidth = 652) {

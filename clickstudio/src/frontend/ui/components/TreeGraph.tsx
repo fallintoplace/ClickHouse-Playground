@@ -8,7 +8,7 @@ import {
     type TreeGraphNode,
     type VisibleTreeGraphNode,
 } from './tree-model';
-import type { Copy } from '../../translations/i18n';
+import type { Copy } from '../copy';
 import { ScrollEdgeFrame } from './ScrollEdgeShadows';
 
 const nodeWidth = 220;

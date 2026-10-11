@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
-import { setAccentForStyles, openSqlExamples, openWorkspacePanel } from './helpers.js';
+import { openSqlExamples, openWorkspacePanel } from './helpers.js';
 import {
     previewCloudSchema,
     mockCloudEndpoint,
@@ -59,47 +59,41 @@ test('Footer shows version detection and keeps connection versions isolated in s
     }
 });
 
-test('Connect Cloud matches neutral secondary controls in both themes and accents', async ({
-    page,
-}) => {
+test('Connect Cloud matches neutral secondary controls in both themes', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');
     const connect = page.getByRole('button', { name: 'Connect Cloud', exact: true });
     const save = page.getByTestId('save-query');
-    for (const theme of ['Dark', 'Light'])
-        for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
-            await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
-            await setAccentForStyles(page, accent);
-            await expect(connect).toHaveCSS('background-image', 'none');
-            for (const property of ['background-color', 'border-color']) {
-                await expect(connect).toHaveCSS(
+    for (const theme of ['Dark', 'Light']) {
+        await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+        await expect(connect).toHaveCSS('background-image', 'none');
+        for (const property of ['background-color', 'border-color']) {
+            await expect(connect).toHaveCSS(
+                property,
+                await save.evaluate(
+                    (element, name) => getComputedStyle(element).getPropertyValue(name),
                     property,
-                    await save.evaluate(
-                        (element, name) => getComputedStyle(element).getPropertyValue(name),
-                        property,
-                    ),
-                );
-            }
-            await save.hover();
-            await expect(save).toHaveCSS(
-                'color',
-                await page
-                    .locator('.brand-name')
-                    .evaluate(element => getComputedStyle(element).color),
+                ),
             );
-            const hover = await save.evaluate(element => {
-                const style = getComputedStyle(element);
-                return {
-                    background: style.backgroundColor,
-                    border: style.borderColor,
-                    text: style.color,
-                };
-            });
-            await connect.hover();
-            await expect(connect).toHaveCSS('background-color', hover.background);
-            await expect(connect).toHaveCSS('border-color', hover.border);
-            await expect(connect).toHaveCSS('color', hover.text);
         }
+        await save.hover();
+        await expect(save).toHaveCSS(
+            'color',
+            await page.locator('.brand-name').evaluate(element => getComputedStyle(element).color),
+        );
+        const hover = await save.evaluate(element => {
+            const style = getComputedStyle(element);
+            return {
+                background: style.backgroundColor,
+                border: style.borderColor,
+                text: style.color,
+            };
+        });
+        await connect.hover();
+        await expect(connect).toHaveCSS('background-color', hover.background);
+        await expect(connect).toHaveCSS('border-color', hover.border);
+        await expect(connect).toHaveCSS('color', hover.text);
+    }
 });
 
 test('Cloud actions stay outside the source picker and disconnect preserves another source', async ({
@@ -437,7 +431,7 @@ test('Restoring a draft with an unavailable run keeps its SQL without an error t
     ).toHaveCount(0);
 });
 
-test('Charts filter opens a localized chart example in a new SQL tab without executing it', async ({
+test('Charts filter opens a chart example in a new SQL tab without executing it', async ({
     page,
 }) => {
     const exampleSqlRequests: string[] = [];

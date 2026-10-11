@@ -1,4 +1,4 @@
-import type { Copy } from '../../translations/i18n';
+import type { Copy } from '../copy';
 import { Icon } from './icons';
 
 export function HelpButton({

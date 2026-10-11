@@ -4,7 +4,7 @@ import type { ResultPage } from '../../../shared/queries/results/types';
 import type { Run, Script } from '../../../shared/queries/execution/types';
 import type { FlamegraphSnapshot } from '../../../shared/queries/inspection/flamegraph';
 import type { NativeParseSnapshot, NativeParserStatus } from '../../../shared/sql/parser';
-import type { Copy, ExperienceLevel, Locale } from '../../translations/i18n';
+import type { Copy, ExperienceLevel } from '../../ui/copy';
 import type { BusyAction, Connected, ResultsView } from '../../workspace/workspace-types';
 import type { Draft } from '../editor/drafts/workspace-state';
 import type { FailedQueryError } from '../../workspace/workspace-helpers';
@@ -30,7 +30,6 @@ export type WorkspaceResultsPanelState = Readonly<{
     active: Draft;
     connection: Connected;
     copy: Copy;
-    locale: Locale;
     run?: Run;
     failedAttempt?: FailedQueryError;
     script?: Script;
@@ -42,7 +41,6 @@ export type WorkspaceResultsPanelState = Readonly<{
     flamegraph?: FlamegraphSnapshot;
     profilesByRun: Readonly<Record<string, QueryProfile>>;
     pipelinesByRun: Readonly<Record<string, ProfilePipeline>>;
-    nativeParserEnabled: boolean;
     nativeParserStatus: NativeParserStatus;
     nativeParseSnapshot?: NativeParseSnapshot;
     trusted: boolean;
@@ -86,7 +84,6 @@ export function WorkspaceResultsPanel({
         active,
         connection,
         copy,
-        locale,
         run,
         failedAttempt,
         script,
@@ -98,7 +95,6 @@ export function WorkspaceResultsPanel({
         flamegraph,
         profilesByRun,
         pipelinesByRun,
-        nativeParserEnabled,
         nativeParserStatus,
         nativeParseSnapshot,
         trusted,
@@ -200,7 +196,6 @@ export function WorkspaceResultsPanel({
                                 sql={sqlMapStatement?.sql ?? active.sql}
                                 sourceOffset={sqlMapStatement?.from ?? 0}
                                 parseResult={sqlMapParseStatement?.result}
-                                parserEnabled={nativeParserEnabled}
                                 parserStatus={nativeParserStatus}
                                 parseDurationMs={nativeParseSnapshot?.elapsedMs}
                                 connectionId={connection.id}
@@ -351,7 +346,6 @@ export function WorkspaceResultsPanel({
                                             chart={active.chart}
                                             onChart={chart => actions.onPatch({ chart })}
                                             copy={copy}
-                                            locale={locale}
                                         />
                                     )
                                 )}
@@ -361,7 +355,6 @@ export function WorkspaceResultsPanel({
                                         loading={
                                             !retainedSnapshot && run.resultState === 'reopenable'
                                         }
-                                        locale={locale}
                                     />
                                 )}
                                 {run && visibleResultsView === 'insights' && (

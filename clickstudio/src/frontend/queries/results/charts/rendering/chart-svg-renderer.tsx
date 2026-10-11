@@ -21,7 +21,6 @@ export function createChartSvgRenderer(
         scatterY,
         result,
         xIndex,
-        locale,
         yIndex,
         plotSeries,
         x,
@@ -45,7 +44,7 @@ export function createChartSvgRenderer(
                             className="chart-point"
                             style={{ fill: seriesColor(0), stroke: seriesColor(0) }}
                         >
-                            <title>{`${result.columns[xIndex]?.name}: ${formatCount(point.x, locale)} · ${result.columns[yIndex]?.name}: ${formatCount(point.y, locale)}`}</title>
+                            <title>{`${result.columns[xIndex]?.name}: ${formatCount(point.x)} · ${result.columns[yIndex]?.name}: ${formatCount(point.y)}`}</title>
                         </circle>
                     ));
 

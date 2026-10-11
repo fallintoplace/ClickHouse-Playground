@@ -1,14 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
-export async function setAccentForStyles(page: Page, label: string) {
-    if (label !== 'Cyan accent' && label !== 'ClickHouse yellow accent')
-        throw new Error(`Unknown accent palette: ${label}`);
-    const accent = label === 'Cyan accent' ? 'cyan' : 'clickhouse-yellow';
-    await page.evaluate(value => {
-        document.documentElement.dataset.accent = value;
-    }, accent);
-}
-
 export const runButton = (page: Page) => page.getByTestId('run-button');
 
 export async function openStatementResults(target: Page | Locator) {

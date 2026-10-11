@@ -1,6 +1,6 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import type { Result } from '../../src/shared/queries/results/types.js';
-import { setAccentForStyles, runButton, trust } from './helpers.js';
+import { runButton, trust } from './helpers.js';
 
 test.beforeEach(async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -153,38 +153,33 @@ for (const mode of ['Standard', 'Experimental'])
             await toolbar.getByRole('combobox', { name: 'Type', exact: true }).click();
             await expect(popup).toBeHidden();
             await page.keyboard.press('Escape');
-            for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
-                await setAccentForStyles(page, accent);
-                for (const width of [1440, 900]) {
-                    await page.setViewportSize({ width, height: 1000 });
-                    await expectToolbarFits(toolbar);
-                    expect(
-                        await page.evaluate(
-                            () => document.documentElement.scrollWidth - innerWidth,
-                        ),
-                    ).toBeLessThanOrEqual(1);
-                    await measures.click();
-                    await expectPopoverFits(page, popup);
-                    await popup
-                        .getByRole('button', { name: 'Close Measures', exact: true })
-                        .click();
-                    await toolbar
-                        .getByRole('button', { name: 'Chart details', exact: true })
-                        .press('Enter');
-                    const details = results.getByRole('dialog', {
-                        name: 'Chart details',
-                        exact: true,
+
+            for (const width of [1440, 900]) {
+                await page.setViewportSize({ width, height: 1000 });
+                await expectToolbarFits(toolbar);
+                expect(
+                    await page.evaluate(() => document.documentElement.scrollWidth - innerWidth),
+                ).toBeLessThanOrEqual(1);
+                await measures.click();
+                await expectPopoverFits(page, popup);
+                await popup.getByRole('button', { name: 'Close Measures', exact: true }).click();
+                await toolbar
+                    .getByRole('button', { name: 'Chart details', exact: true })
+                    .press('Enter');
+                const details = results.getByRole('dialog', {
+                    name: 'Chart details',
+                    exact: true,
+                });
+                await expect(details).toContainText('no hidden aggregation is performed');
+                await expectPopoverFits(page, details);
+                await page.keyboard.press('Escape');
+                await expect(details).toBeHidden();
+                if (width === 1440)
+                    await page.screenshot({
+                        path: info.outputPath(`chart-toolbar-${width}.png`),
                     });
-                    await expect(details).toContainText('no hidden aggregation is performed');
-                    await expectPopoverFits(page, details);
-                    await page.keyboard.press('Escape');
-                    await expect(details).toBeHidden();
-                    if (accent === 'ClickHouse yellow accent' && width === 1440)
-                        await page.screenshot({
-                            path: info.outputPath(`chart-toolbar-${width}.png`),
-                        });
-                }
             }
+
             await page.setViewportSize({ width: 1440, height: 1000 });
             await results.getByRole('combobox', { name: 'Type', exact: true }).selectOption('line');
             await expect(results.locator('.chart-line')).toHaveCount(5);

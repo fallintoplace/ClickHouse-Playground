@@ -10,7 +10,7 @@ import {
 } from '../../../../../shared/queries/results/results';
 import type { Result } from '../../../../../shared/queries/results/types';
 import type { Draft } from '../../../editor/drafts/workspace-state';
-import type { Copy, Locale } from '../../../../translations/i18n';
+import type { Copy } from '../../../../ui/copy';
 import { ScrollEdgeFrame } from '../../../../ui/components/ScrollEdgeShadows';
 import { ChartToolbar } from '../ChartToolbar';
 import {
@@ -28,14 +28,12 @@ export function RowCountChart({
     suggestion,
     onChart,
     copy,
-    locale,
 }: {
     result: Result;
     chart: Draft['chart'];
     suggestion: ReturnType<typeof recommendChart>;
     onChart: (chart: Draft['chart']) => void;
     copy: Copy['chart'];
-    locale: Locale;
 }) {
     const { width: categoryViewportWidth, onViewport: onCategoryViewport } = useChartPlotWidth();
     const { width: plotViewportWidth, onViewport: onPlotViewport } =
@@ -111,7 +109,7 @@ export function RowCountChart({
     const fittedTicks = timeAxis ? fitChartTicks(ticks) : ticks;
     const axisLabels = fittedTicks.map(tick => tick.label);
     const axisLabelPositions = fittedTicks.map(tick => tick.position);
-    const valueFormatter = new Intl.NumberFormat(locale, {
+    const valueFormatter = new Intl.NumberFormat('en', {
         notation: 'compact',
         maximumFractionDigits: 1,
     });
@@ -203,7 +201,6 @@ export function RowCountChart({
         xTime,
         y,
         copy,
-        locale,
         bars,
         xCategory,
         barWidth,
@@ -395,10 +392,10 @@ export function RowCountChart({
                             </span>
                             <span>
                                 {timeAxis
-                                    ? `${chartText(copy.timeSummary, { buckets: formatCount(timeTicks.length, locale), unit: timeUnit, rows: formatCount(result.rows.length, locale) })}${countData?.excludedRows ? ` · ${chartText(copy.invalidDatesSkipped, { count: formatCount(countData.excludedRows, locale) })}` : ''}`
+                                    ? `${chartText(copy.timeSummary, { buckets: formatCount(timeTicks.length), unit: timeUnit, rows: formatCount(result.rows.length) })}${countData?.excludedRows ? ` · ${chartText(copy.invalidDatesSkipped, { count: formatCount(countData.excludedRows) })}` : ''}`
                                     : chartText(copy.categorySummary, {
-                                          categories: formatCount(bars.length, locale),
-                                          rows: formatCount(result.rows.length, locale),
+                                          categories: formatCount(bars.length),
+                                          rows: formatCount(result.rows.length),
                                       })}
                                 <i>·</i>{' '}
                                 {result.completeness === 'truncated'
@@ -430,7 +427,6 @@ function createRowCountSvgRenderer({
     xTime,
     y,
     copy,
-    locale,
     bars,
     xCategory,
     barWidth,
@@ -453,7 +449,6 @@ function createRowCountSvgRenderer({
     xTime: (timestamp: number) => number;
     y: (value: number) => number;
     copy: Copy['chart'];
-    locale: Locale;
     bars: { key: string; label: string; count: number }[];
     xCategory: (index: number, length: number) => number;
     barWidth: number;
@@ -535,7 +530,7 @@ function createRowCountSvgRenderer({
                                       {chartText(copy.timePointTooltip, {
                                           bucket: point.label,
                                           series: item.label,
-                                          count: formatCount(point.count, locale),
+                                          count: formatCount(point.count),
                                       })}
                                   </title>
                               </circle>
@@ -568,7 +563,7 @@ function createRowCountSvgRenderer({
                               <title>
                                   {chartText(copy.categoryBarTooltip, {
                                       category: group.label,
-                                      count: formatCount(group.count, locale),
+                                      count: formatCount(group.count),
                                   })}
                               </title>
                           </rect>

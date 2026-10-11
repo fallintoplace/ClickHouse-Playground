@@ -87,7 +87,6 @@
     background: var(--line);
   }
   .topbar-spacer,
-  .tabs-spacer,
   .rail-spacer {
     flex: 1;
   }
@@ -522,21 +521,6 @@
     font-weight: 750;
     letter-spacing: 0.12em;
   }
-  .beginner-dot,
-  .expert-diamond {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--green);
-    box-shadow: var(--status-ring);
-    color: var(--green);
-  }
-  .expert-diamond {
-    border-radius: 1px;
-    background: var(--accent);
-    transform: rotate(45deg);
-    color: var(--accent);
-  }
   .topbar-preferences {
     display: flex;
     gap: 8px;
@@ -952,7 +936,7 @@
   border-color: var(--active-border);
 }
 
-:root[data-theme="click-light"] :is(.topbar-control-rail, .accent-mode-control) {
+:root[data-theme="click-light"] .topbar-control-rail {
   background: var(--panel-raised);
   box-shadow: none;
 }

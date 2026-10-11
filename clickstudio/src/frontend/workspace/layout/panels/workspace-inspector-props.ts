@@ -59,14 +59,12 @@ export function createInspectorProps({
     copy,
     connection,
     active,
-    nativeParserEnabled,
     experience,
     model,
 }: {
     copy: WorkspaceProps['copy'];
     connection: WorkspaceProps['connection'];
     active: Draft;
-    nativeParserEnabled: WorkspaceProps['nativeParserEnabled'];
     experience: WorkspaceProps['experience'];
     model: ReturnType<typeof useWorkspaceController>;
 }) {
@@ -226,7 +224,6 @@ export function createInspectorProps({
         assistantPhase,
         assistantError,
         assistantNotice,
-        nativeParserEnabled,
         nativeParserStatus,
         nativeParseSnapshot,
         onRetryParser: () => editor.current?.retryNativeParser(),

@@ -1,5 +1,5 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
-import { openResultFilter, replaceSql, runButton, setAccentForStyles, trust } from './helpers.js';
+import { openResultFilter, replaceSql, runButton, trust } from './helpers.js';
 
 const shadow = (locator: Locator) =>
     locator
@@ -143,7 +143,7 @@ async function expectCompactToolbar(page: Page) {
 
 for (const theme of ['Dark', 'Light'])
     for (const mode of ['Standard', 'Experimental']) {
-        test(`${theme} ${mode} keeps workspace panels flat and overlay depth neutral across accents`, async ({
+        test(`${theme} ${mode} keeps workspace panels flat and overlay depth neutral`, async ({
             page,
         }) => {
             await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -151,7 +151,6 @@ for (const theme of ['Dark', 'Light'])
             await trust(page);
             await page.getByText(mode, { exact: true }).click();
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
-            await setAccentForStyles(page, 'Cyan accent');
             await runButton(page).click();
             await expect(page.locator('.data-table')).toBeVisible();
             await expectCompactToolbar(page);
@@ -249,8 +248,6 @@ for (const theme of ['Dark', 'Light'])
             await expect(category).toHaveCSS('outline-offset', '-3px');
             await page.keyboard.press('Escape');
             await expect(help).toBeHidden();
-
-            await setAccentForStyles(page, 'ClickHouse yellow accent');
             await expect(editor).toHaveCSS('border-radius', '4px');
             await expect(runButton(page)).toHaveCSS('border-radius', '4px');
             await expectNeutralWorkspace(page);

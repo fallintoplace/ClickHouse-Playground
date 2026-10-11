@@ -1,7 +1,7 @@
 import type { CandlestickConfig } from '../../../../../shared/queries/results/chart-settings';
 import type { Result } from '../../../../../shared/queries/results/types';
 import type { Draft } from '../../../editor/drafts/workspace-state';
-import type { Copy, Locale } from '../../../../translations/i18n';
+import type { Copy } from '../../../../ui/copy';
 import { CandlestickChart } from './CandlestickChart';
 import { ChartPopover, ChartToolbar } from '../ChartToolbar';
 import { ScrollEdgeFrame } from '../../../../ui/components/ScrollEdgeShadows';
@@ -13,14 +13,12 @@ export function renderCandlestickChart({
     chart,
     onChart,
     chartCopy,
-    locale,
     selection,
 }: {
     result: Result;
     chart: Draft['chart'];
     onChart: (chart: Draft['chart']) => void;
     chartCopy: Copy['chart'];
-    locale: Locale;
     selection: ReturnType<typeof prepareChartSelection>;
 }) {
     const {
@@ -101,7 +99,6 @@ export function renderCandlestickChart({
         candleColumns,
         optionalColumns,
         activeCandleValid,
-        locale,
     });
 }
 
@@ -118,7 +115,6 @@ function renderCandlestickControls({
     candleColumns,
     optionalColumns,
     activeCandleValid,
-    locale,
 }: {
     chart: Draft['chart'];
     chartCopy: Copy['chart'];
@@ -135,7 +131,6 @@ function renderCandlestickControls({
     candleColumns: (selected: number | undefined) => import('react').ReactElement;
     optionalColumns: (selected: number | undefined) => import('react').ReactElement;
     activeCandleValid: boolean;
-    locale: Locale;
 }) {
     return (
         <ScrollEdgeFrame<HTMLDivElement> className="chart-workspace-frame">
@@ -246,7 +241,6 @@ function renderCandlestickControls({
                             config={candle}
                             x={candleX}
                             copy={chartCopy}
-                            locale={locale}
                         />
                     )}
                 </div>

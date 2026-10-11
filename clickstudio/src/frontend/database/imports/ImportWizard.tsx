@@ -3,7 +3,7 @@ import {
     useImportWizardController,
     type ImportWizardControllerOptions,
 } from './useImportWizardController';
-import type { Copy } from '../../translations/i18n';
+import type { Copy } from '../../ui/copy';
 import { ImportFileStep } from './steps/ImportFileStep';
 import { ImportMappingStep } from './steps/ImportMappingStep';
 import { ImportReviewStep } from './steps/ImportReviewStep';

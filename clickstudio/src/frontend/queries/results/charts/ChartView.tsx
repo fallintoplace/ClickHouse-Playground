@@ -1,6 +1,6 @@
 import type { Result } from '../../../../shared/queries/results/types';
 import type { Draft } from '../../editor/drafts/workspace-state';
-import type { Copy, Locale } from '../../../translations/i18n';
+import type { Copy } from '../../../ui/copy';
 import { RowCountChart } from './types/RowCountChart';
 import { useChartPlotWidth } from './useChartPlotWidth';
 import { prepareChartSelection } from './controls/chart-selection';
@@ -16,14 +16,12 @@ export function ChartView({
     chart,
     onChart,
     copy,
-    locale,
 }: {
     result?: Result;
     loading: boolean;
     chart: Draft['chart'];
     onChart: (chart: Draft['chart']) => void;
     copy: Copy;
-    locale: Locale;
 }) {
     const { width: categoryViewportWidth, onViewport: onCategoryViewport } = useChartPlotWidth();
     const { width: plotViewportWidth, onViewport: onPlotViewport } =
@@ -44,7 +42,7 @@ export function ChartView({
         chart.kind === 'candlestick' ||
         (chart.kind === 'table' && suggestion.config.kind === 'candlestick')
     )
-        return renderCandlestickChart({ result, chart, onChart, chartCopy, locale, selection });
+        return renderCandlestickChart({ result, chart, onChart, chartCopy, selection });
     if (!numericIndexes.length)
         return (
             <RowCountChart
@@ -53,14 +51,12 @@ export function ChartView({
                 suggestion={suggestion}
                 onChart={onChart}
                 copy={chartCopy}
-                locale={locale}
             />
         );
     const model = prepareChartView({
         result,
         chart,
         chartCopy,
-        locale,
         categoryViewportWidth,
         plotViewportWidth: plotViewportWidth || 760,
         selection,

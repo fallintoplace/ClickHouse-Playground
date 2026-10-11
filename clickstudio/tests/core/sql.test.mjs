@@ -1,3 +1,4 @@
+import { validateImportJson } from '../../.core-build/src/shared/database/imports/parser.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -11,11 +12,7 @@ import {
     hasTopLevelOutputFormat,
 } from '../../.core-build/src/shared/sql/sql.js';
 import { guardSql } from '../../.core-build/src/backend/queries/execution/guards.js';
-import {
-    limits,
-    runRequest,
-    validateJson,
-} from '../../.core-build/src/backend/system/requests/validation.js';
+import { limits, runRequest } from '../../.core-build/src/backend/system/requests/validation.js';
 const cases = [
     ["SELECT ';'; SELECT 2", 2],
     ["SELECT 'it\\\'s;ok'; SELECT 2", 2],
@@ -158,9 +155,9 @@ test('Hard limits cannot be raised', () => assert.throws(() => limits({ rows: 1e
 test('Unknown limit cannot exploit prototype', () =>
     assert.throws(() => limits(JSON.parse('{"__proto__":1}'))));
 test('Unsafe JSON integers reject rather than lose precision', () =>
-    assert.throws(() => validateJson(JSON.parse('{"id":18446744073709551615}'))));
+    assert.throws(() => validateImportJson(JSON.parse('{"id":18446744073709551615}'))));
 test('Int64 encoded as a string remains lossless', () =>
-    assert.equal(validateJson({ id: '18446744073709551615' }).id, '18446744073709551615'));
+    assert.equal(validateImportJson({ id: '18446744073709551615' }).id, '18446744073709551615'));
 test('Request tags cannot smuggle arbitrary secret fields', () =>
     assert.throws(() =>
         runRequest({

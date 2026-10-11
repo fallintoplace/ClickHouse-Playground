@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { english } from '../../.workspace-build/src/frontend/translations/i18n-english.js';
+import { copy as english } from '../../.workspace-build/src/frontend/ui/copy.js';
 import {
     categoryLabel,
     chartLabel,
@@ -32,7 +32,7 @@ test('experimental help topics stay grouped after the standard help topics', () 
     assert.ok(sections.findIndex(section => section.id === 'reference') < firstExperimentalIndex);
 });
 
-test('example category labels use localized and custom labels', () => {
+test('example category labels use English and custom labels', () => {
     const labels = [
         ['all', copy.allExamples],
         ['featured', 'Featured'],
@@ -55,10 +55,8 @@ test('example category labels use localized and custom labels', () => {
     ];
 
     for (const [category, expected] of labels) {
-        assert.equal(categoryLabel(category, copy, 'en'), expected, category);
+        assert.equal(categoryLabel(category, copy), expected, category);
     }
-    assert.equal(categoryLabel('featured', copy, 'zh'), '精选');
-    assert.equal(categoryLabel('openSource', copy, 'zh'), '开源');
 });
 
 test('chart labels cover every chart kind and unknown kinds', () => {
@@ -78,11 +76,10 @@ test('chart labels cover every chart kind and unknown kinds', () => {
     }
 });
 
-test('schema examples use table copy while other examples preserve or localize their text', () => {
+test('schema examples use table copy while other examples preserve their text', () => {
     assert.deepEqual(
         exampleText(
             { id: 'events', name: 'Preview events', description: 'ignored', category: 'schema' },
-            'en',
             copy,
         ),
         {
@@ -93,7 +90,6 @@ test('schema examples use table copy while other examples preserve or localize t
     assert.deepEqual(
         exampleText(
             { id: 'events', name: 'events', description: 'ignored', category: 'schema' },
-            'en',
             copy,
         ),
         {
@@ -109,12 +105,11 @@ test('schema examples use table copy while other examples preserve or localize t
                 description: 'Read the version',
                 category: 'clickhouse',
             },
-            'zh',
             copy,
         ),
         {
-            name: 'ClickHouse 版本',
-            description: '查看此连接所使用的 ClickHouse 版本。',
+            name: 'Server version',
+            description: 'Read the version',
         },
     );
     assert.deepEqual(
@@ -125,7 +120,6 @@ test('schema examples use table copy while other examples preserve or localize t
                 description: 'No translation',
                 category: 'basics',
             },
-            'zh',
             copy,
         ),
         {

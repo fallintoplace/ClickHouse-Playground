@@ -2,7 +2,7 @@ import { isTerminalRunStatus } from '../../../shared/queries/execution/status';
 
 import type { Run } from '../../../shared/queries/execution/types';
 
-import type { Copy } from '../../translations/i18n';
+import type { Copy } from '../../ui/copy';
 
 import { cx } from '../../ui/components/ui.js';
 

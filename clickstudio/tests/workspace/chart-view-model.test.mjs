@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getCopy } from '../../.workspace-build/src/frontend/translations/i18n.js';
+import { copy } from '../../.workspace-build/src/frontend/ui/copy.js';
 import { prepareChartSelection } from '../../.workspace-build/src/frontend/queries/results/charts/controls/chart-selection.js';
 import { prepareChartView } from '../../.workspace-build/src/frontend/queries/results/charts/rendering/chart-view-model.js';
 import { fitChartTicks } from '../../.workspace-build/src/frontend/queries/results/charts/chart-helpers.js';
@@ -19,13 +19,12 @@ function result(columns, rows) {
     };
 }
 
-function prepare(data, overrides = {}, width = 652, locale = 'en', plotViewportWidth = 760) {
+function prepare(data, overrides = {}, width = 652, plotViewportWidth = 760) {
     const chart = { kind: 'line', x: 0, ys: [1], title: 'Query result', ...overrides };
     return prepareChartView({
         result: data,
         chart,
-        chartCopy: getCopy(locale).chart,
-        locale,
+        chartCopy: copy.chart,
         categoryViewportWidth: width,
         plotViewportWidth,
         selection: prepareChartSelection(data, chart),
@@ -72,7 +71,6 @@ for (const [rowCount, width, tickCount] of [
             ),
             { kind: 'bar' },
             652,
-            'en',
             width,
         );
         assert.equal(view.svg.chartXTicks.length, tickCount);
@@ -96,7 +94,7 @@ for (const xType of ['DateTime', 'Float64']) {
                 rows,
             );
             for (const width of [320, 760, 1800]) {
-                const view = prepare(data, { kind }, 652, 'en', width);
+                const view = prepare(data, { kind }, 652, width);
                 assert.equal(view.categoricalAxis, false);
                 assert.equal(view.svg.viewportWidth, width);
                 assert.equal(view.svg.plotLeft, 80);
@@ -150,7 +148,6 @@ for (const [rowCount, measureCount] of [
                     ys: Array.from({ length: measureCount }, (_value, index) => index + 1),
                 },
                 652,
-                'en',
                 width,
             );
             const slotWidth = (view.svg.plotRight - view.svg.plotLeft) / rowCount;
@@ -178,7 +175,6 @@ for (const rows of [[], [[1, -10, 20]], [[1, null, null]]]) {
             ),
             { kind: 'bar', ys: [1, 2] },
             652,
-            'en',
             1200,
         );
         assert.equal(view.svg.x(0), (80 + 1172) / 2);
@@ -199,7 +195,6 @@ test('Numeric scatter axes follow the viewport while named categories keep label
         ),
         { kind: 'scatter' },
         652,
-        'en',
         1200,
     );
     assert.equal(scatter.svg.scatterX(10), 1172);
@@ -213,7 +208,6 @@ test('Numeric scatter axes follow the viewport while named categories keep label
         ),
         { kind: 'bar' },
         1100,
-        'en',
         1200,
     );
     assert.equal(categories.categoricalAxis, true);
@@ -493,7 +487,7 @@ test('Heatmaps stop preparing labels when their cell budget is exceeded', () => 
     assert.deepEqual(view.heatmapYLabels, []);
 });
 
-test('Chart summaries follow the selected locale and preserve custom titles', () => {
+test('Chart summaries preserve custom titles', () => {
     const data = result(
         [
             ['x', 'UInt64'],
@@ -503,7 +497,6 @@ test('Chart summaries follow the selected locale and preserve custom titles', ()
     );
     assert.equal(prepare(data).chartTitle, undefined);
     assert.equal(prepare(data, { title: 'Revenue' }).chartTitle, 'Revenue');
-    assert.notEqual(prepare(data, {}, 652, 'zh').rowSummary, prepare(data).rowSummary);
 });
 
 test('Candlestick selection finds the time axis and rejects overlapping or invalid mappings', () => {

@@ -1,5 +1,5 @@
 import type { ApiError } from '../../../shared/common/errors';
-import type { Copy } from '../../translations/i18n';
+import type { Copy } from '../../ui/copy';
 import {
     queryFailureSummary,
     sqlErrorContext,

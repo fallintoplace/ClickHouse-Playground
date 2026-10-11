@@ -3,7 +3,7 @@ import type { RunKind } from '../../../shared/queries/execution/status';
 import type { Schema } from '../../../shared/database/schema/types';
 import type { NativeParseSnapshot, NativeParserStatus } from '../../../shared/sql/parser';
 import type { SqlParameter } from '../../../shared/sql/sql';
-import type { Copy, ExperienceLevel } from '../../translations/i18n';
+import type { Copy, ExperienceLevel } from '../../ui/copy';
 import type {
     BusyAction,
     Connected,
@@ -33,7 +33,6 @@ export type WorkspaceQueryPanelState = Readonly<{
     copy: Copy;
     experience: ExperienceLevel;
     dark: boolean;
-    nativeParserEnabled: boolean;
     nativeParserStatus: NativeParserStatus;
     trusted: boolean;
     unsupportedParameters: boolean;
@@ -91,7 +90,6 @@ export function WorkspaceQueryPanel({
         copy,
         experience,
         dark,
-        nativeParserEnabled,
         nativeParserStatus,
         trusted,
         unsupportedParameters,
@@ -126,8 +124,7 @@ export function WorkspaceQueryPanel({
     const runTitle = runRequiresScript
         ? actions.runActionTitle(connection.manifest?.scripts, 'script')
         : undefined;
-    const standardFormatter =
-        nativeParserEnabled && nativeParserStatus === 'ready' ? 'wasm' : 'builtin';
+    const standardFormatter = nativeParserStatus === 'ready' ? 'wasm' : 'builtin';
     let runButtonLabel: string;
 
     if (state.cancelling) {
@@ -249,7 +246,6 @@ export function WorkspaceQueryPanel({
                                 to={active.to}
                                 schema={trusted ? schema : undefined}
                                 dark={dark}
-                                nativeParserEnabled={nativeParserEnabled}
                                 parserStatus={nativeParserStatus}
                                 error={editorErrorContext?.error}
                                 errorRange={editorErrorRange}
@@ -441,7 +437,7 @@ function renderQueryHeading({
     detached: boolean;
     panels: WorkspacePanelController;
 }) {
-    const { copy, active, experience, inspector, nativeParserEnabled, nativeParserStatus } = state;
+    const { copy, active, experience, inspector, nativeParserStatus } = state;
 
     return (
         <div className="editor-heading">
@@ -505,26 +501,24 @@ function renderQueryHeading({
                         {copy.common.askAi}
                     </Button>
                 )}
-                {experience === 'expert' &&
-                    nativeParserEnabled &&
-                    nativeParserStatus === 'unavailable' && (
-                        <>
-                            <span
-                                className="toolbar-small"
-                                role="status"
-                                title="Formatting remains available while the native parser is unavailable."
-                            >
-                                {copy.common.parserUnavailable}
-                            </span>
-                            <Button
-                                variant="ghost"
-                                className="toolbar-small"
-                                onClick={() => editorRef.current?.retryNativeParser()}
-                            >
-                                {copy.common.retryParser}
-                            </Button>
-                        </>
-                    )}
+                {experience === 'expert' && nativeParserStatus === 'unavailable' && (
+                    <>
+                        <span
+                            className="toolbar-small"
+                            role="status"
+                            title="Formatting remains available while the native parser is unavailable."
+                        >
+                            {copy.common.parserUnavailable}
+                        </span>
+                        <Button
+                            variant="ghost"
+                            className="toolbar-small"
+                            onClick={() => editorRef.current?.retryNativeParser()}
+                        >
+                            {copy.common.retryParser}
+                        </Button>
+                    </>
+                )}
                 <Button
                     variant="ghost"
                     className="toolbar-small standard-format-button"

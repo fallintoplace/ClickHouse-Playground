@@ -1,5 +1,5 @@
 import type { SchemaTable } from '../../shared/database/schema/types';
-import type { Copy, Locale } from '../translations/i18n';
+import type { Copy } from '../ui/copy';
 import type { SqlExample } from './examples/sql-examples';
 import type { Connected } from '../workspace/workspace-types';
 import { type RunComparisonProps } from '../queries/history/RunComparison';
@@ -11,7 +11,6 @@ export type WorkspaceHelpPanelProps = {
     sourceLabel: string;
     copy: Copy['common'];
     experimentalLabel: string;
-    locale: Locale;
     open: boolean;
     section: HelpPanelSection;
     onSectionChange: (section: HelpPanelSection) => void;

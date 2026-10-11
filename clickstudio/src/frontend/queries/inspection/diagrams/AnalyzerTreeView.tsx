@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { parseQueryTree, type QueryTree } from './query-tree';
-import type { Copy } from '../../../translations/i18n';
+import type { Copy } from '../../../ui/copy';
 import { api, message } from '../../../api/client';
 import { QueryTreeGraph } from './QueryTreeGraph';
 

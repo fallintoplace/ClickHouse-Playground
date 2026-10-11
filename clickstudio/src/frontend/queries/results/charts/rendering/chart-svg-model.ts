@@ -1,7 +1,6 @@
 import type { ChartKind } from '../../../../../shared/queries/results/chart-types.js';
 import type { Result } from '../../../../../shared/queries/results/types.js';
 import type { Row } from '../../../../../shared/common/values.js';
-import type { Locale } from '../../../../translations/i18n.js';
 import { chartText } from '../chart-helpers.js';
 
 export type ChartSvgModel = {
@@ -21,7 +20,6 @@ export type ChartSvgModel = {
     scatterY: (value: number) => number;
     result: Result;
     xIndex: number;
-    locale: Locale;
     yIndex: number;
     plotSeries: {
         columnIndex: number;

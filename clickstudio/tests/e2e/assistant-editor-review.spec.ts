@@ -544,12 +544,6 @@ for (const theme of ['Dark', 'Light']) {
             'background-color',
             'rgb(255, 101, 79)',
         );
-        const accentControls = page.locator('.accent-mode-control').getByRole('button');
-        for (const accent of await accentControls.all()) {
-            await accent.click();
-            await expect(additions).toHaveCSS('background-color', expectedAdded);
-            await expect(deletions).toHaveCSS('background-color', expectedRemoved);
-        }
         for (const { width, height } of [
             { width: 1280, height: 900 },
             { width: 1280, height: 600 },

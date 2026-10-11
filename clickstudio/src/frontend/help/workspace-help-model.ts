@@ -1,6 +1,5 @@
-import type { Copy, Locale } from '../translations/i18n.js';
+import type { Copy } from '../ui/copy.js';
 import type { SqlExample, SqlExampleCategory } from './examples/sql-examples.js';
-import { localizeSqlExample, localizeSqlExampleCategory } from './examples/sql-examples-locales.js';
 
 type HelpSectionIcon =
     | 'help'
@@ -52,22 +51,18 @@ export const helpCategories: CategoryFilter[] = [
     'schema',
 ];
 
-export function categoryLabel(category: CategoryFilter, copy: Copy['common'], locale: Locale) {
+export function categoryLabel(category: CategoryFilter, copy: Copy['common']) {
     if (category === 'all') return copy.allExamples;
-    if (category === 'featured') return localizeSqlExampleCategory(category, locale, 'Featured');
-    if (category === 'business') return localizeSqlExampleCategory(category, locale, 'Business');
-    if (category === 'observability')
-        return localizeSqlExampleCategory(category, locale, 'Observability');
-    if (category === 'operations')
-        return localizeSqlExampleCategory(category, locale, 'Operations');
-    if (category === 'engineering')
-        return localizeSqlExampleCategory(category, locale, 'Engineering');
-    if (category === 'markets') return localizeSqlExampleCategory(category, locale, 'Markets');
-    if (category === 'cities') return localizeSqlExampleCategory(category, locale, 'Cities');
-    if (category === 'openSource')
-        return localizeSqlExampleCategory(category, locale, 'Open source');
-    if (category === 'internet') return localizeSqlExampleCategory(category, locale, 'Internet');
-    if (category === 'datasets') return localizeSqlExampleCategory(category, locale, 'Datasets');
+    if (category === 'featured') return 'Featured';
+    if (category === 'business') return 'Business';
+    if (category === 'observability') return 'Observability';
+    if (category === 'operations') return 'Operations';
+    if (category === 'engineering') return 'Engineering';
+    if (category === 'markets') return 'Markets';
+    if (category === 'cities') return 'Cities';
+    if (category === 'openSource') return 'Open source';
+    if (category === 'internet') return 'Internet';
+    if (category === 'datasets') return 'Datasets';
     if (category === 'writeOperations') return copy.exampleWriteOperations;
     if (category === 'basics') return copy.exampleBasics;
     if (category === 'aggregation') return copy.exampleAggregation;
@@ -98,7 +93,7 @@ export function chartLabel(example: SqlExample, copy: Copy['common']) {
     }
 }
 
-export function exampleText(example: SqlExample, locale: Locale, copy: Copy['common']) {
+export function exampleText(example: SqlExample, copy: Copy['common']) {
     if (example.category === 'schema') {
         const tableName = example.name.replace(/^Preview /, '');
         return {
@@ -106,7 +101,7 @@ export function exampleText(example: SqlExample, locale: Locale, copy: Copy['com
             description: copy.exampleReadRows,
         };
     }
-    return localizeSqlExample(example, locale);
+    return { name: example.name, description: example.description };
 }
 
 export type HelpSectionDefinition = {

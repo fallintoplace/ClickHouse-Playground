@@ -146,7 +146,7 @@ Open http://localhost:8080 and sign in with `CLICKSTUDIO_TOKEN` from `.env`. Com
 
 ## Main features
 
-- **Choose a workspace mode.** Standard keeps the workspace focused. Experimental adds SQL maps, execution insights, parser settings, and more controls.
+- **Choose a workspace mode.** Standard keeps the workspace focused. Experimental adds SQL maps, execution insights, parser details, and more controls.
 - **Write SQL.** Format and check queries. Run one query or a script with results for each statement.
 - **Explore data.** Browse databases, tables, columns, system docs, and MergeTree data parts.
 - **View results.** See column types and result pages. Build charts and save query documents.
