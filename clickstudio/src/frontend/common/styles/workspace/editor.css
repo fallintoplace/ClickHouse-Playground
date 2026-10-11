@@ -626,6 +626,16 @@
     box-shadow: 0 2px 8px #00000024;
     transform: translateX(-50%);
   }
+  .sql-review-pending {
+    flex: none;
+    padding: 0 8px 0 2px;
+    border-right: 1px solid var(--line);
+    color: var(--text);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 20px;
+    white-space: nowrap;
+  }
   .sql-review-error {
     flex: none;
     padding: 7px 12px;

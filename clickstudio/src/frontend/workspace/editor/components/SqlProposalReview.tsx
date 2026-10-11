@@ -91,6 +91,7 @@ export function SqlProposalReview({
             <div className="sql-review-surface">
                 <div className="sql-editor sql-review-editor" ref={element} />
                 <div className="sql-review-actions" aria-label="Review SQL changes">
+                    <span className="sql-review-pending">1 pending change</span>
                     {busy && <Spinner label="Updating proposal" />}
                     <Button
                         variant="secondary"
