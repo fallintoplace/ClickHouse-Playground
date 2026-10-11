@@ -37,7 +37,7 @@ export interface WorkspaceState {
     closedTabs?: Draft[];
     recoveryWarning?: string;
 }
-export const newDraft = (name = 'Untitled Query', sql = ''): Draft => ({
+export const newDraft = (name = 'Query 1', sql = ''): Draft => ({
     id: crypto.randomUUID(),
     name,
     sql,
@@ -52,6 +52,40 @@ export const newDraft = (name = 'Untitled Query', sql = ''): Draft => ({
 });
 export const MAX_TABS = 30;
 export const MAX_CLOSED_TABS = 10;
+export function nextBlankQueryName(
+    workspace: Pick<WorkspaceState, 'tabs' | 'closedTabs'>,
+): string {
+    const highestNumber = [...workspace.tabs, ...(workspace.closedTabs ?? [])].reduce(
+        (highest, draft) => {
+            const match = /^Query (\d+)$/.exec(draft.name);
+            const number = match ? Number(match[1]) : 0;
+            return Number.isSafeInteger(number) ? Math.max(highest, number) : highest;
+        },
+        0,
+    );
+    return `Query ${highestNumber + 1}`;
+}
+
+function renameLegacyUntitledDrafts(tabs: Draft[], closedTabs: Draft[]) {
+    const drafts = [...tabs, ...closedTabs];
+    const usedNames = new Set(drafts.map(draft => draft.name));
+    let number = drafts.reduce((highest, draft) => {
+        const match = /^Query (\d+)$/.exec(draft.name);
+        const parsed = match ? Number(match[1]) : 0;
+        return Number.isSafeInteger(parsed) ? Math.max(highest, parsed) : highest;
+    }, 0);
+
+    for (const draft of drafts) {
+        if (draft.serverId || draft.name !== 'Untitled Query') continue;
+        let name: string;
+        do {
+            name = `Query ${++number}`;
+        } while (usedNames.has(name));
+        draft.name = name;
+        usedNames.add(name);
+    }
+}
+
 export function draftFromDocument(document: QueryDocument): Draft {
     return {
         ...newDraft(document.name, document.sql),
@@ -228,6 +262,7 @@ export function recover(key: string, storage?: Pick<Storage, 'getItem'>): Worksp
             const storedClosed = array(value.closedTabs);
             const tabs = recoverTabs(storedTabs, MAX_TABS);
             const closedTabs = recoverTabs(storedClosed, MAX_CLOSED_TABS);
+            renameLegacyUntitledDrafts(tabs, closedTabs);
             const incomplete =
                 !Array.isArray(value.tabs) ||
                 tabs.length !== storedTabs.length ||
@@ -258,7 +293,13 @@ export function closeDraft(state: WorkspaceState, draftId: string): WorkspaceSta
     if (i === -1) return state;
     const closed = state.tabs[i]!;
     const tabs = state.tabs.filter(d => d.id !== draftId);
-    const openTabs = tabs.length ? tabs : [newDraft()];
+    const closedTabs = [closed, ...(state.closedTabs ?? []).filter(d => d.id !== draftId)].slice(
+        0,
+        MAX_CLOSED_TABS,
+    );
+    const openTabs = tabs.length
+        ? tabs
+        : [newDraft(nextBlankQueryName({ tabs, closedTabs }))];
     return {
         ...state,
         tabs: openTabs,
@@ -266,10 +307,7 @@ export function closeDraft(state: WorkspaceState, draftId: string): WorkspaceSta
             state.activeId === draftId
                 ? openTabs[Math.min(i, openTabs.length - 1)]?.id
                 : (state.activeId ?? openTabs[0]?.id),
-        closedTabs: [closed, ...(state.closedTabs ?? []).filter(d => d.id !== draftId)].slice(
-            0,
-            MAX_CLOSED_TABS,
-        ),
+        closedTabs,
     };
 }
 

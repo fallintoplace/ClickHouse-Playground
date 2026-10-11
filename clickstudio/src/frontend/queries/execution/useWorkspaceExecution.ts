@@ -28,6 +28,7 @@ import { apiErrorDetail, type FailedQueryError } from '../../workspace/workspace
 import {
     MAX_TABS,
     newDraft,
+    nextBlankQueryName,
     type Draft,
     type WorkspaceState,
 } from '../editor/drafts/workspace-state';
@@ -382,7 +383,7 @@ export function useWorkspaceExecution({
         });
     };
     const startBlankSql = () => {
-        if (!openNewDraft(newDraft(), true)) return false;
+        if (!openNewDraft(newDraft(nextBlankQueryName(workspaceRef.current)), true)) return false;
         window.requestAnimationFrame(() => editor.current?.focus());
         return true;
     };

@@ -6,7 +6,12 @@ import {
     type Dispatch,
     type SetStateAction,
 } from 'react';
-import { newDraft, type Draft, type WorkspaceState } from '../drafts/workspace-state';
+import {
+    newDraft,
+    nextBlankQueryName,
+    type Draft,
+    type WorkspaceState,
+} from '../drafts/workspace-state';
 
 export function useWorkspaceTabs(
     workspace: WorkspaceState,
@@ -17,7 +22,7 @@ export function useWorkspaceTabs(
     const active =
         workspace.tabs.find(tab => tab.id === workspace.activeId) ??
         workspace.tabs[0] ??
-        (emptyDraft.current ??= newDraft());
+        (emptyDraft.current ??= newDraft(nextBlankQueryName(workspace)));
     const tabScrollerRef = useRef<HTMLDivElement>(null);
     const [tabScrollState, setTabScrollState] = useState({
         overflow: false,
