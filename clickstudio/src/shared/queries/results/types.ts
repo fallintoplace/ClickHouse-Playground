@@ -8,7 +8,6 @@ export interface Result {
     rows: Row[];
     completeness: ResultCompleteness;
     createdAt: string;
-    expiresAt: string;
 }
 
 export interface ResultPage extends Omit<Result, 'rows'> {

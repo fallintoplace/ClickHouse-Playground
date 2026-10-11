@@ -25,7 +25,6 @@ try {
     );
     const sweep = setInterval(() => {
         try {
-            services.runs.sweep();
             services.artifacts.sweep();
             services.imports.sweep();
             services.ai.sweep();

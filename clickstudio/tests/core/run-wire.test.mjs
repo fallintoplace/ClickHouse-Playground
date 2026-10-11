@@ -79,7 +79,7 @@ test('run event decoding preserves every supported kind, status and result state
             'timed_out',
             'interrupted',
         ],
-        resultState: ['pending', 'reopenable', 'expired', 'unavailable'],
+        resultState: ['pending', 'reopenable', 'unavailable'],
     };
     for (const [field, values] of Object.entries(domains)) {
         for (const value of values) {
@@ -101,6 +101,7 @@ test('run event decoding rejects unknown, non-string and unrelated domain values
             '__proto__',
             'partial',
             'unknown',
+            'expired',
             'skipped',
             '',
             null,
@@ -142,7 +143,6 @@ test('result decoding accepts existing completeness values and rejects foreign s
         columns: [],
         rows: [],
         createdAt: 'now',
-        expiresAt: 'later',
     };
     for (const completeness of ['complete', 'truncated'])
         assert.equal(isResult({ ...result, completeness }), true);

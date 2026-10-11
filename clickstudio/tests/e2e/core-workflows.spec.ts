@@ -234,7 +234,6 @@ test('Result view and page stay with their draft run', async ({ page }) => {
                 columns,
                 warnings: [],
                 sequence: runNumber,
-                resultExpiresAt: '2027-01-01T00:00:00.000Z',
                 resultState: 'reopenable',
                 requestedBy: 'local-owner',
                 executedAs: 'fixture-reader',
@@ -248,7 +247,6 @@ test('Result view and page stay with their draft run', async ({ page }) => {
                 rows,
                 completeness: 'complete',
                 createdAt,
-                expiresAt: '2027-01-01T00:00:00.000Z',
             };
             retainedRuns.push({ run, result, rows });
             await route.fulfill({ json: run });
@@ -2841,7 +2839,7 @@ test('Script polling persists every statement run ID, including fast intermediat
                 columns: [],
                 warnings: [],
                 sequence: 1,
-                resultState: 'expired',
+                resultState: 'unavailable',
                 requestedBy: 'local-owner',
                 executedAs: 'fixture-reader',
                 permissionSnapshot: { readonly: true, role: 'owner' },

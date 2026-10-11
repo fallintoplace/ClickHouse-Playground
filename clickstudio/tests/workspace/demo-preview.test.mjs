@@ -320,21 +320,83 @@ test('Static preview restores saved execution and document history after invalid
     assert.ok(next.sequence > run.sequence);
 });
 
-test('Static preview expires restored Playground results without losing run history', async t => {
-    const storage = previewStorage(t);
-    const api = new BrowserWorkspaceApi();
+for (const legacyState of ['reopenable', 'expired']) {
+    test(`Static preview preserves old ${legacyState} Playground rows without executing SQL`, async t => {
+        const storage = previewStorage(t),
+            api = new BrowserWorkspaceApi();
+        const run = await api.request('/runs', { method: 'POST', body: { sql: 'SELECT 7' } });
+        const result = await api.request(`/runs/${run.id}/snapshot`);
+        const [key, value] = [...storage.entries()][0],
+            state = JSON.parse(value);
+        const storedRun = state.runs.find(item => item.id === run.id);
+        storedRun.connectionId = 'playground';
+        storedRun.resultState = legacyState;
+        storedRun.resultExpiresAt = '2000-01-01T00:00:00.000Z';
+        state.results.find(item => item.runId === run.id).expiresAt = storedRun.resultExpiresAt;
+        storage.set(key, JSON.stringify(state));
+        const fetch = t.mock.method(globalThis, 'fetch', async () => {
+            throw new Error('Unexpected request');
+        });
+        const reopened = new BrowserWorkspaceApi();
+        const restored = await reopened.request(`/runs/${run.id}`);
+        assert.equal(restored.resultState, 'reopenable');
+        assert.equal('resultExpiresAt' in restored, false);
+        assert.equal(restored.queryId, run.queryId);
+        assert.deepEqual((await reopened.request(`/runs/${run.id}/snapshot`)).rows, result.rows);
+        assert.equal('expiresAt' in (await reopened.request(`/runs/${run.id}/snapshot`)), false);
+        assert.equal(fetch.mock.callCount(), 0);
+    });
+}
+
+test('Static preview keeps legacy history with missing rows without fabricating results', async t => {
+    const storage = previewStorage(t),
+        api = new BrowserWorkspaceApi();
     const run = await api.request('/runs', { method: 'POST', body: { sql: 'SELECT 7' } });
-    const [key, value] = [...storage.entries()][0];
-    const state = JSON.parse(value);
-    const storedRun = state.runs.find(item => item.id === run.id);
-    storedRun.connectionId = 'playground';
-    storedRun.resultState = 'reopenable';
-    state.results.find(item => item.runId === run.id).expiresAt = '2000-01-01T00:00:00.000Z';
+    const [key, value] = [...storage.entries()][0],
+        state = JSON.parse(value);
+    state.runs.find(item => item.id === run.id).resultState = 'expired';
+    state.results = state.results.filter(item => item.runId !== run.id);
+    storage.set(key, JSON.stringify(state));
+    const reopened = new BrowserWorkspaceApi(),
+        restored = await reopened.request(`/runs/${run.id}`);
+    assert.equal(restored.resultState, 'unavailable');
+    assert.equal(restored.sql, run.sql);
+    assert.equal(restored.queryId, run.queryId);
+    await assert.rejects(reopened.request(`/runs/${run.id}/snapshot`), /no longer available/);
+});
+
+test('Static preview keeps results, scripts and documents beyond the former storage caps', async t => {
+    const storage = previewStorage(t),
+        api = new BrowserWorkspaceApi();
+    const run = await api.request('/runs', { method: 'POST', body: { sql: 'SELECT 7' } });
+    const script = await api.request('/scripts', { method: 'POST', body: { sql: 'SELECT 1' } });
+    const document = await api.request('/documents', {
+        method: 'POST',
+        body: { name: 'Saved', sql: run.sql, connectionId: 'demo' },
+    });
+    const result = await api.request(`/runs/${run.id}/snapshot`);
+    const [key, value] = [...storage.entries()][0],
+        state = JSON.parse(value);
+    for (let i = 0; i < 125; i++) {
+        const id = `saved-${i}`;
+        state.runs.push({ ...run, id, queryId: id });
+        state.results.push({ ...result, runId: id, queryId: id, rows: [['x'.repeat(16_000)]] });
+        state.scripts.push({ ...script, id });
+        state.documents.push({ ...document, id, runId: id });
+        state.revisions.push([id, [{ ...document, id, runId: id }]]);
+    }
     storage.set(key, JSON.stringify(state));
     const reopened = new BrowserWorkspaceApi();
-    assert.equal((await reopened.request(`/runs/${run.id}`)).resultState, 'expired');
-    await assert.rejects(reopened.request(`/runs/${run.id}/result`), /no longer available/);
-    assert.ok(
-        (await reopened.request('/runs?connectionId=playground')).some(item => item.id === run.id),
-    );
+    assert.deepEqual((await reopened.request('/runs/saved-0/snapshot')).rows, [
+        ['x'.repeat(16_000)],
+    ]);
+    assert.equal((await reopened.request('/scripts/saved-0')).id, 'saved-0');
+    assert.equal((await reopened.request('/documents/saved-0')).runId, 'saved-0');
+    const saved = JSON.parse(storage.get(key));
+    for (const bucket of ['runs', 'results', 'scripts', 'documents', 'revisions']) {
+        assert.equal(saved[bucket].length, state[bucket].length, bucket);
+    }
+    assert.ok(storage.get(key).length > 1_500_000);
+    const again = new BrowserWorkspaceApi();
+    assert.deepEqual((await again.request('/runs/saved-0/result')).rows, [['x'.repeat(16_000)]]);
 });

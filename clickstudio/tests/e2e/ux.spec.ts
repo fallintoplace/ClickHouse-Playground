@@ -371,7 +371,7 @@ test('A chart with no rows keeps its fallback table controls in the Results head
                     runId,
                     queryId: 'empty-result-query',
                     createdAt: '2026-10-09T00:00:00.000Z',
-                    expiresAt: '2027-01-01T00:00:00.000Z',
+
                     columns: [{ name: 'service', type: 'String' }],
                     rows: [],
                     totalRows: 0,

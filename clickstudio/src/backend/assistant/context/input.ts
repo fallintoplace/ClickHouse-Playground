@@ -130,6 +130,5 @@ export function assistantResultFrom(value: unknown): Result | undefined {
         rows,
         completeness: value.completeness,
         createdAt: field(value.createdAt, 'Result creation time', 128),
-        expiresAt: field(value.expiresAt, 'Result expiry time', 128),
     };
 }

@@ -25,7 +25,7 @@ export function isTerminalRunStatus(status: RunStatus): boolean {
     return TERMINAL_RUN_STATUSES.some(candidate => candidate === status);
 }
 
-export const RUN_RESULT_STATES = ['pending', 'reopenable', 'expired', 'unavailable'] as const;
+export const RUN_RESULT_STATES = ['pending', 'reopenable', 'unavailable'] as const;
 export type RunResultState = (typeof RUN_RESULT_STATES)[number];
 
 export const SCRIPT_STATUSES = [

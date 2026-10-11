@@ -232,7 +232,7 @@ test('An open menu supports keyboard navigation when pending statements become a
     for (const id of ['pending-run-a', 'pending-run-b'])
         await page.route(`**/api/runs/${id}`, route =>
             route.fulfill({
-                json: { ...run, id, queryId: id, resultState: 'expired', status: 'succeeded' },
+                json: { ...run, id, queryId: id, resultState: 'unavailable', status: 'succeeded' },
             }),
         );
     await replaceSql(page, sql);

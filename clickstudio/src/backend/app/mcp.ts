@@ -105,7 +105,6 @@ function runSummary(config: Config, run: Run) {
         limits: run.limits,
         progress: run.progress,
         resultState: run.resultState,
-        resultExpiresAt: run.resultExpiresAt,
         serverVersion: run.serverVersion,
         warnings: run.warnings.map(redact),
         ...(run.error
@@ -352,7 +351,7 @@ function createMcpServer(dependencies: Dependencies) {
         'get_result',
         {
             description:
-                'Get current run status and a retained result page without executing SQL again. Returns nextOffset for further pages and completeness for query truncation. Expired or evicted results return an error, never a fresh query. Pending runs can be waited on for up to 30 seconds. Cancelling this request stops waiting; use cancel_query to stop the durable database run.',
+                'Get current run status and a retained result page without executing SQL again. Returns nextOffset for further pages and completeness for query truncation. Pending runs can be waited on for up to 30 seconds. Cancelling this request stops waiting; use cancel_query to stop the durable database run.',
             inputSchema: z.strictObject({
                 runId: idSchema,
                 offset: z.int().min(0).default(0),

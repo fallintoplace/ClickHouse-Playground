@@ -107,7 +107,6 @@ interface AssistantContextData {
     result?: {
         queryId: string;
         createdAt: string;
-        expiresAt: string;
         completeness: Result['completeness'];
         columns: Result['columns'];
         rows: Result['rows'];
@@ -332,7 +331,6 @@ export function buildContext(input: ContextInput): {
         context.result = {
             queryId: result.queryId,
             createdAt: result.createdAt,
-            expiresAt: result.expiresAt,
             completeness: result.completeness,
             columns: keep.map(({ column }) => column),
             rows: result.rows.map(row => keep.map(({ index }) => row[index] ?? null)),

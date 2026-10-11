@@ -323,7 +323,6 @@ export class ArtifactService {
                 ...result,
                 rows: bounded.rows,
                 completeness: bounded.truncated ? 'truncated' : 'complete',
-                expiresAt,
             },
             resultLifetime: 'snapshot',
             source: run.dataSource === 'fixture' ? 'fixture' : 'live-run',

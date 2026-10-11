@@ -112,7 +112,6 @@ export function isRun(value: unknown): value is Run {
         value.warnings.every(warning => typeof warning === 'string') &&
         (value.error === undefined || isApiError(value.error)) &&
         isSafeInteger(value.sequence) &&
-        isOptionalString(value.resultExpiresAt) &&
         RUN_RESULT_STATES.some(state => state === value.resultState) &&
         typeof value.requestedBy === 'string' &&
         typeof value.executedAs === 'string' &&
@@ -139,8 +138,7 @@ export function isResult(value: unknown): value is Result {
         Array.isArray(value.rows) &&
         value.rows.every(row => Array.isArray(row) && row.every(isJson)) &&
         RESULT_COMPLETENESS.some(completeness => completeness === value.completeness) &&
-        typeof value.createdAt === 'string' &&
-        typeof value.expiresAt === 'string'
+        typeof value.createdAt === 'string'
     );
 }
 

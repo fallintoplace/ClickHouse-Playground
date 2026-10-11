@@ -73,7 +73,6 @@ test('Statements without a result set do not show the empty SELECT message', asy
                 columns,
                 warnings: [],
                 sequence,
-                resultExpiresAt: '2027-01-01T00:00:00.000Z',
                 resultState: 'reopenable',
                 requestedBy: 'local-owner',
                 executedAs: 'fixture-reader',
@@ -87,7 +86,6 @@ test('Statements without a result set do not show the empty SELECT message', asy
                 rows: [],
                 completeness: 'complete',
                 createdAt,
-                expiresAt: '2027-01-01T00:00:00.000Z',
             };
             retained.set(id, { run, result });
             await route.fulfill({ json: run });

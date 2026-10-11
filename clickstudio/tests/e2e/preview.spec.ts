@@ -8,6 +8,97 @@ import {
     chooseExistingCloudTable,
 } from './cloud-import-helpers.js';
 
+for (const hasRows of [true, false]) {
+    test(`Legacy result history ${hasRows ? 'keeps rows' : 'stays silent without rows'} after reload`, async ({
+        page,
+    }) => {
+        const queryRequests: string[] = [];
+        await page.route('https://sql-clickhouse.clickhouse.com:8443/**', async route => {
+            const sql = route.request().postData() ?? '';
+            if (sql.includes('interview_query')) queryRequests.push(sql);
+            await route.fulfill({ body: '[]\n[]\n', contentType: 'text/plain' });
+        });
+        await page.goto('/?connection=demo');
+        await expect(page.locator('.cm-content')).toBeVisible();
+        await page.evaluate(hasRows => {
+            const databaseKey = 'clickstudio:vercel-preview-database:v1';
+            const database = JSON.parse(localStorage.getItem(databaseKey)!);
+            const id = 'legacy-interview-result';
+            const sql = 'SELECT 42 AS interview_query';
+            const columns = [{ name: 'interview_query', type: 'UInt64' }];
+            database.runs.push({
+                ...database.runs[0],
+                id,
+                queryId: 'legacy-interview-query',
+                connectionId: 'playground',
+                dataSource: 'clickhouse',
+                sql,
+                columns,
+                rowCount: 1,
+                resultState: 'expired',
+                resultExpiresAt: '2000-01-01T00:00:00.000Z',
+            });
+            if (hasRows)
+                database.results.push({
+                    runId: id,
+                    queryId: 'legacy-interview-query',
+                    columns,
+                    rows: [['42']],
+                    completeness: 'complete',
+                    createdAt: '2000-01-01T00:00:00.000Z',
+                    expiresAt: '2000-01-01T00:00:00.000Z',
+                });
+            localStorage.setItem(databaseKey, JSON.stringify(database));
+            localStorage.setItem(
+                'clickstudio:workspace:playground:v1',
+                JSON.stringify({
+                    version: 1,
+                    activeId: id,
+                    tabs: [
+                        {
+                            id,
+                            name: 'Interview query.sql',
+                            sql,
+                            parameters: {},
+                            chart: { kind: 'table', x: 0, ys: [], title: 'Query result' },
+                            runIds: [id],
+                            activeRunId: id,
+                            checkpoints: [],
+                            from: 0,
+                            to: 0,
+                            kind: 'query',
+                            dependencies: [],
+                        },
+                    ],
+                }),
+            );
+        }, hasRows);
+        await page.goto('/?connection=playground');
+        await expect(page.locator('.cm-content')).toContainText('SELECT 42 AS interview_query');
+        await expect(page.locator('.execution-bar')).toHaveAttribute(
+            'data-query-id',
+            'legacy-interview-query',
+        );
+        const results = page.getByRole('region', { name: 'Query results', exact: true });
+        if (hasRows) await expect(results.locator('tbody')).toContainText('42');
+        else {
+            await expect(results.locator('.result-empty-state')).toHaveCount(0);
+            await expect(results.locator('.result-loading')).toHaveCount(0);
+            await expect(results.locator('#query-results-content')).toBeEmpty();
+        }
+        await expect(page.getByText('Result retention expired', { exact: true })).toHaveCount(0);
+        await expect(page.getByText('No retained result', { exact: true })).toHaveCount(0);
+        await page.reload();
+        await expect(page.locator('.execution-bar')).toHaveAttribute(
+            'data-query-id',
+            'legacy-interview-query',
+        );
+        if (hasRows) await expect(results.locator('tbody')).toContainText('42');
+        else await expect(results.locator('#query-results-content')).toBeEmpty();
+        expect(queryRequests).toEqual([]);
+    });
+}
+
 test('Footer shows version detection and keeps connection versions isolated in static preview', async ({
     page,
 }) => {

@@ -48,12 +48,11 @@ interface Receipt {
     fingerprint: string;
     resourceId: string;
     kind: 'run' | 'script';
-    at: string;
 }
-export const DEFAULT_SCRIPT_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
-export const DEFAULT_RECEIPT_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
-export const DEFAULT_RUN_HISTORY_LIMIT = 10_000;
-export const DEFAULT_RECEIPT_LIMIT = 100_000;
+type StoredRun = Omit<Run, 'resultState'> & {
+    resultState: Run['resultState'] | 'expired';
+    resultExpiresAt?: string;
+};
 export function terminal(run: Pick<Run, 'status'>) {
     return isTerminalRunStatus(run.status);
 }
@@ -69,16 +68,23 @@ export class RunService {
         private readonly connection: (principal: Principal, id: string) => Connection,
         private readonly options: {
             concurrency?: number;
-            retentionMs?: number;
-            snapshotBytes?: number;
-            scriptRetentionMs?: number;
-            receiptRetentionMs?: number;
-            runHistoryLimit?: number;
-            receiptLimit?: number;
         } = {},
     ) {
+        for (const result of store.list<Result & { expiresAt?: string }>('results')) {
+            if (!('expiresAt' in result)) continue;
+            delete result.expiresAt;
+            store.put('results', result.runId, result);
+        }
         // An interrupted query is never automatically replayed after a process restart.
-        for (const run of store.list<Run>('runs'))
+        for (const stored of store.list<StoredRun>('runs')) {
+            const legacy = 'resultExpiresAt' in stored || stored.resultState === 'expired';
+            delete stored.resultExpiresAt;
+            let resultState: Run['resultState'];
+            if (stored.resultState === 'expired' || stored.resultState === 'reopenable')
+                resultState = store.get('results', stored.id) ? 'reopenable' : 'unavailable';
+            else resultState = stored.resultState;
+            const run: Run = { ...stored, resultState };
+            if (legacy || resultState !== stored.resultState) store.put('runs', run.id, run);
             if (!terminal(run)) {
                 run.status = 'interrupted';
                 run.finishedAt = new Date().toISOString();
@@ -87,6 +93,7 @@ export class RunService {
                 this.emit(run);
                 void driver.cancel(run).catch(() => undefined);
             }
+        }
         for (const script of store.list<Script>('scripts'))
             if (script.status === 'running') {
                 script.status = 'interrupted';
@@ -95,7 +102,6 @@ export class RunService {
                         s.status = 'interrupted';
                 store.put('scripts', script.id, script);
             }
-        this.sweep();
     }
     get acceptingRuns(): boolean {
         return !this.closed;
@@ -230,28 +236,6 @@ export class RunService {
             );
         return old;
     }
-    private makeRunHistoryRoom(principal: Principal) {
-        const limit = this.options.runHistoryLimit ?? DEFAULT_RUN_HISTORY_LIMIT;
-        const count = this.store.count('runs');
-        if (count < limit) return;
-        const removeCount = count - limit + 1;
-        const oldestFinished = this.store
-            .list<Run>('runs')
-            .filter(terminal)
-            .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id))
-            .slice(0, removeCount);
-        requireThat(
-            oldestFinished.length === removeCount,
-            507,
-            'HISTORY_FULL',
-            'Run history is full. No finished runs can be removed.',
-        );
-        for (const run of oldestFinished) {
-            this.store.delete('results', run.id);
-            this.store.delete('runs', run.id);
-            audit(this.store, principal, 'run.history_prune', run.id);
-        }
-    }
     submit(principal: Principal, input: unknown): Run {
         requireThat(!this.closed, 503, 'SHUTTING_DOWN', 'The server is shutting down');
         const request = runRequest(input),
@@ -272,17 +256,6 @@ export class RunService {
             'RUN_QUEUE_FULL',
             'There are too many pending runs',
         );
-        const receiptLimit = this.options.receiptLimit ?? DEFAULT_RECEIPT_LIMIT;
-        if (this.store.count('receipts') >= receiptLimit) {
-            this.sweep();
-            requireThat(
-                this.store.count('receipts') < receiptLimit,
-                507,
-                'RECEIPT_CAPACITY',
-                'Idempotency storage needs operator maintenance',
-            );
-        }
-        this.makeRunHistoryRoom(principal);
         const id = randomUUID();
         const run: Run = {
             id,
@@ -324,7 +297,6 @@ export class RunService {
             kind: 'run',
             fingerprint: hash(request),
             resourceId: id,
-            at: run.createdAt,
         });
         audit(this.store, principal, 'run.execute', id);
         this.queue.push(id);
@@ -336,15 +308,6 @@ export class RunService {
         requireThat(run, 404, 'NOT_FOUND', 'Run not found');
         mustOwn(principal, run.owner);
         this.connection(principal, run.connectionId);
-        if (
-            run.resultExpiresAt &&
-            Date.parse(run.resultExpiresAt) <= Date.now() &&
-            run.resultState === 'reopenable'
-        ) {
-            run.resultState = 'expired';
-            this.store.delete('results', run.id);
-            this.store.put('runs', run.id, run);
-        }
         return run;
     }
     list(principal: Principal, connectionId?: string, documentId?: string): Run[] {
@@ -369,24 +332,13 @@ export class RunService {
     result(principal: Principal, id: string): Result {
         const run = this.get(principal, id);
         requireThat(
-            run.resultState !== 'expired',
-            410,
-            'RESULT_EXPIRED',
-            'The retained result expired. SQL and run evidence remain available.',
-        );
-        requireThat(
             run.resultState === 'reopenable',
             409,
             'RESULT_UNAVAILABLE',
             'This run has no completed result',
         );
         const result = this.store.get<Result>('results', id);
-        requireThat(
-            result,
-            410,
-            'RESULT_EXPIRED',
-            'Result data was evicted. Rerun explicitly to obtain fresh data.',
-        );
+        requireThat(result, 409, 'RESULT_UNAVAILABLE', 'This run has no completed result');
         return result;
     }
     page(
@@ -581,9 +533,6 @@ export class RunService {
                 run.warnings.push(
                     'Output is truncated; charts and local filters describe only the retained rows.',
                 );
-            const expiresAt = new Date(
-                Date.now() + (this.options.retentionMs ?? 86400000),
-            ).toISOString();
             const result: Result = {
                 runId: id,
                 queryId: run.queryId,
@@ -591,10 +540,8 @@ export class RunService {
                 rows: bounded.rows,
                 completeness: bounded.truncated ? 'truncated' : 'complete',
                 createdAt: new Date().toISOString(),
-                expiresAt,
             };
             this.store.put('results', id, result);
-            run.resultExpiresAt = expiresAt;
             run.resultState = 'reopenable';
         } catch (error) {
             const e = asError(error);
@@ -624,62 +571,6 @@ export class RunService {
             const saved = this.store.get<Run>('runs', id);
             run.warnings = [...new Set([...run.warnings, ...(saved?.warnings ?? [])])];
             this.emit(run);
-            this.sweepResultSnapshots();
-        }
-    }
-    sweep(now = Date.now()) {
-        this.sweepResultSnapshots(now);
-        this.sweepRetainedHistory(now);
-    }
-    private sweepResultSnapshots(now = Date.now()) {
-        const runs = this.store.list<Run>('runs');
-        const retained: {
-            run: Run;
-            bytes: number;
-        }[] = [];
-        for (const run of runs) {
-            if (run.resultState !== 'reopenable') continue;
-            if (!run.resultExpiresAt || Date.parse(run.resultExpiresAt) <= now) {
-                this.store.delete('results', run.id);
-                run.resultState = 'expired';
-                this.emit(run);
-            } else retained.push({ run, bytes: run.bytes });
-        }
-        let total = retained.reduce((n, r) => n + r.bytes, 0);
-        for (const { run, bytes } of retained.sort((a, b) =>
-            a.run.createdAt.localeCompare(b.run.createdAt),
-        )) {
-            if (total <= (this.options.snapshotBytes ?? 50000000)) break;
-            this.store.delete('results', run.id);
-            run.resultState = 'expired';
-            this.emit(run);
-            total -= bytes;
-        }
-    }
-    private sweepRetainedHistory(now: number) {
-        const scriptCutoff = now - (this.options.scriptRetentionMs ?? DEFAULT_SCRIPT_RETENTION_MS);
-        const expiredScriptIds = new Set<string>();
-        for (const script of this.store.list<Script>('scripts')) {
-            if (script.status === 'running' || Date.parse(script.createdAt) > scriptCutoff)
-                continue;
-            this.store.delete('scripts', script.id);
-            expiredScriptIds.add(script.id);
-        }
-        const liveResourceIds = new Set([
-            ...this.store.list<Run>('runs').map(run => run.id),
-            ...this.store.list<Script>('scripts').map(script => script.id),
-        ]);
-        const receiptCutoff =
-            now - (this.options.receiptRetentionMs ?? DEFAULT_RECEIPT_RETENTION_MS);
-        for (const key of this.store.keys('receipts')) {
-            const receipt = this.store.get<Receipt>('receipts', key);
-            if (!receipt) continue;
-            if (receipt.kind === 'script' && expiredScriptIds.has(receipt.resourceId)) {
-                this.store.delete('receipts', key);
-                continue;
-            }
-            if (!liveResourceIds.has(receipt.resourceId) && Date.parse(receipt.at) <= receiptCutoff)
-                this.store.delete('receipts', key);
         }
     }
     submitScript(principal: Principal, input: unknown, stopOnError = true): Script {
@@ -703,15 +594,6 @@ export class RunService {
         const payload = { request, stopOnError },
             old = this.receipt(principal, request.clientRequestId, payload, 'script');
         if (old) return this.getScript(principal, old.resourceId);
-        if (this.store.count('scripts') >= 200) {
-            this.sweep();
-            requireThat(
-                this.store.count('scripts') < 200,
-                507,
-                'SCRIPT_CAPACITY',
-                'Script history needs operator maintenance',
-            );
-        }
         requireThat(
             this.store.list<Script>('scripts').filter(s => s.status === 'running').length < 4,
             429,
@@ -737,7 +619,6 @@ export class RunService {
             fingerprint: hash(payload),
             resourceId: id,
             kind: 'script',
-            at: script.createdAt,
         });
         void this.executeScript(principal, request, script).catch(() => {
             this.closed = true;

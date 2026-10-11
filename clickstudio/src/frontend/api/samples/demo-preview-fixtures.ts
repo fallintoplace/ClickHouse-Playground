@@ -10,8 +10,6 @@ import { DEMO_PREVIEW_STARTERS, demoIndexAnalysis } from './demo-preview-data.js
 
 export const owner = 'preview-user';
 export const previewStorageKey = 'clickstudio:vercel-preview-database:v1';
-export const previewStorageBudget = 1_500_000;
-export const expiresAt = () => new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 export const now = () => new Date().toISOString();
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -669,7 +667,6 @@ export function resultFor(run: Run): Result {
         rows: resultRows,
         completeness: 'complete',
         createdAt: now(),
-        expiresAt: expiresAt(),
     };
 }
 
@@ -786,7 +783,6 @@ export function makeRun(
         columns,
         warnings: ['DEMO FIXTURE: these generated rows do not evaluate the SQL in the editor.'],
         sequence,
-        resultExpiresAt: expiresAt(),
         resultState,
         requestedBy: owner,
         executedAs: 'sample-reader',

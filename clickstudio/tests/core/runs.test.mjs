@@ -1,14 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setTimeout as sleep } from 'node:timers/promises';
-import {
-    DEFAULT_RECEIPT_LIMIT,
-    DEFAULT_RECEIPT_RETENTION_MS,
-    DEFAULT_RUN_HISTORY_LIMIT,
-    DEFAULT_SCRIPT_RETENTION_MS,
-    RunService,
-    boundResult,
-} from '../../.core-build/src/backend/queries/execution/runs.js';
+import { RunService, boundResult } from '../../.core-build/src/backend/queries/execution/runs.js';
 import { DEFAULT_LIMITS } from '../../.core-build/src/shared/queries/execution/settings.js';
 import { fixture, owner, other, viewer, until, columns, connection } from './helpers.mjs';
 test('Lifecycle retains typed evidence and actual identity', async () => {
@@ -29,12 +22,12 @@ test('Duplicate request executes once', async () => {
     await f.runs.wait(owner, a.id);
     assert.equal(f.calls.length, 1);
 });
-test('Run capacity checks use store counts without loading run or receipt records', async () => {
+test('Submitting a run does not scan saved run or receipt records', async () => {
     const f = fixture(),
         list = f.store.list.bind(f.store);
     f.store.list = bucket => {
         if (bucket === 'runs' || bucket === 'receipts')
-            throw new Error(`Capacity check loaded ${bucket}`);
+            throw new Error(`Submission loaded ${bucket}`);
         return list(bucket);
     };
     let run;
@@ -47,96 +40,36 @@ test('Run capacity checks use store counts without loading run or receipt record
     assert.equal(f.store.count('runs'), 1);
     assert.equal(f.store.count('receipts'), 1);
 });
-test('Run history keeps the newest entries and preserves idempotency after pruning', async () => {
-    assert.equal(DEFAULT_RUN_HISTORY_LIMIT, 10_000);
-    assert.equal(DEFAULT_RECEIPT_LIMIT, 100_000);
-    const f = fixture({ runHistoryLimit: 3 }),
-        oldInput = f.request(),
-        old = f.runs.submit(owner, oldInput);
-    await f.runs.wait(owner, old.id);
-    const finished = f.runs.get(owner, old.id);
-    f.store.put('runs', old.id, {
-        ...finished,
-        createdAt: '2000-01-01T00:00:00.000Z',
-        status: 'failed',
-        resultState: 'unavailable',
-    });
-    f.store.put('runs', 'failed', {
-        ...finished,
-        id: 'failed',
-        queryId: 'failed',
-        createdAt: '2001-01-01T00:00:00.000Z',
-        status: 'failed',
-        finishedAt: '2001-01-01T00:00:01.000Z',
-        resultState: 'unavailable',
-    });
-    f.store.put('results', 'failed', { runId: 'failed' });
-    f.store.put('runs', 'active', {
-        ...finished,
-        id: 'active',
-        queryId: 'active',
-        createdAt: '2002-01-01T00:00:00.000Z',
-        status: 'running',
-        resultState: 'pending',
-    });
-    const next = f.runs.submit(owner, f.request());
-    assert.equal(f.store.count('runs'), 3);
-    assert.equal(f.store.get('runs', old.id), undefined);
-    assert.ok(f.store.get('runs', 'failed'));
-    assert.equal(f.store.get('results', old.id), undefined);
-    assert.ok(f.store.get('results', 'failed'));
-    assert.ok(f.store.get('runs', 'active'));
-    assert.ok(f.store.get('runs', next.id));
-    assert.ok(
-        f.store.keys('receipts').some(key => f.store.get('receipts', key).resourceId === old.id),
-    );
-    assert.throws(() => f.runs.submit(owner, oldInput), { code: 'RETIRED_REQUEST' });
-    await f.runs.wait(owner, next.id);
-});
-test('Concurrent run submissions prune only enough finished history to stay at the limit', async () => {
-    const f = fixture({ runHistoryLimit: 2 });
-    f.store.put('runs', 'oldest', {
-        id: 'oldest',
-        status: 'succeeded',
-        createdAt: '2000-01-01T00:00:00.000Z',
-    });
-    f.store.put('runs', 'newer', {
-        id: 'newer',
-        status: 'succeeded',
-        createdAt: '2001-01-01T00:00:00.000Z',
-    });
-    const first = f.runs.submit(owner, f.request()),
-        second = f.runs.submit(owner, f.request());
-    assert.equal(f.store.count('runs'), 2);
-    assert.equal(f.store.get('runs', 'oldest'), undefined);
-    assert.equal(f.store.get('runs', 'newer'), undefined);
-    assert.ok(f.store.get('runs', first.id));
-    assert.ok(f.store.get('runs', second.id));
-    await Promise.all([f.runs.wait(owner, first.id), f.runs.wait(owner, second.id)]);
-});
-test('Run history stays intact when it is full and no finished run can be pruned', () => {
-    const f = fixture({ runHistoryLimit: 2 });
-    f.store.put('runs', 'queued', {
-        id: 'queued',
-        status: 'queued',
-        createdAt: '2000-01-01T00:00:00.000Z',
-    });
-    f.store.put('runs', 'running', {
-        id: 'running',
-        status: 'running',
-        createdAt: '2001-01-01T00:00:00.000Z',
-    });
-    assert.throws(() => f.runs.submit(owner, f.request()), { code: 'HISTORY_FULL' });
-    assert.equal(f.store.count('runs'), 2);
-    assert.equal(f.calls.length, 0);
-});
-test('Run history is not pruned when the separate receipt limit rejects a submission', async () => {
-    const f = fixture({ runHistoryLimit: 1, receiptLimit: 1 }),
-        existing = f.runs.submit(owner, f.request());
-    await f.runs.wait(owner, existing.id);
-    assert.throws(() => f.runs.submit(owner, f.request()), { code: 'RECEIPT_CAPACITY' });
-    assert.ok(f.store.get('runs', existing.id));
-    assert.equal(f.store.count('runs'), 1);
+test('New runs preserve results beyond the former history, byte and receipt caps', async () => {
+    const f = fixture(),
+        input = f.request(),
+        first = f.runs.submit(owner, input);
+    const done = await f.runs.wait(owner, first.id);
+    const result = f.runs.result(owner, first.id);
+    for (let i = 0; i < 10_000; i++) {
+        const id = `saved-${i}`;
+        f.store.put('runs', id, { ...done, id, queryId: id, bytes: 6000 });
+        f.store.put('results', id, { ...result, runId: id, queryId: id });
+    }
+    for (let i = 0; i < 100_000; i++) {
+        const id = `receipt-${i}`;
+        f.store.put('receipts', id, {
+            id,
+            kind: 'run',
+            fingerprint: id,
+            resourceId: first.id,
+            at: done.createdAt,
+        });
+    }
+    const next = f.runs.submit(owner, f.request()),
+        another = f.runs.submit(owner, f.request());
+    await Promise.all([f.runs.wait(owner, next.id), f.runs.wait(owner, another.id)]);
+    assert.equal(f.store.count('runs'), 10_003);
+    assert.equal(f.store.count('results'), 10_003);
+    assert.equal(f.store.count('receipts'), 100_003);
+    assert.deepEqual(f.runs.result(owner, first.id), result);
+    assert.equal(f.runs.submit(owner, input).id, first.id);
+    assert.equal(f.calls.length, 3);
 });
 test('Reusing an id for different SQL rejects', () => {
     const f = fixture(),
@@ -274,19 +207,46 @@ test('Broken listener cannot fail execution', async () => {
     assert.equal((await f.runs.wait(owner, r.id)).status, 'succeeded');
     close();
 });
-test('Result expiry preserves SQL but removes row access', async () => {
+test('Restart preserves old results and removes legacy expiry fields without executing SQL', async () => {
     const f = fixture(),
         r = f.runs.submit(owner, f.request());
-    const done = await f.runs.wait(owner, r.id);
-    f.store.put('runs', r.id, { ...done, resultExpiresAt: '2000-01-01T00:00:00.000Z' });
-    assert.throws(() => f.runs.result(owner, r.id), { code: 'RESULT_EXPIRED' });
-    assert.ok(f.runs.get(owner, r.id).sql);
+    const done = await f.runs.wait(owner, r.id),
+        result = f.runs.result(owner, r.id);
+    const old = '2000-01-01T00:00:00.000Z';
+    f.store.put('runs', r.id, { ...done, createdAt: old, resultExpiresAt: old });
+    f.store.put('results', r.id, { ...result, createdAt: old, expiresAt: old });
+    assert.deepEqual(f.runs.result(owner, r.id).rows, result.rows);
+    const restarted = new RunService(f.store, f.driver, f.authorize);
+    assert.equal(restarted.get(owner, r.id).resultState, 'reopenable');
+    assert.equal('resultExpiresAt' in restarted.get(owner, r.id), false);
+    assert.equal('expiresAt' in restarted.result(owner, r.id), false);
+    assert.deepEqual(restarted.result(owner, r.id).rows, result.rows);
+    assert.equal(f.calls.length, 1);
 });
-test('Quota eviction is explicit, not silent empty rows', async () => {
-    const f = fixture({ snapshotBytes: 1 }),
+test('Legacy expired history preserves available rows and keeps missing rows unavailable', async () => {
+    const f = fixture(),
         r = f.runs.submit(owner, f.request());
-    await f.runs.wait(owner, r.id);
-    assert.equal(f.runs.get(owner, r.id).resultState, 'expired');
+    const done = await f.runs.wait(owner, r.id),
+        result = f.runs.result(owner, r.id);
+    f.store.put('runs', r.id, { ...done, resultState: 'expired' });
+    f.store.put('runs', 'missing', { ...done, id: 'missing', resultState: 'expired' });
+    f.store.put('runs', 'missing-reopenable', {
+        ...done,
+        id: 'missing-reopenable',
+        resultState: 'reopenable',
+    });
+    const restarted = new RunService(f.store, f.driver, f.authorize);
+    assert.equal(restarted.get(owner, r.id).resultState, 'reopenable');
+    assert.deepEqual(restarted.result(owner, r.id), result);
+    const missing = restarted.get(owner, 'missing');
+    assert.equal(missing.resultState, 'unavailable');
+    assert.equal(restarted.get(owner, 'missing-reopenable').resultState, 'unavailable');
+    assert.equal(missing.sql, done.sql);
+    assert.equal(missing.queryId, done.queryId);
+    assert.throws(() => restarted.result(owner, 'missing'), { code: 'RESULT_UNAVAILABLE' });
+    f.store.delete('results', r.id);
+    assert.throws(() => restarted.result(owner, r.id), { code: 'RESULT_UNAVAILABLE' });
+    assert.equal(f.calls.length, 1);
 });
 test('Pagination never returns more than requested', async () => {
     const f = fixture(),
@@ -332,40 +292,27 @@ test('Partial scripts preserve each outcome, stop-on-error skips remainder', asy
         ['succeeded', 'failed', 'skipped'],
     );
 });
-test('Terminal scripts and their receipts expire after the configured retention window', async () => {
+test('Old scripts and receipts survive restart and the former script capacity', async () => {
     const f = fixture(),
-        script = f.runs.submitScript(owner, f.request({ sql: 'SELECT 1' }));
+        input = f.request({ sql: 'SELECT 1' }),
+        script = f.runs.submitScript(owner, input);
     await until(() => f.runs.getScript(owner, script.id).status !== 'running');
+    const done = f.runs.getScript(owner, script.id),
+        old = '2000-01-01T00:00:00.000Z';
+    f.store.put('scripts', script.id, { ...done, createdAt: old });
     const receiptKey = f.store
         .keys('receipts')
         .find(key => f.store.get('receipts', key).resourceId === script.id);
-    assert.ok(receiptKey);
-    const old = '2000-01-01T00:00:00.000Z';
-    f.store.put('scripts', script.id, { ...f.runs.getScript(owner, script.id), createdAt: old });
     f.store.put('receipts', receiptKey, { ...f.store.get('receipts', receiptKey), at: old });
-    f.runs.sweep(Date.parse(old) + DEFAULT_SCRIPT_RETENTION_MS + 1);
-    assert.equal(f.store.get('scripts', script.id), undefined);
-    assert.equal(f.store.get('receipts', receiptKey), undefined);
-});
-test('Active scripts and live-resource idempotency receipts survive the retention cutoff', async () => {
-    const f = fixture({ delay: 500 }),
-        script = f.runs.submitScript(owner, f.request({ sql: 'SELECT 1' }));
-    await until(() => f.calls.length);
-    const receiptKey = f.store
-        .keys('receipts')
-        .find(key => f.store.get('receipts', key).resourceId === script.id);
-    assert.ok(receiptKey);
-    const old = '2000-01-01T00:00:00.000Z';
-    f.store.put('scripts', script.id, { ...f.runs.getScript(owner, script.id), createdAt: old });
-    f.store.put('receipts', receiptKey, { ...f.store.get('receipts', receiptKey), at: old });
-    f.runs.sweep(Date.parse(old) + DEFAULT_SCRIPT_RETENTION_MS + 1);
-    assert.ok(f.store.get('scripts', script.id));
+    for (let i = 0; i < 200; i++)
+        f.store.put('scripts', `saved-${i}`, { ...done, id: `saved-${i}`, createdAt: old });
+    const restarted = new RunService(f.store, f.driver, f.authorize);
+    assert.equal(restarted.submitScript(owner, input).id, script.id);
+    const next = restarted.submitScript(owner, f.request({ sql: 'SELECT 2' }));
+    await until(() => restarted.getScript(owner, next.id).status !== 'running');
+    assert.equal(f.store.count('scripts'), 202);
     assert.ok(f.store.get('receipts', receiptKey));
-    await f.runs.cancelScript(owner, script.id);
-    await until(() => f.runs.getScript(owner, script.id).status !== 'running');
-    f.runs.sweep(Date.parse(old) + DEFAULT_SCRIPT_RETENTION_MS + 1);
-    assert.equal(f.store.get('scripts', script.id), undefined);
-    await f.runs.close();
+    assert.equal(f.calls.length, 2);
 });
 test('Continue-on-error scripts do not hide a failed statement', async () => {
     const f = fixture();
@@ -435,21 +382,21 @@ test('Deleting history does not release the idempotency reservation', async () =
     f.runs.remove(owner, r.id);
     assert.throws(() => f.runs.submit(owner, input), { code: 'RETIRED_REQUEST' });
 });
-test('Deleted-run idempotency tombstones expire after the retention window', async () => {
+test('Old deleted-run receipts still prevent replay after restart', async () => {
     const f = fixture(),
         input = f.request(),
         run = f.runs.submit(owner, input);
     await f.runs.wait(owner, run.id);
     f.runs.remove(owner, run.id);
     const receiptKey = f.store.keys('receipts')[0];
-    const old = '2000-01-01T00:00:00.000Z';
-    f.store.put('receipts', receiptKey, { ...f.store.get('receipts', receiptKey), at: old });
-    f.runs.sweep(Date.parse(old) + DEFAULT_RECEIPT_RETENTION_MS + 1);
-    assert.equal(f.store.get('receipts', receiptKey), undefined);
-    const replacement = f.runs.submit(owner, input);
-    assert.notEqual(replacement.id, run.id);
-    await f.runs.wait(owner, replacement.id);
-    assert.equal(f.calls.length, 2);
+    f.store.put('receipts', receiptKey, {
+        ...f.store.get('receipts', receiptKey),
+        at: '2000-01-01T00:00:00.000Z',
+    });
+    const restarted = new RunService(f.store, f.driver, f.authorize);
+    assert.ok(f.store.get('receipts', receiptKey));
+    assert.throws(() => restarted.submit(owner, input), { code: 'RETIRED_REQUEST' });
+    assert.equal(f.calls.length, 1);
 });
 test('Child runs cannot cross connection boundaries', async () => {
     const f = fixture(),

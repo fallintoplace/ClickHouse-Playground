@@ -134,6 +134,8 @@ export function WorkspaceResultsPanel({
     const failedScriptStatement = script?.statements.find(
         statement => statement.status === 'failed' && statement.error,
     );
+    const rowsUnavailable =
+        run?.resultState === 'unavailable' && ['succeeded', 'truncated'].includes(run.status);
     const showFailure = Boolean(failureError && !execution && visibleResultsView !== 'sqlmap');
     const previousSuccessfulResult = Boolean(
         (failedAttempt || (failedScriptStatement && !failedScriptStatement.runId)) &&
@@ -269,7 +271,7 @@ export function WorkspaceResultsPanel({
                                             }
                                         />
                                     )}
-                                {run && visibleResultsView === 'indexes' && (
+                                {run && !rowsUnavailable && visibleResultsView === 'indexes' && (
                                     <ExplainIndexesView
                                         analysis={explainIndexAnalysis}
                                         loading={
@@ -278,7 +280,7 @@ export function WorkspaceResultsPanel({
                                         copy={copy.common}
                                     />
                                 )}
-                                {run && visibleResultsView === 'plan' && (
+                                {run && !rowsUnavailable && visibleResultsView === 'plan' && (
                                     <ExplainPlanView
                                         plan={explainPlan}
                                         loading={
@@ -288,6 +290,7 @@ export function WorkspaceResultsPanel({
                                     />
                                 )}
                                 {run &&
+                                    !rowsUnavailable &&
                                     visibleResultsView === 'pipeline' &&
                                     (pipelineResult ? (
                                         <PipelineGraph
@@ -301,7 +304,7 @@ export function WorkspaceResultsPanel({
                                             {copy.common.pipelineNoOutput}
                                         </div>
                                     ))}
-                                {run && visibleResultsView === 'runtime' && (
+                                {run && !rowsUnavailable && visibleResultsView === 'runtime' && (
                                     <ExplainAnalyzeView
                                         evidence={analyzeEvidence}
                                         loading={
@@ -311,6 +314,7 @@ export function WorkspaceResultsPanel({
                                     />
                                 )}
                                 {run &&
+                                !rowsUnavailable &&
                                 visibleResultsView === 'chart' &&
                                 snapshotChart?.config.kind === 'table' ? (
                                     <div className="chart-table-fallback">
@@ -336,6 +340,7 @@ export function WorkspaceResultsPanel({
                                     </div>
                                 ) : (
                                     run &&
+                                    !rowsUnavailable &&
                                     visibleResultsView === 'chart' && (
                                         <ChartView
                                             result={retainedSnapshot}
@@ -349,7 +354,7 @@ export function WorkspaceResultsPanel({
                                         />
                                     )
                                 )}
-                                {run && visibleResultsView === 'map' && (
+                                {run && !rowsUnavailable && visibleResultsView === 'map' && (
                                     <GeoView
                                         result={retainedSnapshot}
                                         loading={

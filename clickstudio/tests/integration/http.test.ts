@@ -659,7 +659,6 @@ test('Ask AI uses browser Cloud schema and run evidence without resolving a loca
             rows: [['Marta']],
             completeness: 'complete',
             createdAt: '2026-09-29T12:00:00.000Z',
-            expiresAt: '2026-09-29T12:05:00.000Z',
         },
         evidenceSql: 'SELECT player FROM default.world_cup_golden_boot',
     });

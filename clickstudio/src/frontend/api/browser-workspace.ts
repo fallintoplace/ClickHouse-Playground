@@ -69,12 +69,10 @@ import {
 import {
     chartConfig,
     connection,
-    expiresAt,
     makeRun,
     metricContract,
     now,
     owner,
-    previewStorageBudget,
     previewStorageKey,
     record,
     resultFor,
@@ -244,14 +242,6 @@ export class BrowserWorkspaceApi {
                 this.sequence = state.sequence;
             this.restoreExecutionState(state);
             this.restoreDocumentState(state);
-            for (const run of this.runs.values()) {
-                if (
-                    run.connectionId === PLAYGROUND_CONNECTION_ID &&
-                    run.resultState === 'reopenable' &&
-                    !this.results.has(run.id)
-                )
-                    this.runs.set(run.id, { ...run, resultState: 'expired' });
-            }
             for (const run of this.runs.values())
                 this.sequence = Math.max(this.sequence, run.sequence);
         } catch {
@@ -265,18 +255,21 @@ export class BrowserWorkspaceApi {
     }
 
     private restoreExecutionState(state: ReturnType<typeof record>) {
+        const results = Array.isArray(state.results) ? state.results : [];
+        for (const value of results) {
+            const result = { ...record(value) };
+            delete result.expiresAt;
+            if (isResult(result)) this.results.set(result.runId, result);
+        }
         if (Array.isArray(state.runs))
             for (const value of state.runs) {
-                if (isRun(value)) this.runs.set(value.id, value);
-            }
-        if (Array.isArray(state.results))
-            for (const value of state.results) {
-                if (!isResult(value)) continue;
-                const run = this.runs.get(value.runId);
-                const expiredPlaygroundResult =
-                    run?.connectionId === PLAYGROUND_CONNECTION_ID &&
-                    Date.parse(value.expiresAt) <= Date.now();
-                if (!expiredPlaygroundResult) this.results.set(value.runId, value);
+                const run = { ...record(value) };
+                delete run.resultExpiresAt;
+                if (run.resultState === 'expired' || run.resultState === 'reopenable')
+                    run.resultState = this.results.has(String(run.id))
+                        ? 'reopenable'
+                        : 'unavailable';
+                if (isRun(run)) this.runs.set(run.id, run);
             }
         if (Array.isArray(state.scripts))
             for (const value of state.scripts) {
@@ -376,58 +369,19 @@ export class BrowserWorkspaceApi {
 
     private persist() {
         try {
-            const results = [...this.results.values()].slice(-100);
-            const scripts = [...this.scripts.values()].slice(-50);
-            const serialize = () =>
+            localStorage.setItem(
+                previewStorageKey,
                 JSON.stringify({
                     version: 1,
                     trusted: this.trusted,
                     sequence: this.sequence,
-                    runs: [...this.runs.values()]
-                        .slice(-100)
-                        .map(run =>
-                            run.resultState === 'reopenable' &&
-                            !results.some(result => result.runId === run.id)
-                                ? { ...run, resultState: 'expired' as const }
-                                : run,
-                        ),
-                    results,
-                    scripts,
-                    documents: [...this.documents.values()].slice(-100),
-                    revisions: [...this.revisions.entries()].slice(-100),
-                });
-            let serialized = serialize();
-            while (serialized.length > previewStorageBudget) {
-                const playgroundResult = results.findIndex(
-                    result =>
-                        this.runs.get(result.runId)?.connectionId === PLAYGROUND_CONNECTION_ID,
-                );
-                const oldestCloudOrPlayground = results.findIndex(
-                    result => this.runs.get(result.runId)?.connectionId !== 'demo',
-                );
-                let resultToExpire: number;
-
-                if (playgroundResult >= 0) {
-                    resultToExpire = playgroundResult;
-                } else if (oldestCloudOrPlayground >= 0) {
-                    resultToExpire = oldestCloudOrPlayground;
-                } else if (results.length) {
-                    resultToExpire = 0;
-                } else {
-                    resultToExpire = -1;
-                }
-                if (resultToExpire >= 0) {
-                    results.splice(resultToExpire, 1);
-                } else {
-                    const oldestCompletedScript = scripts.findIndex(
-                        script => script.status !== 'running',
-                    );
-                    if (oldestCompletedScript < 0) break;
-                    scripts.splice(oldestCompletedScript, 1);
-                }
-                serialized = serialize();
-            }
-            localStorage.setItem(previewStorageKey, serialized);
+                    runs: [...this.runs.values()],
+                    results: [...this.results.values()],
+                    scripts: [...this.scripts.values()],
+                    documents: [...this.documents.values()],
+                    revisions: [...this.revisions.entries()],
+                }),
+            );
         } catch {}
     }
 
@@ -453,7 +407,6 @@ export class BrowserWorkspaceApi {
                       rows: imported.rows,
                       completeness: 'complete',
                       createdAt: now(),
-                      expiresAt: expiresAt(),
                   }
                 : resultFor(run),
         );
@@ -508,7 +461,7 @@ export class BrowserWorkspaceApi {
                 const current = this.runs.get(id);
                 if (!current || current.status === 'cancelled') return;
                 const finishedAt = now();
-                const resultExpiresAt = expiresAt();
+
                 const status = response.truncated ? ('truncated' as const) : ('succeeded' as const);
                 const completed: Run = {
                     ...current,
@@ -524,7 +477,7 @@ export class BrowserWorkspaceApi {
                     warnings: response.truncated
                         ? ['The result reached the 1,000-row display limit and may be incomplete.']
                         : [],
-                    resultExpiresAt,
+
                     resultState: 'reopenable',
                     sequence: ++this.sequence,
                 };
@@ -535,7 +488,6 @@ export class BrowserWorkspaceApi {
                     rows: response.rows,
                     completeness: response.truncated ? 'truncated' : 'complete',
                     createdAt: finishedAt,
-                    expiresAt: resultExpiresAt,
                 };
                 this.runs.set(id, completed);
                 this.results.set(id, result);
@@ -661,7 +613,7 @@ export class BrowserWorkspaceApi {
                 const response = await runClickHouseCloudSql(statement.sql, script.id);
                 const finishedAt = now();
                 const runId = crypto.randomUUID();
-                const resultExpiresAt = expiresAt();
+
                 const status = response.truncated ? ('truncated' as const) : ('succeeded' as const);
                 const run: Run = {
                     dataSource: 'clickhouse',
@@ -695,7 +647,6 @@ export class BrowserWorkspaceApi {
                         ? ['The result reached the 1,000-row display limit and may be incomplete.']
                         : [],
                     sequence: ++this.sequence,
-                    resultExpiresAt,
                     resultState: 'reopenable',
                     requestedBy: owner,
                     executedAs: cloud.username,
@@ -710,7 +661,6 @@ export class BrowserWorkspaceApi {
                     rows: response.rows,
                     completeness: response.truncated ? 'truncated' : 'complete',
                     createdAt: finishedAt,
-                    expiresAt: resultExpiresAt,
                 };
                 this.runs.set(run.id, run);
                 this.results.set(run.id, result);
@@ -955,20 +905,8 @@ export class BrowserWorkspaceApi {
     }
 
     private getRun(id: string) {
-        let run = this.runs.get(id);
+        const run = this.runs.get(id);
         if (!run) throw new RetainedRunUnavailableError();
-        const expiresAtMs = run.resultExpiresAt ? Date.parse(run.resultExpiresAt) : Number.NaN;
-        if (
-            run.connectionId === PLAYGROUND_CONNECTION_ID &&
-            run.resultState === 'reopenable' &&
-            (!this.results.has(run.id) ||
-                (Number.isFinite(expiresAtMs) && expiresAtMs <= Date.now()))
-        ) {
-            this.results.delete(run.id);
-            run = { ...run, resultState: 'expired' };
-            this.runs.set(run.id, run);
-            this.persist();
-        }
         return run;
     }
 
@@ -1478,12 +1416,8 @@ export class BrowserWorkspaceApi {
         )
             run = await this.refreshCloudRunProgress(run);
         if (parts[2] === 'result' || parts[2] === 'snapshot') {
-            const result = this.results.get(run.id);
-            if (!result && run.connectionId === PLAYGROUND_CONNECTION_ID)
-                throw new Error(
-                    'This retained Playground result is no longer available in this browser. Run the SQL again.',
-                );
-            const retained = result ?? resultFor(run);
+            const retained = this.results.get(run.id);
+            if (!retained) throw new RetainedRunUnavailableError();
             if (parts[2] === 'snapshot') return retained;
             const offset = Math.max(0, Number(url.searchParams.get('offset') ?? 0) || 0);
             const count = Math.max(
@@ -1688,7 +1622,7 @@ export class BrowserWorkspaceApi {
             const warnings = response.truncated
                 ? ['The result reached the 1,000-row display limit and may be incomplete.']
                 : [];
-            const resultExpiresAt = expiresAt();
+
             const run: Run = {
                 dataSource: 'clickhouse',
                 id: runId,
@@ -1714,7 +1648,6 @@ export class BrowserWorkspaceApi {
                 columns: response.columns,
                 warnings,
                 sequence: ++this.sequence,
-                resultExpiresAt,
                 resultState: 'reopenable',
                 requestedBy: owner,
                 executedAs: PLAYGROUND_CONNECTION.username,
@@ -1728,7 +1661,6 @@ export class BrowserWorkspaceApi {
                 rows: response.rows,
                 completeness: response.truncated ? 'truncated' : 'complete',
                 createdAt: finishedAt,
-                expiresAt: resultExpiresAt,
             };
             this.runs.set(run.id, run);
             this.results.set(run.id, result);

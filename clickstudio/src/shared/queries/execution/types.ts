@@ -52,7 +52,6 @@ export interface Run {
     warnings: string[];
     error?: ApiError;
     sequence: number;
-    resultExpiresAt?: string;
     resultState: RunResultState;
     requestedBy: string;
     executedAs: string;

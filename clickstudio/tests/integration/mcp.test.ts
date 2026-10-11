@@ -707,7 +707,7 @@ test('MCP accepts the parameter count, key length, and value length boundaries',
     assert.deepEqual(s.fixture.calls[0]?.parameters, parameters);
 });
 
-test('MCP distinguishes an empty completed result, a failure, and an expired snapshot', async t => {
+test('MCP preserves old completed results and distinguishes missing rows from a failure', async t => {
     const s = await start(t);
     s.fixture.result.rows = [];
     const empty = await s.completed('execute_sql', query());
@@ -719,12 +719,17 @@ test('MCP distinguishes an empty completed result, a failure, and an expired sna
     assert.equal(failed.data.run?.status, 'failed');
     assert.equal(failed.data.run?.error?.code, 'DATABASE_ERROR');
     const run = s.runs.get(owner, empty.data.run!.id);
-    run.resultExpiresAt = new Date(0).toISOString();
-    s.store.put('runs', run.id, run);
-    const expired = await s.call('get_result', { runId: run.id });
-    assert.equal(expired.isError, true);
-    assert.equal(expired.data.run?.resultState, 'expired');
-    assert.equal(expired.data.error?.code, 'RESULT_EXPIRED');
+    s.store.put('runs', run.id, { ...run, resultExpiresAt: new Date(0).toISOString() });
+    const retained = await s.call('get_result', { runId: run.id });
+    assert.equal(retained.isError, undefined);
+    assert.equal(retained.data.run?.resultState, 'reopenable');
+    assert.deepEqual(retained.data.result?.rows, []);
+    assert.equal('resultExpiresAt' in retained.data.run!, false);
+    assert.equal('expiresAt' in retained.data.result!, false);
+    s.store.delete('results', run.id);
+    const missing = await s.call('get_result', { runId: run.id });
+    assert.equal(missing.isError, true);
+    assert.equal(missing.data.error?.code, 'RESULT_UNAVAILABLE');
     assert.equal(s.fixture.calls.length, 2);
 });
 

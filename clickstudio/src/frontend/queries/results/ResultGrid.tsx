@@ -228,14 +228,7 @@ export function ResultGrid({
         restoreFilterFocus.current = true;
         setFilterOpen(false);
     };
-    if (run.resultState === 'expired')
-        return (
-            <div className="result-empty-state">
-                <span className="empty-result-icon">⌛</span>
-                <strong>Result retention expired</strong>
-                <p>The SQL and query ID are still available. Run it again to fetch fresh data.</p>
-            </div>
-        );
+    if (run.resultState === 'unavailable') return null;
     if (run.resultState !== 'reopenable')
         return (
             <div className="result-empty-state">
