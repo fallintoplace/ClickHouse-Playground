@@ -484,7 +484,11 @@ test('Switching to Experimental keeps the AI chat, query and run evidence', asyn
         results.getByRole('table', { name: 'Retained query rows', exact: true }),
     ).toBeVisible();
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-query-id', queryId);
+    await page.getByTestId('open-ai').click();
+    await expect(page.locator('.assistant-supporting-details')).toHaveCount(0);
+    await expect(citation).toBeVisible();
     await useAdvancedMode(page);
+    await expect(page.locator('.assistant-supporting-details')).toHaveCount(1);
     await expect(page.locator('.assistant-user-message')).toContainText('Show event counts by day');
     await expect(prompt).toHaveValue('');
     await expect(results.getByRole('tab', { name: 'Insights', exact: true })).toHaveAttribute(
@@ -892,6 +896,16 @@ test('Experimental insights and AI requests do not execute SQL', async ({ page }
     await expect(
         page.getByText('The fixture has no measured performance data.', { exact: true }),
     ).toBeVisible();
+    const details = page.locator('.assistant-supporting-details');
+    await expect(details).toHaveCount(2);
+    await page.getByText('Standard', { exact: true }).click();
+    await page.getByTestId('open-ai').click();
+    await expect(page.getByTestId('assistant-answer-markdown')).toHaveText(
+        'The fixture has no measured performance data.',
+    );
+    await expect(details).toHaveCount(0);
+    await useAdvancedMode(page);
+    await expect(details).toHaveCount(2);
     expect(assistantRequests).toHaveLength(1);
     expect(assistantRequests[0]).toMatchObject({
         action: 'ask',

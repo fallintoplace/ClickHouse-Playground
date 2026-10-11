@@ -574,7 +574,7 @@ function AssistantOutput({
                     />
                 </div>
             )}
-            {findingCards.length > 0 && (
+            {!beginner && findingCards.length > 0 && (
                 <details className="assistant-supporting-details">
                     <summary>
                         Details <span>{findingCards.length}</span>
@@ -582,7 +582,7 @@ function AssistantOutput({
                     <div className="assistant-supporting-details-content">{findingCards}</div>
                 </details>
             )}
-            {hasSupportingDetails && (
+            {!beginner && hasSupportingDetails && (
                 <details className="assistant-supporting-details">
                     <summary>
                         Assumptions, notes and sources <span>{supportingDetailCount}</span>

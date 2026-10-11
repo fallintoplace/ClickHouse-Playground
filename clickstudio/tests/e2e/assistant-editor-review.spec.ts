@@ -310,7 +310,18 @@ for (const mode of ['beginner', 'expert']) {
             mode => localStorage.setItem('clickstudio:experience', mode),
             mode,
         );
-        const { decisions } = await installProposal(page);
+        const { decisions } = await installProposal(page, proposedSql, {
+            findings: [
+                {
+                    severity: 'low',
+                    message: 'The output value changes.',
+                    evidence: 'The query selects 2 instead of 1.',
+                },
+            ],
+            assumptions: ['The value should be 2.'],
+            caveats: ['Result labels stay the same.'],
+            sources: [{ title: 'SELECT reference', url: 'https://clickhouse.com/docs' }],
+        });
         let runs = 0;
         let saves = 0;
         page.on('request', request => {
@@ -323,6 +334,31 @@ for (const mode of ['beginner', 'expert']) {
         await replaceSql(page, originalSql);
         await expect.poll(async () => (await storedDraft(page))?.sql).toBe(originalSql);
         await askForChanges(page);
+        const details = page.locator('.assistant-supporting-details');
+        if (mode === 'expert') {
+            await expect(details).toHaveCount(2);
+            await details
+                .locator('summary')
+                .filter({ hasText: /^Details/ })
+                .click();
+            await expect(
+                details.getByText('The output value changes.', { exact: true }),
+            ).toBeVisible();
+            await details
+                .locator('summary')
+                .filter({ hasText: /^Assumptions, notes and sources/ })
+                .click();
+            await expect(
+                details.getByText('The value should be 2.', { exact: true }),
+            ).toBeVisible();
+            await expect(
+                details.getByText('Result labels stay the same.', { exact: true }),
+            ).toBeVisible();
+            await expect(details.getByRole('link', { name: 'SELECT reference' })).toHaveAttribute(
+                'href',
+                'https://clickhouse.com/docs',
+            );
+        } else await expect(details).toHaveCount(0);
         await expect(review(page)).toBeVisible();
         await expect(
             page
@@ -351,6 +387,7 @@ for (const mode of ['beginner', 'expert']) {
         await expect(liveEditor(page)).toBeVisible();
         await expect(liveEditor(page)).toHaveText(proposedSql);
         await expect(page.getByTestId('sql-proposal-diff')).toContainText('Applied');
+        await expect(details).toHaveCount(mode === 'expert' ? 2 : 0);
         await expect.poll(async () => (await storedDraft(page))?.sql).toBe(proposedSql);
         expect((await storedDraft(page))?.checkpoints).toContainEqual(
             expect.objectContaining({
