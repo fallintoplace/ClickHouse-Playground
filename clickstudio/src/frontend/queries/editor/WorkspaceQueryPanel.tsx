@@ -539,6 +539,7 @@ function renderQueryHeading({
                         <Icon name="dock" />
                     </Button>
                 ) : (
+                    experience === 'expert' &&
                     !panels.compactViewport && (
                         <Button
                             variant="ghost"

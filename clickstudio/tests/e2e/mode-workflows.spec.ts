@@ -22,6 +22,9 @@ async function beginInCompactMode(page: Page) {
     await expect(page.getByTestId('open-ai')).toBeVisible();
     await expect(page.getByTestId('format-sql')).toBeVisible();
     await expect(page.getByTestId('run-button')).toHaveCount(1);
+    await expect(
+        page.getByRole('button', { name: 'Open editor in a separate window', exact: true }),
+    ).toHaveCount(0);
     await expect(page.getByTestId('save-query')).toHaveCount(0);
     await expect(page.locator('.tab-unsaved')).toHaveCount(0);
     await expect(page.locator('.draft-status')).toHaveCount(0);
@@ -120,6 +123,9 @@ test('Standard exposes assignment actions and can run a query without opening AI
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-query-id', queryId);
     await expect(page.getByTestId('open-ai')).toBeVisible();
     await expect(page.getByTestId('save-query')).toBeVisible();
+    await expect(
+        page.getByRole('button', { name: 'Open editor in a separate window', exact: true }),
+    ).toBeVisible();
     await expect(page.locator('.tab-unsaved')).toHaveCount(1);
     await expect(page.locator('.editor-control-rail')).toBeVisible();
     await expect(page.locator('.parser-switch')).toHaveCount(0);
@@ -950,6 +956,12 @@ for (const theme of ['Dark', 'Light'])
             await expect(page.locator('.workspace-root')).toHaveClass(/is-beginner/);
             await expect(page.getByTestId('save-query')).toHaveCount(0);
             await expect(page.locator('.tab-unsaved')).toHaveCount(0);
+            await expect(
+                page.getByRole('button', {
+                    name: 'Open editor in a separate window',
+                    exact: true,
+                }),
+            ).toHaveCount(0);
             await expect.poll(readActionStyles).toEqual(experimentalStyles);
             await useAdvancedMode(page);
             await expect(run).toBeVisible();

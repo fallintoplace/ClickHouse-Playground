@@ -189,7 +189,7 @@ for (const theme of ['Dark', 'Light'])
                 '.results-surface',
                 '[data-testid="run-button"]',
                 ...(mode === 'Experimental' ? ['[data-testid="save-query"]'] : []),
-                '.panel-window-button',
+                ...(mode === 'Experimental' ? ['.panel-window-button'] : []),
                 '.panel-collapse-button',
                 '.result-filter',
             ]) {

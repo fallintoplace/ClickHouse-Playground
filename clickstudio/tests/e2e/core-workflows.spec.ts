@@ -1399,7 +1399,7 @@ for (const legacyMode of ['floating', 'maximized'])
                         name: 'Open editor in a separate window',
                         exact: true,
                     }),
-                ).toBeVisible();
+                ).toHaveCount(mode === 'Experimental' ? 1 : 0);
                 await expect(
                     page.getByRole('button', {
                         name: 'Open results in a separate window',
@@ -1420,7 +1420,7 @@ for (const legacyMode of ['floating', 'maximized'])
     });
 
 for (const mode of ['Standard', 'Experimental'])
-    test(`${mode} query opens in a separate window while results stay in the workspace`, async ({
+    test(`Detached queries remain editable in ${mode} while results stay in the workspace`, async ({
         page,
     }) => {
         await page.setViewportSize({ width: 1400, height: 1000 });
@@ -1432,11 +1432,21 @@ for (const mode of ['Standard', 'Experimental'])
             .innerText();
         await page.locator('button[aria-controls="sql-editor-content"]').click();
 
+        if (mode === 'Standard') {
+            await expect(
+                page.getByRole('button', {
+                    name: 'Open editor in a separate window',
+                    exact: true,
+                }),
+            ).toHaveCount(0);
+            await page.getByText('Experimental', { exact: true }).click();
+        }
         const editorPopupPromise = page.waitForEvent('popup');
         await page
             .getByRole('button', { name: 'Open editor in a separate window', exact: true })
             .click();
         const editorPopup = await editorPopupPromise;
+        if (mode === 'Standard') await page.getByText('Standard', { exact: true }).click();
         await expect(editorPopup.locator('.cm-content')).toBeVisible();
         await expect(editorPopup.getByTestId('save-query')).toHaveCount(
             mode === 'Experimental' ? 1 : 0,
@@ -1482,6 +1492,9 @@ for (const mode of ['Standard', 'Experimental'])
         await expect(page.locator('#sql-editor-content')).toBeHidden();
         await page.locator('button[aria-controls="sql-editor-content"]').click();
         await expect(page.locator('.cm-content')).toHaveText(editedSql);
+        await expect(
+            page.getByRole('button', { name: 'Open editor in a separate window', exact: true }),
+        ).toHaveCount(mode === 'Experimental' ? 1 : 0);
 
         await expect(
             page.getByRole('button', { name: 'Open results in a separate window', exact: true }),
@@ -1494,19 +1507,27 @@ for (const mode of ['Standard', 'Experimental'])
         ).toHaveText(retainedRows, { useInnerText: true });
     });
 
-test('Detached beginner editor leaves only a compact workspace header without results', async ({
+test('Switching to Standard keeps a detached editor dockable with a compact workspace header', async ({
     page,
 }) => {
     await page.addInitScript(() => localStorage.setItem('clickstudio:experience', 'beginner'));
     await page.setViewportSize({ width: 1400, height: 1000 });
     await trust(page);
 
+    await expect(
+        page.getByRole('button', { name: 'Open editor in a separate window', exact: true }),
+    ).toHaveCount(0);
+    await page.getByText('Experimental', { exact: true }).click();
     const editorPopupPromise = page.waitForEvent('popup');
     await page
         .getByRole('button', { name: 'Open editor in a separate window', exact: true })
         .click();
     const editorPopup = await editorPopupPromise;
+    await page.getByText('Standard', { exact: true }).click();
     await expect(editorPopup.locator('#sql-editor-content')).toBeVisible();
+    await expect(
+        editorPopup.getByRole('button', { name: 'Dock editor here', exact: true }),
+    ).toBeVisible();
     await expect(editorPopup.locator('.panel-collapse-button')).toHaveCount(0);
     await expect(page.locator('.detached-query-placeholder-content')).toHaveCount(0);
     await expect(page.locator('.detached-query-location')).toHaveText(
