@@ -1,5 +1,5 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
-import { openResultFilter, replaceSql, runButton, trust } from './helpers.js';
+import { openResultFilter, replaceSql, runButton, setAccentForStyles, trust } from './helpers.js';
 
 const shadow = (locator: Locator) =>
     locator
@@ -132,6 +132,7 @@ for (const theme of ['Dark', 'Light'])
             await trust(page);
             await page.getByText(mode, { exact: true }).click();
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+            await setAccentForStyles(page, 'Cyan accent');
             await runButton(page).click();
             await expect(page.locator('.data-table')).toBeVisible();
             await expectCompactToolbar(page);
@@ -230,9 +231,7 @@ for (const theme of ['Dark', 'Light'])
             await page.keyboard.press('Escape');
             await expect(help).toBeHidden();
 
-            await page
-                .getByRole('button', { name: 'ClickHouse yellow accent', exact: true })
-                .click();
+            await setAccentForStyles(page, 'ClickHouse yellow accent');
             await expect(editor).toHaveCSS('border-radius', '4px');
             await expect(runButton(page)).toHaveCSS('border-radius', '4px');
             await expectNeutralWorkspace(page);

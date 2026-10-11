@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { openResultFilter, runButton, trust } from './helpers.js';
+import { setAccentForStyles, openResultFilter, runButton, trust } from './helpers.js';
 
 const longName = 'latency_for_all_frontend_services_over_the_current_observation_window';
 const longType =
@@ -97,7 +97,7 @@ for (const theme of ['Light', 'Dark'])
             await expect(headers.first().locator('small')).toHaveCSS('border-radius', '2px');
             await expect(headers.first().locator('small')).toHaveCSS('padding', '1px 4px');
             for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
-                await page.getByRole('button', { name: accent, exact: true }).click();
+                await setAccentForStyles(page, accent);
                 const badges = await headers.evaluateAll(elements => {
                     const canvas = document.createElement('canvas');
                     canvas.width = canvas.height = 1;

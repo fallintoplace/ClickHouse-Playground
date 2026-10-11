@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
-import { openSqlExamples, openWorkspacePanel } from './helpers.js';
+import { setAccentForStyles, openSqlExamples, openWorkspacePanel } from './helpers.js';
 import {
     previewCloudSchema,
     mockCloudEndpoint,
@@ -69,7 +69,7 @@ test('Connect Cloud matches neutral secondary controls in both themes and accent
     for (const theme of ['Dark', 'Light'])
         for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
-            await page.getByRole('button', { name: accent, exact: true }).click();
+            await setAccentForStyles(page, accent);
             await expect(connect).toHaveCSS('background-image', 'none');
             for (const property of ['background-color', 'border-color']) {
                 await expect(connect).toHaveCSS(

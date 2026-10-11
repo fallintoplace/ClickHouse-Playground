@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { runButton, trust } from './helpers.js';
+import { setAccentForStyles, runButton, trust } from './helpers.js';
 import { chooseExistingTable, mockWritableWorkspace, previewCsv } from './import-helpers.js';
 import {
     chooseExistingCloudTable,
@@ -23,8 +23,8 @@ for (const theme of ['Light', 'Dark']) {
                 await page.setViewportSize({ width: 1600, height: 1000 });
                 await trust(page);
                 await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
-                await page.getByRole('button', { name: accent, exact: true }).click();
                 await page.getByText(mode, { exact: true }).click();
+                await setAccentForStyles(page, accent);
                 await expectReferenceStyles(page, info, 'empty-workspace');
                 const inspector = page.locator('.inspector-pane');
                 if (!(await inspector.isVisible()))
@@ -119,7 +119,7 @@ for (const theme of ['Light', 'Dark']) {
             await page.setViewportSize({ width: 1440, height: 1000 });
             await trust(page);
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
-            await page.getByRole('button', { name: accent, exact: true }).click();
+            await setAccentForStyles(page, accent);
             await page.getByRole('button', { name: 'Help', exact: true }).click();
             const help = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });
             for (const section of [
@@ -179,7 +179,7 @@ for (const theme of ['Light', 'Dark']) {
             await mockCloudEndpoint(page);
             await connectPreviewCloud(page);
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
-            await page.getByRole('button', { name: accent, exact: true }).click();
+            await setAccentForStyles(page, accent);
             await page.getByRole('button', { name: 'Import', exact: true }).last().click();
             const dialog = await previewCsv(page);
             await expect(dialog.locator('.import-destination-choice')).toBeVisible();
@@ -213,7 +213,7 @@ for (const theme of ['Light', 'Dark']) {
             await page.setViewportSize({ width: 1440, height: 1000 });
             await mockWritableWorkspace(page);
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
-            await page.getByRole('button', { name: accent, exact: true }).click();
+            await setAccentForStyles(page, accent);
             const rows = [
                 { day: '2026-01-01', events: '10' },
                 { day: '2026-01-02', events: '20' },

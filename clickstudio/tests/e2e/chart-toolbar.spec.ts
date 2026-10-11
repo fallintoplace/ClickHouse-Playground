@@ -1,6 +1,6 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import type { Result } from '../../src/shared/queries/results/types.js';
-import { runButton, trust } from './helpers.js';
+import { setAccentForStyles, runButton, trust } from './helpers.js';
 
 test.beforeEach(async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -154,7 +154,7 @@ for (const mode of ['Standard', 'Experimental'])
             await expect(popup).toBeHidden();
             await page.keyboard.press('Escape');
             for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
-                await page.getByRole('button', { name: accent, exact: true }).click();
+                await setAccentForStyles(page, accent);
                 for (const width of [1440, 900]) {
                     await page.setViewportSize({ width, height: 1000 });
                     await expectToolbarFits(toolbar);

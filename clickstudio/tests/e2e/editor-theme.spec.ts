@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { PNG } from 'pngjs';
-import { replaceSql } from './helpers.js';
+import { setAccentForStyles, replaceSql } from './helpers.js';
 
 const sql =
     "SELECT /* aggregate */ quantile(0.50)(number) AS p50_ms, 1000000, -2, 'frontend', 'it''s', true, NULL, {limit:UInt64}, \"quoted name\", `FROM`, `toDate`, `UInt64`, \"SELECT\" FROM numbers(7) -- latency";
@@ -162,7 +162,7 @@ for (const parser of ['ready', 'unavailable']) {
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
             await expectThemeTokenColors(page, theme);
             for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
-                await page.getByRole('button', { name: accent, exact: true }).click();
+                await setAccentForStyles(page, accent);
                 for (const state of ['normal', 'active', 'selected']) {
                     const editor = page.locator('.cm-content');
                     if (state !== 'normal') {
@@ -200,7 +200,7 @@ test('Light editor selections stay visible over the active line with both accent
     await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
     const editor = page.locator('.cm-content');
     for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
-        await page.getByRole('button', { name: accent, exact: true }).click();
+        await setAccentForStyles(page, accent);
         await editor.focus();
         await page.keyboard.press('ControlOrMeta+End');
         const before = PNG.sync.read(await page.screenshot({ caret: 'hide' }));

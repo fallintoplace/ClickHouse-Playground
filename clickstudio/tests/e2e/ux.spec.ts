@@ -1,5 +1,5 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
-import { openBlankSql, openResultFilter, runButton, trust } from './helpers.js';
+import { setAccentForStyles, openBlankSql, openResultFilter, runButton, trust } from './helpers.js';
 
 function countRuns(page: Page) {
     let count = 0;
@@ -220,7 +220,7 @@ for (const mode of ['Standard', 'Experimental'])
         for (const theme of ['Dark', 'Light']) {
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
             for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
-                await page.getByRole('button', { name: accent, exact: true }).click();
+                await setAccentForStyles(page, accent);
                 for (const width of [1440, 900]) {
                     await page.setViewportSize({ width, height: 1000 });
                     await expectResultsToolbarFits(header);

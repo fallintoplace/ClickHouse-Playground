@@ -1,5 +1,5 @@
 import { test, expect, type Locator } from '@playwright/test';
-import { runButton, trust } from './helpers.js';
+import { setAccentForStyles, runButton, trust } from './helpers.js';
 
 test.beforeEach(async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -111,7 +111,7 @@ for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
         await page.setViewportSize({ width: 1440, height: 1000 });
         await trust(page);
         await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
-        await page.getByRole('button', { name: accent, exact: true }).click();
+        await setAccentForStyles(page, accent);
         await runButton(page).click();
         await expect(page.locator('.execution-bar')).toHaveAttribute(
             'data-run-status',
@@ -217,7 +217,7 @@ for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
         await page.setViewportSize({ width: 1440, height: 1000 });
         await trust(page);
         await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
-        await page.getByRole('button', { name: accent, exact: true }).click();
+        await setAccentForStyles(page, accent);
         await page.getByRole('button', { name: 'Import', exact: true }).click();
         const dialog = page.getByRole('dialog', { name: 'Import data', exact: true });
         await expect(dialog).toBeVisible();
@@ -267,7 +267,7 @@ test('Light heatmaps keep zero, null, missing, and saturated values readable wit
     await expect(results.locator('.heatmap-cell')).toHaveCount(6);
     await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
     for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
-        await page.getByRole('button', { name: accent, exact: true }).click();
+        await setAccentForStyles(page, accent);
         await expectReadableText(results, `Heatmap, ${accent}`);
         const fills = await results
             .locator('.heatmap-cell')
@@ -321,7 +321,9 @@ test('Mounted candlesticks update their marks and labels when theme or accent ch
     await expect(up).toHaveCSS('fill', 'rgb(20, 108, 67)');
     await expect(down).toHaveCSS('fill', 'rgb(179, 48, 67)');
     await expect(page.locator('.market-axis text').first()).toHaveCSS('fill', 'rgb(97, 97, 97)');
-    await page.getByRole('button', { name: 'ClickHouse yellow accent', exact: true }).click();
+    await setAccentForStyles(page, 'Cyan accent');
+    await expect(page.locator('.market-bid-line')).toHaveCSS('stroke', 'rgb(0, 108, 131)');
+    await setAccentForStyles(page, 'ClickHouse yellow accent');
     await expect(page.locator('.market-bid-line')).toHaveCSS('stroke', 'rgb(107, 93, 0)');
     await page.getByRole('radio', { name: 'Dark theme', exact: true }).click();
     await expect(up).toHaveCSS('fill', 'rgb(53, 233, 120)');
@@ -348,7 +350,7 @@ test('Light mode preserves invalid field borders before and after focus with bot
     const dialog = page.getByRole('dialog', { name: 'New table', exact: true });
     const name = dialog.getByRole('textbox', { name: 'Table name', exact: true });
     for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
-        await page.getByRole('button', { name: accent, exact: true }).click();
+        await setAccentForStyles(page, accent);
         await page.getByRole('button', { name: 'New table', exact: true }).click();
         await name.fill('bad-name');
         await dialog.getByRole('textbox', { name: 'Column 1 name', exact: true }).focus();

@@ -101,9 +101,6 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const)
             await page.getByText('Standard', { exact: true }).click();
             if (reducedMotion === 'reduce') {
                 await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
-                await page
-                    .getByRole('button', { name: 'ClickHouse yellow accent', exact: true })
-                    .click();
             }
             await runButton(page).click();
             const results = page.getByRole('region', { name: 'Query results', exact: true });

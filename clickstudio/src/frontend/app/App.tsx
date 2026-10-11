@@ -1,9 +1,4 @@
-import {
-    THEMES,
-    ACCENT_CHOICES,
-    EXPERIENCE_LEVELS,
-    type AccentChoice,
-} from '../common/styles/appearance-types';
+import { THEMES, DEFAULT_ACCENT, EXPERIENCE_LEVELS } from '../common/styles/appearance-types';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, message, post } from '../common/requests/api';
 import { Button, cx, Spinner } from '../common/components/ui';
@@ -87,9 +82,6 @@ function App() {
     );
     const [theme, setTheme] = useState<Theme>(() =>
         pref('clickstudio:theme', THEMES, 'click-dark'),
-    );
-    const [accent, setAccent] = useState<AccentChoice>(() =>
-        pref('clickstudio:accent', ACCENT_CHOICES, 'cyan'),
     );
     const [experience, setExperience] = useState<ExperienceLevel>(() =>
         pref('clickstudio:experience', EXPERIENCE_LEVELS, 'beginner'),
@@ -182,8 +174,11 @@ function App() {
     };
 
     useEffect(() => {
+        document.documentElement.dataset.accent = DEFAULT_ACCENT;
+    }, []);
+
+    useEffect(() => {
         document.documentElement.dataset.theme = theme;
-        document.documentElement.dataset.accent = accent;
         document.documentElement.lang = locale;
         document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
         document
@@ -196,11 +191,10 @@ function App() {
             );
         try {
             localStorage.setItem('clickstudio:theme', theme);
-            localStorage.setItem('clickstudio:accent', accent);
             localStorage.setItem('clickstudio:locale', locale);
             localStorage.setItem('clickstudio:experience', experience);
         } catch {}
-    }, [accent, dark, experience, locale, theme]);
+    }, [dark, experience, locale, theme]);
 
     const loadSession = useCallback(async () => {
         const next = await api<Session>('/session');
@@ -412,8 +406,6 @@ function App() {
                     copy,
                     experience,
                     setExperience,
-                    accent,
-                    setAccent,
                     theme,
                     setTheme,
                 })}
@@ -781,18 +773,12 @@ function renderAppearanceControls({
     copy,
     experience,
     setExperience,
-    accent,
-    setAccent,
     theme,
     setTheme,
 }: {
     copy: ReturnType<typeof getCopy>;
     experience: 'beginner' | 'expert';
     setExperience: import('react').Dispatch<import('react').SetStateAction<'beginner' | 'expert'>>;
-    accent: 'cyan' | 'clickhouse-yellow';
-    setAccent: import('react').Dispatch<
-        import('react').SetStateAction<'cyan' | 'clickhouse-yellow'>
-    >;
     theme: 'click-dark' | 'click-light';
     setTheme: import('react').Dispatch<
         import('react').SetStateAction<'click-dark' | 'click-light'>
@@ -829,31 +815,6 @@ function renderAppearanceControls({
                 </RadioGroup>
             </div>
             <div className="topbar-preferences">
-                <div className="accent-mode-control" role="group" aria-label={copy.app.accent}>
-                    <button
-                        type="button"
-                        className={`accent-mode-option ${accent === 'cyan' ? 'is-active' : ''}`}
-                        aria-label={copy.app.cyanAccent}
-                        aria-pressed={accent === 'cyan'}
-                        title={copy.app.cyanAccent}
-                        onClick={() => setAccent('cyan')}
-                    >
-                        <span className="accent-mode-swatch is-cyan" aria-hidden="true" />
-                    </button>
-                    <button
-                        type="button"
-                        className={`accent-mode-option ${accent === 'clickhouse-yellow' ? 'is-active' : ''}`}
-                        aria-label={copy.app.clickhouseYellowAccent}
-                        aria-pressed={accent === 'clickhouse-yellow'}
-                        title={copy.app.clickhouseYellowAccent}
-                        onClick={() => setAccent('clickhouse-yellow')}
-                    >
-                        <span
-                            className="accent-mode-swatch is-clickhouse-yellow"
-                            aria-hidden="true"
-                        />
-                    </button>
-                </div>
                 <div className="experience-switch theme-switch">
                     <div
                         className="theme-mode-control"

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { runButton, trust } from './helpers.js';
+import { runButton, setAccentForStyles, trust } from './helpers.js';
 
 const themes = [
     {
@@ -7,10 +7,10 @@ const themes = [
         dark: true,
         surface: '#0c151c',
         panel: '#14232d',
-        accent: '#68e5ff',
-        action: '#68e5ff',
-        yellowAccent: '#faff69',
-        yellowAction: '#faff69',
+        accent: '#faff69',
+        action: '#faff69',
+        cyanAccent: '#68e5ff',
+        cyanAction: '#68e5ff',
         chrome: '#151515',
         logoColor: 'rgb(255, 255, 255)',
     },
@@ -19,10 +19,10 @@ const themes = [
         dark: false,
         surface: '#f8f8f8',
         panel: '#ffffff',
-        accent: '#006c83',
-        action: '#006c83',
-        yellowAccent: '#6b5d00',
-        yellowAction: '#faff69',
+        accent: '#6b5d00',
+        action: '#faff69',
+        cyanAccent: '#006c83',
+        cyanAction: '#006c83',
         chrome: '#ffffff',
         logoColor: 'rgb(22, 22, 22)',
     },
@@ -33,11 +33,6 @@ function themeOption(page: Page, value: string) {
     return page.getByRole('radiogroup', { name: 'Theme' }).getByRole('radio', { name: label });
 }
 
-function accentOption(page: Page, value: 'cyan' | 'clickhouse-yellow') {
-    const label = value === 'cyan' ? 'Cyan accent' : 'ClickHouse yellow accent';
-    return page.getByRole('group', { name: 'Accent color' }).getByRole('button', { name: label });
-}
-
 for (const theme of themes)
     test(`${theme.value} applies its palette and survives reload`, async ({ page }) => {
         await page.goto('/');
@@ -45,8 +40,9 @@ for (const theme of themes)
         await expect(option).toBeVisible();
         await option.click();
         await expect(page.locator('html')).toHaveAttribute('data-theme', theme.value);
-        await expect(page.locator('html')).toHaveAttribute('data-accent', 'cyan');
-        await expect(accentOption(page, 'cyan')).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.locator('html')).toHaveAttribute('data-accent', 'clickhouse-yellow');
+        await expect(page.getByRole('group', { name: 'Accent color' })).toHaveCount(0);
+        await expect(page.getByRole('button', { name: /accent$/ })).toHaveCount(0);
 
         const palette = await page.locator('html').evaluate(element => {
             const styles = getComputedStyle(element);
@@ -74,18 +70,16 @@ for (const theme of themes)
 
         await page.reload();
         await expect(themeOption(page, theme.value)).toBeChecked();
-        await expect(accentOption(page, 'cyan')).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.locator('html')).toHaveAttribute('data-accent', 'clickhouse-yellow');
         await expect(page.locator('html')).toHaveAttribute('data-theme', theme.value);
     });
 
 for (const theme of themes)
-    test(`${theme.value} supports the ClickHouse yellow accent`, async ({ page }) => {
+    test(`${theme.value} retains the cyan palette for future use`, async ({ page }) => {
         await page.goto('/');
         await themeOption(page, theme.value).click();
-        const option = accentOption(page, 'clickhouse-yellow');
-        await option.click();
-        await expect(option).toHaveAttribute('aria-pressed', 'true');
-        await expect(page.locator('html')).toHaveAttribute('data-accent', 'clickhouse-yellow');
+        await setAccentForStyles(page, 'Cyan accent');
+        await expect(page.locator('html')).toHaveAttribute('data-accent', 'cyan');
 
         const palette = await page.locator('html').evaluate(element => {
             const styles = getComputedStyle(element);
@@ -94,17 +88,75 @@ for (const theme of themes)
                 action: styles.getPropertyValue('--accent-action').trim(),
             };
         });
-        expect(palette.accent).toBe(theme.yellowAccent);
-        expect(palette.action).toBe(theme.yellowAction);
+        expect(palette.accent).toBe(theme.cyanAccent);
+        expect(palette.action).toBe(theme.cyanAction);
 
         await page.reload();
         await expect(themeOption(page, theme.value)).toBeChecked();
-        await expect(accentOption(page, 'clickhouse-yellow')).toHaveAttribute(
-            'aria-pressed',
-            'true',
-        );
         await expect(page.locator('html')).toHaveAttribute('data-accent', 'clickhouse-yellow');
     });
+
+for (const theme of themes) {
+    for (const savedAccent of ['cyan', 'clickhouse-yellow', 'future-accent', ''])
+        test(`${theme.value} uses yellow with a saved ${savedAccent || 'empty'} accent`, async ({
+            page,
+        }) => {
+            await page.addInitScript(
+                ({ theme, accent }) => {
+                    localStorage.setItem('clickstudio:theme', theme);
+                    localStorage.setItem('clickstudio:accent', accent);
+                },
+                { theme: theme.value, accent: savedAccent },
+            );
+            await page.goto('/');
+            await expect(themeOption(page, theme.value)).toBeChecked();
+            await expect(page.locator('html')).toHaveAttribute('data-accent', 'clickhouse-yellow');
+            await expect(page.locator('.accent-mode-control')).toHaveCount(0);
+            for (const mode of ['Standard', 'Experimental']) {
+                await page.getByText(mode, { exact: true }).click();
+                await expect(page.locator('html')).toHaveAttribute(
+                    'data-accent',
+                    'clickhouse-yellow',
+                );
+            }
+            await page.reload();
+            await expect(page.locator('html')).toHaveAttribute('data-accent', 'clickhouse-yellow');
+            expect(await page.evaluate(() => localStorage.getItem('clickstudio:accent'))).toBe(
+                savedAccent,
+            );
+        });
+
+    test(`${theme.value} uses yellow when the accent attribute is absent`, async ({ page }) => {
+        await page.goto('/');
+        await themeOption(page, theme.value).click();
+        const palette = await page.locator('html').evaluate(element => {
+            element.removeAttribute('data-accent');
+            const styles = getComputedStyle(element);
+            return {
+                accent: styles.getPropertyValue('--accent').trim(),
+                action: styles.getPropertyValue('--accent-action').trim(),
+            };
+        });
+        expect(palette.accent).toBe(theme.accent);
+        expect(palette.action).toBe(theme.action);
+    });
+}
+
+test('yellow works when preference storage is unavailable', async ({ page }) => {
+    await page.addInitScript(() => {
+        Object.defineProperty(window, 'localStorage', {
+            get() {
+                throw new DOMException('Storage is disabled', 'SecurityError');
+            },
+        });
+    });
+    await page.goto('/');
+    await expect(themeOption(page, 'click-dark')).toBeChecked();
+    await expect(page.locator('html')).toHaveAttribute('data-accent', 'clickhouse-yellow');
+    await themeOption(page, 'click-light').click();
+    await expect(themeOption(page, 'click-light')).toBeChecked();
+    await expect(page.locator('html')).toHaveAttribute('data-accent', 'clickhouse-yellow');
+});
 
 for (const mode of ['Standard', 'Experimental'])
     test(`${mode} keeps light yellow Run flat and readable across interaction states`, async ({
@@ -114,7 +166,6 @@ for (const mode of ['Standard', 'Experimental'])
         await trust(page);
         await page.getByText(mode, { exact: true }).click();
         await themeOption(page, 'click-light').click();
-        await accentOption(page, 'clickhouse-yellow').click();
         const run = runButton(page);
         await expect(run).toHaveCSS('background-image', 'none');
         await expect(run).toHaveCSS('background-color', 'rgb(250, 255, 105)');
@@ -157,9 +208,8 @@ for (const mode of ['Standard', 'Experimental'])
         await themeOption(page, 'click-dark').click();
         await expect(run).toHaveCSS('background-image', /linear-gradient/);
         await themeOption(page, 'click-light').click();
-        await accentOption(page, 'cyan').click();
+        await setAccentForStyles(page, 'Cyan accent');
         await expect(run).toHaveCSS('background-image', 'none');
-        await accentOption(page, 'clickhouse-yellow').click();
         await page.reload();
         await expect(run).toHaveCSS('background-image', 'none');
         await expect(run).toHaveCSS('background-color', 'rgb(250, 255, 105)');
@@ -173,8 +223,7 @@ test('an unknown saved theme falls back to ClickDark', async ({ page }) => {
     await page.goto('/');
     await expect(themeOption(page, 'click-dark')).toBeChecked();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'click-dark');
-    await expect(accentOption(page, 'cyan')).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.locator('html')).toHaveAttribute('data-accent', 'cyan');
+    await expect(page.locator('html')).toHaveAttribute('data-accent', 'clickhouse-yellow');
 });
 
 for (const removedTheme of ['monokai', 'catppuccin-latte'])
@@ -202,7 +251,7 @@ test('localized desktop header keeps the theme switch in view', async ({ page })
         await expect(page.locator('html')).toHaveAttribute('lang', locale);
         await expect(page.locator('.topbar-preferences select')).toHaveCount(0);
         await expect(themeSwitch).toBeVisible();
-        await expect(accentSwitch).toBeVisible();
+        await expect(accentSwitch).toHaveCount(0);
 
         const headerSize = await topbar.evaluate(element => ({
             clientWidth: element.clientWidth,
@@ -219,15 +268,6 @@ test('localized desktop header keeps the theme switch in view', async ({ page })
         expect(themeBounds.left, `${locale} theme switch left edge`).toBeGreaterThanOrEqual(0);
         expect(themeBounds.right, `${locale} theme switch right edge`).toBeLessThanOrEqual(
             themeBounds.viewportWidth,
-        );
-
-        const accentBounds = await accentSwitch.evaluate(element => {
-            const rect = element.getBoundingClientRect();
-            return { left: rect.left, right: rect.right, viewportWidth: window.innerWidth };
-        });
-        expect(accentBounds.left, `${locale} accent switch left edge`).toBeGreaterThanOrEqual(0);
-        expect(accentBounds.right, `${locale} accent switch right edge`).toBeLessThanOrEqual(
-            accentBounds.viewportWidth,
         );
     }
 });
