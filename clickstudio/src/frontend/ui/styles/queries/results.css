@@ -829,6 +829,38 @@
     cursor: default;
     opacity: 0.72;
   }
+  .script-running-results {
+    min-width: 0;
+    flex: none;
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-raised);
+  }
+  .script-statement-list {
+    display: flex;
+    min-width: 0;
+    gap: 6px;
+    padding: 3px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .script-statement-list > .script-statement {
+    width: 240px;
+    flex: none;
+    border-color: var(--line);
+    background: var(--panel);
+  }
+  .script-statement-list > .script-statement:hover:not(:disabled),
+  .script-statement-list > .script-statement.is-active {
+    border-color: var(--line-bright);
+    background: var(--control-hover);
+  }
+  .script-statement-list .script-statement-copy strong {
+    color: var(--text);
+    font-size: 10px;
+    font-weight: var(--font-weight-emphasis);
+    line-height: 12px;
+  }
   .script-statement-index {
     display: grid;
     width: 22px;

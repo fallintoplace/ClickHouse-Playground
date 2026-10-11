@@ -1,10 +1,19 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { Run, Script } from '../../../shared/queries/execution/types';
 import { Button, cx } from '../../ui/components/ui';
 import { Icon } from '../../ui/components/icons';
 import { statementOutcome } from './statement-outcome';
 
 type ResultStatement = Pick<Script['statements'][number], 'sql' | 'runId' | 'status' | 'error'>;
+
+type StatementResultsProps = {
+    statements: readonly ResultStatement[];
+    runs: Run[];
+    activeRunId?: string;
+    onSelectRun: (runId: string) => void;
+    onSelectError: () => void;
+    errorSelected: boolean;
+};
 
 function statementDetails(statement: ResultStatement, run?: Run) {
     const error = run?.error ?? statement.error;
@@ -15,6 +24,112 @@ function statementDetails(statement: ResultStatement, run?: Run) {
     if (run && ['succeeded', 'truncated'].includes(status))
         return `${statementOutcome(run)} · ${Math.round(run.elapsedMs)} ms`;
     return `${status.charAt(0).toUpperCase()}${status.slice(1).replace(/_/g, ' ')}`;
+}
+
+function StatementCardContent({
+    statement,
+    index,
+    details,
+    showHeading = false,
+}: {
+    statement: ResultStatement;
+    index: number;
+    details: string;
+    showHeading?: boolean;
+}) {
+    return (
+        <>
+            <span className={cx('script-statement-index', `status-${statement.status}`)}>
+                {String(index + 1).padStart(2, '0')}
+            </span>
+            <span className="script-statement-copy">
+                {showHeading && <strong>Statement {index + 1}</strong>}
+                <code>{statement.sql.replace(/\s+/g, ' ').trim()}</code>
+                <small>{details}</small>
+            </span>
+            <span className={cx('script-status', `status-${statement.status}`)}>
+                {statement.status}
+            </span>
+        </>
+    );
+}
+
+export function ScriptRunningResults({
+    statements,
+    runs,
+    activeRunId,
+    onSelectRun,
+    onSelectError,
+    errorSelected,
+}: StatementResultsProps) {
+    const list = useRef<HTMLDivElement>(null);
+    const runningIndex = statements.findIndex(statement =>
+        ['running', 'queued'].includes(statement.status),
+    );
+    const runningRunId = statements[runningIndex]?.runId;
+    const byId = new Map(runs.map(run => [run.id, run]));
+
+    useEffect(() => {
+        if (runningIndex < 0 || (activeRunId && activeRunId !== runningRunId)) return;
+        list.current?.children[runningIndex]?.scrollIntoView({
+            block: 'nearest',
+            inline: 'nearest',
+        });
+    }, [activeRunId, runningIndex, runningRunId]);
+
+    useLayoutEffect(() => {
+        const element = list.current;
+        return () => {
+            if (element?.contains(element.ownerDocument.activeElement))
+                element
+                    .closest('.results-surface')
+                    ?.querySelector<HTMLButtonElement>('.script-results-trigger')
+                    ?.focus();
+        };
+    }, []);
+
+    return (
+        <section className="script-running-results" aria-label="Script statement results">
+            <div
+                ref={list}
+                className="script-statement-list"
+                role="group"
+                aria-label="Select a statement result"
+            >
+                {statements.map((statement, index) => {
+                    const active = statement.runId
+                        ? !errorSelected && statement.runId === activeRunId
+                        : Boolean(statement.error && errorSelected);
+                    const run = statement.runId ? byId.get(statement.runId) : undefined;
+                    const details = statementDetails(
+                        statement,
+                        run?.status === statement.status ? run : undefined,
+                    );
+                    return (
+                        <button
+                            key={index}
+                            type="button"
+                            className={cx('script-statement', active && 'is-active')}
+                            aria-label={`Statement ${index + 1}: ${statement.status}`}
+                            aria-pressed={active}
+                            title={`${statement.sql.replace(/\s+/g, ' ')} · ${details}`}
+                            disabled={!statement.runId && !statement.error}
+                            onClick={() =>
+                                statement.runId ? onSelectRun(statement.runId) : onSelectError()
+                            }
+                        >
+                            <StatementCardContent
+                                statement={statement}
+                                index={index}
+                                details={details}
+                                showHeading
+                            />
+                        </button>
+                    );
+                })}
+            </div>
+        </section>
+    );
 }
 
 function positionMenu(menu: HTMLDivElement, trigger: HTMLButtonElement) {
@@ -71,14 +186,7 @@ export function ScriptResultsSelector({
     onSelectRun,
     onSelectError,
     errorSelected,
-}: {
-    statements: readonly ResultStatement[];
-    runs: Run[];
-    activeRunId?: string;
-    onSelectRun: (runId: string) => void;
-    onSelectError: () => void;
-    errorSelected: boolean;
-}) {
+}: StatementResultsProps) {
     const id = useId();
     const trigger = useRef<HTMLButtonElement>(null);
     const menu = useRef<HTMLDivElement>(null);
@@ -217,21 +325,11 @@ export function ScriptResultsSelector({
                                 trigger.current?.focus();
                             }}
                         >
-                            <span
-                                className={cx(
-                                    'script-statement-index',
-                                    `status-${statement.status}`,
-                                )}
-                            >
-                                {String(index + 1).padStart(2, '0')}
-                            </span>
-                            <span className="script-statement-copy">
-                                <code>{statement.sql.replace(/\s+/g, ' ').trim()}</code>
-                                <small>{details}</small>
-                            </span>
-                            <span className={cx('script-status', `status-${statement.status}`)}>
-                                {statement.status}
-                            </span>
+                            <StatementCardContent
+                                statement={statement}
+                                index={index}
+                                details={details}
+                            />
                         </button>
                     );
                 })}

@@ -19,7 +19,11 @@ import { PipelineGraph } from '../inspection/diagrams/PipelineGraph';
 import { SqlFlowView } from '../inspection/diagrams/SqlFlowView';
 import { Button, cx, Spinner } from '../../ui/components/ui';
 import { Icon } from '../../ui/components/icons';
-import { ScriptCancelAction, ScriptResultsSelector } from './ScriptResultsSelector';
+import {
+    ScriptCancelAction,
+    ScriptResultsSelector,
+    ScriptRunningResults,
+} from './ScriptResultsSelector';
 import { ScrollEdgeFrame } from '../../ui/components/ScrollEdgeShadows';
 import { QueryFailureNotice } from './QueryFailureNotice';
 import { resultsTabLabel } from '../../workspace/workspace-helpers';
@@ -124,6 +128,13 @@ export function WorkspaceResultsPanel({
     const showPreviousResult = Boolean(
         execution && retainedExecutionResult && visibleResultsView === 'results',
     );
+    const runningScript =
+        script?.status === 'running' &&
+        visibleResultsView === 'results' &&
+        !failedAttempt &&
+        (!execution || execution.scriptId === script.id)
+            ? script
+            : undefined;
     const resultsRun = showPreviousResult ? retainedExecutionResult!.run : run;
     const resultsPage = showPreviousResult ? retainedExecutionResult!.page : resultPage;
     const resultsPageIndex = showPreviousResult ? retainedExecutionResult!.pageIndex : page;
@@ -176,6 +187,17 @@ export function WorkspaceResultsPanel({
                 state,
             })}
             <WorkspaceInlineNotice feedback={state.readFeedback} onRetry={actions.onRetryRead} />
+            {runningScript && visibleResultsView === 'results' && !panels.resultsCollapsed && (
+                <ScriptRunningResults
+                    key={runningScript.id}
+                    statements={runningScript.statements}
+                    runs={history}
+                    activeRunId={run?.id}
+                    onSelectRun={actions.onSelectScriptRun}
+                    onSelectError={actions.onSelectScriptError}
+                    errorSelected={false}
+                />
+            )}
             <ScrollEdgeFrame<HTMLDivElement>
                 className="results-content-frame"
                 hidden={panels.resultsCollapsed}
@@ -209,7 +231,7 @@ export function WorkspaceResultsPanel({
                                 onRevealRange={actions.onRevealRange}
                             />
                         )}
-                        {execution && visibleResultsView !== 'sqlmap' && (
+                        {execution && !runningScript && visibleResultsView !== 'sqlmap' && (
                             <div
                                 className={cx(
                                     'result-execution-progress',

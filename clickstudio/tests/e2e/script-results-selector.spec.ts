@@ -223,6 +223,7 @@ test('A single failed query shows the submitted SQL card and replaces it after a
     await replaceSql(page, "SELECT 'unfinished");
     await page.getByTestId('run-button').click();
     await expect(results.getByTestId('query-failure')).toBeVisible();
+    await expect(results.locator('.script-running-results')).toHaveCount(0);
     await expect(card).toHaveAttribute('title', "SELECT 'unfinished");
     await expect(card.locator('.script-statement-index')).toHaveClass(/status-failed/);
     await expect(results.locator('.script-results-failure')).toHaveCount(0);
@@ -360,6 +361,11 @@ test('Pending statements stay disabled and cancellation remains available in the
     const results = page.getByRole('region', { name: 'Query results', exact: true });
     const cancel = results.getByRole('button', { name: 'Cancel script', exact: true });
     await expect(cancel).toBeVisible();
+    const cards = results.getByRole('group', { name: 'Select a statement result', exact: true });
+    await expect(cards.getByRole('button')).toHaveCount(3);
+    await expect(cards.getByRole('button', { name: 'Statement 1: running' })).toBeEnabled();
+    await expect(cards.getByRole('button', { name: 'Statement 2: pending' })).toBeDisabled();
+    await expect(cards.getByRole('button', { name: 'Statement 3: pending' })).toBeDisabled();
     const menu = await openStatementResults(results);
     await expect(menu.getByRole('menuitemradio', { name: 'Statement 1: running' })).toBeEnabled();
     await expect(
@@ -371,6 +377,7 @@ test('Pending statements stay disabled and cancellation remains available in the
     await expect(menu.getByRole('menuitemradio', { name: 'Statement 1: running' })).toBeFocused();
     await cancel.click();
     await expect(cancel).toHaveCount(0);
+    await expect(results.locator('.script-running-results')).toHaveCount(0);
     await expect(results.getByRole('button', { name: /^Select a statement result/ })).toContainText(
         '01',
     );
@@ -379,9 +386,10 @@ test('Pending statements stay disabled and cancellation remains available in the
     await expect(menu.getByRole('menuitemradio', { name: 'Statement 2: skipped' })).toBeDisabled();
 });
 
-test('An open menu supports keyboard navigation when pending statements become available', async ({
+test('Running cards track progress and return to the existing dropdown after completion', async ({
     page,
-}) => {
+}, info) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await trust(page);
     await replaceSql(page, 'SELECT 1');
     const runResponse = page.waitForResponse(
@@ -410,22 +418,35 @@ test('An open menu supports keyboard navigation when pending statements become a
         ],
     };
     let available = false;
+    let finished = false;
     await page.route('**/api/scripts', route => route.fulfill({ status: 202, json: script }));
-    await page.route('**/api/scripts/all-pending-script', route =>
-        route.fulfill({
-            json: available
-                ? {
-                      ...script,
-                      statements: [
-                          { ...script.statements[0], runId: 'pending-run-a', status: 'succeeded' },
-                          { ...script.statements[1], runId: 'pending-run-b', status: 'running' },
-                          script.statements[2],
-                      ],
-                  }
-                : script,
-        }),
-    );
-    for (const id of ['pending-run-a', 'pending-run-b'])
+    await page.route('**/api/scripts/all-pending-script', route => {
+        let response = script;
+        if (finished)
+            response = {
+                ...script,
+                status: 'succeeded',
+                statements: script.statements.map((statement, index) => ({
+                    ...statement,
+                    runId: `pending-run-${['a', 'b', 'c'][index]}`,
+                    status: 'succeeded',
+                })),
+            };
+        else if (available)
+            response = {
+                ...script,
+                statements: script.statements.map((statement, index) => {
+                    if (index > 1) return statement;
+                    return {
+                        ...statement,
+                        runId: index === 0 ? 'pending-run-a' : 'pending-run-b',
+                        status: index === 0 ? 'succeeded' : 'running',
+                    };
+                }),
+            };
+        return route.fulfill({ json: response });
+    });
+    for (const id of ['pending-run-a', 'pending-run-b', 'pending-run-c'])
         await page.route(`**/api/runs/${id}`, route =>
             route.fulfill({
                 json: { ...run, id, queryId: id, resultState: 'unavailable', status: 'succeeded' },
@@ -433,6 +454,28 @@ test('An open menu supports keyboard navigation when pending statements become a
         );
     await replaceSql(page, sql);
     await runScript(page);
+    const cards = results.getByRole('group', { name: 'Select a statement result', exact: true });
+    await expect(cards.getByRole('button')).toHaveCount(3);
+    await expect(cards.getByRole('button', { name: 'Statement 1: pending' })).toBeDisabled();
+    await expect(results.locator('.result-execution-progress')).toHaveCount(0);
+    for (const theme of ['Light', 'Dark']) {
+        await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+        for (const mode of ['Standard', 'Experimental']) {
+            await page.getByText(mode, { exact: true }).click();
+            await page.setViewportSize({ width: 761, height: 720 });
+            const header = (await results.locator('.results-header').boundingBox())!;
+            const strip = (await results.locator('.script-running-results').boundingBox())!;
+            expect(strip.y).toBeCloseTo(header.y + header.height, 0);
+            expect(strip.x + strip.width).toBeLessThanOrEqual(761);
+            expect(await cards.evaluate(element => element.scrollWidth > element.clientWidth)).toBe(
+                true,
+            );
+        }
+    }
+    await results.getByRole('button', { name: 'Collapse Query results', exact: true }).click();
+    await expect(cards).toHaveCount(0);
+    await results.getByRole('button', { name: 'Expand Query results', exact: true }).click();
+    await expect(cards.getByRole('button')).toHaveCount(3);
     const menu = await openStatementResults(results);
     await expect(menu.getByRole('menuitemradio', { name: 'Statement 1: pending' })).toBeDisabled();
     await expect(menu).toBeFocused();
@@ -440,6 +483,12 @@ test('An open menu supports keyboard navigation when pending statements become a
     const first = menu.getByRole('menuitemradio', { name: 'Statement 1: succeeded' });
     const second = menu.getByRole('menuitemradio', { name: 'Statement 2: running' });
     await expect(second).toBeEnabled();
+    await expect(cards.getByRole('button', { name: 'Statement 1: succeeded' })).toBeEnabled();
+    await expect(cards.getByRole('button', { name: 'Statement 2: running' })).toBeEnabled();
+    await expect(
+        cards.getByRole('button', { name: 'Statement 2: running' }).locator('small'),
+    ).toHaveText('Running');
+    await expect(cards.getByRole('button', { name: 'Statement 3: pending' })).toBeDisabled();
     await expect(menu).toBeFocused();
     await page.keyboard.press('ArrowUp');
     await expect(second).toBeFocused();
@@ -450,4 +499,18 @@ test('An open menu supports keyboard navigation when pending statements become a
     await expect(results.getByRole('button', { name: /^Select a statement result/ })).toContainText(
         '01',
     );
+    await cards.getByRole('button', { name: 'Statement 1: succeeded' }).click();
+    await expect(cards.getByRole('button', { name: 'Statement 1: succeeded' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+    );
+    await page.screenshot({ path: info.outputPath('running-statement-cards.png') });
+    finished = true;
+    await expect(cards).toHaveCount(0);
+    const trigger = results.getByRole('button', { name: /^Select a statement result/ });
+    await expect(trigger).toContainText('01');
+    await expect(trigger).toBeFocused();
+    await openStatementResults(results);
+    await expect(menu.getByRole('menuitemradio')).toHaveCount(3);
+    await expect(menu.getByRole('menuitemradio', { name: 'Statement 1: succeeded' })).toBeChecked();
 });

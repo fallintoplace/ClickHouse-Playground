@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { runButton, trust } from './helpers.js';
+import { replaceSql, runButton, runScript, trust } from './helpers.js';
+import type { Script } from '../../src/shared/queries/execution/types.js';
 import { chooseExistingTable, mockWritableWorkspace, previewCsv } from './import-helpers.js';
 import {
     chooseExistingCloudTable,
@@ -115,6 +116,46 @@ for (const theme of ['Light', 'Dark']) {
             await expectReferenceStyles(page, info, 'assistant-composer');
         });
     }
+
+    test(`CSS preserves ${theme} running script cards below the unchanged header`, async ({
+        page,
+    }, info) => {
+        await trust(page);
+        await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+        const statements = [
+            'SELECT 1 AS a_long_column_name_that_should_stay_inside_the_statement_card',
+            'SELECT 2',
+            'SELECT 3',
+        ];
+        const script: Script = {
+            id: 'running-style-script',
+            owner: 'style-owner',
+            connectionId: 'demo',
+            sql: statements.join('; '),
+            createdAt: '2026-10-10T10:00:00Z',
+            status: 'running',
+            stopOnError: true,
+            cancelled: false,
+            statements: statements.map((sql, index) => ({
+                sql,
+                from: 0,
+                to: sql.length,
+                status: index === 0 ? 'running' : 'pending',
+            })),
+        };
+        await page.route('**/api/scripts', route => route.fulfill({ status: 202, json: script }));
+        await page.route('**/api/scripts/running-style-script', route =>
+            route.fulfill({ json: script }),
+        );
+        await replaceSql(page, script.sql);
+        await runScript(page);
+        const results = page.getByRole('region', { name: 'Query results', exact: true });
+        await expect(results.locator('.script-statement-list > button')).toHaveCount(3);
+        for (const width of [1440, 761]) {
+            await page.setViewportSize({ width, height: 900 });
+            await expectReferenceStyles(page, info, `running-cards-${width}`, results);
+        }
+    });
 
     test(`CSS preserves ${theme}, yellow accent help and native explorers`, async ({
         page,
