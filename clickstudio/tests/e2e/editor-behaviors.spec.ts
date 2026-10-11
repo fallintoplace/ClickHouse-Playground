@@ -28,6 +28,27 @@ async function editorState(page: Page) {
         };
     });
 }
+async function editorDiagnostics(page: Page) {
+    return page.locator('.cm-editor').evaluate(async root => {
+        const resources = performance.getEntriesByType('resource');
+        const moduleUrl = (name: string) => {
+            const url = resources.find(entry => entry.name.includes(name))?.name;
+            if (!url) throw new Error(`${name} was not loaded`);
+            return url;
+        };
+        const { EditorView } = (await import(
+            moduleUrl('/@codemirror_view.js')
+        )) as typeof import('@codemirror/view');
+        const { forEachDiagnostic } = (await import(
+            moduleUrl('/@codemirror_lint.js')
+        )) as typeof import('@codemirror/lint');
+        const diagnostics: Array<{ from: number; source: string | undefined }> = [];
+        forEachDiagnostic(EditorView.findFromDOM(root as HTMLElement)!.state, (diagnostic, from) =>
+            diagnostics.push({ from, source: diagnostic.source }),
+        );
+        return diagnostics;
+    });
+}
 async function selectRange(page: Page, anchor: number, head = anchor) {
     await page.locator('.cm-editor').evaluate(
         async (root, selection) => {
@@ -301,6 +322,8 @@ test('selected repeated SQL submits exact source offsets and highlights the sele
 test('server errors at end of input highlight the final line and clear after edits', async ({
     page,
 }) => {
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
     await trust(page);
     const sql = 'SELECT 1\nGROUP BY';
     await replaceSql(page, sql);
@@ -320,8 +343,19 @@ test('server errors at end of input highlight the final line and clear after edi
     );
     await runButton(page).click();
     await expect(page.locator('.cm-server-error-line')).toHaveText('GROUP BY');
+    await expect
+        .poll(async () =>
+            (await editorDiagnostics(page)).some(
+                diagnostic =>
+                    diagnostic.source === 'ClickHouse native parser' &&
+                    diagnostic.from === sql.length,
+            ),
+        )
+        .toBe(true);
     await replaceSql(page, 'SELECT 2');
     await expect(page.locator('.cm-server-error-line')).toHaveCount(0);
+    await expect.poll(() => editorDiagnostics(page)).toEqual([]);
+    expect(errors).toEqual([]);
 });
 
 test('Cmd/Ctrl+S saves SQL typed in the detached window', async ({ page }) => {

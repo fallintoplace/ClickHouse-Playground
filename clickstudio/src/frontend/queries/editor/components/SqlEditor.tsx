@@ -448,8 +448,11 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
                             for (const effect of transaction.effects)
                                 if (effect.is(StateEffect.appendConfig))
                                     appendedExtensions.push(effect.value);
-                        if (update.docChanged)
+                        if (update.docChanged) {
+                            nativeDiagnostics.current = [];
+                            invalidateNativeValidation();
                             current.current.onChange(update.state.doc.toString());
+                        }
                         if (update.docChanged || update.selectionSet) {
                             const s = update.state.selection.main;
                             current.current.onSelection(s.from, s.to);
@@ -474,7 +477,7 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
             editor.destroy();
             view.current = undefined;
         };
-    }, [languageExtension]);
+    }, [languageExtension, invalidateNativeValidation]);
     useEffect(() => {
         const v = view.current;
         if (v && v.state.doc.toString() !== props.value) {
