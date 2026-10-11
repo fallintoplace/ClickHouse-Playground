@@ -1,3 +1,4 @@
+import { NativeTable } from '../../../ui/components/NativeTable';
 import { ImportReviewRows } from '../preview/ImportPreviewTable';
 import {
     formatImportColumnCount,
@@ -141,7 +142,7 @@ export function ImportReviewStep({
                     </span>
                 </div>
                 <div className="import-review-mapping-list">
-                    <table aria-label="Import column mapping">
+                    <NativeTable aria-label="Import column mapping">
                         <thead>
                             <tr>
                                 <th scope="col">Source column</th>
@@ -157,10 +158,10 @@ export function ImportReviewStep({
                                 )?.type;
                                 return (
                                     <tr key={source}>
-                                        <th scope="row" title={source}>
+                                        <th scope="row" data-overflow-title={source}>
                                             {source}
                                         </th>
-                                        <td>
+                                        <td data-overflow-title={destination ?? 'Skipped'}>
                                             {destination ? (
                                                 <code>{destination}</code>
                                             ) : (
@@ -169,7 +170,7 @@ export function ImportReviewStep({
                                                 </span>
                                             )}
                                         </td>
-                                        <td>{type ?? '—'}</td>
+                                        <td data-overflow-title={type ?? '—'}>{type ?? '—'}</td>
                                     </tr>
                                 );
                             })}
@@ -183,7 +184,7 @@ export function ImportReviewStep({
                                 </tr>
                             )}
                         </tbody>
-                    </table>
+                    </NativeTable>
                 </div>
             </div>
         </section>

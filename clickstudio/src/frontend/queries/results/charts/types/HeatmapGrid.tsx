@@ -1,3 +1,4 @@
+import { NativeTable } from '../../../../ui/components/NativeTable';
 import {
     type HeatmapPreparation,
     heatmapCellKey,
@@ -34,7 +35,7 @@ export function HeatmapGrid({
         <ScrollEdgeFrame<HTMLDivElement> className="heatmap-scroll-frame">
             {ref => (
                 <div ref={ref} className="heatmap-scroll">
-                    <table
+                    <NativeTable
                         className="heatmap-grid"
                         aria-label={chartText(chartCopy.heatmapTableAria, {
                             measure: result.columns[yIndex]?.name ?? '',
@@ -53,6 +54,7 @@ export function HeatmapGrid({
                                         className="heatmap-axis-label"
                                         scope="col"
                                         key={`x-${label}`}
+                                        data-overflow-title={label}
                                     >
                                         {label}
                                     </th>
@@ -65,7 +67,7 @@ export function HeatmapGrid({
                                     <th
                                         className="heatmap-axis-label heatmap-row-label"
                                         scope="row"
-                                        title={yLabel}
+                                        data-overflow-title={yLabel}
                                     >
                                         {yLabel}
                                     </th>
@@ -113,7 +115,7 @@ export function HeatmapGrid({
                                 </tr>
                             ))}
                         </tbody>
-                    </table>
+                    </NativeTable>
                     <div className="heatmap-caption">
                         {chartText(chartCopy.heatmapCaption, {
                             measure: result.columns[yIndex]?.name ?? '',

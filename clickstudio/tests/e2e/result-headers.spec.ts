@@ -138,16 +138,9 @@ for (const theme of ['Light', 'Dark'])
 
             const shortHeader = headers.first();
             await shortHeader.hover();
-            const shortTooltip = page.getByRole('tooltip');
-            await expect(shortTooltip).toHaveText('xBool');
-            const shortBounds = await shortTooltip.boundingBox();
-            const shortHeaderBounds = await shortHeader.boundingBox();
-            expect(shortBounds!.width).toBeLessThanOrEqual(160);
-            expect(shortBounds!.y + shortBounds!.height).toBeLessThanOrEqual(
-                shortHeaderBounds!.y + 2,
-            );
+            await expect(shortHeader).toHaveAttribute('title', '');
+            await expect(page.getByRole('tooltip')).toHaveCount(0);
             await page.mouse.move(0, 0);
-            await expect(shortTooltip).toBeHidden();
             const complex = headers.nth(6);
             await expect(complex).toHaveAttribute('scope', 'col');
             const clipped = await complex.locator('.result-column-heading').evaluate(element => {
@@ -163,34 +156,13 @@ for (const theme of ['Light', 'Dark'])
             expect(clipped.name).toBe(true);
             expect(clipped.type).toBe(true);
             await complex.hover();
-            const tooltip = page.getByRole('tooltip');
-            await expect(tooltip).toHaveText(`${longName}${longType}`);
-            await tooltip.hover();
-            await page.waitForTimeout(200);
-            await expect(tooltip).toBeVisible();
-            const bounds = await tooltip.boundingBox();
-            expect(bounds!.x).toBeGreaterThanOrEqual(8);
-            expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(1092);
-            expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(
-                (await complex.boundingBox())!.y + 2,
-            );
-            await page.keyboard.press('Escape');
-            await expect(tooltip).toBeHidden();
-            await complex.hover();
-            await expect(tooltip).toBeVisible();
-            await page.mouse.move(0, 0);
-            await expect(tooltip).toBeHidden();
-            await page.keyboard.press('Tab');
-            await complex.focus();
-            await expect(complex).toHaveCSS('outline-style', 'solid');
-            await expect(tooltip).toHaveText(`${longName}${longType}`);
-            await expect(complex).toHaveAttribute(
-                'aria-describedby',
-                (await tooltip.getAttribute('id')) ?? '',
-            );
-            await page.keyboard.press('Escape');
-            await expect(tooltip).toBeHidden();
-            await expect(complex).toBeFocused();
+            await expect(complex).toHaveAttribute('title', `${longName}\n${longType}`);
+            await expect(complex.locator('[data-overflow-text]').first()).toHaveText(longName);
+            await expect(complex.locator('[data-overflow-text]').last()).toHaveText(longType);
+            await expect(page.getByRole('tooltip')).toHaveCount(0);
+            const filter = await openResultFilter(page);
+            await expect(filter).toBeFocused();
+            await page.getByRole('button', { name: 'Close row filter', exact: true }).click();
             const scroll = page.locator('.data-table-scroll');
             await scroll.evaluate(element => {
                 element.scrollTop = 100;
@@ -201,8 +173,8 @@ for (const theme of ['Light', 'Dark'])
                 headerTop: element.querySelector('th')!.getBoundingClientRect().top,
             }));
             expect(Math.abs(sticky.headerTop - sticky.top)).toBeLessThanOrEqual(2);
-            const filter = await openResultFilter(page);
-            await filter.fill('entry-99');
+            const activeFilter = await openResultFilter(page);
+            await activeFilter.fill('entry-99');
             await expect(table.locator('tbody tr')).toHaveCount(1);
             await expect(table.locator('tbody .row-number')).toHaveText('100');
             await expect(headers.nth(7).locator('small')).toHaveText('String');
@@ -210,7 +182,7 @@ for (const theme of ['Light', 'Dark'])
         });
     }
 
-test('Very long result types remain readable and scrollable in a narrow desktop window', async ({
+test('Very long result types keep full metadata in a native tooltip in a narrow desktop window', async ({
     page,
 }) => {
     const type = `Tuple(${Array.from({ length: 80 }, (_, index) => `field_${index} Nullable(Decimal(18, 2))`).join(', ')})`;
@@ -236,25 +208,12 @@ test('Very long result types remain readable and scrollable in a narrow desktop 
     await trust(page);
     await runButton(page).click();
     const header = page.locator('.data-table th[data-type-group]');
-    await header.focus();
-    const tooltip = page.getByRole('tooltip');
-    await expect(tooltip).toHaveText(`payload${type}`);
-    const bounds = await tooltip.boundingBox();
-    expect(bounds!.x).toBeGreaterThanOrEqual(8);
-    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(892);
-    expect(bounds!.width).toBeLessThanOrEqual(360);
-    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(712);
-    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual((await header.boundingBox())!.y + 2);
-    await page.keyboard.press('PageDown');
-    await expect.poll(() => tooltip.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
-    await expect(tooltip).toBeVisible();
-    await page.keyboard.press('PageUp');
-    await expect.poll(() => tooltip.evaluate(element => element.scrollTop)).toBe(0);
-    await page.keyboard.press('ArrowDown');
-    await expect.poll(() => tooltip.evaluate(element => element.scrollTop)).toBe(24);
-    await page.keyboard.press('ArrowUp');
-    await expect.poll(() => tooltip.evaluate(element => element.scrollTop)).toBe(0);
-    await page.keyboard.press('Escape');
-    await expect(tooltip).toBeHidden();
-    await expect(header).toBeFocused();
+    await header.hover();
+    await expect(header).toHaveAttribute('title', `payload\n${type}`);
+    await expect(header.locator('small')).toHaveText(type);
+    await expect(page.getByRole('tooltip')).toHaveCount(0);
+    await openResultFilter(page);
+    await expect(
+        page.getByRole('searchbox', { name: 'Filter current page', exact: true }),
+    ).toBeFocused();
 });

@@ -1,3 +1,4 @@
+import { NativeTable } from '../../../ui/components/NativeTable';
 import type { BusyAction, ImportJob, PendingImport } from '../state/import-wizard-model';
 import { displayImportValue, formatImportRowCount } from '../state/import-wizard-model';
 
@@ -171,11 +172,15 @@ export function ImportJobStatus({
                         </span>
                     </div>
                     <div className="overflow-x-auto">
-                        <table className="w-full min-w-[520px] border-collapse text-left text-xs">
+                        <NativeTable className="w-full min-w-[520px] border-collapse text-left text-xs">
                             <thead className="bg-[var(--page)] text-[10px] uppercase tracking-wider text-[var(--muted)]">
                                 <tr>
                                     {Object.keys(job.demoRows[0]!).map(column => (
-                                        <th key={column} className="px-3 py-2">
+                                        <th
+                                            key={column}
+                                            className="px-3 py-2"
+                                            data-overflow-title={column}
+                                        >
                                             {column}
                                         </th>
                                     ))}
@@ -191,6 +196,9 @@ export function ImportJobStatus({
                                             <td
                                                 key={column}
                                                 className="px-3 py-2 text-[var(--text-soft)]"
+                                                data-overflow-title={displayImportValue(
+                                                    row[column],
+                                                )}
                                             >
                                                 {displayImportValue(row[column])}
                                             </td>
@@ -198,7 +206,7 @@ export function ImportJobStatus({
                                     </tr>
                                 ))}
                             </tbody>
-                        </table>
+                        </NativeTable>
                     </div>
                     <p className="border-t border-[var(--line)] px-4 py-3 text-[11px] text-[var(--muted)]">
                         To query them, switch to{' '}

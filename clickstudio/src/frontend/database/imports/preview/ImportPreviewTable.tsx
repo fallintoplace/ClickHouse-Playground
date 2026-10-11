@@ -1,3 +1,4 @@
+import { NativeTable } from '../../../ui/components/NativeTable';
 import { useState } from 'react';
 import type { Json } from '../../../../shared/common/values';
 import type { Copy } from '../../../ui/copy';
@@ -30,14 +31,14 @@ export function ImportPreviewTable({
                 </span>
             </div>
             <div className="max-h-64 overflow-auto">
-                <table className="w-full border-collapse text-left text-[10px]">
+                <NativeTable className="w-full border-collapse text-left text-[10px]">
                     <thead className="sticky top-0 bg-[var(--panel-raised)] text-[var(--muted)]">
                         <tr>
                             {columns.map(column => (
                                 <th
                                     key={column}
                                     className="max-w-[180px] truncate px-3 py-2 font-semibold"
-                                    title={column}
+                                    data-overflow-title={column}
                                 >
                                     {column}
                                 </th>
@@ -51,7 +52,7 @@ export function ImportPreviewTable({
                                     <td
                                         key={column}
                                         className="max-w-[180px] truncate px-3 py-2 text-[var(--text-soft)]"
-                                        title={displayImportValue(row[column])}
+                                        data-overflow-title={displayImportValue(row[column])}
                                     >
                                         {displayImportValue(row[column])}
                                     </td>
@@ -59,7 +60,7 @@ export function ImportPreviewTable({
                             </tr>
                         ))}
                     </tbody>
-                </table>
+                </NativeTable>
             </div>
         </div>
     );
@@ -101,12 +102,12 @@ export function ImportReviewRows({
                 {copy.reviewRowsNote}
             </p>
             <div className="import-review-rows-list import-review-mapping-list">
-                <table aria-label={copy.reviewRows}>
+                <NativeTable aria-label={copy.reviewRows}>
                     <thead>
                         <tr>
                             <th scope="col">{copy.reviewRowNumber}</th>
                             {columns.map(column => (
-                                <th key={column} scope="col" title={column}>
+                                <th key={column} scope="col" data-overflow-title={column}>
                                     {column}
                                 </th>
                             ))}
@@ -121,7 +122,7 @@ export function ImportReviewRows({
                                     {columns.map(column => {
                                         const value = displayImportValue(row[column]);
                                         return (
-                                            <td key={column} title={value}>
+                                            <td key={column} data-overflow-title={value}>
                                                 {value}
                                             </td>
                                         );
@@ -130,7 +131,7 @@ export function ImportReviewRows({
                             );
                         })}
                     </tbody>
-                </table>
+                </NativeTable>
             </div>
             {pageCount > 1 && (
                 <nav

@@ -1,9 +1,10 @@
 import { DEFAULT_RESULT_PAGE_ROWS } from '../../../shared/queries/execution/limits';
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { displayValue, filterRows } from '../../../shared/queries/results/results';
 import type { ResultPage } from '../../../shared/queries/results/types';
 import type { Run } from '../../../shared/queries/execution/types';
+import { NativeTable } from '../../ui/components/NativeTable';
 import { ScrollEdgeFrame } from '../../ui/components/ScrollEdgeShadows';
 import { Button, cx, Spinner } from '../../ui/components/ui';
 import { Icon } from '../../ui/components/icons';
@@ -53,125 +54,12 @@ function ResultColumnHeader({
     type: string;
     group: ResultTypeGroup;
 }) {
-    const header = useRef<HTMLTableCellElement>(null);
-    const typeBadge = useRef<HTMLElement>(null);
-    const details = useRef<HTMLDivElement>(null);
-    const closeTimer = useRef<number | undefined>(undefined);
-    const detailsId = useId();
-    const [position, setPosition] = useState<{
-        left: number;
-        top: number;
-        maxHeight: number;
-        above: boolean;
-    }>();
-    const showDetails = useCallback(() => {
-        window.clearTimeout(closeTimer.current);
-        const headerElement = header.current;
-        if (!headerElement) return;
-        const headerRect = headerElement.getBoundingClientRect();
-        const badgeRect = typeBadge.current?.getBoundingClientRect() ?? headerRect;
-        const gap = 6;
-        const spaceAbove = Math.max(0, headerRect.top - gap - 8);
-        const spaceBelow = Math.max(0, window.innerHeight - headerRect.bottom - gap - 8);
-        const above = spaceAbove >= 72 || spaceAbove >= spaceBelow;
-        const maxHeight = Math.max(24, above ? spaceAbove : spaceBelow);
-        setPosition({
-            left: badgeRect.left,
-            top: above ? headerRect.top - gap : headerRect.bottom + gap,
-            maxHeight,
-            above,
-        });
-    }, []);
-    const hideDetails = () => {
-        window.clearTimeout(closeTimer.current);
-        closeTimer.current = window.setTimeout(() => {
-            if (document.activeElement !== header.current) setPosition(undefined);
-        }, 120);
-    };
-    useEffect(() => () => window.clearTimeout(closeTimer.current), []);
-    const open = Boolean(position);
-    useLayoutEffect(() => {
-        if (!position || !details.current) return;
-        const width = details.current.getBoundingClientRect().width;
-        const left = Math.max(8, Math.min(position.left, window.innerWidth - width - 8));
-        if (Math.abs(left - position.left) > 0.5)
-            setPosition(current => (current ? { ...current, left } : current));
-    }, [position]);
-    useEffect(() => {
-        if (!open) return;
-        const close = (event: Event) => {
-            if (event.target instanceof Node && details.current?.contains(event.target)) return;
-            if (document.activeElement === header.current) showDetails();
-            else setPosition(undefined);
-        };
-        const dismiss = (event: KeyboardEvent) => {
-            if (event.key !== 'Escape') return;
-            event.preventDefault();
-            event.stopPropagation();
-            setPosition(undefined);
-        };
-        window.addEventListener('resize', close);
-        document.addEventListener('scroll', close, true);
-        document.addEventListener('keydown', dismiss, true);
-        return () => {
-            window.removeEventListener('resize', close);
-            document.removeEventListener('scroll', close, true);
-            document.removeEventListener('keydown', dismiss, true);
-        };
-    }, [open, showDetails]);
     return (
-        <th
-            ref={header}
-            scope="col"
-            tabIndex={0}
-            data-type-group={group}
-            aria-describedby={position ? detailsId : undefined}
-            onMouseMove={() => {
-                if (!position) showDetails();
-            }}
-            onFocus={showDetails}
-            onMouseLeave={hideDetails}
-            onBlur={() => setPosition(undefined)}
-            onKeyDown={event => {
-                if (event.key === 'Escape' && position) {
-                    event.stopPropagation();
-                    setPosition(undefined);
-                } else if (
-                    position &&
-                    details.current &&
-                    ['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp'].includes(event.key)
-                ) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    const step = event.key.startsWith('Page') ? details.current.clientHeight : 24;
-                    details.current.scrollTop += event.key.endsWith('Up') ? -step : step;
-                }
-            }}
-        >
+        <th scope="col" data-type-group={group} data-overflow-title={`${name}\n${type}`}>
             <div className="result-column-heading">
-                <span>{name}</span>
-                <small ref={typeBadge}>{type}</small>
+                <span data-overflow-text>{name}</span>
+                <small data-overflow-text>{type}</small>
             </div>
-            {position &&
-                createPortal(
-                    <div
-                        ref={details}
-                        id={detailsId}
-                        role="tooltip"
-                        className={`result-column-details${position.above ? ' is-above' : ''}`}
-                        style={{
-                            left: position.left,
-                            top: position.top,
-                            maxHeight: position.maxHeight,
-                        }}
-                        onMouseEnter={() => window.clearTimeout(closeTimer.current)}
-                        onMouseLeave={hideDetails}
-                    >
-                        <strong>{name}</strong>
-                        <span>{type}</span>
-                    </div>,
-                    document.body,
-                )}
         </th>
     );
 }
@@ -422,7 +310,7 @@ export function ResultGrid({
                         }
                         tabIndex={edges.left || edges.right ? 0 : undefined}
                     >
-                        <table className="data-table" aria-label="Retained query rows">
+                        <NativeTable className="data-table" aria-label="Retained query rows">
                             <thead>
                                 <tr>
                                     <th className="row-number" scope="col">
@@ -450,7 +338,7 @@ export function ResultGrid({
                                         {row.map((value, index) => (
                                             <td
                                                 key={index}
-                                                title={displayValue(value)}
+                                                data-overflow-title={displayValue(value)}
                                                 data-type-group={columnGroups[index] ?? 'other'}
                                                 className={value === null ? 'cell-null' : ''}
                                             >
@@ -460,7 +348,7 @@ export function ResultGrid({
                                     </tr>
                                 ))}
                             </tbody>
-                        </table>
+                        </NativeTable>
                         {page.rows.length === 0 ? (
                             <div className="no-rows" role="status">
                                 {emptyRowsMessage}

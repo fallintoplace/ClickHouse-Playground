@@ -307,45 +307,6 @@
   :root[data-theme="click-light"] .result-column-heading > small {
     --result-badge-tint: 4%;
   }
-  .result-column-details {
-    position: fixed;
-    z-index: var(--z-tooltip);
-    display: flex;
-    width: max-content;
-    max-width: min(360px, calc(100vw - 16px));
-    min-width: 0;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 2px 7px;
-    overflow: auto;
-    padding: 5px 8px;
-    border: 1px solid var(--line-bright);
-    border-radius: var(--radius-control);
-    background: var(--panel-raised);
-    color: var(--text-soft);
-    font: var(--font-size-result-column)/1.4 var(--font-mono);
-    overflow-wrap: anywhere;
-    box-shadow: var(--shadow-popover);
-  }
-  .result-column-details.is-above {
-    transform: translateY(-100%);
-  }
-  .result-column-details > strong {
-    display: block;
-    min-width: 0;
-    margin: 0;
-    color: var(--text);
-    font-family: var(--font-sans);
-    font-size: inherit;
-    font-weight: var(--font-weight-emphasis);
-    overflow-wrap: anywhere;
-  }
-  .result-column-details > span {
-    display: block;
-    min-width: 0;
-    color: var(--text-soft);
-    overflow-wrap: anywhere;
-  }
   .data-table td {
     max-width: 330px;
     padding: 9px 13px;

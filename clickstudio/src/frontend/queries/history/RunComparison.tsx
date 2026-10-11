@@ -1,3 +1,4 @@
+import { NativeTable } from '../../ui/components/NativeTable';
 import { useEffect, useMemo, useState } from 'react';
 import type { ProfilePipeline, QueryProfile } from '../../../shared/queries/inspection/types';
 import type { Run } from '../../../shared/queries/execution/types';
@@ -35,6 +36,20 @@ function metricValue(value: string | undefined, unit: ComparisonMetric['unit']) 
 
     return `${nativeCount(value)}${unit === 'ms' ? ' ms' : ''}`;
 }
+function ComparisonValue({ value, unit }: { value?: string; unit: ComparisonMetric['unit'] }) {
+    const text = metricValue(value, unit);
+    const detail = value !== text ? value : undefined;
+    return (
+        <td
+            className={value === undefined ? 'is-unavailable' : 'is-available'}
+            title={detail}
+            data-overflow-title={detail ? undefined : text}
+        >
+            {text}
+        </td>
+    );
+}
+
 function runOptionLabel(run: Run) {
     const query = run.sql.replace(/\s+/g, ' ').trim();
     const preview = query.length > 38 ? `${query.slice(0, 38).trimEnd()}…` : query;
@@ -189,7 +204,7 @@ function ComparisonBody({
                 </p>
             )}
             <div className="native-comparison-table-scroll">
-                <table className="native-comparison-table">
+                <NativeTable className="native-comparison-table">
                     <thead>
                         <tr>
                             <th>Metric</th>
@@ -209,12 +224,8 @@ function ComparisonBody({
                                         {metric.label}
                                         <small>{metric.source}</small>
                                     </th>
-                                    <td title={metric.before}>
-                                        {metricValue(metric.before, metric.unit)}
-                                    </td>
-                                    <td title={metric.after}>
-                                        {metricValue(metric.after, metric.unit)}
-                                    </td>
+                                    <ComparisonValue value={metric.before} unit={metric.unit} />
+                                    <ComparisonValue value={metric.after} unit={metric.unit} />
                                     <td
                                         className={metric.neutral ? '' : `delta-${delta.direction}`}
                                     >
@@ -224,7 +235,7 @@ function ComparisonBody({
                             );
                         })}
                     </tbody>
-                </table>
+                </NativeTable>
             </div>
             <div className="native-comparison-columns">
                 {[

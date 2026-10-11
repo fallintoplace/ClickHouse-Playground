@@ -1,3 +1,4 @@
+import { NativeTable } from '../../../ui/components/NativeTable';
 import { type ImportPreview } from '../state/import-wizard-model';
 import { useImportWizardController } from '../useImportWizardController';
 
@@ -20,7 +21,7 @@ export function ImportColumnMapping({
 }) {
     return (
         <div className="import-column-map">
-            <table className="w-full min-w-[540px] border-collapse text-left text-xs">
+            <NativeTable className="w-full min-w-[540px] border-collapse text-left text-xs">
                 <thead>
                     <tr>
                         <th>FROM FILE</th>
@@ -40,7 +41,7 @@ export function ImportColumnMapping({
                         )?.type;
                         return (
                             <tr key={source}>
-                                <th scope="row" title={source}>
+                                <th scope="row" data-overflow-title={source}>
                                     <code className="import-source-column-name">{source}</code>
                                 </th>
                                 <td>
@@ -76,7 +77,10 @@ export function ImportColumnMapping({
                                     )}
                                 </td>
                                 <td className="import-column-type-cell">
-                                    <span className="import-column-type" title={destinationType}>
+                                    <span
+                                        className="import-column-type"
+                                        data-overflow-title={destinationType ?? '—'}
+                                    >
                                         {destinationType ?? '—'}
                                     </span>
                                 </td>
@@ -84,7 +88,7 @@ export function ImportColumnMapping({
                         );
                     })}
                 </tbody>
-            </table>
+            </NativeTable>
         </div>
     );
 }
