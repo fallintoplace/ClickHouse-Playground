@@ -9,6 +9,8 @@ import type { Proposal } from '../../../../shared/assistant/types';
 import { clickhouse, sqlEditorTheme, sqlHighlightStyle } from './SqlEditor';
 import { Button, Spinner } from '../../../common/components/ui';
 
+const reviewScrollClearance = 72;
+
 export function SqlProposalReview({
     proposal,
     currentSql,
@@ -50,10 +52,12 @@ export function SqlProposalReview({
                         '&.cm-merge-b .cm-deletedLineGutter': {
                             backgroundColor: 'var(--sql-diff-removed)',
                         },
+                        '.cm-content': { paddingBottom: `${reviewScrollClearance}px` },
                         '.cm-deletedLine del': { textDecoration: 'none' },
                     }),
                     EditorState.readOnly.of(true),
                     EditorView.editable.of(false),
+                    EditorView.scrollMargins.of(() => ({ bottom: reviewScrollClearance })),
                     EditorView.contentAttributes.of({
                         role: 'textbox',
                         'aria-label': 'Proposed SQL changes',
@@ -84,33 +88,35 @@ export function SqlProposalReview({
         blocked = 'This proposal did not pass SQL checks.';
     return (
         <div className="sql-proposal-review" data-testid="sql-proposal-review">
-            <div className="sql-editor sql-review-editor" ref={element} />
+            <div className="sql-review-surface">
+                <div className="sql-editor sql-review-editor" ref={element} />
+                <div className="sql-review-actions" aria-label="Review SQL changes">
+                    {busy && <Spinner label="Updating proposal" />}
+                    <Button
+                        variant="secondary"
+                        className="toolbar-small"
+                        aria-label="Reject SQL changes"
+                        disabled={busy}
+                        onClick={() => void onDecide('rejected')}
+                    >
+                        Reject
+                    </Button>
+                    <Button
+                        variant="primary"
+                        className="toolbar-small"
+                        aria-label="Accept SQL changes"
+                        disabled={busy || Boolean(blocked)}
+                        onClick={() => void onDecide('accepted')}
+                    >
+                        Accept
+                    </Button>
+                </div>
+            </div>
             {(error || blocked) && (
                 <div className="sql-review-error" role="alert">
                     {error || blocked}
                 </div>
             )}
-            <div className="sql-review-actions" aria-label="Review SQL changes">
-                {busy && <Spinner label="Updating proposal" />}
-                <Button
-                    variant="secondary"
-                    className="toolbar-small"
-                    aria-label="Reject SQL changes"
-                    disabled={busy}
-                    onClick={() => void onDecide('rejected')}
-                >
-                    Reject
-                </Button>
-                <Button
-                    variant="primary"
-                    className="toolbar-small"
-                    aria-label="Accept SQL changes"
-                    disabled={busy || Boolean(blocked)}
-                    onClick={() => void onDecide('accepted')}
-                >
-                    Accept
-                </Button>
-            </div>
         </div>
     );
 }

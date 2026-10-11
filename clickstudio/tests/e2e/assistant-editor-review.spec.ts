@@ -440,13 +440,32 @@ for (const theme of ['Dark', 'Light']) {
             await expect(additions).toHaveCSS('background-color', expectedAdded);
             await expect(deletions).toHaveCSS('background-color', expectedRemoved);
         }
-        for (const width of [1280, 720]) {
-            await page.setViewportSize({ width, height: 900 });
+        for (const { width, height } of [
+            { width: 1280, height: 900 },
+            { width: 1280, height: 600 },
+            { width: 720, height: 900 },
+        ]) {
+            await page.setViewportSize({ width, height });
             const accept = review(page).getByRole('button', {
                 name: 'Accept SQL changes',
                 exact: true,
             });
-            await expect(accept).toBeInViewport();
+            const surface = review(page).locator('.sql-review-surface');
+            const actions = review(page).locator('.sql-review-actions');
+            await expect(accept).toBeInViewport({ ratio: 1 });
+            await expect(actions).toBeInViewport({ ratio: 1 });
+            const surfaceBox = await surface.boundingBox();
+            const initialActionsBox = await actions.boundingBox();
+            if (!surfaceBox || !initialActionsBox)
+                throw new Error('The SQL review and its decisions should be visible');
+            expect(initialActionsBox.width).toBeLessThan(surfaceBox.width);
+            expect(
+                Math.abs(
+                    initialActionsBox.x +
+                        initialActionsBox.width / 2 -
+                        (surfaceBox.x + surfaceBox.width / 2),
+                ),
+            ).toBeLessThanOrEqual(1);
             await expect(review(page).locator('.cm-chunkButtons')).toHaveCount(0);
             expect(
                 await review(page).evaluate(element => element.scrollWidth <= element.clientWidth),
@@ -456,8 +475,19 @@ for (const theme of ['Dark', 'Light']) {
                 .evaluate(element => {
                     element.scrollTop = element.scrollHeight;
                 });
-            await expect(accept).toBeInViewport();
-            await page.screenshot({ path: testInfo.outputPath(`review-${width}.png`) });
+            await expect(accept).toBeInViewport({ ratio: 1 });
+            await expect(actions).toBeInViewport({ ratio: 1 });
+            const lastLine = review(page)
+                .locator('.cm-line')
+                .filter({ hasText: 'SELECT 151 AS value;' });
+            await expect(lastLine).toBeVisible();
+            const lastLineBox = await lastLine.boundingBox();
+            const actionsBox = await actions.boundingBox();
+            if (!lastLineBox || !actionsBox)
+                throw new Error('The final SQL line and its decisions should be visible');
+            expect(lastLineBox.y + lastLineBox.height).toBeLessThanOrEqual(actionsBox.y);
+            expect(Math.abs(actionsBox.y - initialActionsBox.y)).toBeLessThanOrEqual(1);
+            await page.screenshot({ path: testInfo.outputPath(`review-${width}x${height}.png`) });
         }
     });
 }

@@ -594,6 +594,15 @@
     --sql-diff-added-background: #ccfff0;
     --sql-diff-removed-background: #ffe7e2;
   }
+  .sql-review-surface {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    isolation: isolate;
+  }
   .sql-proposal-review .sql-review-editor {
     height: 0;
     min-height: 0;
@@ -601,14 +610,21 @@
     overflow: hidden;
   }
   .sql-review-actions {
+    position: absolute;
+    z-index: var(--z-editor-panels);
+    bottom: 12px;
+    left: 50%;
     display: flex;
-    flex: none;
+    max-width: calc(100% - 24px);
     align-items: center;
     justify-content: center;
     gap: 6px;
-    padding: 7px 12px;
-    border-top: 1px solid var(--line);
-    background: var(--panel);
+    padding: 6px;
+    border: 1px solid var(--line-bright);
+    border-radius: var(--radius-control);
+    background: var(--canvas);
+    box-shadow: 0 2px 8px #00000024;
+    transform: translateX(-50%);
   }
   .sql-review-error {
     flex: none;
