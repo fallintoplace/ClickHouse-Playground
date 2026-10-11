@@ -9,7 +9,7 @@ const baseURL = `http://localhost:${webPort}`;
 
 export default defineConfig({
     testDir: './tests/e2e',
-    fullyParallel: false,
+    fullyParallel: true,
     workers: 1,
     retries: 0,
     forbidOnly: Boolean(process.env.CI),
