@@ -61,8 +61,8 @@
   }
   .results-title h2 {
     margin: 0;
-    font-size: 13px;
-    font-weight: 680;
+    font-size: var(--font-size-panel-title);
+    font-weight: var(--font-weight-emphasis);
   }
   .results-title > .inline-flex {
     margin-left: 5px;

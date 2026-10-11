@@ -23,8 +23,8 @@
   .inspector-header h2 {
     margin: 0;
     font-family: var(--font-display);
-    font-size: 15px;
-    font-weight: 680;
+    font-size: var(--font-size-inspector-title);
+    font-weight: var(--font-weight-emphasis);
     letter-spacing: -0.025em;
   }
   .inspector-tabs {
@@ -2028,15 +2028,11 @@
     min-width: 0;
     gap: 4px;
   }
-  .proposal-heading strong {
-    font-size: 9px;
-    line-height: 1.45;
-  }
   .assistant-proposal-summary {
     min-width: 0;
     color: var(--text);
     font-size: 11px;
-    font-weight: 680;
+    font-weight: var(--font-weight-regular);
     line-height: 1.5;
     overflow-wrap: anywhere;
   }
@@ -2108,9 +2104,10 @@
   .assistant-answer-markdown li > p {
     margin: 0;
   }
+  .assistant-proposal-summary strong,
   .assistant-answer-markdown strong {
     color: var(--text);
-    font-weight: 700;
+    font-weight: var(--font-weight-emphasis);
   }
   .assistant-answer-markdown a {
     color: var(--accent);

@@ -188,8 +188,8 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     color: var(--text);
-    font-size: 13px;
-    font-weight: 630;
+    font-size: var(--font-size-panel-title);
+    font-weight: var(--font-weight-emphasis);
   }
   .editor-heading {
     position: relative;
@@ -302,8 +302,8 @@
     outline: none;
     background: transparent;
     color: var(--text);
-    font-size: 13px;
-    font-weight: 630;
+    font-size: var(--font-size-panel-title);
+    font-weight: var(--font-weight-emphasis);
   }
   .editor-heading-actions {
     padding-right: 42px;
