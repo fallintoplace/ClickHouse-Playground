@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import type { Proposal } from '../../src/shared/assistant/types.js';
-import { jsonRecord, replaceSql, trust } from './helpers.js';
+import { jsonRecord, replaceSql, trust, openStatementResults } from './helpers.js';
 
 const originalSql = 'SELECT 1 AS value';
 const proposedSql = 'SELECT 2 AS value';
@@ -326,8 +326,9 @@ for (const decision of ['accepted', 'rejected'] as const) {
             await latestRunAll.click();
             await expect.poll(() => runs.length).toBe(1);
             expect(runs[0]).toMatchObject({ sql: nextScript, connectionId: 'demo' });
+            await openStatementResults(page);
             await expect(
-                page.getByRole('button', { name: 'Statement 2: succeeded', exact: true }),
+                page.getByRole('menuitemradio', { name: 'Statement 2: succeeded', exact: true }),
             ).toBeVisible();
         } else {
             await expect(latestCard.getByRole('button', { name: /Run/ })).toHaveCount(0);

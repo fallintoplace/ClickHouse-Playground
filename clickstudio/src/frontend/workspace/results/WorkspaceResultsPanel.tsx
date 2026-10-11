@@ -19,7 +19,7 @@ import { PipelineGraph } from '../queries/inspection/diagrams/PipelineGraph';
 import { SqlFlowView } from '../queries/inspection/diagrams/SqlFlowView';
 import { Button, cx, Spinner } from '../../common/components/ui';
 import { Icon } from '../../common/components/icons';
-import { ScriptResults } from '../layout/WorkspaceChrome';
+import { ScriptCancelAction, ScriptResultsSelector } from './ScriptResultsSelector';
 import { ScrollEdgeFrame } from '../../common/components/ScrollEdgeShadows';
 import { QueryFailureNotice } from './QueryFailureNotice';
 import { resultsTabLabel } from '../workspace-helpers';
@@ -105,7 +105,6 @@ export function WorkspaceResultsPanel({
         busy,
         execution,
         retainedExecutionResult,
-        cancelling,
         experience,
     } = state;
     const {
@@ -148,6 +147,7 @@ export function WorkspaceResultsPanel({
 
     if (
         !run &&
+        !script &&
         !execution &&
         !failedAttempt &&
         !failedScriptStatement &&
@@ -239,25 +239,6 @@ export function WorkspaceResultsPanel({
                                     </details>
                                 )}
                             </div>
-                        )}
-                        {visibleResultsView === 'results' && script && (
-                            <ScriptResults
-                                script={script}
-                                runs={history}
-                                activeRunId={run?.id}
-                                onSelectRun={actions.onSelectScriptRun}
-                                onSelectError={actions.onSelectScriptError}
-                                errorSelected={
-                                    showFailure &&
-                                    failureError === failedScriptStatement?.error &&
-                                    !failedScriptStatement?.runId
-                                }
-                                onCancel={actions.onCancel}
-                                cancelDisabled={cancelling}
-                                cancelAfterCurrentStatement={
-                                    connection.id === CLICKHOUSE_CLOUD_CONNECTION_ID
-                                }
-                            />
                         )}
                         {showFailure && failureError ? (
                             <QueryFailureNotice
@@ -453,9 +434,10 @@ function renderResultsHeader({
         resultsPanelLabel,
         failureSql,
     } = viewState;
-    const { copy, run, assistantBusy, busy } = state;
+    const { copy, run, script, history, cancelling, connection, assistantBusy, busy } = state;
     const headerView = showFailure ? 'results' : visibleResultsView;
     const headerPanelLabel = showFailure ? copy.common.queryResults : resultsPanelLabel;
+    const failedStatement = script?.statements.find(statement => statement.error);
 
     return (
         <div className="results-header">
@@ -476,8 +458,31 @@ function renderResultsHeader({
                     <span className="eyebrow">{resultsEyebrow}</span>
                     <h2>{showFailure ? copy.common.results : resultsTitle}</h2>
                 </div>
+                {headerView === 'results' && script && (
+                    <ScriptResultsSelector
+                        key={script.id}
+                        script={script}
+                        runs={history}
+                        activeRunId={run?.id}
+                        onSelectRun={actions.onSelectScriptRun}
+                        onSelectError={actions.onSelectScriptError}
+                        errorSelected={
+                            showFailure &&
+                            viewState.failureError === failedStatement?.error &&
+                            !failedStatement?.runId
+                        }
+                    />
+                )}
             </div>
             <div className="results-actions">
+                {headerView === 'results' && script && (
+                    <ScriptCancelAction
+                        script={script}
+                        onCancel={actions.onCancel}
+                        disabled={cancelling}
+                        afterCurrentStatement={connection.id === CLICKHOUSE_CLOUD_CONNECTION_ID}
+                    />
+                )}
                 <div
                     ref={setTableToolbar}
                     className="results-table-tools"

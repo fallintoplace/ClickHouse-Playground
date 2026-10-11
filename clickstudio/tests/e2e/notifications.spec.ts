@@ -1,5 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
-import { openBlankSql, openWorkspacePanel, replaceSql, runButton, trust } from './helpers.js';
+import {
+    openBlankSql,
+    openWorkspacePanel,
+    replaceSql,
+    runButton,
+    trust,
+    openStatementResults,
+} from './helpers.js';
 import type { Script } from '../../src/shared/queries/execution/types.js';
 import { newDraft } from '../../src/frontend/workspace/editor/drafts/workspace-state.js';
 
@@ -100,8 +107,9 @@ test('Trust, saving, and script completion stay quiet', async ({ page }) => {
     await expect(page.locator('.tab-unsaved')).toHaveCount(1);
     await replaceSql(page, 'SELECT 1; SELECT 2');
     await runButton(page).click();
+    await openStatementResults(page);
     await expect(
-        page.getByRole('button', { name: 'Statement 2: succeeded', exact: true }),
+        page.getByRole('menuitemradio', { name: 'Statement 2: succeeded', exact: true }),
     ).toBeVisible();
     await expect(page.locator('.toast')).toHaveCount(0);
 });

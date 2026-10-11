@@ -3,6 +3,7 @@ import {
     currentQueryId,
     jsonRecord,
     openBlankSql,
+    openStatementResults,
     openWorkspacePanel,
     replaceSql,
     runIdentity,
@@ -749,8 +750,15 @@ test('Standard can run a script and open its statement results', async ({ page }
     await runScript(page);
 
     const results = page.getByRole('region', { name: 'Query results', exact: true });
-    const first = results.getByRole('button', { name: 'Statement 1: succeeded', exact: true });
-    const second = results.getByRole('button', { name: 'Statement 2: succeeded', exact: true });
+    await openStatementResults(results);
+    const first = results.getByRole('menuitemradio', {
+        name: 'Statement 1: succeeded',
+        exact: true,
+    });
+    const second = results.getByRole('menuitemradio', {
+        name: 'Statement 2: succeeded',
+        exact: true,
+    });
     await expect(first).toBeVisible();
     await expect(second).toBeVisible();
     await first.click();

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { Run, Script } from '../../../shared/queries/execution/types';
+import type { Run } from '../../../shared/queries/execution/types';
 import { Button, cx } from '../../common/components/ui';
 import { formatBytes, formatCount } from '../../common/browser/format';
 import { Icon } from '../../common/components/icons';
@@ -7,7 +7,6 @@ import { Status, terminal } from '../queries/execution/status';
 import type { IconName } from '../../common/components/icons';
 import type { RunEventState } from '../workspace-types';
 import type { Copy } from '../../common/translations/i18n';
-import { statementOutcome } from '../results/statement-outcome';
 
 export type RunAction = {
     id: string;
@@ -115,124 +114,6 @@ export function RailButton({
             <Icon name={icon} />
             <span className="rail-tooltip">{label}</span>
         </button>
-    );
-}
-
-export function ScriptResults({
-    script,
-    runs,
-    activeRunId,
-    onSelectRun,
-    onSelectError,
-    errorSelected = false,
-    onCancel,
-    cancelDisabled,
-    cancelAfterCurrentStatement = false,
-}: {
-    script: Script;
-    runs: Run[];
-    activeRunId?: string;
-    onSelectRun: (runId: string) => void;
-    onSelectError?: () => void;
-    errorSelected?: boolean;
-    onCancel: () => void;
-    cancelDisabled: boolean;
-    cancelAfterCurrentStatement?: boolean;
-}) {
-    const byId = new Map(runs.map(run => [run.id, run]));
-    const statements = script.statements.map((statement, index) => {
-        const run = statement.runId ? byId.get(statement.runId) : undefined;
-        let details: string;
-
-        if (run?.error) {
-            details = `${run.error.code}: ${run.error.message}`;
-        } else if (statement.error) {
-            details = `${statement.error.code}: ${statement.error.message}`;
-        } else if (run) {
-            details = `${statementOutcome(run)} · ${Math.round(run.elapsedMs)} ms`;
-        } else {
-            switch (statement.status) {
-                case 'pending':
-                    details = 'Waiting to run';
-                    break;
-                case 'running':
-                    details = 'Running';
-                    break;
-                case 'skipped':
-                    details = 'Skipped';
-                    break;
-                default:
-                    details = 'Not executed';
-                    break;
-            }
-        }
-        return { statement, index, details };
-    });
-    return (
-        <section
-            className={cx('script-results', script.status !== 'running' && 'is-settled')}
-            aria-label="Script statement results"
-        >
-            {script.status === 'running' && (
-                <div className="script-results-heading">
-                    {script.cancelled ? (
-                        <span className="script-cancel-status" role="status">
-                            {cancelAfterCurrentStatement
-                                ? 'Stopping after this query…'
-                                : 'Cancelling script…'}
-                        </span>
-                    ) : (
-                        <Button
-                            variant="danger"
-                            className="toolbar-small"
-                            onClick={onCancel}
-                            disabled={cancelDisabled}
-                        >
-                            {cancelAfterCurrentStatement
-                                ? 'Stop after current statement'
-                                : 'Cancel script'}
-                        </Button>
-                    )}
-                </div>
-            )}
-            <div
-                className="script-statement-list"
-                role="group"
-                aria-label="Select a statement result"
-            >
-                {statements.map(({ statement, index, details }) => {
-                    const active = statement.runId
-                        ? !errorSelected && statement.runId === activeRunId
-                        : Boolean(statement.error && errorSelected);
-                    return (
-                        <button
-                            key={`${script.id}-${index}`}
-                            type="button"
-                            className={cx('script-statement', active && 'is-active')}
-                            aria-label={`Statement ${index + 1}: ${statement.status}`}
-                            aria-pressed={active}
-                            title={`${statement.sql.replace(/\s+/g, ' ').slice(0, 160)} · ${details}`}
-                            disabled={!statement.runId && !(statement.error && onSelectError)}
-                            onClick={() =>
-                                statement.runId ? onSelectRun(statement.runId) : onSelectError?.()
-                            }
-                        >
-                            <span className="script-statement-index">
-                                {String(index + 1).padStart(2, '0')}
-                            </span>
-                            <span className="script-statement-copy">
-                                <strong>Statement {index + 1}</strong>
-                                <code>{statement.sql.replace(/\s+/g, ' ').slice(0, 72)}</code>
-                                <small>{details}</small>
-                            </span>
-                            <span className={cx('script-status', `status-${statement.status}`)}>
-                                {statement.status}
-                            </span>
-                        </button>
-                    );
-                })}
-            </div>
-        </section>
     );
 }
 

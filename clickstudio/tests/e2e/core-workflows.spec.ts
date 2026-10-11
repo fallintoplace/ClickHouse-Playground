@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import {
     currentQueryId,
     openBlankSql,
+    openStatementResults,
     openResultFilter,
     openWorkspacePanel,
     runIdentity,
@@ -2238,16 +2239,25 @@ test('A delayed chart snapshot cannot update the draft after selecting another s
         await replaceSql(page, 'SELECT 1; SELECT 2;');
         await runScript(page);
         const results = page.getByRole('region', { name: 'Query results', exact: true });
-        const first = results.getByRole('button', { name: 'Statement 1: succeeded', exact: true });
-        const second = results.getByRole('button', { name: 'Statement 2: succeeded', exact: true });
+        await openStatementResults(results);
+        const first = results.getByRole('menuitemradio', {
+            name: 'Statement 1: succeeded',
+            exact: true,
+        });
+        const second = results.getByRole('menuitemradio', {
+            name: 'Statement 2: succeeded',
+            exact: true,
+        });
         await expect(first).toBeVisible();
         await expect(second).toBeVisible();
         await first.click();
         await results.getByRole('tab', { name: 'Chart', exact: true }).click();
         await snapshotStarted;
         await results.getByRole('tab', { name: 'Results', exact: true }).click();
+        await openStatementResults(results);
         await second.click();
-        await expect(second).toHaveAttribute('aria-pressed', 'true');
+        await openStatementResults(results);
+        await expect(second).toHaveAttribute('aria-checked', 'true');
         releaseSnapshot();
         await snapshotFinished;
         await page.getByTestId('save-query').click();
@@ -2626,12 +2636,16 @@ test('Scripts show each statement outcome and open that statement’s retained r
     await runScript(page);
 
     const results = page.getByRole('region', { name: 'Query results', exact: true });
-    const first = results.getByRole('button', { name: 'Statement 1: succeeded', exact: true });
-    const second = results.getByRole('button', { name: 'Statement 2: failed', exact: true });
+    await openStatementResults(results);
+    const first = results.getByRole('menuitemradio', {
+        name: 'Statement 1: succeeded',
+        exact: true,
+    });
+    const second = results.getByRole('menuitemradio', { name: 'Statement 2: failed', exact: true });
     await expect(first).toBeVisible();
     await expect(second).toBeVisible();
     await expect(
-        results.getByRole('button', { name: 'Statement 3: skipped', exact: true }),
+        results.getByRole('menuitemradio', { name: 'Statement 3: skipped', exact: true }),
     ).toBeVisible();
 
     await first.click();
@@ -2640,11 +2654,13 @@ test('Scripts show each statement outcome and open that statement’s retained r
     await expect(results.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
     await expect(results.locator('.result-provenance-header')).toHaveCount(0);
 
+    await openStatementResults(results);
     await second.click();
     await expect(page.getByTestId('query-failure')).toContainText('FIXTURE_ERROR');
     await expect(page.locator('.cm-content')).toContainText(
         'SELECT 1; SELECT fixture_error; SELECT 3;',
     );
+    await openStatementResults(results);
     await first.click();
 
     await expect(results.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
@@ -2669,14 +2685,15 @@ test('Script errors without a statement run ID show the ClickHouse error and fai
     try {
         await runScript(page);
         const results = page.getByRole('region', { name: 'Query results', exact: true });
+        await openStatementResults(results);
         const failure = page.getByTestId('query-failure');
         await expect(failure).toContainText('CLICKHOUSE_ERROR');
         await expect(failure).toContainText(message);
         await expect(
-            results.getByRole('button', { name: 'Statement 1: failed', exact: true }),
+            results.getByRole('menuitemradio', { name: 'Statement 1: failed', exact: true }),
         ).toBeVisible();
         await expect(
-            results.getByRole('button', { name: 'Statement 2: skipped', exact: true }),
+            results.getByRole('menuitemradio', { name: 'Statement 2: skipped', exact: true }),
         ).toBeVisible();
         await expect(failure.locator('.result-failure-detail')).toBeHidden();
         await expect(failure.locator('.result-failure-marker')).toHaveCount(0);
@@ -2760,18 +2777,23 @@ test('A script submission failure still lets a successful statement open its res
     await runScript(page);
     await expect(results.getByTestId('query-failure')).toBeVisible();
     await expect(results.getByRole('table')).toHaveCount(0);
-    await results.getByRole('button', { name: 'Statement 1: succeeded', exact: true }).click();
+    await openStatementResults(results);
+    await results
+        .getByRole('menuitemradio', { name: 'Statement 1: succeeded', exact: true })
+        .click();
     await expect(results.getByTestId('query-failure')).toHaveCount(0);
     await expect(results.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
     await expect(page.locator('.query-failed-status')).toHaveCount(0);
-    await results.getByRole('button', { name: 'Statement 2: failed', exact: true }).click();
+    await openStatementResults(results);
+    await results.getByRole('menuitemradio', { name: 'Statement 2: failed', exact: true }).click();
     await expect(results.getByTestId('query-failure')).toContainText(
         'Table missing_table does not exist.',
     );
     await expect(results.getByRole('table')).toHaveCount(0);
+    await openStatementResults(results);
     await expect(
-        results.getByRole('button', { name: 'Statement 2: failed', exact: true }),
-    ).toHaveAttribute('aria-pressed', 'true');
+        results.getByRole('menuitemradio', { name: 'Statement 2: failed', exact: true }),
+    ).toHaveAttribute('aria-checked', 'true');
 });
 
 test('Script polling persists every statement run ID, including fast intermediate results', async ({
@@ -2838,8 +2860,9 @@ test('Script polling persists every statement run ID, including fast intermediat
     await runScript(page);
 
     const results = page.getByRole('region', { name: 'Query results', exact: true });
+    await openStatementResults(results);
     await expect(
-        results.getByRole('button', { name: 'Statement 3: succeeded', exact: true }),
+        results.getByRole('menuitemradio', { name: 'Statement 3: succeeded', exact: true }),
     ).toBeVisible();
     const runIds = async () =>
         page.evaluate(() => {
@@ -2887,19 +2910,27 @@ test('Selecting an earlier script statement stops automatic following while late
     await runScript(page);
 
     const results = page.getByRole('region', { name: 'Query results', exact: true });
-    const first = results.getByRole('button', { name: 'Statement 1: succeeded', exact: true });
-    const second = results.getByRole('button', { name: 'Statement 2: running', exact: true });
-    await expect(second).toHaveAttribute('aria-pressed', 'true');
+    await openStatementResults(results);
+    const first = results.getByRole('menuitemradio', {
+        name: 'Statement 1: succeeded',
+        exact: true,
+    });
+    const second = results.getByRole('menuitemradio', {
+        name: 'Statement 2: running',
+        exact: true,
+    });
+    await expect(second).toHaveAttribute('aria-checked', 'true');
     const nextPoll = page.waitForResponse(
         response =>
             response.request().method() === 'GET' &&
             new URL(response.url()).pathname.startsWith('/api/scripts/'),
     );
     await first.click();
-    await expect(first).toHaveAttribute('aria-pressed', 'true');
+    await openStatementResults(results);
+    await expect(first).toHaveAttribute('aria-checked', 'true');
     await nextPoll;
-    await expect(first).toHaveAttribute('aria-pressed', 'true');
-    await expect(second).toHaveAttribute('aria-pressed', 'false');
+    await expect(first).toHaveAttribute('aria-checked', 'true');
+    await expect(second).toHaveAttribute('aria-checked', 'false');
 });
 
 test('Cancelling a long-running query reaches a terminal cancelled state', async ({ page }) => {

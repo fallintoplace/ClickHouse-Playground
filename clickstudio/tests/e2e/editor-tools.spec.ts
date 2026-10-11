@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { runScript, trust } from './helpers.js';
+import { runScript, trust, openStatementResults } from './helpers.js';
 
 function readSql(page: Page) {
     return page.locator('.cm-content').evaluate(editor =>
@@ -77,13 +77,14 @@ for (const engine of ['native', 'fallback'] as const) {
         for (const statement of script.statements)
             expect(sql.slice(statement.from, statement.to)).toBe(statement.sql);
         const results = page.getByRole('region', { name: 'Query results', exact: true });
+        await openStatementResults(results);
         await expect(
-            results.getByRole('button', { name: 'Statement 1: succeeded', exact: true }),
+            results.getByRole('menuitemradio', { name: 'Statement 1: succeeded', exact: true }),
         ).toBeVisible();
         await expect(
-            results.getByRole('button', { name: 'Statement 2: succeeded', exact: true }),
+            results.getByRole('menuitemradio', { name: 'Statement 2: succeeded', exact: true }),
         ).toBeVisible();
-        await expect(results.getByRole('button', { name: /^Statement 3:/ })).toHaveCount(0);
+        await expect(results.getByRole('menuitemradio', { name: /^Statement 3:/ })).toHaveCount(0);
         expect(errors).toEqual([]);
     });
 }

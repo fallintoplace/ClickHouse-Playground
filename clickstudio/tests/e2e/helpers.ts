@@ -2,6 +2,18 @@ import { expect, type Locator, type Page } from '@playwright/test';
 
 export const runButton = (page: Page) => page.getByTestId('run-button');
 
+export async function openStatementResults(target: Page | Locator) {
+    const trigger = target.getByRole('button', { name: /^Select a statement result/ });
+    await expect(trigger).toBeVisible();
+    const menu = target.getByRole('menu', { name: 'Statement results', exact: true });
+    if (!(await menu.isVisible())) await trigger.click();
+    await expect(menu).toBeVisible();
+    await expect
+        .poll(() => menu.evaluate(element => element.contains(element.ownerDocument.activeElement)))
+        .toBe(true);
+    return menu;
+}
+
 export async function openResultFilter(target: Page | Locator) {
     await target.getByRole('button', { name: 'Filter', exact: true }).click();
     return target.getByRole('searchbox', { name: 'Filter current page', exact: true });
