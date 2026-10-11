@@ -106,7 +106,7 @@ async function expectThemeTokenColors(page: Page, theme: string) {
     for (const token of ['`FROM`', '`toDate`', '`UInt64`', '"SELECT"']) {
         await expect(page.locator('.cm-content span').filter({ hasText: token }).last()).toHaveCSS(
             'color',
-            theme === 'Light' ? 'rgb(27, 48, 61)' : 'rgb(239, 248, 250)',
+            theme === 'Light' ? 'rgb(27, 48, 61)' : 'rgb(247, 247, 247)',
         );
     }
     await expect(
@@ -114,25 +114,28 @@ async function expectThemeTokenColors(page: Page, theme: string) {
             .locator('.cm-content span')
             .filter({ hasText: /^NULL$/ })
             .last(),
-    ).toHaveCSS('color', theme === 'Light' ? 'rgb(111, 66, 161)' : 'rgb(197, 152, 255)');
-    if (theme === 'Light') {
-        for (const [token, color] of [
-            ['SELECT', 'rgb(36, 88, 166)'],
-            ["'frontend'", 'rgb(166, 63, 59)'],
-            ['0.50', 'rgb(27, 114, 84)'],
-            ['/* aggregate */', 'rgb(83, 108, 120)'],
-            ['quantile', 'rgb(121, 94, 38)'],
-        ] as const) {
-            await expect(
-                page
-                    .locator('.cm-content span')
-                    .filter({
-                        hasText: new RegExp(`^${token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`),
-                    })
-                    .last(),
-            ).toHaveCSS('color', color);
-        }
+    ).toHaveCSS('color', theme === 'Light' ? 'rgb(111, 66, 161)' : 'rgb(172, 241, 209)');
+    for (const [token, light, dark] of [
+        ['SELECT', 'rgb(36, 88, 166)', 'rgb(144, 181, 246)'],
+        ["'frontend'", 'rgb(166, 63, 59)', 'rgb(255, 157, 173)'],
+        ['0.50', 'rgb(27, 114, 84)', 'rgb(172, 241, 209)'],
+        ['true', 'rgb(111, 66, 161)', 'rgb(172, 241, 209)'],
+        ['/* aggregate */', 'rgb(83, 108, 120)', 'rgb(166, 180, 190)'],
+        ['quantile', 'rgb(121, 94, 38)', 'rgb(247, 247, 247)'],
+    ] as const) {
+        await expect(
+            page
+                .locator('.cm-content span')
+                .filter({
+                    hasText: new RegExp(`^${token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`),
+                })
+                .last(),
+        ).toHaveCSS('color', theme === 'Light' ? light : dark);
     }
+    await expect(page.locator('.cm-content')).toHaveCSS(
+        'color',
+        theme === 'Light' ? 'rgb(27, 48, 61)' : 'rgb(247, 247, 247)',
+    );
 }
 
 for (const parser of ['ready', 'unavailable']) {

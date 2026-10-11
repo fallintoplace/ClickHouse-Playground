@@ -71,16 +71,20 @@ export const sqlHighlightStyle = HighlightStyle.define([
     { tag: tags.number, color: 'var(--editor-number)' },
     { tag: [tags.bool, tags.null], color: 'var(--editor-literal)' },
     { tag: [tags.string, tags.escape], color: 'var(--editor-string)' },
-    { tag: tags.special(tags.string), color: 'var(--text)' },
+    { tag: tags.special(tags.string), color: 'var(--editor-foreground)' },
     { tag: tags.standard(tags.name), color: 'var(--editor-function)' },
     { tag: tags.comment, color: 'var(--editor-comment)' },
     { tag: tags.typeName, color: 'var(--editor-type)' },
-    { tag: [tags.operator, tags.punctuation], color: 'var(--text-soft)' },
+    { tag: [tags.operator, tags.punctuation], color: 'var(--editor-punctuation)' },
 ]);
 export const sqlEditorTheme = (dark: boolean) =>
     EditorView.theme(
         {
-            '&': { height: '100%', backgroundColor: 'var(--panel)', color: 'var(--text)' },
+            '&': {
+                height: '100%',
+                backgroundColor: 'var(--panel)',
+                color: 'var(--editor-foreground)',
+            },
             '.cm-scroller': {
                 fontFamily: 'var(--font-mono)',
                 fontSize: '12px',

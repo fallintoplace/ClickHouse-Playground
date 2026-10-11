@@ -518,6 +518,81 @@ test('Detached query review shares the same draft and decision with the workspac
     await expect(liveEditor(page)).toHaveText(proposedSql);
 });
 
+test('Dark SQL review tokens stay readable on added and removed lines', async ({ page }, info) => {
+    const draft =
+        'SELECT count() AS reviews, 0.50, \'frontend\', true, NULL, {limit:UInt64}, "SELECT", `FROM` -- latency';
+    await installProposal(page, draft.replace("'frontend'", "'backend'"));
+    await trust(page);
+    await replaceSql(page, draft);
+    await page.getByRole('radio', { name: 'Dark theme', exact: true }).click();
+    await askForChanges(page);
+    const lines = review(page).locator('.cm-changedLine, .cm-deletedLine');
+    await expect(lines).toHaveCount(2);
+    const contrasts = await lines.evaluateAll(elements => {
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 1;
+        const context = canvas.getContext('2d')!;
+        const rgba = (color: string) => {
+            context.clearRect(0, 0, 1, 1);
+            context.fillStyle = color;
+            context.fillRect(0, 0, 1, 1);
+            return [...context.getImageData(0, 0, 1, 1).data];
+        };
+        const blend = (foreground: number[], background: number[]) => {
+            const alpha = foreground[3]! / 255;
+            return background.map((value, index) =>
+                index < 3 ? foreground[index]! * alpha + value * (1 - alpha) : 255,
+            );
+        };
+        const luminance = (color: number[]) =>
+            color
+                .slice(0, 3)
+                .map(value => {
+                    const channel = value / 255;
+                    return channel <= 0.04045
+                        ? channel / 12.92
+                        : ((channel + 0.055) / 1.055) ** 2.4;
+                })
+                .reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index]!, 0);
+        return elements.flatMap(line => {
+            const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+            const results = [];
+            let node: Node | null;
+            while ((node = walker.nextNode())) {
+                if (!node.textContent?.trim()) continue;
+                const element = node.parentElement!;
+                const ancestors: Element[] = [];
+                for (let parent: Element | null = element; parent; parent = parent.parentElement)
+                    ancestors.unshift(parent);
+                const background = ancestors.reduce(
+                    (color, ancestor) =>
+                        blend(rgba(getComputedStyle(ancestor).backgroundColor), color),
+                    [0, 0, 0, 255],
+                );
+                for (const selected of [false, true]) {
+                    const style = getComputedStyle(element, selected ? '::selection' : null);
+                    const foreground = luminance(rgba(style.color));
+                    const surface = luminance(
+                        selected ? blend(rgba(style.backgroundColor), background) : background,
+                    );
+                    results.push({
+                        token: node.textContent,
+                        selected,
+                        ratio:
+                            (Math.max(foreground, surface) + 0.05) /
+                            (Math.min(foreground, surface) + 0.05),
+                    });
+                }
+            }
+            return results;
+        });
+    });
+    expect(contrasts.length).toBeGreaterThan(0);
+    for (const { token, selected, ratio } of contrasts)
+        expect(ratio, `${selected ? 'selected' : 'normal'}: ${token}`).toBeGreaterThanOrEqual(4.5);
+    await review(page).screenshot({ path: info.outputPath('dark-sql-token-contrast.png') });
+});
+
 for (const theme of ['Dark', 'Light']) {
     test(`Long SQL reviews keep restrained colors and visible decisions in ${theme} theme`, async ({
         page,
