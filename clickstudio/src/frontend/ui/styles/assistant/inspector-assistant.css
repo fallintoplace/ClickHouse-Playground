@@ -2724,6 +2724,22 @@
   }
 } /* Light theme */
 
+:root[data-theme="click-light"] .proposal-quality.pass {
+  border-color: var(--success-badge-fill);
+  background: var(--success-badge-fill);
+  color: var(--status-badge-ink);
+}
+
+:root[data-theme="click-light"] .proposal-quality.fail {
+  border-color: var(--failure-badge-fill);
+  background: var(--failure-badge-fill);
+  color: var(--status-badge-ink);
+}
+
+:root[data-theme="click-light"] .proposal-quality:is(.pass, .fail) small {
+  color: var(--status-badge-ink);
+}
+
 :root[data-theme="click-light"] .inspector-pane {
   background: var(--page-raised);
 }

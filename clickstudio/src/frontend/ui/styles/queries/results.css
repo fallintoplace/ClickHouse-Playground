@@ -988,6 +988,22 @@
 }
 
 /* Light theme */
+:root[data-theme="click-light"] :is(.script-status, .script-statement-index).status-succeeded {
+  background: var(--success-badge-fill);
+  color: var(--status-badge-ink);
+}
+
+:root[data-theme="click-light"]
+  :is(.script-status, .script-statement-index):is(
+    .status-failed,
+    .status-cancelled,
+    .status-interrupted,
+    .status-timed_out
+  ) {
+  background: var(--failure-badge-fill);
+  color: var(--status-badge-ink);
+}
+
 :root[data-theme="click-light"] :is(.results-tabs) {
   background: var(--panel-raised);
   box-shadow: none;

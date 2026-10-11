@@ -119,6 +119,9 @@
   --amber: #a34f00;
   --red: #c52243;
   --violet: #7c2ed6;
+  --success-badge-fill: #007a45;
+  --failure-badge-fill: var(--red);
+  --status-badge-ink: #fff;
   --active-surface: color-mix(in srgb, var(--accent-action) 62%, var(--panel));
   --active-border: color-mix(in srgb, var(--accent) 64%, var(--line-bright));
   --active-inset: inset 0 0 0 0 transparent;

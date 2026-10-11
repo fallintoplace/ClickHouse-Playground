@@ -807,7 +807,9 @@ for (const [status, score, token] of [
     ['warn', 50, '--amber'],
     ['fail', 0, '--red'],
 ] as const)
-    test(`SQL check badges show the ${status} status color in both themes`, async ({ page }) => {
+    test(`SQL check badges show the ${status} status color in both themes`, async ({
+        page,
+    }, info) => {
         await installProposal(page, proposedSql, {
             quality: {
                 evaluatorVersion: 'test',
@@ -827,15 +829,26 @@ for (const [status, score, token] of [
                 .getByRole('radiogroup', { name: 'Theme' })
                 .getByRole('radio', { name: theme })
                 .click();
-            const expectedColor = await page.evaluate(variable => {
-                const probe = document.createElement('span');
-                probe.style.color = `var(${variable})`;
-                document.body.append(probe);
-                const color = getComputedStyle(probe).color;
-                probe.remove();
-                return color;
-            }, token);
+            const expectedColor = await page.evaluate(
+                variable => {
+                    const probe = document.createElement('span');
+                    probe.style.color = `var(${variable})`;
+                    document.body.append(probe);
+                    const color = getComputedStyle(probe).color;
+                    probe.remove();
+                    return color;
+                },
+                theme === 'Light theme' && status !== 'warn' ? '--status-badge-ink' : token,
+            );
             await expect(badge).toHaveCSS('color', expectedColor);
+            if (theme === 'Light theme' && status !== 'warn') {
+                await expect(badge.locator('small')).toHaveCSS('color', expectedColor);
+                await expect(badge).toHaveCSS(
+                    'background-color',
+                    status === 'pass' ? 'rgb(0, 122, 69)' : 'rgb(197, 34, 67)',
+                );
+                await page.screenshot({ path: info.outputPath(`light-${status}-checks.png`) });
+            }
         }
     });
 

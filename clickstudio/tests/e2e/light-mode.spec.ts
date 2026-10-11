@@ -118,6 +118,9 @@ test(`Light mode keeps workspace and help text readable with yellow accent`, asy
     await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
     await runButton(page).click();
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'succeeded');
+    const succeeded = page.locator('.script-results-trigger .script-statement-index');
+    await expect(succeeded).toHaveCSS('background-color', 'rgb(0, 122, 69)');
+    await expect(succeeded).toHaveCSS('color', 'rgb(255, 255, 255)');
     await expectReadableText(page.locator('.application'), 'Workspace and objects');
     await expect(page.locator('.object-tree-scroll')).toHaveCSS(
         'background-color',
