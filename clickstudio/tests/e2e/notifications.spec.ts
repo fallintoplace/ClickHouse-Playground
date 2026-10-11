@@ -13,6 +13,16 @@ import { newDraft } from '../../src/frontend/queries/editor/drafts/workspace-sta
 const popout = (page: Page) =>
     page.getByRole('button', { name: 'Open editor in a separate window', exact: true });
 
+async function prepareBlockedPopup(page: Page) {
+    const time = new Date('2026-10-11T10:00:00Z');
+    await page.clock.install({ time });
+    await trust(page);
+    await page.evaluate(() => {
+        window.open = () => null;
+    });
+    await page.clock.pauseAt(new Date(time.getTime() + 60000));
+}
+
 async function pendingScript(page: Page) {
     const script: Script = {
         id: 'notification-script',
@@ -107,6 +117,9 @@ test('Trust, saving, and script completion stay quiet', async ({ page }) => {
     await expect(page.locator('.tab-unsaved')).toHaveCount(1);
     await replaceSql(page, 'SELECT 1; SELECT 2');
     await runButton(page).click();
+    await expect(
+        page.getByRole('button', { name: /^Select a statement result/ }),
+    ).toHaveAccessibleName(/Statement 2: succeeded/);
     await openStatementResults(page);
     await expect(
         page.getByRole('menuitemradio', { name: 'Statement 2: succeeded', exact: true }),
@@ -213,11 +226,7 @@ test('An unconfirmed save in another tab persists and opens the affected draft',
 test('Popup error timer pauses while hovered or focused and resumes its remaining time', async ({
     page,
 }) => {
-    await trust(page);
-    await page.evaluate(() => {
-        window.open = () => null;
-    });
-    await page.clock.install();
+    await prepareBlockedPopup(page);
     await popout(page).click();
     const toast = page.locator('.toast-error');
     await expect(toast).toContainText('Editor window blocked. Allow pop-ups and try again.');
@@ -239,11 +248,7 @@ test('Popup error timer pauses while hovered or focused and resumes its remainin
 });
 
 test('Repeating the same popup error does not restart its timer', async ({ page }) => {
-    await trust(page);
-    await page.evaluate(() => {
-        window.open = () => null;
-    });
-    await page.clock.install();
+    await prepareBlockedPopup(page);
     await popout(page).click();
     await expect(page.locator('.toast')).toBeVisible();
     await page.clock.runFor(4000);
