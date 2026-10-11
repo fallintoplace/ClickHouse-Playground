@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { trust } from './helpers.js';
+import { replaceSql, trust } from './helpers.js';
 
 test('Experimental mode uses the Standard right inspector layout', async ({ page }) => {
     await trust(page);
@@ -76,6 +76,8 @@ test('Standard keeps only AI and preserves execution and saving', async ({ page 
     const rail = page.locator('.icon-rail');
     const inspector = page.locator('.inspector-pane.is-docked-inspector');
     await expect(inspector).toHaveCount(0);
+    await expect(page.getByTestId('save-query')).toHaveCount(0);
+    await expect(page.locator('.tab-unsaved')).toHaveCount(0);
     for (const name of ['Objects', 'Reference', 'Query history', 'Saved queries'])
         await expect(rail.getByRole('button', { name, exact: true })).toHaveCount(0);
     await rail.getByRole('button', { name: 'AI', exact: true }).click();
@@ -96,25 +98,32 @@ test('Standard keeps only AI and preserves execution and saving', async ({ page 
             new URL(response.url()).pathname === '/api/documents',
     );
     await expect(page.getByTestId('execution-details')).toHaveCount(0);
-    await page.getByTestId('save-query').click();
+    await page.keyboard.press('ControlOrMeta+s');
     expect((await saved).ok()).toBe(true);
     const sql = await page.locator('.cm-content').innerText();
     const queryId = await page.locator('.execution-bar').getAttribute('data-query-id');
     await page.getByText('Experimental', { exact: true }).click();
+    await expect(page.getByTestId('save-query')).toBeVisible();
     await expect(page.getByTestId('execution-details')).toBeVisible();
     await inspector.getByRole('button', { name: 'More workspace panels', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Saved queries', exact: true }).click();
     await expect(inspector.locator('.document-card')).not.toHaveCount(0);
     await page.getByText('Standard', { exact: true }).click();
     await expect(inspector).toHaveCount(0);
+    await expect(page.getByTestId('save-query')).toHaveCount(0);
+    await expect(page.locator('.tab-unsaved')).toHaveCount(0);
     await expect(page.locator('.cm-content')).toHaveText(sql, { useInnerText: true });
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-query-id', queryId!);
     await expect(
         page.getByRole('table', { name: 'Retained query rows', exact: true }),
     ).toBeVisible();
+    const localSql = 'SELECT 42 AS locally_stored_draft';
+    await replaceSql(page, localSql);
     await page.reload();
     await expect(inspector).toHaveCount(0);
-    await expect(page.locator('.cm-content')).toHaveText(sql, { useInnerText: true });
+    await expect(page.locator('.cm-content')).toHaveText(localSql, { useInnerText: true });
+    await expect(page.getByTestId('save-query')).toHaveCount(0);
+    await expect(page.locator('.tab-unsaved')).toHaveCount(0);
     await rail.getByRole('button', { name: 'AI', exact: true }).click();
     await expect(inspector.getByRole('heading', { name: 'AI', exact: true })).toBeVisible();
     await inspector.getByRole('button', { name: 'Close inspector', exact: true }).click();

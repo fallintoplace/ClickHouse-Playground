@@ -163,32 +163,33 @@ export function WorkspaceDocumentTabs({
                                 {draft.name}
                             </span>
                         )}
-                        {(() => {
-                            const status = draftSaveStatus(
-                                draft,
-                                connectionId,
-                                documents.find(document => document.id === draft.serverId),
-                                {
-                                    saving: Boolean(savingDraftIds[draft.id]),
-                                    pending: !documentsLoaded,
-                                    readError: Boolean(documentsReadError),
-                                },
-                            );
-                            const unsaved = [
-                                'local',
-                                'changed',
-                                'conflict',
-                                'deleted',
-                                'unavailable',
-                            ].includes(status.state);
-                            return unsaved ? (
-                                <span
-                                    className="tab-unsaved"
-                                    title={status.label}
-                                    aria-hidden="true"
-                                />
-                            ) : null;
-                        })()}
+                        {experience === 'expert' &&
+                            (() => {
+                                const status = draftSaveStatus(
+                                    draft,
+                                    connectionId,
+                                    documents.find(document => document.id === draft.serverId),
+                                    {
+                                        saving: Boolean(savingDraftIds[draft.id]),
+                                        pending: !documentsLoaded,
+                                        readError: Boolean(documentsReadError),
+                                    },
+                                );
+                                const unsaved = [
+                                    'local',
+                                    'changed',
+                                    'conflict',
+                                    'deleted',
+                                    'unavailable',
+                                ].includes(status.state);
+                                return unsaved ? (
+                                    <span
+                                        className="tab-unsaved"
+                                        title={status.label}
+                                        aria-hidden="true"
+                                    />
+                                ) : null;
+                            })()}
                         <button
                             type="button"
                             aria-label={`Close ${draft.name}`}

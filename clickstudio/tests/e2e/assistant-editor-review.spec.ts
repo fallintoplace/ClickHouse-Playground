@@ -340,7 +340,8 @@ for (const mode of ['beginner', 'expert']) {
         await expect(review(page).locator('.cm-changedLine')).toHaveText(proposedSql);
         await expect(review(page).locator('.cm-deletedChunk')).toHaveText(originalSql);
         await expect(page.getByTestId('run-button')).toBeDisabled();
-        await expect(page.getByTestId('save-query')).toBeDisabled();
+        if (mode === 'expert') await expect(page.getByTestId('save-query')).toBeDisabled();
+        else await expect(page.getByTestId('save-query')).toHaveCount(0);
         await expect(page.getByTestId('format-sql')).toBeDisabled();
         await page.keyboard.press('ControlOrMeta+s');
         await page.keyboard.press('ControlOrMeta+Enter');

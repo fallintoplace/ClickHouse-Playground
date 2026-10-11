@@ -890,8 +890,12 @@ for (const theme of ['Dark', 'Light'])
             const titleBefore = (await title.boundingBox())!;
             const markBefore = (await header.locator('.results-mark').boundingBox())!;
             const before = (await results.boundingBox())!;
-            const runBefore = (await runButton(page).boundingBox())!;
-            const saveBefore = (await page.getByTestId('save-query').boundingBox())!;
+            const actionBounds = await Promise.all(
+                [
+                    runButton(page),
+                    ...(mode === 'Experimental' ? [page.getByTestId('save-query')] : []),
+                ].map(async button => [button, (await button.boundingBox())!] as const),
+            );
             const message =
                 'Syntax error: failed at position 10 (GROUP) (line 2, col 1): GROUP BY FORMAT JSONCompactStringsEachRowWithNamesAndTypes. Expected one of: token, expression, identifier.';
             await page.route(
@@ -980,10 +984,7 @@ for (const theme of ['Dark', 'Light'])
             const after = (await results.boundingBox())!;
             expect(after.y).toBeCloseTo(before.y, 0);
             expect(after.height).toBeCloseTo(before.height, 0);
-            for (const [button, previous] of [
-                [runButton(page), runBefore],
-                [page.getByTestId('save-query'), saveBefore],
-            ] as const) {
+            for (const [button, previous] of actionBounds) {
                 const current = (await button.boundingBox())!;
                 expect(current.x).toBeCloseTo(previous.x, 0);
                 expect(current.y).toBeCloseTo(previous.y, 0);
@@ -1437,6 +1438,9 @@ for (const mode of ['Standard', 'Experimental'])
             .click();
         const editorPopup = await editorPopupPromise;
         await expect(editorPopup.locator('.cm-content')).toBeVisible();
+        await expect(editorPopup.getByTestId('save-query')).toHaveCount(
+            mode === 'Experimental' ? 1 : 0,
+        );
         await expect(editorPopup.locator('.panel-collapse-button')).toHaveCount(0);
         await expect(editorPopup.locator('.editor-surface')).toHaveCSS('border-radius', '4px');
         await expect(

@@ -105,10 +105,12 @@ async function expectNeutralWorkspace(page: Page) {
     }
 }
 
-async function expectCompactToolbar(page: Page) {
+async function expectCompactToolbar(page: Page, mode: string) {
     await expect(runButton(page)).toHaveCSS('height', '28px');
     await expect(runButton(page)).toHaveCSS('font-size', '11px');
-    await expect(page.getByTestId('save-query')).toHaveCSS('height', '26px');
+    if (mode === 'Experimental')
+        await expect(page.getByTestId('save-query')).toHaveCSS('height', '26px');
+    else await expect(page.getByTestId('save-query')).toHaveCount(0);
     await expect(page.getByTestId('format-sql')).toHaveCSS('height', '26px');
     await expect(page.locator('.results-tabs')).toHaveCSS('height', '26px');
     for (const tab of await page.locator('.results-tabs button').all()) {
@@ -164,9 +166,9 @@ for (const theme of ['Dark', 'Light'])
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
             await runButton(page).click();
             await expect(page.locator('.data-table')).toBeVisible();
-            await expectCompactToolbar(page);
+            await expectCompactToolbar(page, mode);
             await page.setViewportSize({ width: 900, height: 900 });
-            await expectCompactToolbar(page);
+            await expectCompactToolbar(page, mode);
             await page.setViewportSize({ width: 1440, height: 900 });
             const editor = page.locator('.editor-surface');
             await page.locator('.cm-content').focus();
@@ -186,7 +188,7 @@ for (const theme of ['Dark', 'Light'])
                 '.editor-surface',
                 '.results-surface',
                 '[data-testid="run-button"]',
-                '[data-testid="save-query"]',
+                ...(mode === 'Experimental' ? ['[data-testid="save-query"]'] : []),
                 '.panel-window-button',
                 '.panel-collapse-button',
                 '.result-filter',

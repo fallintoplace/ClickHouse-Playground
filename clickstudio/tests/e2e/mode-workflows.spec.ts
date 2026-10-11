@@ -22,7 +22,8 @@ async function beginInCompactMode(page: Page) {
     await expect(page.getByTestId('open-ai')).toBeVisible();
     await expect(page.getByTestId('format-sql')).toBeVisible();
     await expect(page.getByTestId('run-button')).toHaveCount(1);
-    await expect(page.getByTestId('save-query')).toHaveCount(1);
+    await expect(page.getByTestId('save-query')).toHaveCount(0);
+    await expect(page.locator('.tab-unsaved')).toHaveCount(0);
     await expect(page.locator('.draft-status')).toHaveCount(0);
     await expect(page.locator('.restore-sql-trigger')).toHaveCount(0);
     await expect(page.locator('.revision-history-trigger')).toHaveCount(0);
@@ -67,6 +68,8 @@ test('Standard exposes assignment actions and can run a query without opening AI
     await expect(page.getByTestId('open-ai')).toBeVisible();
     await expect(page.getByTestId('format-sql')).toBeVisible();
     await expect(page.getByTestId('run-button')).toBeVisible();
+    await expect(page.getByTestId('save-query')).toHaveCount(0);
+    await expect(page.locator('.tab-unsaved')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Import', exact: true })).toBeVisible();
     const exportButton = page.getByRole('button', { name: 'Export', exact: true });
     await expect(exportButton).toBeEnabled();
@@ -117,6 +120,7 @@ test('Standard exposes assignment actions and can run a query without opening AI
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-query-id', queryId);
     await expect(page.getByTestId('open-ai')).toBeVisible();
     await expect(page.getByTestId('save-query')).toBeVisible();
+    await expect(page.locator('.tab-unsaved')).toHaveCount(1);
     await expect(page.locator('.editor-control-rail')).toBeVisible();
     await expect(page.locator('.parser-switch')).toHaveCount(0);
     await expect(results.getByRole('tab', { name: 'Chart', exact: true })).toBeVisible();
@@ -132,6 +136,8 @@ test('Standard exposes assignment actions and can run a query without opening AI
     await expect(results.getByRole('tab', { name: 'Chart', exact: true })).toBeVisible();
     await expect(page.getByTestId('open-ai')).toBeVisible();
     await expect(page.locator('.parser-switch')).toHaveCount(0);
+    await expect(page.getByTestId('save-query')).toHaveCount(0);
+    await expect(page.locator('.tab-unsaved')).toHaveCount(0);
 });
 
 test('Experimental keeps one format action and opens AI from the workspace rail', async ({
@@ -289,7 +295,8 @@ test('Standard shows a single document tab and keeps tabs for multiple queries',
     await expect(page.locator('.document-tabs.is-compact-single')).toHaveCount(0);
     await expect(tabs).toHaveCount(2);
     await expect(page.getByTestId('new-sql')).toBeVisible();
-    await expect(page.getByTestId('save-query')).toHaveCount(1);
+    await expect(page.getByTestId('save-query')).toHaveCount(0);
+    await expect(page.locator('.tab-unsaved')).toHaveCount(0);
     await tabs
         .last()
         .getByRole('button', { name: /^Close / })
@@ -921,28 +928,28 @@ for (const theme of ['Dark', 'Light'])
             await page.setViewportSize({ width, height: 900 });
             await expect(page.getByTestId('save-query').locator('svg')).toHaveCSS('width', '14px');
             const readActionStyles = () =>
-                header
-                    .locator('[data-testid="save-query"], [data-testid="run-button"]')
-                    .evaluateAll(elements =>
-                        elements.map(element => {
-                            const style = getComputedStyle(element);
-                            const bounds = element.getBoundingClientRect();
-                            return {
-                                width: bounds.width,
-                                height: bounds.height,
-                                fontSize: style.fontSize,
-                                padding: style.padding,
-                                gap: style.gap,
-                                borderRadius: style.borderRadius,
-                                color: style.color,
-                                background: style.background,
-                                shadow: style.boxShadow,
-                            };
-                        }),
-                    );
+                header.getByTestId('run-button').evaluateAll(elements =>
+                    elements.map(element => {
+                        const style = getComputedStyle(element);
+                        const bounds = element.getBoundingClientRect();
+                        return {
+                            width: bounds.width,
+                            height: bounds.height,
+                            fontSize: style.fontSize,
+                            padding: style.padding,
+                            gap: style.gap,
+                            borderRadius: style.borderRadius,
+                            color: style.color,
+                            background: style.background,
+                            shadow: style.boxShadow,
+                        };
+                    }),
+                );
             const experimentalStyles = await readActionStyles();
             await page.getByText('Standard', { exact: true }).click();
             await expect(page.locator('.workspace-root')).toHaveClass(/is-beginner/);
+            await expect(page.getByTestId('save-query')).toHaveCount(0);
+            await expect(page.locator('.tab-unsaved')).toHaveCount(0);
             await expect.poll(readActionStyles).toEqual(experimentalStyles);
             await useAdvancedMode(page);
             await expect(run).toBeVisible();

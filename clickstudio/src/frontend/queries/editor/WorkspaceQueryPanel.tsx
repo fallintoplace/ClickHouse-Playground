@@ -520,7 +520,7 @@ function renderQueryHeading({
                 >
                     {copy.common.format}
                 </Button>
-                {saveButton}
+                {experience === 'expert' && saveButton}
                 {state.draftFeedback.map(feedback => (
                     <DraftFeedbackNotice
                         key={`${active.id}:${feedback.source}`}

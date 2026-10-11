@@ -358,13 +358,15 @@ test('server errors at end of input highlight the final line and clear after edi
     expect(errors).toEqual([]);
 });
 
-test('Cmd/Ctrl+S saves SQL typed in the detached window', async ({ page }) => {
+test('Cmd/Ctrl+S saves SQL typed in the Standard detached window', async ({ page }) => {
     await trust(page);
+    await page.getByText('Standard', { exact: true }).click();
     const opened = page.waitForEvent('popup');
     await page
         .getByRole('button', { name: 'Open editor in a separate window', exact: true })
         .click();
     const popup = await opened;
+    await expect(popup.getByTestId('save-query')).toHaveCount(0);
     await replaceSql(popup, 'SELECT 42 AS detached_save');
     const submitted = page.waitForResponse(
         response =>
