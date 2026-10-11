@@ -49,6 +49,7 @@ export const copy = {
         history: 'Query history',
         assistant: 'AI',
         results: 'Results',
+        table: 'Table',
         chart: 'Chart',
         map: 'Map',
         insights: 'Insights',

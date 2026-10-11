@@ -317,7 +317,7 @@ test('Result view and page stay with their draft run', async ({ page }) => {
         'true',
     );
     await expect(firstResults.locator('.chart-canvas svg[role="img"]')).toBeVisible();
-    await firstResults.getByRole('tab', { name: 'Results', exact: true }).click();
+    await firstResults.getByRole('tab', { name: 'Table', exact: true }).click();
     await expect(
         firstResults.getByRole('status', { name: 'Page 2 of 2', exact: true }),
     ).toBeVisible();
@@ -2244,7 +2244,7 @@ test('A delayed chart snapshot cannot update the draft after selecting another s
         await first.click();
         await results.getByRole('tab', { name: 'Chart', exact: true }).click();
         await snapshotStarted;
-        await results.getByRole('tab', { name: 'Results', exact: true }).click();
+        await results.getByRole('tab', { name: 'Table', exact: true }).click();
         await openStatementResults(results);
         await second.click();
         await openStatementResults(results);

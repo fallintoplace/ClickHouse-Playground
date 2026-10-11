@@ -176,7 +176,7 @@ Shows the planned processor stages and which stages can run in parallel.
 
 Use a connection with ClickHouse 26.7 or newer for native `EXPLAIN ANALYZE`. The bundled local server uses ClickHouse 24.6.
 
-The runtime graph shows measured time, data flow, and parallel work. It follows data from reads toward the result and highlights slower stages. Raw output remains in the Results tab.
+The runtime graph shows measured time, data flow, and parallel work. It follows data from reads toward the result and highlights slower stages. Raw output remains in the Table tab.
 
 Sample mode shows fixed example measurements. Live mode measures the selected query.
 

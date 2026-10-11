@@ -153,7 +153,7 @@ test('Switching between result and chart views keeps the same execution selected
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();
     await expect(results.locator('svg[role="img"]')).toBeVisible();
     await expect(results.getByRole('table')).toHaveCount(0);
-    await results.getByRole('tab', { name: 'Results', exact: true }).click();
+    await results.getByRole('tab', { name: 'Table', exact: true }).click();
     await expect(results.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
     expect(runs).toBe(1);
 });

@@ -467,7 +467,7 @@ test('A chart with no rows keeps its fallback table controls in the Results head
     await expect(results.locator('.result-row-count')).toHaveText('0 of 0 rows');
     await expect(results.getByText('This query returned zero rows.')).toBeVisible();
     await expect(results.locator('.table-pagination, .result-pagination')).toHaveCount(0);
-    await results.getByRole('tab', { name: 'Results', exact: true }).click();
+    await results.getByRole('tab', { name: 'Table', exact: true }).click();
     await expect(filter).toBeHidden();
     await expect(results.getByRole('button', { name: 'Filter', exact: true })).toHaveAttribute(
         'aria-expanded',
@@ -504,7 +504,7 @@ test('Paged truncated results keep header navigation when returning from Chart',
     await expect(
         header.getByRole('navigation', { name: 'Result pagination', exact: true }),
     ).toHaveCount(0);
-    await results.getByRole('tab', { name: 'Results', exact: true }).click();
+    await results.getByRole('tab', { name: 'Table', exact: true }).click();
     await expect(header.locator('.result-row-count')).toHaveText('201–250 / 250 rows');
     await expect(
         header.getByRole('navigation', { name: 'Result pagination', exact: true }),

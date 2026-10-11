@@ -189,7 +189,7 @@ test('EXPLAIN INDEXES opens an interactive index graph and keeps the raw result 
     );
     await expect(controls.getByLabel('Zoom level')).toHaveText(zoomBeforeEditorFocus);
 
-    await page.getByRole('tab', { name: 'Results', exact: true }).click();
+    await page.getByRole('tab', { name: 'Table', exact: true }).click();
     await expect(page.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
 });
 
@@ -255,7 +255,7 @@ test('EXPLAIN PLAN opens a graph with a tree view and keeps the raw result avail
         plan.getByRole('region', { name: 'Logical query plan · Graph', exact: true }),
     ).toBeVisible();
 
-    await page.getByRole('tab', { name: 'Results', exact: true }).click();
+    await page.getByRole('tab', { name: 'Table', exact: true }).click();
     await expect(page.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
 });
 
@@ -280,7 +280,7 @@ test('EXPLAIN ANALYZE opens a measured runtime graph and retains the raw result'
     await expect(inspection).toContainText('1.24 million');
     await expect(inspection).toContainText('87.6%');
 
-    await page.getByRole('tab', { name: 'Results', exact: true }).click();
+    await page.getByRole('tab', { name: 'Table', exact: true }).click();
     await expect(page.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
 });
 

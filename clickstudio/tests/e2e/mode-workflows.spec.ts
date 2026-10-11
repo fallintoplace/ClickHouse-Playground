@@ -90,11 +90,11 @@ test('Standard exposes assignment actions and can run a query without opening AI
     await expect(
         results.getByRole('table', { name: 'Retained query rows', exact: true }),
     ).toBeVisible();
-    await expect(results.getByRole('tab', { name: 'Results', exact: true })).toBeVisible();
+    await expect(results.getByRole('tab', { name: 'Table', exact: true })).toBeVisible();
     await expect(results.getByRole('tab', { name: 'Chart', exact: true })).toBeVisible();
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();
     await expect(results.locator('.chart-workspace, .chart-table-fallback')).toBeVisible();
-    await results.getByRole('tab', { name: 'Results', exact: true }).click();
+    await results.getByRole('tab', { name: 'Table', exact: true }).click();
     await expect(exportButton).toBeEnabled();
     await exportButton.click();
     const [download] = await Promise.all([
@@ -959,7 +959,7 @@ for (const theme of ['Dark', 'Light'])
         await run.click();
         const results = page.getByRole('region', { name: 'Query results', exact: true });
         await expect(results.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
-        await expect(results.getByRole('tab', { name: 'Results', exact: true })).toHaveAttribute(
+        await expect(results.getByRole('tab', { name: 'Table', exact: true })).toHaveAttribute(
             'aria-selected',
             'true',
         );

@@ -114,7 +114,7 @@ export function resultPanelAriaLabel(view: ResultsView, copy: Copy['common']): s
 export function resultsTabLabel(view: ResultsView, copy: Copy['common']): string {
     switch (view) {
         case 'results':
-            return copy.results;
+            return copy.table;
         case 'chart':
             return copy.chart;
         case 'map':
