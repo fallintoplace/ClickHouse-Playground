@@ -91,6 +91,14 @@ for (const mode of ['Standard', 'Experimental']) {
         );
         const runs = countRunRequests(page);
         await trust(page);
+        for (const theme of ['Light', 'Dark']) {
+            await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+            await expect(page.getByTestId('new-sql')).toHaveCSS(
+                'background-color',
+                'rgb(250, 255, 105)',
+            );
+            await expect(page.getByTestId('new-sql')).toHaveCSS('color', 'rgb(21, 25, 26)');
+        }
         const sql = 'SELECT 42 AS keep_my_draft';
         await replaceSql(page, sql);
         const tabs = page.getByRole('tablist', { name: 'SQL documents', exact: true });
@@ -279,7 +287,9 @@ test("Switching connections never reuses another connection's result", async ({ 
     ).toBeVisible();
 });
 
-test('Closing and reopening a result tab does not execute SQL again', async ({ page }) => {
+test('Closing a result tab returns to a blank editor without executing SQL again', async ({
+    page,
+}) => {
     const runs = countRunRequests(page);
     await trust(page);
     await page
@@ -294,37 +304,12 @@ test('Closing and reopening a result tab does not execute SQL again', async ({ p
     await page.getByTestId('run-button').click();
     const results = page.getByRole('region', { name: 'Query results' });
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'succeeded');
-    const queryId = await currentQueryId(page);
     await page.getByRole('button', { name: 'Close Recoverable.sql', exact: true }).click();
     await expect(results).toHaveCount(0);
-    const restoreTrigger = page.getByRole('button', { name: 'Restore', exact: true });
-    await restoreTrigger.click();
-    const restoreMenu = page.getByRole('menu', { name: 'Recently closed SQL tabs', exact: true });
-    const placement = await restoreMenu.evaluate(element => {
-        const trigger = document.querySelector<HTMLElement>('.restore-sql-trigger');
-        if (!trigger) throw new Error('Restore trigger missing');
-        const menuRect = element.getBoundingClientRect();
-        const triggerRect = trigger.getBoundingClientRect();
-        return {
-            menuLeft: menuRect.left,
-            menuRight: menuRect.right,
-            triggerLeft: triggerRect.left,
-            triggerRight: triggerRect.right,
-            viewportWidth: window.innerWidth,
-        };
-    });
-    expect(placement.menuLeft).toBeGreaterThanOrEqual(0);
-    expect(placement.menuRight).toBeLessThanOrEqual(placement.viewportWidth);
-    expect(placement.menuRight).toBeLessThanOrEqual(placement.triggerRight + 1);
-    expect(placement.menuLeft).toBeLessThan(placement.triggerLeft);
-    await restoreMenu.getByRole('menuitem', { name: /Recoverable\.sql/ }).click();
-    await expect(page.getByRole('textbox', { name: 'SQL document name', exact: true })).toHaveValue(
-        'Recoverable.sql',
-    );
-    await expect(page.getByRole('textbox', { name: 'value:UInt64', exact: true })).toHaveValue(
-        '9007199254740993',
-    );
-    await expect(page.locator('.execution-bar')).toHaveAttribute('data-query-id', queryId);
+    await expect(page.locator('.cm-content')).toHaveText('');
+    await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'ready');
+    await expect(page.locator('.document-tab-actions').getByRole('button')).toHaveCount(1);
+    await expect(page.getByTestId('new-sql')).toBeVisible();
     expect(runs()).toBe(1);
 });
 

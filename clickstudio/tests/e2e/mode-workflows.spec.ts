@@ -298,7 +298,7 @@ test('Standard shows a single document tab and keeps tabs for multiple queries',
     await expect(tabs).toHaveCount(1);
     await expect(tabs).toHaveAttribute('aria-selected', 'true');
     await expect(tabs.getByRole('button', { name: /^Close / })).toHaveCount(1);
-    await expect(page.locator('.restore-sql-trigger')).toHaveCount(1);
+    await expect(page.locator('.restore-sql-trigger')).toHaveCount(0);
 });
 
 test('Switching to Experimental keeps the AI chat, query and run evidence', async ({ page }) => {

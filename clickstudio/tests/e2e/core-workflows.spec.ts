@@ -660,9 +660,8 @@ test('Restoring a version keeps run status aligned and retains its result while 
         await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'running');
         await expect(results.locator('.result-execution-progress')).toContainText('Running');
 
-        await page
-            .getByRole('button', { name: 'Version history for Getting started.sql', exact: true })
-            .click();
+        await page.getByRole('button', { name: 'More workspace panels', exact: true }).click();
+        await page.getByRole('menuitem', { name: 'Version history', exact: true }).click();
         const versionList = page.locator('.revision-list');
         await expect(versionList.getByRole('button', { name: /Version 1/ })).toBeVisible();
         await versionList.getByRole('button', { name: /Version 1/ }).click();

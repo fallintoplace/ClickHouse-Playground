@@ -196,9 +196,8 @@ for (const scenario of ['edit', 'switch tab'] as const) {
         await page.getByTestId('save-query').click();
         expect((await secondSave).ok()).toBe(true);
 
-        await page
-            .getByRole('button', { name: 'Version history for Getting started.sql', exact: true })
-            .click();
+        await page.getByRole('button', { name: 'More workspace panels', exact: true }).click();
+        await page.getByRole('menuitem', { name: 'Version history', exact: true }).click();
         await page
             .locator('.revision-list')
             .getByRole('button', { name: /Version 1/ })

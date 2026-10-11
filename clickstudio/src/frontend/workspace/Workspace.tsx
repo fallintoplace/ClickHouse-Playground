@@ -9,8 +9,7 @@ import { InspectorPane } from './layout/panels/InspectorPane';
 import { ObservabilityExplorer } from '../database/explorer/activity/ObservabilityExplorer';
 import { OverlayPortal } from '../ui/components/OverlayPortal';
 import { RestoreRevisionDialog } from '../queries/saved-queries/RestoreRevisionDialog';
-import { RestoreSqlMenu } from '../queries/editor/tabs/RestoreSqlMenu';
-import { Button, cx } from '../ui/components/ui';
+import { cx } from '../ui/components/ui';
 import { Icon } from '../ui/components/icons';
 import { inspectorLabel } from './layout/panels/labels';
 import { ExecutionBar, RailButton } from './layout/WorkspaceChrome';
@@ -25,13 +24,7 @@ import {
     PRIMARY_INSPECTOR_NAVIGATION,
 } from './layout/panels/inspector-navigation';
 import { PLAYGROUND_CONNECTION_ID } from '../database/connections/playground';
-import {
-    closeDraft,
-    MAX_TABS,
-    newDraft,
-    reopenDraft,
-    type Draft,
-} from '../queries/editor/drafts/workspace-state';
+import { closeDraft, newDraft, type Draft } from '../queries/editor/drafts/workspace-state';
 
 import { WorkspaceToast } from './layout/notifications/WorkspaceToast';
 import {
@@ -732,10 +725,6 @@ function renderDocumentTabs({
         openNewDraft,
         runExample,
         startBlankSql,
-        workspaceRef,
-        setError,
-        panels,
-        inspector,
     } = model;
 
     return (
@@ -841,40 +830,6 @@ function renderDocumentTabs({
                         onRunExample={runExample}
                         onStartBlankSql={startBlankSql}
                     />
-                    {!!workspace.closedTabs?.length && (
-                        <RestoreSqlMenu
-                            closedTabs={workspace.closedTabs}
-                            copy={copy.common}
-                            onRestore={draftId => {
-                                if (workspaceRef.current.tabs.length >= MAX_TABS) {
-                                    setError(
-                                        `${MAX_TABS} tabs open. Close one to restore this draft.`,
-                                        { tone: 'warning', timeoutMs: 5000 },
-                                    );
-                                    return false;
-                                }
-                                const restored = reopenDraft(workspaceRef.current, draftId);
-                                setWorkspace(restored);
-                                if (restored.activeId)
-                                    panels.revealPanelTemporarily('query', restored.activeId);
-                                window.requestAnimationFrame(() => editor.current?.focus());
-                                return true;
-                            }}
-                        />
-                    )}
-                    {experience === 'expert' && active.serverId && (
-                        <Button
-                            variant="ghost"
-                            className="revision-history-trigger"
-                            aria-label={`Version history for ${active.name}`}
-                            aria-pressed={inspector === 'revisions'}
-                            title="View saved versions"
-                            onClick={() => showInspector('revisions')}
-                        >
-                            <Icon name="history" />
-                            <span>Versions</span>
-                        </Button>
-                    )}
                 </>
             }
         />
