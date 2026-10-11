@@ -186,16 +186,28 @@ export function ExecutionBar({
             data-query-id={currentRun?.queryId}
         >
             <div className="execution-state">
-                {!failureInToolbar && renderCurrentStatus()}
-                {currentRun && scriptRunning && (
-                    <span className="execution-kind">{copy.runScript.toUpperCase()}</span>
-                )}
-                {currentRun && (
-                    <>
-                        {!failureInToolbar && <span className="execution-separator" />}
-                        <strong>{elapsedMs?.toLocaleString()} ms</strong>
-                    </>
-                )}
+                <div className="execution-summary">
+                    {!failureInToolbar && renderCurrentStatus()}
+                    {currentRun && scriptRunning && (
+                        <span className="execution-kind">{copy.runScript.toUpperCase()}</span>
+                    )}
+                    {currentRun && (
+                        <>
+                            {!failureInToolbar && <span className="execution-separator" />}
+                            <strong>{elapsedMs?.toLocaleString()} ms</strong>
+                            <Button
+                                variant="ghost"
+                                className="execution-details-button"
+                                data-testid="execution-details"
+                                aria-label="Execution details"
+                                title="Open execution details"
+                                onClick={onOpenDetails}
+                            >
+                                Details
+                            </Button>
+                        </>
+                    )}
+                </div>
                 <span className="execution-server-version" data-testid="server-version">
                     {serverLabel}
                 </span>
@@ -233,21 +245,7 @@ export function ExecutionBar({
                     )}
                 </div>
             )}
-            <div className="execution-right">
-                {currentRun && (
-                    <Button
-                        variant="ghost"
-                        className="execution-details-button"
-                        data-testid="execution-details"
-                        aria-label="Execution details"
-                        title="Open execution details"
-                        onClick={onOpenDetails}
-                    >
-                        Details
-                    </Button>
-                )}
-                {helpButton}
-            </div>
+            <div className="execution-right">{helpButton}</div>
             {executionInProgress && <span className="execution-progress-line" />}
         </footer>
     );

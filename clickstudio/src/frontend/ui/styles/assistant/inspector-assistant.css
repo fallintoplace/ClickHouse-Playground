@@ -2396,6 +2396,7 @@
     color: var(--accent);
   }
   .execution-state,
+  .execution-summary,
   .execution-telemetry,
   .execution-right {
     display: flex;
@@ -2419,7 +2420,10 @@
     flex: 0 1 auto;
     flex-wrap: wrap;
   }
-  .execution-state > strong {
+  .execution-summary {
+    flex: none;
+  }
+  .execution-summary > strong {
     color: var(--text);
     font-family: var(--font-mono);
     font-size: 10px;
@@ -2918,7 +2922,8 @@
 }
 
 @media (max-width: 560px) {
-  .execution-state {
+  .execution-state,
+  .execution-summary {
     gap: 7px;
   }
   .execution-telemetry {
