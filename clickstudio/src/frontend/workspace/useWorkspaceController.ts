@@ -289,7 +289,6 @@ export function useWorkspaceController({
     );
     const formatActiveSql = useWorkspaceSqlFormatter(
         active,
-        setWorkspace,
         editor,
         nativeParserStatus,
         Boolean(assistant.editorProposal),

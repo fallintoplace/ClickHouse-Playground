@@ -1,4 +1,12 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
+import {
+    forwardRef,
+    useCallback,
+    useEffect,
+    useImperativeHandle,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+} from 'react';
 import type { RefCallback } from 'react';
 import { EditorState, Compartment, StateEffect, StateField } from '@codemirror/state';
 import {
@@ -20,23 +28,15 @@ import {
     indentSelection,
 } from '@codemirror/commands';
 import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
-import {
-    bracketMatching,
-    foldGutter,
-    foldKeymap,
-    syntaxHighlighting,
-    HighlightStyle,
-} from '@codemirror/language';
-import { tags } from '@lezer/highlight';
+import { bracketMatching, foldGutter, foldKeymap, syntaxHighlighting } from '@codemirror/language';
 import {
     autocompletion,
-    ifNotIn,
     nextSnippetField,
     prevSnippetField,
     type CompletionContext,
     type CompletionResult,
 } from '@codemirror/autocomplete';
-import { sql, SQLDialect } from '@codemirror/lang-sql';
+import { sql } from '@codemirror/lang-sql';
 import { lintGutter, setDiagnostics } from '@codemirror/lint';
 import type { ApiError } from '../../../../shared/common/errors';
 import type { Schema } from '../../../../shared/database/schema/types';
@@ -50,99 +50,46 @@ import {
     type NativeParseStatement,
     type NativeParserStatus,
 } from '../../../../shared/sql/parser';
-import { hasSqlComments, quoteIdentifier } from '../../../../shared/sql/sql';
+import { formatSql, hasSqlComments, quoteIdentifier } from '../../../../shared/sql/sql';
 import {
     activeStatementIndex,
-    CLICKHOUSE_KEYWORDS,
     completionTarget,
     matchingNames,
     tableAliases as aliasesFor,
+    tableAlias,
 } from '../tools';
 import {
     appendSqlSnippet,
     clickhouseSnippetCompletions,
     sqlEditorTools,
     sqlStatementOutline,
+    sqlLexicalContext,
 } from './editor-tools';
+import {
+    clickhouse,
+    clickhouseFunctions,
+    keywordCompletions,
+    sqlEditorTheme,
+    sqlHighlightStyle,
+} from './editor-language';
+import {
+    indexedTable,
+    indexSchema,
+    tableColumns,
+    tablesInDatabase,
+    sqlCompletionProtected,
+    sqlHoverTarget,
+    schemaHoverInfo,
+    type SchemaIndex,
+} from '../schema-context';
+import {
+    captureSqlEditorSession,
+    restoreSqlEditorState,
+    sqlDocumentEdit,
+    type SqlEditorSessions,
+} from './editor-session';
 import { clickHouseNativeParser } from '../parser/clickhouse-native-parser';
 import { ScrollEdgeFrame } from '../../../ui/components/ScrollEdgeShadows';
-export const sqlHighlightStyle = HighlightStyle.define([
-    { tag: tags.keyword, color: 'var(--editor-keyword)', fontWeight: '600' },
-    { tag: tags.number, color: 'var(--editor-number)' },
-    { tag: [tags.bool, tags.null], color: 'var(--editor-literal)' },
-    { tag: [tags.string, tags.escape], color: 'var(--editor-string)' },
-    { tag: tags.special(tags.string), color: 'var(--editor-foreground)' },
-    { tag: tags.standard(tags.name), color: 'var(--editor-function)' },
-    { tag: tags.comment, color: 'var(--editor-comment)' },
-    { tag: tags.typeName, color: 'var(--editor-type)' },
-    { tag: [tags.operator, tags.punctuation], color: 'var(--editor-punctuation)' },
-]);
-export const sqlEditorTheme = (dark: boolean) =>
-    EditorView.theme(
-        {
-            '&': {
-                height: '100%',
-                backgroundColor: 'var(--panel)',
-                color: 'var(--editor-foreground)',
-            },
-            '.cm-scroller': {
-                fontFamily: 'var(--font-mono)',
-                fontSize: '12px',
-                lineHeight: '1.55',
-                fontVariantLigatures: 'none',
-                fontVariantNumeric: 'tabular-nums',
-            },
-            '.cm-gutters': {
-                backgroundColor: 'var(--panel)',
-                color: 'var(--muted)',
-                border: 'none',
-                fontFamily: 'var(--font-mono)',
-                fontVariantNumeric: 'tabular-nums',
-            },
-            '.cm-content': { minHeight: '220px' },
-            '.cm-activeLine': { backgroundColor: 'var(--editor-active-line)' },
-            '.cm-activeLineGutter': { backgroundColor: 'var(--editor-active-gutter)' },
-            '.cm-cursor': { borderLeftColor: 'var(--text)' },
-            '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': {
-                backgroundColor: 'var(--editor-selection)',
-            },
-        },
-        { dark },
-    );
-const keywordCompletions = [...new Set(CLICKHOUSE_KEYWORDS.split(' '))].map(label => ({
-    label,
-    type: 'keyword',
-}));
-export const clickhouse = SQLDialect.define({
-    keywords: CLICKHOUSE_KEYWORDS.toLowerCase().replace(/\bnull\b/g, ''),
-    types: 'String Bool UInt8 UInt16 UInt32 UInt64 UInt128 UInt256 Int8 Int16 Int32 Int64 Int128 Int256 Float32 Float64 Date Date32 DateTime DateTime64 Nullable Array Tuple Map Decimal LowCardinality UUID JSON'.toLowerCase(),
-    builtin:
-        'count sum avg min max uniq uniqExact quantile median toDate toDateTime toStartOfDay toStartOfHour now today numbers arrayJoin arrayMap arrayFilter multiIf ifNull coalesce'.toLowerCase(),
-    doubleQuotedStrings: false,
-    identifierQuotes: '`"',
-    hashComments: true,
-});
-const clickhouseFunctions = [
-    ['count', 'Aggregate count of rows'],
-    ['sum', 'Aggregate numeric values'],
-    ['avg', 'Average numeric values'],
-    ['uniqExact', 'Exact distinct count'],
-    ['quantile', 'Approximate quantile aggregate'],
-    ['median', 'Median aggregate'],
-    ['toDate', 'Convert a value to Date'],
-    ['toDateTime', 'Convert a value to DateTime'],
-    ['toStartOfDay', 'Round a DateTime down to the day'],
-    ['toStartOfHour', 'Round a DateTime down to the hour'],
-    ['now', 'Current server DateTime'],
-    ['today', 'Current server Date'],
-    ['numbers', 'Generate a sequence of numbers'],
-    ['arrayJoin', 'Expand an array into rows'],
-    ['arrayMap', 'Map a lambda over an array'],
-    ['arrayFilter', 'Filter an array with a lambda'],
-    ['multiIf', 'Multi-branch conditional'],
-    ['ifNull', 'Replace NULL with a fallback'],
-    ['coalesce', 'Return the first non-NULL value'],
-] as const;
 const setNativeDecorations = StateEffect.define<DecorationSet>();
 const nativeDecorations = StateField.define<DecorationSet>({
     create: () => Decoration.none,
@@ -212,41 +159,10 @@ function decorationsForNativeResults(statements: readonly NativeParseStatement[]
     );
 }
 
-const unquote = (value: string) => value.replace(/^`|`$/g, '').replace(/^"|"$/g, '');
-type SchemaIndex = {
-    columns: Schema['columns'];
-    columnsByTable: Map<string, Schema['columns']>;
-    tables: Schema['tables'];
-    tablesByName: Map<string, Schema['tables'][number]>;
-    codeMirror: Record<string, string[]>;
-};
-const tableKey = (database: string, table: string) => `${database}\u0000${table}`;
-function indexSchema(schema: Schema | undefined): SchemaIndex {
-    const columns = schema?.columns ?? [],
-        columnsByTable = new Map<string, Schema['columns']>(),
-        tablesByName = new Map<string, Schema['tables'][number]>(),
-        codeMirror: Record<string, string[]> = {};
-    for (const column of columns) {
-        const key = tableKey(column.database, column.table),
-            grouped = columnsByTable.get(key) ?? [];
-        grouped.push(column);
-        columnsByTable.set(key, grouped);
-    }
-    for (const table of schema?.tables ?? []) {
-        const qualified = `${table.database}.${table.name}`.toLowerCase(),
-            short = table.name.toLowerCase();
-        tablesByName.set(qualified, table);
-        if (!tablesByName.has(short)) tablesByName.set(short, table);
-        codeMirror[`${table.database}.${table.name}`] = (
-            columnsByTable.get(tableKey(table.database, table.name)) ?? []
-        ).map(column => column.name);
-    }
-    return { columns, columnsByTable, tables: schema?.tables ?? [], tablesByName, codeMirror };
-}
-function indexedTable(index: SchemaIndex, name: string) {
-    return index.tablesByName.get(name.toLowerCase());
-}
 function completionSource(context: CompletionContext, index: SchemaIndex): CompletionResult | null {
+    const source = context.state.doc.toString();
+    if (sqlCompletionProtected(context.state.field(sqlLexicalContext), source, context.pos))
+        return null;
     const line = context.state.doc.lineAt(context.pos);
     const target = completionTarget(
         context.state.sliceDoc(line.from, context.pos),
@@ -257,14 +173,12 @@ function completionSource(context: CompletionContext, index: SchemaIndex): Compl
     const statements = context.state.field(sqlStatementOutline).statements;
     const statement = statements[activeStatementIndex(statements, context.pos)];
     const aliases = aliasesFor(statement?.sql ?? '');
-    const tableName = qualifier
-        ? (aliases.get(unquote(qualifier).toLowerCase()) ?? qualifier)
-        : undefined;
+    const tableName = qualifier ? (tableAlias(aliases, qualifier) ?? qualifier) : undefined;
     const table = tableName ? indexedTable(index, tableName) : undefined;
     let candidates: typeof index.columns;
 
     if (table) {
-        candidates = index.columnsByTable.get(tableKey(table.database, table.name)) ?? [];
+        candidates = tableColumns(index, table);
     } else if (qualifier) {
         candidates = [];
     } else {
@@ -282,9 +196,7 @@ function completionSource(context: CompletionContext, index: SchemaIndex): Compl
         if (table) {
             tableCandidates = [];
         } else {
-            tableCandidates = index.tables.filter(
-                item => item.database.toLowerCase() === qualifier.toLowerCase(),
-            );
+            tableCandidates = tablesInDatabase(index, qualifier);
         }
     } else {
         tableCandidates = index.tables;
@@ -316,36 +228,13 @@ function completionSource(context: CompletionContext, index: SchemaIndex): Compl
         ],
     };
 }
-function hoverInfo(index: SchemaIndex, sqlText: string, label: string) {
-    const functionInfo = clickhouseFunctions.find(
-        ([name]) => name.toLowerCase() === label.toLowerCase(),
-    );
-    if (functionInfo) return `${functionInfo[0]}() · ${functionInfo[1]}`;
-    const aliases = aliasesFor(sqlText),
-        raw = unquote(label),
-        qualified = raw.split('.'),
-        columnName = qualified.at(-1)!.toLowerCase(),
-        tableName =
-            qualified.length > 1
-                ? (aliases.get(qualified.slice(0, -1).join('.').toLowerCase()) ??
-                  qualified.slice(0, -1).join('.'))
-                : undefined;
-    const matchedTable = tableName ? indexedTable(index, tableName) : undefined,
-        columns = matchedTable
-            ? (index.columnsByTable.get(tableKey(matchedTable.database, matchedTable.name)) ?? [])
-            : index.columns;
-    const column = columns.find(c => c.name.toLowerCase() === columnName);
-    if (column)
-        return `${column.database}.${column.table}.${column.name} · ${column.type}${column.comment ? ` · ${column.comment}` : ''}`;
-    const table = indexedTable(index, raw);
-    return table ? `${table.database}.${table.name} · ${table.engine}` : undefined;
-}
 export interface EditorHandle {
     insert: (text: string) => void;
     insertSnippet: (template: string) => boolean;
     focus: () => void;
     revealRange: (from: number, to: number) => void;
     indent: () => void;
+    formatBuiltIn: (source: string) => void;
     retryNativeParser: () => void;
     formatNative: () => Promise<'formatted' | 'fallback' | 'unavailable' | 'rejected'>;
     snapshot: () => {
@@ -356,6 +245,9 @@ export interface EditorHandle {
 }
 export interface SqlEditorProps {
     value: string;
+    documentId: string;
+    sessions: SqlEditorSessions;
+    database?: string;
     from: number;
     to: number;
     schema?: Schema;
@@ -378,7 +270,10 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
     const nativeDiagnostics = useRef<NativeDiagnostic[]>([]),
         validationRevision = useRef(0);
     current.current = props;
-    const schemaIndex = useMemo(() => indexSchema(props.schema), [props.schema]),
+    const schemaIndex = useMemo(
+            () => indexSchema(props.schema, props.database),
+            [props.schema, props.database],
+        ),
         schemaIndexRef = useRef(schemaIndex);
     schemaIndexRef.current = schemaIndex;
     const applyDiagnostics = useCallback(() => {
@@ -408,7 +303,7 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
                 source: 'ClickHouse server',
             });
             const decorations =
-                from < editor.state.doc.length
+                editor.state.doc.length > 0
                     ? [
                           Decoration.line({ class: 'cm-server-error-line' }).range(
                               editor.state.doc.lineAt(from).from,
@@ -431,25 +326,26 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
         }
         editor.dispatch(setDiagnostics(editor.state, diagnostics));
     }, []);
-    const languageExtension = useCallback(
-        () => sql({ dialect: clickhouse, schema: schemaIndexRef.current.codeMirror }),
-        [],
-    );
+    const languageExtension = useCallback(() => sql({ dialect: clickhouse }), []);
     const invalidateNativeValidation = useCallback(() => {
         validationRevision.current++;
     }, []);
     const themeExtension = () => sqlEditorTheme(current.current.dark);
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!element.current) return;
         const p = current.current;
+        const session = p.sessions.get(p.documentId);
+        const appendedExtensions = [...(session?.appendedExtensions ?? [])];
+        const restoredScroll =
+            session?.state.doc.toString() === p.value ? session.scroll : undefined;
+        let scrollMeasured = false;
         const editor = new EditorView({
             parent: element.current,
-            state: EditorState.create({
-                doc: p.value,
-                selection: {
-                    anchor: Math.min(p.from, p.value.length),
-                    head: Math.min(p.to, p.value.length),
-                },
+            scrollTo: restoredScroll,
+            state: restoreSqlEditorState(session, {
+                value: p.value,
+                from: p.from,
+                to: p.to,
                 extensions: [
                     sqlEditorTools(),
                     nativeDecorations,
@@ -466,22 +362,27 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
                     highlightSelectionMatches(),
                     syntaxHighlighting(sqlHighlightStyle),
                     autocompletion({
-                        override: [
-                            ifNotIn(
-                                ['QuotedIdentifier', 'String', 'LineComment', 'BlockComment'],
-                                context => completionSource(context, schemaIndexRef.current),
-                            ),
-                        ],
+                        override: [context => completionSource(context, schemaIndexRef.current)],
                     }),
                     hoverTooltip((view, pos) => {
-                        const word = view.state.wordAt(pos);
-                        if (!word) return null;
-                        const label = view.state.sliceDoc(word.from, word.to),
-                            info = hoverInfo(schemaIndexRef.current, current.current.value, label);
+                        const target = sqlHoverTarget(view.state.field(sqlLexicalContext), pos);
+                        if (!target) return null;
+                        const statements = view.state.field(sqlStatementOutline).statements;
+                        const statement = statements[activeStatementIndex(statements, pos)];
+                        const fn =
+                            target.functionCall && target.parts.length === 1
+                                ? clickhouseFunctions.find(
+                                      ([name]) =>
+                                          name.toLowerCase() === target.parts[0]!.toLowerCase(),
+                                  )
+                                : undefined;
+                        const info = fn
+                            ? `${fn[0]}() · ${fn[1]}`
+                            : schemaHoverInfo(schemaIndexRef.current, statement?.sql ?? '', target);
                         if (!info) return null;
                         return {
-                            pos: word.from,
-                            end: word.to,
+                            pos: target.from,
+                            end: target.to,
                             above: true,
                             create: () => {
                                 const dom = document.createElement('div');
@@ -507,9 +408,13 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
                         indentWithTab,
                     ]),
                     EditorView.updateListener.of(update => {
+                        for (const transaction of update.transactions)
+                            for (const effect of transaction.effects)
+                                if (effect.is(StateEffect.appendConfig))
+                                    appendedExtensions.push(effect.value);
                         if (update.docChanged)
                             current.current.onChange(update.state.doc.toString());
-                        if (update.selectionSet) {
+                        if (update.docChanged || update.selectionSet) {
                             const s = update.state.selection.main;
                             current.current.onSelection(s.from, s.to);
                         }
@@ -518,8 +423,17 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
             }),
         });
         view.current = editor;
+        editor.requestMeasure({
+            read: () => null,
+            write: () => {
+                scrollMeasured = true;
+            },
+        });
         setScrollViewport.current?.(editor.scrollDOM);
         return () => {
+            const captured = captureSqlEditorSession(editor, appendedExtensions);
+            if (restoredScroll && !scrollMeasured) captured.scroll = restoredScroll;
+            p.sessions.set(p.documentId, captured);
             setScrollViewport.current?.(null);
             editor.destroy();
             view.current = undefined;
@@ -531,6 +445,7 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
             const { from, to } = current.current;
             v.dispatch({
                 changes: { from: 0, to: v.state.doc.length, insert: props.value },
+                annotations: sqlDocumentEdit(),
                 selection: {
                     anchor: Math.min(from, props.value.length),
                     head: Math.min(to, props.value.length),
@@ -620,9 +535,6 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
             v.dispatch({ selection: { anchor: from, head: to }, scrollIntoView: true });
     }, [props.from, props.to]);
     useEffect(() => {
-        view.current?.dispatch({ effects: language.current.reconfigure(languageExtension()) });
-    }, [schemaIndex, languageExtension]);
-    useEffect(() => {
         view.current?.dispatch({ effects: theme.current.reconfigure(themeExtension()) });
     }, [props.dark]);
     useEffect(() => applyDiagnostics(), [props.error, props.errorRange, applyDiagnostics]);
@@ -662,6 +574,17 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
             indent: () => {
                 if (view.current) indentSelection(view.current);
             },
+            formatBuiltIn: source => {
+                const editor = view.current;
+                if (!editor || editor.state.doc.toString() !== source) return;
+                const formatted = formatSql(source);
+                if (formatted !== source)
+                    editor.dispatch({
+                        changes: { from: 0, to: editor.state.doc.length, insert: formatted },
+                        annotations: sqlDocumentEdit(),
+                    });
+                editor.focus();
+            },
             retryNativeParser: () => clickHouseNativeParser.retry(),
             formatNative: async () => {
                 const editor = view.current;
@@ -697,7 +620,8 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
                             ? [{ from: statement.from, to: statement.to, insert: formatted }]
                             : [];
                     });
-                    if (changes.length) editor.dispatch({ changes });
+                    if (changes.length)
+                        editor.dispatch({ changes, annotations: sqlDocumentEdit() });
                     editor.focus();
                     return 'formatted';
                 } catch {

@@ -144,6 +144,15 @@ export function useWorkspaceDocumentSave({
         void saveDraftRef.current(next);
     }, [busy]);
 
+    return saveDraft;
+}
+
+export function useWorkspaceDocumentSaveShortcut(
+    saveDraft: (draft?: Draft) => Promise<void>,
+    detachedWindow?: Window,
+) {
+    const save = useRef(saveDraft);
+    save.current = saveDraft;
     useEffect(() => {
         const saveOnShortcut = (event: KeyboardEvent) => {
             if (
@@ -155,11 +164,13 @@ export function useWorkspaceDocumentSave({
             )
                 return;
             event.preventDefault();
-            void saveDraftRef.current();
+            void save.current();
         };
         window.addEventListener('keydown', saveOnShortcut);
-        return () => window.removeEventListener('keydown', saveOnShortcut);
-    }, []);
-
-    return saveDraft;
+        detachedWindow?.addEventListener('keydown', saveOnShortcut);
+        return () => {
+            window.removeEventListener('keydown', saveOnShortcut);
+            detachedWindow?.removeEventListener('keydown', saveOnShortcut);
+        };
+    }, [detachedWindow]);
 }

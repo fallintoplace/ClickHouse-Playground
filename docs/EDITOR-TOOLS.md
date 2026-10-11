@@ -2,26 +2,21 @@
 
 Use these tools to navigate SQL scripts, add query patterns, and complete names as you type.
 
-## Query navigation
+## Editor sessions
 
-The numbered query navigator previews each SQL statement.
+Switching query tabs or detaching and docking the editor preserves undo, redo, folded regions, scroll position, and selections for each draft. Reloading the page restores the draft text and main selection.
 
-- Choose **Previous / next**, or press **Alt+PageUp / Alt+PageDown**, to move between statements.
-- Choose **Select query** to select the current statement. You can then use the run-selection action.
-
-Navigation and query execution share a lexer, the code that recognizes SQL text and statement boundaries. It handles comments, escaped quotes, and heredocs, which are strings between matching delimiter markers.
-
-The outline updates when you edit the document, so its statement locations stay aligned with the SQL.
+SQL execution and editor hints share a lexer that recognizes comments, escaped quotes, heredocs, and statement boundaries. The statement outline updates when you edit the document.
 
 ## ClickHouse snippets
 
-A snippet is an editable query template. Choose one and press **Add query** to place it at the end of the document.
+A snippet is an editable query template. Type `ch_` and open autocomplete with **Ctrl+Space**, then choose a template.
 
 The templates include hourly counts, top values, P50/P95/P99 percentiles, the latest value per key with `argMax`, conditional counts, and `EXPLAIN indexes = 1`. A percentile describes a value's position in a distribution; for example, P50 is the median.
 
 Press **Tab / Shift+Tab** to move between placeholder fields. When a placeholder appears more than once, changing one copy updates the linked copies. The editor's normal undo action also works with snippet insertion.
 
-The same templates appear in autocomplete with names that start with `ch_`.
+Formatting creates a separate undo step. **Cmd+S / Ctrl+S** saves the active draft in both the workspace and detached editor.
 
 ## Completion
 
@@ -29,7 +24,7 @@ Autocomplete suggests SQL keywords, ClickHouse functions, schema names and types
 
 For example, typing `e.` offers columns from the table with alias `e`. Typing `database.` offers tables from that database.
 
-Suggestions account for quoted names, comments, strings, and the statement you are editing.
+Suggestions exclude comments, strings, heredocs, and quoted identifier prefixes. Alias hints use the statement you are editing. Schema names that need quoting are inserted with quotes.
 
 ## Sample and live workflows
 
@@ -46,4 +41,4 @@ npm run typecheck
 npm run test:e2e -- tests/e2e/editor-tools.spec.ts
 ```
 
-The tests cover statement boundaries, snippet insertion, placeholder navigation, aliases, completion positions, large schemas, keyboard navigation, undo, and keyword completion.
+The tests cover statement boundaries, snippet insertion, placeholder navigation, aliases, completion positions, large schemas, tab and detached editor sessions, undo, lexical exclusions, error locations, and keyword completion.

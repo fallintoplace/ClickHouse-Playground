@@ -18,6 +18,7 @@ import {
     sqlForRunKind,
 } from '../../shared/queries/inspection/explain-plan.js';
 import { buildQueryProfile, parsePipelineResult } from '../../shared/queries/inspection/profile.js';
+import { sqlErrorRange } from '../queries/editor/sql-error.js';
 import { isResult, isRun } from '../queries/execution/events.js';
 import {
     loadPlaygroundSchema,
@@ -111,6 +112,21 @@ const demoQueryTree = [
     '  JOIN TREE',
     '    TABLE id: 5, table_name: demo.events',
 ] as const;
+
+function sourceRange(body: ReturnType<typeof record>): Pick<Run, 'sourceFrom' | 'sourceTo'> {
+    const { sourceFrom, sourceTo } = body;
+    if (
+        typeof sourceFrom !== 'number' ||
+        typeof sourceTo !== 'number' ||
+        !Number.isSafeInteger(sourceFrom) ||
+        !Number.isSafeInteger(sourceTo) ||
+        sourceFrom < 0 ||
+        sourceTo < sourceFrom ||
+        sourceTo > MAX_SQL_CHARS
+    )
+        return {};
+    return { sourceFrom, sourceTo };
+}
 
 export class BrowserWorkspaceApi {
     private trusted = true;
@@ -386,8 +402,14 @@ export class BrowserWorkspaceApi {
         } catch {}
     }
 
-    private addRun(id: string, sql: string, kind: Run['kind'], parameters: Record<string, string>) {
-        const run = makeRun(id, sql, kind, ++this.sequence, parameters);
+    private addRun(
+        id: string,
+        sql: string,
+        kind: Run['kind'],
+        parameters: Record<string, string>,
+        range: Pick<Run, 'sourceFrom' | 'sourceTo'> = {},
+    ) {
+        const run = { ...makeRun(id, sql, kind, ++this.sequence, parameters), ...range };
         this.runs.set(id, run);
         const imported = kind === 'query' ? demoImportQuery(sql, this.demoImportRows) : undefined;
         if (imported) {
@@ -420,6 +442,7 @@ export class BrowserWorkspaceApi {
         kind: Run['kind'],
         parameters: Record<string, string>,
         cloud: NonNullable<ReturnType<typeof getClickHouseCloudConnection>>,
+        range: Pick<Run, 'sourceFrom' | 'sourceTo'>,
     ) {
         const id = crypto.randomUUID();
         const queryId = `clickstudio-run-${id}`;
@@ -431,6 +454,7 @@ export class BrowserWorkspaceApi {
             owner,
             connectionId: CLICKHOUSE_CLOUD_CONNECTION_ID,
             sql,
+            ...range,
             kind,
             parameters,
             limits: { ...cloud.limits },
@@ -457,7 +481,8 @@ export class BrowserWorkspaceApi {
         };
         this.runs.set(id, run);
         this.persist();
-        void runClickHouseCloudSql(sql, undefined, { queryId, parameters })
+        const executionSql = sqlForRunKind(sql, kind);
+        void runClickHouseCloudSql(executionSql, undefined, { queryId, parameters })
             .then(response => {
                 const current = this.runs.get(id);
                 if (!current || current.status === 'cancelled') return;
@@ -502,16 +527,21 @@ export class BrowserWorkspaceApi {
                         ? caught.message
                         : 'ClickHouse could not run this query.';
                 const timedOut = /timeout|timed out|maximum execution time/i.test(text);
+                const error: ApiError = {
+                    code: caught instanceof CloudRequestError ? caught.code : 'CLICKHOUSE_ERROR',
+                    message: text.slice(0, 2_000),
+                };
+                const location = sqlErrorRange(executionSql, error);
+                if (location) {
+                    const position = location.from - explainPrefixLength(kind);
+                    error.position = position < 0 ? -1 : (current.sourceFrom ?? 0) + position;
+                }
                 this.runs.set(id, {
                     ...current,
                     status: timedOut ? 'timed_out' : 'failed',
                     finishedAt: now(),
                     elapsedMs: Math.max(current.elapsedMs, Date.now() - Date.parse(startedAt)),
-                    error: {
-                        code:
-                            caught instanceof CloudRequestError ? caught.code : 'CLICKHOUSE_ERROR',
-                        message: text.slice(0, 2_000),
-                    },
+                    error,
                     resultState: 'unavailable',
                     sequence: ++this.sequence,
                 });
@@ -555,7 +585,7 @@ export class BrowserWorkspaceApi {
         }
     }
 
-    private async executeCloudScript(scriptId: string) {
+    private async executeCloudScript(scriptId: string, sourceFrom: number) {
         let script = this.scripts.get(scriptId);
         const cloud = getClickHouseCloudConnection();
         if (!script) return;
@@ -604,6 +634,8 @@ export class BrowserWorkspaceApi {
             }
 
             const startedAt = now();
+            const runId = crypto.randomUUID();
+            const queryId = `clickstudio-run-${runId}`;
             const runningStatements = [...script.statements];
             runningStatements[index] = { ...statement, status: 'running', error: undefined };
             script = { ...script, statements: runningStatements };
@@ -611,9 +643,8 @@ export class BrowserWorkspaceApi {
             this.persist();
 
             try {
-                const response = await runClickHouseCloudSql(statement.sql, script.id);
+                const response = await runClickHouseCloudSql(statement.sql, script.id, { queryId });
                 const finishedAt = now();
-                const runId = crypto.randomUUID();
 
                 const status = response.truncated ? ('truncated' as const) : ('succeeded' as const);
                 const run: Run = {
@@ -623,8 +654,8 @@ export class BrowserWorkspaceApi {
                     owner,
                     connectionId: CLICKHOUSE_CLOUD_CONNECTION_ID,
                     sql: statement.sql,
-                    sourceFrom: statement.from,
-                    sourceTo: statement.to,
+                    sourceFrom: sourceFrom + statement.from,
+                    sourceTo: sourceFrom + statement.to,
                     kind: 'query',
                     parameters: {},
                     limits: { ...cloud.limits },
@@ -678,7 +709,16 @@ export class BrowserWorkspaceApi {
                 this.scripts.set(scriptId, { ...current, statements });
                 this.persist();
             } catch (caught) {
-                if (this.recordCloudScriptFailure(scriptId, index, caught)) return;
+                if (
+                    this.recordCloudScriptFailure(scriptId, index, caught, {
+                        runId,
+                        queryId,
+                        startedAt,
+                        sourceFrom,
+                        cloud,
+                    })
+                )
+                    return;
             }
         }
 
@@ -719,7 +759,18 @@ export class BrowserWorkspaceApi {
         this.persist();
     }
 
-    private recordCloudScriptFailure(scriptId: string, index: number, caught: unknown): boolean {
+    private recordCloudScriptFailure(
+        scriptId: string,
+        index: number,
+        caught: unknown,
+        context: {
+            runId: string;
+            queryId: string;
+            startedAt: string;
+            sourceFrom: number;
+            cloud: NonNullable<ReturnType<typeof getClickHouseCloudConnection>>;
+        },
+    ): boolean {
         const current = this.scripts.get(scriptId);
         if (!current) return true;
         const error: ApiError =
@@ -732,8 +783,48 @@ export class BrowserWorkspaceApi {
                               ? caught.message
                               : 'ClickHouse could not run this statement.',
                   };
+        const statement = current.statements[index]!;
+        const finishedAt = now();
+        const location = sqlErrorRange(statement.sql, error);
+        if (location) error.position = context.sourceFrom + statement.from + location.from;
+        const run: Run = {
+            dataSource: 'clickhouse',
+            id: context.runId,
+            queryId: context.queryId,
+            owner,
+            connectionId: CLICKHOUSE_CLOUD_CONNECTION_ID,
+            sql: statement.sql,
+            sourceFrom: context.sourceFrom + statement.from,
+            sourceTo: context.sourceFrom + statement.to,
+            kind: 'query',
+            parameters: {},
+            limits: { ...context.cloud.limits },
+            tags: {
+                workspace: 'clickstudio',
+                source: 'ClickHouse Cloud',
+                execution: 'Vercel function',
+            },
+            status: 'failed',
+            createdAt: context.startedAt,
+            startedAt: context.startedAt,
+            finishedAt,
+            elapsedMs: Math.max(0, Date.parse(finishedAt) - Date.parse(context.startedAt)),
+            rowCount: 0,
+            bytes: 0,
+            columns: [],
+            warnings: [],
+            sequence: ++this.sequence,
+            resultState: 'unavailable',
+            requestedBy: owner,
+            executedAs: context.cloud.username,
+            permissionSnapshot: { readonly: context.cloud.readonly, role: 'ClickHouse Cloud user' },
+            retryPolicy: 'never',
+            serverVersion: context.cloud.manifest?.serverVersion,
+            error,
+        };
+        this.runs.set(run.id, run);
         const statements = [...current.statements];
-        statements[index] = { ...statements[index]!, status: 'failed', error };
+        statements[index] = { ...statement, runId: run.id, status: 'failed', error };
         if (current.stopOnError)
             for (let later = index + 1; later < statements.length; later++)
                 if (statements[later]!.status === 'pending')
@@ -1250,6 +1341,7 @@ export class BrowserWorkspaceApi {
         }
         const id = crypto.randomUUID();
         const statements = splitSql(sql);
+        const sourceFrom = sourceRange(body).sourceFrom ?? 0;
         if (body.connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID) {
             if (!getClickHouseCloudConnection())
                 throw new CloudRequestError(
@@ -1280,7 +1372,7 @@ export class BrowserWorkspaceApi {
             };
             this.scripts.set(id, script);
             this.persist();
-            void this.executeCloudScript(id);
+            void this.executeCloudScript(id, sourceFrom);
             return script;
         }
         const items = statements.map(statement => {
@@ -1289,6 +1381,7 @@ export class BrowserWorkspaceApi {
                 statement.sql,
                 'query',
                 record(body.parameters) as Record<string, string>,
+                { sourceFrom: sourceFrom + statement.from, sourceTo: sourceFrom + statement.to },
             );
             return { ...statement, runId: run.id, status: 'succeeded' as const };
         });
@@ -1608,6 +1701,7 @@ export class BrowserWorkspaceApi {
     }
 
     private async submitRun(body: ReturnType<typeof record>, options: RequestOptions) {
+        const range = sourceRange(body);
         const requestedKind =
             body.kind === 'explain' ||
             body.kind === 'plan' ||
@@ -1639,6 +1733,7 @@ export class BrowserWorkspaceApi {
                 owner,
                 connectionId: PLAYGROUND_CONNECTION_ID,
                 sql,
+                ...range,
                 kind: requestedKind,
                 parameters: {},
                 limits: { ...PLAYGROUND_CONNECTION.limits },
@@ -1685,14 +1780,14 @@ export class BrowserWorkspaceApi {
                     401,
                 );
             const sql = typeof body.sql === 'string' ? body.sql : '';
-            const executionSql = sqlForRunKind(sql, requestedKind);
-            return this.startCloudRun(executionSql, requestedKind, parameters, cloud);
+            return this.startCloudRun(sql, requestedKind, parameters, cloud, range);
         }
         const run = this.addRun(
             crypto.randomUUID(),
             typeof body.sql === 'string' ? body.sql : DEMO_PREVIEW_SQL,
             requestedKind,
             parameters,
+            range,
         );
         return run;
     }

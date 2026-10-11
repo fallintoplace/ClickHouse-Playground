@@ -40,6 +40,8 @@
     "src/shared/database/tables/delete-table.ts",
     "src/shared/database/reference/reference.ts",
     "src/frontend/help/reference/reference-data.ts",
-    "src/frontend/ui/copy.ts"
+    "src/frontend/ui/copy.ts",
+    "src/frontend/queries/editor/schema-context.ts",
+    "src/frontend/queries/editor/components/editor-session.ts"
   ]
 }

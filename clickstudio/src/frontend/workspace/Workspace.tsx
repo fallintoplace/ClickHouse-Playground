@@ -40,6 +40,8 @@ import {
 
 import { useWorkspaceController, type WorkspaceProps } from './useWorkspaceController';
 import { createExampleDraft } from '../queries/execution/useWorkspaceExecution';
+import { useSqlEditorSessions } from '../queries/editor/components/useSqlEditorSessions';
+import { useWorkspaceDocumentSaveShortcut } from '../queries/saved-queries/useWorkspaceDocumentSave';
 
 function openImportedSqlQuery(
     name: string,
@@ -82,6 +84,8 @@ export function Workspace({
         copy,
     });
     const { active } = model.tabs;
+    const editorSessions = useSqlEditorSessions(model.workspace);
+    useWorkspaceDocumentSaveShortcut(model.saveDraft, model.detachedEditor.detached?.window);
 
     const { schema, history } = model.data;
     const {
@@ -182,6 +186,7 @@ export function Workspace({
             panels={panels}
             viewState={viewState}
             editorRef={editor}
+            editorSessions={editorSessions}
             detached={Boolean(detachedEditor.detached)}
         />
     );

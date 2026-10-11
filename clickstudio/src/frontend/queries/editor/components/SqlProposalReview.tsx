@@ -6,7 +6,7 @@ import { sql } from '@codemirror/lang-sql';
 import { getChunks, unifiedMergeView } from '@codemirror/merge';
 import type { ProposalDecisionAction } from '../../../../shared/assistant/actions';
 import type { Proposal } from '../../../../shared/assistant/types';
-import { clickhouse, sqlEditorTheme, sqlHighlightStyle } from './SqlEditor';
+import { clickhouse, sqlEditorTheme, sqlHighlightStyle } from './editor-language';
 import { Button, Spinner } from '../../../ui/components/ui';
 
 const reviewScrollClearance = 72;

@@ -275,17 +275,23 @@ export function useWorkspaceExecution({
         };
         const selection =
             editorSnapshot.to > editorSnapshot.from
-                ? editorSnapshot.sql.slice(editorSnapshot.from, editorSnapshot.to)
+                ? {
+                      sql: editorSnapshot.sql.slice(editorSnapshot.from, editorSnapshot.to),
+                      from: editorSnapshot.from,
+                      to: editorSnapshot.to,
+                  }
                 : undefined;
-        const selected = selectedStatement(
-            editorSnapshot.sql,
-            editorSnapshot.from,
-            editorSnapshot.to,
-        );
-        const sql =
-            sqlOverride ??
-            (kind === 'query' ? (selection ?? editorSnapshot.sql) : (selected?.sql ?? ''));
-        const sourceRange = sqlOverride === undefined && !selection ? selected : undefined;
+        let sql = sqlOverride ?? selection?.sql ?? editorSnapshot.sql;
+        let sourceRange = sqlOverride === undefined ? selection : undefined;
+        if (kind !== 'query' && sqlOverride === undefined && !selection) {
+            try {
+                const selected = selectedStatement(editorSnapshot.sql, editorSnapshot.from);
+                sql = selected?.sql ?? '';
+                sourceRange = selected;
+            } catch {
+                sql = editorSnapshot.sql;
+            }
+        }
         return executeSqlForDraft(active, sql, { kind, sourceRange, draftSql: editorSnapshot.sql });
     };
 
@@ -473,8 +479,16 @@ function createDraftExecutor({
         const isScript = kind === 'query' && statements.length > 1;
         const statement = isScript ? undefined : statements[0];
         const draftSql = options.draftSql ?? draft.sql;
-        const sourceRange =
-            options.sourceRange ?? (sql === draft.sql && statement ? statement : undefined);
+        let sourceRange: { from: number; to: number } | undefined;
+        if (isScript) sourceRange = options.sourceRange;
+        else if (statement) {
+            if (options.sourceRange)
+                sourceRange = {
+                    from: options.sourceRange.from + statement.from,
+                    to: options.sourceRange.from + statement.to,
+                };
+            else if (sql === draftSql) sourceRange = statement;
+        }
 
         return performExecution(
             async () => {
@@ -546,7 +560,7 @@ function createDraftExecutor({
                         seconds: connection.limits.seconds || DEFAULT_LIMITS.seconds,
                     },
                     tags: { workspace: 'clickstudio', experience },
-                    ...(!isScript && sourceRange
+                    ...(sourceRange
                         ? { sourceFrom: sourceRange.from, sourceTo: sourceRange.to }
                         : {}),
                 };
@@ -572,7 +586,7 @@ function createDraftExecutor({
                             draftId: draft.id,
                             draftSql,
                             statementSql: payload.sql,
-                            sourceFrom: 0,
+                            sourceFrom: sourceRange?.from ?? 0,
                             error: apiErrorDetail(caught),
                         });
                         throw caught;

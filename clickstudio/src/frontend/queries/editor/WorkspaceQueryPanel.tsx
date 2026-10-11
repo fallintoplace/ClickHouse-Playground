@@ -25,6 +25,7 @@ import type { WorkspaceFeedback } from '../../workspace/layout/notifications/use
 import type { pendingEditorProposal } from '../../assistant/chat/assistant-chat-state';
 import type { ProposalDecisionAction } from '../../../shared/assistant/actions';
 import { SqlProposalReview } from './components/SqlProposalReview';
+import type { SqlEditorSessions } from './components/editor-session';
 
 export type WorkspaceQueryPanelState = Readonly<{
     active: Draft;
@@ -73,6 +74,7 @@ export function WorkspaceQueryPanel({
     panels,
     viewState,
     editorRef,
+    editorSessions,
     detached = false,
 }: {
     state: WorkspaceQueryPanelState;
@@ -80,6 +82,7 @@ export function WorkspaceQueryPanel({
     panels: WorkspacePanelController;
     viewState: WorkspaceViewState;
     editorRef: RefObject<EditorHandle | null>;
+    editorSessions: SqlEditorSessions;
     detached?: boolean;
 }) {
     const {
@@ -240,6 +243,9 @@ export function WorkspaceQueryPanel({
                                 key={active.id}
                                 ref={editorRef}
                                 value={active.sql}
+                                documentId={active.id}
+                                sessions={editorSessions}
+                                database={connection.database}
                                 from={active.from}
                                 to={active.to}
                                 schema={trusted ? schema : undefined}

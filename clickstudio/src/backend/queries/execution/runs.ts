@@ -660,8 +660,8 @@ export class RunService {
                     ...request,
                     sql: statement.sql,
                     clientRequestId: `${script.id}-${index}`,
-                    sourceFrom: statement.from,
-                    sourceTo: statement.to,
+                    sourceFrom: (request.sourceFrom ?? 0) + statement.from,
+                    sourceTo: (request.sourceFrom ?? 0) + statement.to,
                 });
                 statement.runId = run.id;
                 statement.status = 'running';

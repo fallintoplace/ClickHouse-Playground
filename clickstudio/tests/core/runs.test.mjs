@@ -292,6 +292,31 @@ test('Partial scripts preserve each outcome, stop-on-error skips remainder', asy
         ['succeeded', 'failed', 'skipped'],
     );
 });
+
+for (const sourceFrom of [undefined, 0, 37])
+    test(`Script runs retain document offsets with selection base ${sourceFrom}`, async () => {
+        const f = fixture();
+        const sql = '  SELECT 1;\n SELECT 2;';
+        const script = f.runs.submitScript(
+            owner,
+            f.request({
+                sql,
+                ...(sourceFrom === undefined
+                    ? {}
+                    : { sourceFrom, sourceTo: sourceFrom + sql.length }),
+            }),
+        );
+        const done = await until(() => {
+            const current = f.runs.getScript(owner, script.id);
+            return current.status === 'running' ? false : current;
+        });
+        for (const statement of done.statements) {
+            const run = f.runs.get(owner, statement.runId);
+            assert.equal(sql.slice(statement.from, statement.to), statement.sql);
+            assert.equal(run.sourceFrom, (sourceFrom ?? 0) + statement.from);
+            assert.equal(run.sourceTo, (sourceFrom ?? 0) + statement.to);
+        }
+    });
 test('Old scripts and receipts survive restart and the former script capacity', async () => {
     const f = fixture(),
         input = f.request({ sql: 'SELECT 1' }),

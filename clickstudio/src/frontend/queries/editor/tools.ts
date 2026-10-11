@@ -124,7 +124,7 @@ export interface CompletionTarget {
     prefix: string;
 }
 
-/** Unquoted identifier prefixes. String/comment exclusion belongs to the editor language. */
+/** Unquoted identifier prefixes. String/comment exclusion uses the shared SQL lexer. */
 export function completionTarget(before: string, explicit = false): CompletionTarget | null {
     const word = /[A-Za-z_][A-Za-z0-9_$]*(?:\.[A-Za-z_][A-Za-z0-9_$]*)*\.?$/.exec(before);
     if (!word) {
@@ -159,15 +159,11 @@ export function matchingNames<T>(
 }
 
 export const CLICKHOUSE_KEYWORDS =
-    'SELECT WITH FROM WHERE PREWHERE GROUP BY HAVING ORDER LIMIT OFFSET AS AND OR NOT NULL JOIN LEFT RIGHT INNER FULL CROSS ARRAY JOIN UNION ALL DISTINCT EXPLAIN SETTINGS SAMPLE FINAL FORMAT INTO CASE WHEN THEN ELSE END ON USING ASC DESC';
+    'SELECT WITH FROM WHERE PREWHERE GROUP BY HAVING ORDER LIMIT OFFSET AS AND OR NOT NULL JOIN LEFT RIGHT INNER FULL CROSS ARRAY UNION ALL DISTINCT EXPLAIN SETTINGS SAMPLE FINAL FORMAT INTO CASE WHEN THEN ELSE END ON USING ASC DESC INSERT VALUES UPDATE DELETE ALTER CREATE DROP TRUNCATE RENAME ATTACH DETACH EXCHANGE TABLE DATABASE VIEW MATERIALIZED TEMPORARY IF EXISTS REPLACE ADD MODIFY COLUMN PARTITION ENGINE PRIMARY KEY TTL CODEC DEFAULT ALIAS SYSTEM SHOW DESCRIBE USE SET IN BETWEEN LIKE ILIKE IS GLOBAL ANY ASOF ANTI SEMI OUTER OVER WINDOW QUALIFY INTERSECT EXCEPT INTERVAL ROWS RANGE UNBOUNDED PRECEDING FOLLOWING CURRENT ROW';
 
-const aliasKeywords = new Set(
-    (CLICKHOUSE_KEYWORDS + ' GLOBAL ANY ASOF ANTI SEMI OUTER WINDOW QUALIFY INTERSECT EXCEPT')
-        .toLowerCase()
-        .split(' '),
-);
+const aliasKeywords = new Set(CLICKHOUSE_KEYWORDS.toLowerCase().split(' '));
 
-function identifierText(token: Token | undefined): string | undefined {
+export function identifierText(token: Token | undefined): string | undefined {
     if (token?.kind === 'word') return token.text;
     if (token?.kind !== 'quoted' || !['`', '"'].includes(token.text[0]!)) return undefined;
     const quote = token.text[0]!;
@@ -204,17 +200,24 @@ export function tableAliases(text: string): Map<string, string> {
         }
         if (tokens[next]?.text === '(') continue;
         const name = parts.join('.');
-        aliases.set(name.toLowerCase(), name);
-        aliases.set(parts.at(-1)!.toLowerCase(), name);
+        aliases.set(name, name);
+        aliases.set(parts.at(-1)!, name);
         if (tokens[next]?.kind === 'word' && tokens[next]?.text.toUpperCase() === 'AS') next++;
         const alias = identifierText(tokens[next]);
         if (
             alias !== undefined &&
             (tokens[next]?.kind === 'quoted' || !aliasKeywords.has(alias.toLowerCase()))
         )
-            aliases.set(alias.toLowerCase(), name);
+            aliases.set(alias, name);
     }
     return aliases;
+}
+
+export function tableAlias(aliases: Map<string, string>, name: string): string | undefined {
+    const exact = aliases.get(name);
+    if (exact !== undefined) return exact;
+    const matches = [...aliases].filter(([key]) => key.toLowerCase() === name.toLowerCase());
+    return matches.length === 1 ? matches[0]![1] : undefined;
 }
 
 export const CLICKHOUSE_SNIPPETS = [

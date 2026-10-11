@@ -400,3 +400,46 @@ test('Static preview keeps results, scripts and documents beyond the former stor
     const again = new BrowserWorkspaceApi();
     assert.deepEqual((await again.request('/runs/saved-0/result')).rows, [['x'.repeat(16_000)]]);
 });
+
+for (const sourceFrom of [undefined, 0, 31])
+    test(`Browser script runs preserve document source ranges with base ${sourceFrom}`, async () => {
+        const api = new BrowserWorkspaceApi();
+        const sql = '  SELECT 1;\n SELECT 2;';
+        const script = await api.request('/scripts', {
+            method: 'POST',
+            body: {
+                sql,
+                ...(sourceFrom === undefined
+                    ? {}
+                    : { sourceFrom, sourceTo: sourceFrom + sql.length }),
+            },
+        });
+        for (const statement of script.statements) {
+            const run = await api.request(`/runs/${statement.runId}`);
+            assert.equal(run.sourceFrom, (sourceFrom ?? 0) + statement.from);
+            assert.equal(run.sourceTo, (sourceFrom ?? 0) + statement.to);
+        }
+    });
+
+test('Browser query runs retain validated source ranges', async () => {
+    const api = new BrowserWorkspaceApi();
+    const run = await api.request('/runs', {
+        method: 'POST',
+        body: { sql: 'SELECT 1', sourceFrom: 25, sourceTo: 33 },
+    });
+    assert.equal(run.sourceFrom, 25);
+    assert.equal(run.sourceTo, 33);
+    for (const range of [
+        { sourceFrom: -1, sourceTo: 2 },
+        { sourceFrom: 1 },
+        { sourceFrom: 2, sourceTo: 1 },
+        { sourceFrom: 1.5, sourceTo: 2 },
+    ]) {
+        const invalid = await api.request('/runs', {
+            method: 'POST',
+            body: { sql: 'SELECT 1', ...range },
+        });
+        assert.equal(invalid.sourceFrom, undefined);
+        assert.equal(invalid.sourceTo, undefined);
+    }
+});

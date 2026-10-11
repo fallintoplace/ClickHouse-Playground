@@ -2,6 +2,7 @@ import { StateField, Transaction, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { isolateHistory } from '@codemirror/commands';
 import { snippet, snippetCompletion } from '@codemirror/autocomplete';
+import { scanSql } from '../../../../shared/sql/lexer';
 import {
     appendQuerySeparator,
     CLICKHOUSE_SNIPPETS,
@@ -14,6 +15,12 @@ export const sqlStatementOutline = StateField.define<StatementOutline>({
     create: state => statementOutline(state.doc.toString()),
     update: (outline, transaction) =>
         transaction.docChanged ? statementOutline(transaction.newDoc.toString()) : outline,
+});
+
+export const sqlLexicalContext = StateField.define({
+    create: state => scanSql(state.doc.toString()),
+    update: (context, transaction) =>
+        transaction.docChanged ? scanSql(transaction.newDoc.toString()) : context,
 });
 
 export const clickhouseSnippetCompletions = CLICKHOUSE_SNIPPETS.map(item =>
@@ -59,6 +66,7 @@ export function appendSqlSnippet(view: EditorView, template: string): boolean {
 export function sqlEditorTools(): Extension {
     return [
         sqlStatementOutline,
+        sqlLexicalContext,
         EditorView.theme({
             '.cm-gutters': { zIndex: 'var(--z-editor-gutters)' },
         }),
