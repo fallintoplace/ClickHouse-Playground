@@ -216,9 +216,9 @@ test('Numeric scatter axes and named categories follow the viewport', () => {
         1200,
     );
     assert.equal(categories.categoricalAxis, true);
-    assert.equal(categories.svg.plotRight, 1100);
+    assert.ok(categories.svg.plotRight > 1100);
     assert.equal(categories.chartRows.length, 61);
-    assert.ok(categories.svg.chartXTicks.length < 61);
+    assert.equal(categories.svg.chartXTicks.length, 61);
 });
 
 test('Chart preparation keeps valid saved measures and repairs unavailable axes', () => {
@@ -379,7 +379,7 @@ test('Continuous charts sample large results while retaining both endpoints', ()
     assert.match(view.rowSummary, /240.*600/);
 });
 
-test('Categorical charts retain every category while fitting long labels to the viewport', () => {
+test('Categorical charts retain every category label in a compact scrollable plot', () => {
     const rows = Array.from({ length: 300 }, (_, index) => [`long category label ${index}`, index]);
     const view = prepare(
         result(
@@ -391,11 +391,12 @@ test('Categorical charts retain every category while fitting long labels to the 
         ),
     );
     assert.equal(view.chartRows, rows);
-    assert.ok(view.svg.chartXTicks.length < rows.length);
+    assert.equal(view.svg.chartXTicks.length, rows.length);
     assert.equal(view.svg.chartXTicks[0].label, rows[0][0]);
     assert.equal(view.svg.chartXTicks.at(-1).label, rows.at(-1)[0]);
-    assert.equal(view.svg.plotRight, 652);
-    assert.ok(view.svg.x(299) < 652);
+    assert.ok(view.svg.plotRight > 652);
+    assert.ok(view.svg.x(299) < view.svg.plotRight);
+    assert.ok(view.svg.plotRight < rows.reduce((sum, [label]) => sum + chartLabelWidth(label), 0));
 });
 
 for (const width of [48, 320, 630, 1200]) {
@@ -404,31 +405,32 @@ for (const width of [48, 320, 630, 1200]) {
         [''],
         ['Detroit Red Wings'],
         ['a', 'b'],
+        ['Repeated category', 'Repeated category', 'Another category'],
         ['Detroit Red Wings', 'Chicago Blackhawks', 'Colorado Avalanche', 'New Jersey Devils'],
         Array.from({ length: 300 }, (_, index) => `Team with a very long name ${index}`),
         ['😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀', '  Team    with\nspaces  '],
         Array.from({ length: 16 }, (_, index) => `超级无敌宇宙中文分类名字${index}`),
     ]) {
-        test(`${labels.length} category labels fit width ${width} without dropping plotted data`, () => {
+        test(`${labels.length} category labels use width ${width} without hiding or clipping names`, () => {
             const layout = categoryAxisLayout(labels, width);
-            assert.equal(layout.width, width);
+            assert.ok(layout.width >= width);
             assert.equal(layout.positions.length, labels.length);
-            assert.ok(layout.positions.every(position => position > 0 && position < width));
+            assert.ok(layout.positions.every(position => position > 0 && position < layout.width));
             const ticks = fitCategoryTicks(
                 labels.map((label, index) => ({ label, position: layout.positions[index] })),
-                width,
             );
+            assert.equal(ticks.length, labels.length);
             let previousRight = -Infinity;
-            for (const tick of ticks) {
-                assert.ok(labels.includes(tick.label));
+            for (const [index, tick] of ticks.entries()) {
+                assert.equal(tick.label, labels[index]);
                 assert.ok(tick.lines.length <= 2);
+                assert.equal(tick.lines.join('').replace(/\s/g, ''), tick.label.replace(/\s/g, ''));
                 const labelWidth = Math.max(...tick.lines.map(chartLabelWidth));
-                let left = tick.position - labelWidth / 2;
-                if (tick.anchor === 'start') left = tick.position;
-                if (tick.anchor === 'end') left = tick.position - labelWidth;
-                assert.equal(tick.position, layout.positions[labels.indexOf(tick.label)]);
+                const left = tick.position - labelWidth / 2;
+                assert.equal(tick.anchor, 'middle');
+                assert.equal(tick.position, layout.positions[index]);
                 assert.ok(left >= -1);
-                assert.ok(left + labelWidth <= width + 1);
+                assert.ok(left + labelWidth <= layout.width + 1);
                 assert.ok(left >= previousRight + 8);
                 previousRight = left + labelWidth;
                 for (const line of tick.lines)
@@ -445,12 +447,47 @@ for (const width of [48, 320, 630, 1200]) {
     }
 }
 
-test('Wrapped category labels retain their full text and truncate only the displayed lines', () => {
+test('Unbroken category labels balance two complete lines without truncating text', () => {
     const label = 'AReallyLongUnbrokenCategoryNameThatCannotFitOnTwoLines';
-    const [tick] = fitCategoryTicks([{ label, position: 48 }], 96);
+    const layout = categoryAxisLayout([label], 96);
+    const [tick] = fitCategoryTicks([{ label, position: layout.positions[0] }]);
     assert.equal(tick.label, label);
     assert.equal(tick.lines.length, 2);
-    assert.ok(tick.lines[1].endsWith('…'));
+    assert.equal(tick.lines.join(''), label);
+    assert.ok(Math.abs(chartLabelWidth(tick.lines[0]) - chartLabelWidth(tick.lines[1])) <= 6);
+});
+
+test('Team names split at word boundaries and share only the space they need', () => {
+    const labels = ['Detroit Red Wings', 'Chicago Blackhawks', 'Dallas Stars'];
+    const layout = categoryAxisLayout(labels, 48);
+    const ticks = fitCategoryTicks(
+        labels.map((label, index) => ({ label, position: layout.positions[index] })),
+    );
+    assert.deepEqual(
+        ticks.map(tick => tick.lines),
+        [
+            ['Detroit', 'Red Wings'],
+            ['Chicago', 'Blackhawks'],
+            ['Dallas', 'Stars'],
+        ],
+    );
+    assert.equal(layout.width, 206);
+    assert.notEqual(
+        layout.positions[1] - layout.positions[0],
+        layout.positions[2] - layout.positions[1],
+    );
+});
+
+test('Category wrapping preserves joined emoji, flags and combining accents', () => {
+    const labels = ['👨‍👩‍👧‍👦', '🇵🇱'.repeat(5), 'e\u0301'.repeat(12)];
+    const ticks = fitCategoryTicks(labels.map(label => ({ label, position: 48 })));
+    const segments = new Intl.Segmenter('en', { granularity: 'grapheme' });
+    const graphemes = text => Array.from(segments.segment(text), part => part.segment);
+    assert.deepEqual(ticks[0].lines, ['👨‍👩‍👧‍👦']);
+    for (const tick of ticks) {
+        assert.deepEqual(tick.lines.flatMap(graphemes), graphemes(tick.label));
+        assert.equal(tick.lines.join(''), tick.label);
+    }
 });
 
 test('Category layout has a finite fallback before the viewport is measured', () => {

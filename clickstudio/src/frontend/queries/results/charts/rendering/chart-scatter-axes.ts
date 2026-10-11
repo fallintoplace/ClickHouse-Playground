@@ -138,8 +138,6 @@ export function prepareScatterAxes({
             position: x(index),
         }));
     }
-    chartXTicks = categoricalAxis
-        ? fitCategoryTicks(chartXTicks, plotWidth)
-        : fitChartTicks(chartXTicks);
+    chartXTicks = categoricalAxis ? fitCategoryTicks(chartXTicks) : fitChartTicks(chartXTicks);
     return { chartYTicks, scatterPoints, scatterX, scatterY, chartXTicks, scatterSummary };
 }

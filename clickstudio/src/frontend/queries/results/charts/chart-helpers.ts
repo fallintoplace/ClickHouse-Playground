@@ -13,6 +13,7 @@ const chartColors = [
     'var(--red)',
     'var(--violet)',
 ] as const;
+const chartLabelSegments = new Intl.Segmenter('en', { granularity: 'grapheme' });
 export const seriesColor = (index: number) => chartColors[index % chartColors.length]!;
 export type ChartPoint = { label: string; value: number | null; index: number };
 export type ChartAxisTick = {
@@ -43,13 +44,24 @@ export function formatCount(value: number) {
 }
 
 export function categoryAxisLayout(labels: readonly string[], viewportWidth = 652) {
-    const width = viewportWidth > 0 && Number.isFinite(viewportWidth) ? viewportWidth : 652;
-    const inset = Math.min(4, width / 4);
-    const slotWidth = (width - inset * 2) / Math.max(1, labels.length);
+    const minimumWidth = viewportWidth > 0 && Number.isFinite(viewportWidth) ? viewportWidth : 652;
+    const slotWidths = labels.map(label =>
+        Math.max(32, Math.max(...wrapChartLabel(label).map(chartLabelWidth)) + 16),
+    );
+    const contentWidth = slotWidths.reduce((total, width) => total + width, 8);
+    const width = Math.max(minimumWidth, contentWidth);
+    const extraSpace = labels.length ? (width - contentWidth) / labels.length : 0;
+    let offset = 4;
+    const positions = slotWidths.map(slotWidth => {
+        const expandedWidth = slotWidth + extraSpace;
+        const position = offset + expandedWidth / 2;
+        offset += expandedWidth;
+        return position;
+    });
     return {
         width,
-        positions: labels.map((_label, index) => inset + (index + 0.5) * slotWidth),
-        minimumSlotWidth: slotWidth,
+        positions,
+        minimumSlotWidth: slotWidths.length ? Math.min(...slotWidths) + extraSpace : width - 8,
     };
 }
 
@@ -73,66 +85,34 @@ export function chartLabelWidth(label: string) {
     );
 }
 
-function chartLabelPrefix(characters: string[], width: number) {
-    let usedWidth = 0;
-    let length = 0;
-    for (const character of characters) {
-        usedWidth += chartLabelWidth(character);
-        if (usedWidth > width) break;
-        length++;
+function wrapChartLabel(label: string) {
+    const text = label.trim().replace(/\s+/g, ' ');
+    const width = chartLabelWidth(text);
+    if (width <= 64) return [text];
+    const characters = Array.from(chartLabelSegments.segment(text), part => part.segment);
+    if (characters.length <= 1) return [text];
+    const prefixWidths = [0];
+    for (const character of characters)
+        prefixWidths.push(prefixWidths.at(-1)! + chartLabelWidth(character));
+    const wordBreaks = characters.flatMap((character, index) => (character === ' ' ? [index] : []));
+    const candidates = wordBreaks.length
+        ? wordBreaks
+        : Array.from({ length: characters.length - 1 }, (_value, index) => index + 1);
+    let split = candidates[0]!;
+    let bestWidth = Number.POSITIVE_INFINITY;
+    for (const index of candidates) {
+        const secondStart = characters[index] === ' ' ? index + 1 : index;
+        const widestLine = Math.max(prefixWidths[index]!, width - prefixWidths[secondStart]!);
+        if (widestLine < bestWidth) {
+            bestWidth = widestLine;
+            split = index;
+        }
     }
-    return characters.slice(0, length);
+    return [characters.slice(0, split).join('').trim(), characters.slice(split).join('').trim()];
 }
 
-function wrapChartLabel(label: string, availableWidth: number) {
-    const characters = Array.from(label.trim().replace(/\s+/g, ' '));
-    const width = Math.max(10, availableWidth);
-    if (chartLabelWidth(characters.join('')) <= width) return [characters.join('')];
-    const limit = chartLabelPrefix(characters, width).length;
-    const wordBreak = characters.slice(0, limit + 1).lastIndexOf(' ');
-    const split = wordBreak > 0 ? wordBreak : limit;
-    const remaining = characters.slice(split).join('').trim();
-    const secondLine =
-        chartLabelWidth(remaining) > width
-            ? `${chartLabelPrefix(Array.from(remaining), width - chartLabelWidth('…')).join('')}…`
-            : remaining;
-    return [characters.slice(0, split).join(''), secondLine];
-}
-
-export function fitCategoryTicks(ticks: ChartAxisTick[], width: number): ChartAxisTick[] {
-    let count = Math.min(ticks.length, Math.max(1, Math.floor(width / 64)));
-    while (count > 0) {
-        const fitted = Array.from({ length: count }, (_value, index) => {
-            const sourceIndex =
-                count === 1
-                    ? Math.floor((ticks.length - 1) / 2)
-                    : Math.round((index * (ticks.length - 1)) / (count - 1));
-            const tick = ticks[sourceIndex]!;
-            const lines = wrapChartLabel(tick.label, Math.min(112, width / count - 12));
-            const labelWidth = Math.max(...lines.map(chartLabelWidth));
-            let anchor: ChartAxisTick['anchor'] = 'middle';
-            if (tick.position < labelWidth / 2) anchor = 'start';
-            else if (width - tick.position < labelWidth / 2) anchor = 'end';
-            return {
-                ...tick,
-                lines,
-                anchor,
-            };
-        });
-        let previousRight = Number.NEGATIVE_INFINITY;
-        const fits = fitted.every(tick => {
-            const labelWidth = Math.max(...tick.lines.map(chartLabelWidth));
-            let left = tick.position - labelWidth / 2;
-            if (tick.anchor === 'start') left = tick.position;
-            if (tick.anchor === 'end') left = tick.position - labelWidth;
-            const fits = left >= 0 && left + labelWidth <= width && left >= previousRight + 8;
-            previousRight = left + labelWidth;
-            return fits;
-        });
-        if (fits) return fitted;
-        count--;
-    }
-    return [];
+export function fitCategoryTicks(ticks: ChartAxisTick[]): ChartAxisTick[] {
+    return ticks.map(tick => ({ ...tick, lines: wrapChartLabel(tick.label), anchor: 'middle' }));
 }
 
 export function fitChartTicks(ticks: { label: string; position: number }[]) {

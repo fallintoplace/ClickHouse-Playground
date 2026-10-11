@@ -9,15 +9,18 @@ export function useChartPlotWidth<T extends Element = HTMLDivElement>(viewBoxHei
         if (!viewport) return;
         const measure = () => {
             const bounds = viewport.getBoundingClientRect();
-            let measuredWidth = bounds.width;
+            const measuredHeight =
+                viewport instanceof HTMLElement ? viewport.clientHeight : bounds.height;
+            let measuredWidth =
+                viewport instanceof HTMLElement ? viewport.clientWidth : bounds.width;
             if (viewBoxHeight !== undefined) {
                 measuredWidth =
                     bounds.height > 0 ? (bounds.width * viewBoxHeight) / bounds.height : 0;
             }
             setSize(current =>
-                current.width === measuredWidth && current.height === bounds.height
+                current.width === measuredWidth && current.height === measuredHeight
                     ? current
-                    : { width: measuredWidth, height: bounds.height },
+                    : { width: measuredWidth, height: measuredHeight },
             );
         };
         measure();

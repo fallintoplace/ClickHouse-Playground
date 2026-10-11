@@ -138,6 +138,7 @@ export function renderChartWorkspace({
                                 <svg
                                     className="chart-category-y-axis"
                                     viewBox={`0 0 80 ${svg.viewportHeight}`}
+                                    style={{ height: svg.viewportHeight }}
                                     preserveAspectRatio="none"
                                     aria-hidden="true"
                                 >

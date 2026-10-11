@@ -47,6 +47,12 @@ for (const fixture of [
     },
     { name: 'two short categories', labels: ['A', 'B'], kind: 'bar', rowCount: false },
     {
+        name: 'joined emoji and accent categories',
+        labels: ['👨‍👩‍👧‍👦', '🇵🇱'.repeat(5), 'e\u0301'.repeat(12)],
+        kind: 'bar',
+        rowCount: false,
+    },
+    {
         name: 'dense category bars',
         labels: Array.from({ length: 600 }, (_, index) => `Long category name ${index}`),
         kind: 'bar',
@@ -59,7 +65,7 @@ for (const fixture of [
         rowCount: true,
     },
 ]) {
-    test(`${fixture.name} fit every mark with wrapped labels and a visible footer`, async ({
+    test(`${fixture.name} show every full label in a compact scrollable plot`, async ({
         page,
     }, info) => {
         const expectedLabels = fixture.rowCount
@@ -89,6 +95,12 @@ for (const fixture of [
             });
         });
         await trust(page);
+        const reservedBottomGutter =
+            fixture.name === 'team bars' || fixture.name === 'team row counts';
+        if (reservedBottomGutter)
+            await page.addStyleTag({
+                content: '.chart-category-scroll {border-bottom: 16px solid transparent}',
+            });
         await page.getByText('Standard', { exact: true }).click();
         await runButton(page).click();
         const results = page.getByRole('region', { name: 'Query results', exact: true });
@@ -101,6 +113,17 @@ for (const fixture of [
         const plot = results.locator('.chart-category-plot');
         const marks = plot.locator(fixture.kind === 'line' ? '.chart-point' : '.chart-bar');
         await expect(marks).toHaveCount(fixture.labels.length);
+        await expect(plot.locator('.chart-x-labels text')).toHaveCount(fixture.labels.length);
+        expect(
+            await plot.locator('.chart-x-labels text').evaluateAll(labels =>
+                labels.map(label =>
+                    [...label.querySelectorAll('tspan')]
+                        .map(line => line.textContent)
+                        .join('')
+                        .replace(/\s/g, ''),
+                ),
+            ),
+        ).toEqual(expectedLabels.map(label => label.replace(/\s/g, '')));
         await expect(marks.first().locator('title')).toContainText(expectedLabels[0]!);
         const checkLayout = async () => {
             await expect
@@ -121,11 +144,30 @@ for (const fixture of [
                             .querySelector('.chart-footer')!
                             .getBoundingClientRect();
                         const matrix = svg.getScreenCTM()!;
+                        const axis = workspace.querySelector(
+                            '.chart-category-y-axis',
+                        )! as SVGSVGElement;
+                        const axisMatrix = axis.getScreenCTM()!;
+                        const yTicks = [...axis.querySelectorAll('text')];
+                        const gridlines = [...svg.querySelectorAll('.chart-gridline')];
                         return (
-                            viewport.scrollWidth <= viewport.clientWidth + 1 &&
+                            viewport.scrollWidth >= viewport.clientWidth &&
                             workspace.scrollHeight <= workspace.clientHeight + 1 &&
                             footer.bottom <= workspace.getBoundingClientRect().bottom + 1 &&
                             Math.abs(matrix.a / matrix.d - 1) < 0.02 &&
+                            Math.abs(axisMatrix.d - matrix.d) < 0.02 &&
+                            yTicks.every((tick, index) => {
+                                const y = Number(tick.getAttribute('y'));
+                                const gridY = Number(gridlines[index]!.getAttribute('y1'));
+                                return (
+                                    Math.abs(
+                                        axisMatrix.d * y +
+                                            axisMatrix.f -
+                                            matrix.d * gridY -
+                                            matrix.f,
+                                    ) < 1
+                                );
+                            }) &&
                             marks.every(
                                 mark =>
                                     mark.left >= bounds.left - 1 && mark.right <= bounds.right + 1,
@@ -143,6 +185,35 @@ for (const fixture of [
                 .toBe(true);
         };
         await checkLayout();
+        const viewport = results.locator('.chart-category-scroll');
+        if (reservedBottomGutter)
+            expect(
+                await viewport.evaluate(
+                    element => element.getBoundingClientRect().height - element.clientHeight,
+                ),
+            ).toBeGreaterThanOrEqual(16);
+        await viewport.evaluate(element => {
+            element.scrollLeft = element.scrollWidth;
+        });
+        await expect
+            .poll(() =>
+                plot
+                    .locator('.chart-x-labels text')
+                    .last()
+                    .evaluate(label => {
+                        const bounds = label.getBoundingClientRect();
+                        const viewport = label
+                            .closest('.chart-category-scroll')!
+                            .getBoundingClientRect();
+                        return (
+                            bounds.left >= viewport.left - 1 && bounds.right <= viewport.right + 1
+                        );
+                    }),
+            )
+            .toBe(true);
+        await viewport.evaluate(element => {
+            element.scrollLeft = 0;
+        });
         if (fixture.labels.length > 2)
             await expect(plot.locator('.chart-x-labels text tspan[dy="11"]').first()).toBeVisible();
         else {
@@ -181,6 +252,11 @@ for (const fixture of [
         await page.setViewportSize({ width: 1778, height: 824 });
         await checkLayout();
         await expect(marks).toHaveCount(fixture.labels.length);
+        await expect(plot.locator('.chart-x-labels text')).toHaveCount(fixture.labels.length);
+        await results.screenshot({
+            path: info.outputPath('compact-labels-wide.png'),
+            animations: 'disabled',
+        });
     });
 }
 

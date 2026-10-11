@@ -1681,11 +1681,12 @@
   .chart-category-scroll {
     width: 100%;
     height: 100%;
-    overflow-x: hidden;
+    overflow-x: auto;
     overflow-y: hidden;
   }
   .chart-canvas--categorical .chart-category-scroll > svg {
-    width: 100%;
+    width: max(100%, var(--chart-plot-width));
+    min-width: var(--chart-plot-width);
     height: 100%;
     overflow: visible;
   }

@@ -136,6 +136,14 @@ export function createChartSvgRenderer(
                 className={categoricalAxis ? 'chart-category-plot' : undefined}
                 viewBox={`0 0 ${categoricalAxis ? plotRight : viewportWidth} ${viewportHeight}`}
                 preserveAspectRatio={categoricalAxis ? 'none' : undefined}
+                style={
+                    categoricalAxis
+                        ? ({
+                              '--chart-plot-width': `${plotRight}px`,
+                              height: viewportHeight,
+                          } as CSSProperties)
+                        : undefined
+                }
                 role="img"
                 aria-label={chartAriaLabel}
             >

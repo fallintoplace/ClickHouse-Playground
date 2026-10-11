@@ -114,7 +114,7 @@ export function RowCountChart({
             ? xTime(timeTicks[index]?.timestamp ?? timeMin)
             : xCategory(index, bars.length),
     }));
-    const fittedTicks = timeAxis ? fitChartTicks(ticks) : fitCategoryTicks(ticks, plotWidth);
+    const fittedTicks = timeAxis ? fitChartTicks(ticks) : fitCategoryTicks(ticks);
     const valueFormatter = new Intl.NumberFormat('en', {
         notation: 'compact',
         maximumFractionDigits: 1,
@@ -234,6 +234,7 @@ export function RowCountChart({
                                 <svg
                                     className="chart-category-y-axis"
                                     viewBox={`0 0 80 ${viewportHeight}`}
+                                    style={{ height: viewportHeight }}
                                     preserveAspectRatio="none"
                                     aria-hidden="true"
                                 >
@@ -467,6 +468,14 @@ function createRowCountSvgRenderer({
             className={categoricalAxis ? 'chart-category-plot' : undefined}
             viewBox={`0 0 ${categoricalAxis ? plotRight : viewportWidth} ${viewportHeight}`}
             preserveAspectRatio={categoricalAxis ? 'none' : undefined}
+            style={
+                categoricalAxis
+                    ? ({
+                          '--chart-plot-width': `${plotRight}px`,
+                          height: viewportHeight,
+                      } as CSSProperties)
+                    : undefined
+            }
             role="img"
             aria-label={chartAriaLabel}
         >
