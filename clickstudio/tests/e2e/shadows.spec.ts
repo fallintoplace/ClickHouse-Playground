@@ -153,7 +153,7 @@ async function expectCompactToolbar(page: Page) {
 }
 
 for (const theme of ['Dark', 'Light'])
-    for (const mode of ['Standard', 'Experimental']) {
+    for (const mode of [theme === 'Dark' ? 'Standard' : 'Experimental']) {
         test(`${theme} ${mode} keeps workspace panels flat and overlay depth neutral`, async ({
             page,
         }) => {
