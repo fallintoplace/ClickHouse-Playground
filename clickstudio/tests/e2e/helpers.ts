@@ -15,8 +15,11 @@ export async function openStatementResults(target: Page | Locator) {
 }
 
 export async function openResultFilter(target: Page | Locator) {
-    await target.getByRole('button', { name: 'Filter', exact: true }).click();
-    return target.getByRole('searchbox', { name: 'Filter current page', exact: true });
+    const input = target.getByRole('searchbox', { name: 'Search this page', exact: true });
+    if (!(await input.isVisible()))
+        await target.getByRole('button', { name: 'Search rows', exact: true }).click();
+    await input.focus();
+    return input;
 }
 
 export function jsonRecord(value: unknown, label = 'JSON value'): Record<string, unknown> {

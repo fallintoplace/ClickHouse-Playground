@@ -181,11 +181,6 @@
     padding: 0 7px;
     transition-property: background-color, color, box-shadow;
   }
-  .results-header .result-filter {
-    height: 26px;
-    min-height: 26px;
-    padding-block: 3px;
-  }
   .results-header .script-results-trigger {
     padding-block: 2px;
     transition-property: border-color, background-color, color, box-shadow;

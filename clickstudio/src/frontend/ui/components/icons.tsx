@@ -169,6 +169,18 @@ const iconPaths = {
             <circle cx="12" cy="12" r="3" />
         </>
     ),
+    pin: (
+        <>
+            <path d="m16 9 3 3v2H5v-2l3-3V3h8z" />
+            <path d="M12 14v7" />
+        </>
+    ),
+    move: (
+        <>
+            <path d="M12 3v18M3 12h18" />
+            <path d="m9 6 3-3 3 3m-6 12 3 3 3-3M6 9l-3 3 3 3m12-6 3 3-3 3" />
+        </>
+    ),
     close: (
         <>
             <path d="M18 6 6 18" />

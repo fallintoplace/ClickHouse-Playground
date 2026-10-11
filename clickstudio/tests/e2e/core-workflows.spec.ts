@@ -298,13 +298,10 @@ test('Result view and page stay with their draft run', async ({ page }) => {
         .first();
     const firstTabName = await firstTab.getAttribute('aria-label');
     const firstResults = page.locator('.results-surface');
-    await expect(
-        firstResults.getByRole('status', { name: 'Page 1 of 2', exact: true }),
-    ).toBeVisible();
+    await expect(firstResults.locator('.result-pages-toggle')).toHaveText('1/2');
+    await firstResults.locator('.result-pages-toggle').click();
     await firstResults.getByRole('button', { name: 'Last page', exact: true }).click();
-    await expect(
-        firstResults.getByRole('status', { name: 'Page 2 of 2', exact: true }),
-    ).toBeVisible();
+    await expect(firstResults.locator('.result-pages-toggle')).toHaveText('2/2');
     await firstResults.getByRole('tab', { name: 'Chart', exact: true }).click();
     await expect(firstResults.locator('.chart-canvas svg[role="img"]')).toBeVisible();
 
@@ -318,9 +315,7 @@ test('Result view and page stay with their draft run', async ({ page }) => {
     );
     await expect(firstResults.locator('.chart-canvas svg[role="img"]')).toBeVisible();
     await firstResults.getByRole('tab', { name: 'Table', exact: true }).click();
-    await expect(
-        firstResults.getByRole('status', { name: 'Page 2 of 2', exact: true }),
-    ).toBeVisible();
+    await expect(firstResults.locator('.result-pages-toggle')).toHaveText('2/2');
 });
 
 test('Run button submits the live CodeMirror document before React catches up', async ({
@@ -1007,9 +1002,9 @@ for (const theme of ['Dark', 'Light'])
             ).toHaveText(['SELECT 1', 'GROUP BY\n^']);
             await expect(results.getByRole('table')).toHaveCount(0);
             await expect(results.locator('.result-row-count')).toHaveCount(0);
-            await expect(header.getByRole('button', { name: 'Filter', exact: true })).toHaveCount(
-                0,
-            );
+            await expect(
+                header.getByRole('button', { name: 'Search rows', exact: true }),
+            ).toHaveCount(0);
             await expect(header.getByRole('tablist')).toHaveCount(0);
             await expect(page.locator('.toast-error')).toHaveCount(0);
             await expect(page.locator('.editor-heading')).not.toContainText(
@@ -1974,7 +1969,7 @@ test('Result filtering searches only the visible retained page without mutating 
     await filter.fill('2026-01-02');
     await expect(rows).toHaveCount(1);
     await expect(rows.first()).toContainText('2026-01-02');
-    await expect(results.locator('.results-header .result-row-count')).toHaveText('1 of 7 rows');
+    await expect(results.locator('.result-match-count')).toHaveText('1 of 7 rows on this page');
     await filter.fill('no matching value');
     await expect(rows).toHaveCount(0);
     await expect(results).toContainText('No rows match on this page.');
@@ -2049,9 +2044,14 @@ test('Charts keep NULL missing and plot nullable negative values from zero', asy
     );
     const bars = results.locator('.chart-bar');
     await expect(bars).toHaveCount(2);
-    expect(Number(await bars.nth(0).getAttribute('y'))).toBeCloseTo(100, 0);
-    expect(Number(await bars.nth(1).getAttribute('y'))).toBeCloseTo(40, 0);
-    await expect(results.locator('.chart-zero-line')).toHaveAttribute('y1', '100');
+    const zero = Number(await results.locator('.chart-zero-line').getAttribute('y1'));
+    const negativeY = Number(await bars.nth(0).getAttribute('y'));
+    const negativeHeight = Number(await bars.nth(0).getAttribute('height'));
+    const positiveY = Number(await bars.nth(1).getAttribute('y'));
+    const positiveHeight = Number(await bars.nth(1).getAttribute('height'));
+    expect(negativeY).toBeCloseTo(zero, 2);
+    expect(positiveY + positiveHeight).toBeCloseTo(zero, 2);
+    expect(negativeHeight / positiveHeight).toBeCloseTo(6 / 4, 2);
 });
 
 test('Categorical charts show every retained row with a full x-axis label', async ({ page }) => {
@@ -2083,9 +2083,23 @@ test('Categorical charts show every retained row with a full x-axis label', asyn
         '350 retained rows across 1 measure',
     );
     await expect(results.locator('.chart-x-labels text')).toHaveCount(350);
-    await expect(results.locator('.chart-x-labels text').first()).toHaveText('row-1');
-    await expect(results.locator('.chart-x-labels text').last()).toHaveText('row-350');
-    expect(Number(await results.locator('.chart-bar').last().getAttribute('y'))).toBeCloseTo(40, 0);
+    await expect(results.locator('.chart-x-labels text').first().locator('tspan')).toHaveText(
+        'row-1',
+    );
+    await expect(results.locator('.chart-x-labels text').last().locator('tspan')).toHaveText(
+        'row-350',
+    );
+    await expect(results.locator('.chart-x-labels text').last().locator('title')).toHaveText(
+        'row-350',
+    );
+    const bars = results.locator('.chart-bar');
+    const outlierY = Number(await bars.last().getAttribute('y'));
+    const outlierHeight = Number(await bars.last().getAttribute('height'));
+    const plotTop = Number(await results.locator('.chart-gridline').first().getAttribute('y1'));
+    const zero = Number(await results.locator('.chart-zero-line').getAttribute('y1'));
+    expect(outlierHeight).toBeGreaterThan(Number(await bars.first().getAttribute('height')));
+    expect(outlierY).toBeCloseTo(plotTop, 2);
+    expect(outlierY + outlierHeight).toBeCloseTo(zero, 2);
 });
 
 test('Single-row numeric results render as a number and expose supported chart types', async ({
@@ -2235,6 +2249,10 @@ test('A delayed chart snapshot cannot update the draft after selecting another s
         await replaceSql(page, 'SELECT 1; SELECT 2;');
         await runScript(page);
         const results = page.getByRole('region', { name: 'Query results', exact: true });
+        await expect(results.locator('.script-results-trigger')).toHaveAttribute(
+            'aria-label',
+            /^Select a statement result: Statement 2: succeeded,/,
+        );
         await openStatementResults(results);
         const first = results.getByRole('menuitemradio', {
             name: 'Statement 1: succeeded',

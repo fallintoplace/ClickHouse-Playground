@@ -162,7 +162,7 @@ for (const theme of ['Light', 'Dark'])
             await expect(page.getByRole('tooltip')).toHaveCount(0);
             const filter = await openResultFilter(page);
             await expect(filter).toBeFocused();
-            await page.getByRole('button', { name: 'Close row filter', exact: true }).click();
+            await page.getByRole('button', { name: 'Close search and pages', exact: true }).click();
             const scroll = page.locator('.data-table-scroll');
             await scroll.evaluate(element => {
                 element.scrollTop = 100;
@@ -214,6 +214,6 @@ test('Very long result types keep full metadata in a native tooltip in a narrow 
     await expect(page.getByRole('tooltip')).toHaveCount(0);
     await openResultFilter(page);
     await expect(
-        page.getByRole('searchbox', { name: 'Filter current page', exact: true }),
+        page.getByRole('searchbox', { name: 'Search this page', exact: true }),
     ).toBeFocused();
 });

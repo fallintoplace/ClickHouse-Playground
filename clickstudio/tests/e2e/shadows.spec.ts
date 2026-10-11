@@ -106,7 +106,7 @@ async function expectNeutralWorkspace(page: Page) {
 }
 
 async function expectCompactToolbar(page: Page) {
-    await expect(runButton(page)).toHaveCSS('height', '30px');
+    await expect(runButton(page)).toHaveCSS('height', '28px');
     await expect(runButton(page)).toHaveCSS('font-size', '11px');
     await expect(page.getByTestId('save-query')).toHaveCSS('height', '26px');
     await expect(page.getByTestId('format-sql')).toHaveCSS('height', '26px');
@@ -117,11 +117,13 @@ async function expectCompactToolbar(page: Page) {
     }
     for (const selector of ['.editor-heading', '.results-header']) {
         const header = page.locator(selector);
-        await expect(header).toHaveCSS('height', '40px');
+        await expect(header).toHaveCSS('height', '34px');
         const bounds = await header.boundingBox();
         expect(bounds).not.toBeNull();
         const controlBounds = [];
-        for (const control of await header.locator('.button-base').all()) {
+        for (const control of await header
+            .locator('.button-base:not(.result-controls-panel *), .result-table-controls > button')
+            .all()) {
             const before = await control.boundingBox();
             expect(before).not.toBeNull();
             expect(before!.width).toBeGreaterThanOrEqual(24);
@@ -172,8 +174,8 @@ for (const theme of ['Dark', 'Light'])
             await expect(page.locator('.results-surface')).toHaveCSS('box-shadow', 'none');
             await expect(page.locator('.topbar')).toHaveCSS('box-shadow', 'none');
             const filter = await openResultFilter(page);
-            await expect(filter).toHaveCSS('height', '26px');
-            await page.keyboard.press('Tab');
+            await expect(filter).toHaveCSS('height', '30px');
+            await page.keyboard.press('Shift+Tab');
             await filter.focus();
             await expect(filter).toHaveCSS('outline-style', 'none');
             expect(await shadow(filter)).toMatch(/^(none|.+ 0px 0px 0px 0px)$/);
@@ -187,7 +189,7 @@ for (const theme of ['Dark', 'Light'])
                 '[data-testid="save-query"]',
                 '.panel-window-button',
                 '.panel-collapse-button',
-                '[aria-label="Filter current page"]',
+                '.result-filter',
             ]) {
                 await expect(page.locator(selector).first()).toHaveCSS('border-radius', '4px');
             }
@@ -312,7 +314,7 @@ for (const theme of ['Dark', 'Light'])
             await page.keyboard.press('Escape');
             await expect(importDialog).toBeHidden();
             await expect(runButton(page)).toHaveCSS('border-radius', '4px');
-            await expect(runButton(page)).toHaveCSS('height', '30px');
+            await expect(runButton(page)).toHaveCSS('height', '28px');
             await expect(page.getByTestId('save-query')).toHaveCSS('height', '26px');
             await runButton(page).click({ trial: true });
 

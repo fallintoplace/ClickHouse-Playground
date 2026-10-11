@@ -78,8 +78,14 @@ for (const theme of ['Light', 'Dark']) {
                 },
             );
             await runButton(page).click();
-            await expect(page.locator('.results-header .result-pagination')).toBeVisible();
+            await expect(page.locator('.result-pages-toggle')).toBeVisible();
             await expectReferenceStyles(page, info, 'paged-results');
+            await page.locator('.result-pages-toggle').click();
+            await expect(
+                page.getByRole('dialog', { name: 'Search & pages', exact: true }),
+            ).toBeVisible();
+            await expectReferenceStyles(page, info, 'floating-table-controls');
+            await page.keyboard.press('Escape');
             await page.setViewportSize({ width: 900, height: 740 });
             await expectReferenceStyles(page, info, 'responsive-900');
             await page.setViewportSize({ width: 1440, height: 1000 });
