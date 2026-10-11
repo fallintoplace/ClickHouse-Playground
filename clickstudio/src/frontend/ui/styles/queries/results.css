@@ -607,11 +607,11 @@
   .script-results-trigger {
     display: flex;
     min-width: 0;
-    max-width: min(360px, 45vw);
+    max-width: min(260px, 45vw);
     min-height: 28px;
     align-items: center;
-    gap: 8px;
-    padding: 3px 8px;
+    gap: 6px;
+    padding: 3px 7px;
     border: 1px solid var(--line);
     border-radius: var(--radius-control);
     background: var(--panel-raised);
@@ -657,9 +657,9 @@
   .script-results-menu {
     position: fixed;
     inset: auto;
-    width: min(400px, calc(100vw - 16px));
+    width: min(300px, calc(100vw - 16px));
     margin: 0;
-    padding: 5px;
+    padding: 4px;
     overflow: auto;
     border: 1px solid var(--line-bright);
     border-radius: var(--radius-panel);
@@ -669,7 +669,7 @@
   }
   .script-results-menu:popover-open {
     display: grid;
-    gap: 3px;
+    gap: 2px;
   }
   .script-cancel-status {
     flex: none;
@@ -688,8 +688,8 @@
     min-width: 0;
     grid-template-columns: 22px minmax(0, 1fr) auto;
     align-items: center;
-    gap: 7px;
-    padding: 7px;
+    gap: 6px;
+    padding: 5px 6px;
     border: 1px solid transparent;
     border-radius: var(--radius-control);
     background: transparent;
@@ -721,7 +721,7 @@
   .script-statement-copy {
     display: grid;
     min-width: 0;
-    gap: 3px;
+    gap: 2px;
   }
   .script-statement-copy code,
   .script-statement-copy small {
