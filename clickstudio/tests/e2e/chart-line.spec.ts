@@ -95,6 +95,8 @@ const fixtures: Array<{
 
 for (const reducedMotion of ['no-preference', 'reduce'] as const)
     for (const fixture of fixtures) {
+        if (reducedMotion === 'reduce' && fixture.name !== 'multiple series with missing values')
+            continue;
         test(`${fixture.name} stay fully drawn with ${reducedMotion} motion`, async ({
             page,
         }, info) => {

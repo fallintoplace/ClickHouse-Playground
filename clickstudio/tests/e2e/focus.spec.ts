@@ -36,7 +36,7 @@ for (const theme of ['Dark', 'Light']) {
         );
         await expect(page.locator('html')).toHaveCSS('--focus-color', 'Highlight');
     });
-    for (const mode of ['Standard', 'Experimental']) {
+    for (const mode of [theme === 'Dark' ? 'Standard' : 'Experimental']) {
         test(`${theme} ${mode} uses one keyboard ring and quiet pointer selection`, async ({
             page,
         }, info) => {

@@ -1,5 +1,6 @@
 import { test, expect, type Locator } from '@playwright/test';
 import { runButton, trust } from './helpers.js';
+import { mockWritableWorkspace } from './import-helpers.js';
 
 test.beforeEach(async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -329,18 +330,7 @@ test('Mounted candlesticks update their marks and labels when the theme changes'
 test('Light mode preserves invalid field borders before and after focus with the yellow accent', async ({
     page,
 }) => {
-    await page.route('**/api/connections', async route => {
-        const response = await route.fetch();
-        const connections = await response.json();
-        await route.fulfill({
-            response,
-            json: connections.map((connection: Record<string, unknown>) => ({
-                ...connection,
-                dataSource: 'clickhouse',
-            })),
-        });
-    });
-    await trust(page);
+    await mockWritableWorkspace(page);
     await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'New table', exact: true });
     const name = dialog.getByRole('textbox', { name: 'Table name', exact: true });

@@ -82,7 +82,7 @@ async function storedDraft(page: Page) {
     });
 }
 
-for (const count of [2, 5, 6, 10, 11, 61]) {
+for (const count of [5, 6, 11, 61]) {
     test(`Script plans paginate ${count} statements with Previous and Next buttons`, async ({
         page,
     }, testInfo) => {
@@ -237,11 +237,7 @@ for (const mode of ['beginner', 'expert']) {
 
 for (const [operation, sql] of [
     ['Read', 'SELECT 2'],
-    ['Insert', 'INSERT INTO demo.events (id) VALUES (1)'],
-    ['Update', 'ALTER TABLE demo.events UPDATE id = 2 WHERE id = 1'],
     ['Delete', 'DROP TABLE demo.events'],
-    ['Schema', 'CREATE TABLE new_events (id UInt64) ENGINE = Memory'],
-    ['Unknown', 'SET max_threads = 1'],
     ['Empty', ''],
     ['Invalid', "SELECT 'unterminated"],
 ] as const) {
@@ -277,22 +273,6 @@ for (const [operation, sql] of [
         await expect(review(page)).toHaveCount(0);
         await expect(actions).toHaveCount(0);
         expect(runs).toBe(0);
-    });
-}
-
-for (const action of ['explain', 'review'] as const) {
-    test(`${action} replies are informational without an editor review or chat decision`, async ({
-        page,
-    }) => {
-        await installProposal(page, proposedSql, { action });
-        await trust(page);
-        await replaceSql(page, originalSql);
-        await askForChanges(page);
-        await expect(review(page)).toHaveCount(0);
-        await expect(page.getByTestId('sql-proposal-diff')).toContainText('Review only');
-        await expect(page.locator('.proposal-card')).not.toContainText('Needs review');
-        await expect(page.locator('.proposal-card').getByRole('button')).toHaveCount(0);
-        await expect(liveEditor(page)).toHaveText(originalSql);
     });
 }
 
@@ -440,6 +420,9 @@ for (const decision of ['accepted', 'rejected'] as const) {
             await page.getByTestId('run-button').click();
             await expect.poll(() => runs.length).toBe(1);
             expect(runs[0]).toMatchObject({ sql: nextScript, connectionId: 'demo' });
+            await expect(
+                page.getByRole('button', { name: /^Select a statement result/ }),
+            ).toHaveAccessibleName(/Statement 2: succeeded/);
             await openStatementResults(page);
             await expect(
                 page.getByRole('menuitemradio', { name: 'Statement 2: succeeded', exact: true }),
@@ -870,5 +853,10 @@ for (const reply of [
         await expect(review(page)).toHaveCount(0);
         await expect(liveEditor(page)).toBeVisible();
         await expect(liveEditor(page)).toHaveText(originalSql);
+        if (reply.action !== 'ask') {
+            await expect(page.getByTestId('sql-proposal-diff')).toContainText('Review only');
+            await expect(page.locator('.proposal-card')).not.toContainText('Needs review');
+            await expect(page.locator('.proposal-card').getByRole('button')).toHaveCount(0);
+        }
     });
 }

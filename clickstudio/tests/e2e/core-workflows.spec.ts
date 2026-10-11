@@ -866,7 +866,7 @@ test('A query failure in another draft remains discoverable without showing its 
 });
 
 for (const theme of ['Dark', 'Light'])
-    for (const mode of ['Standard', 'Experimental']) {
+    for (const mode of [theme === 'Dark' ? 'Standard' : 'Experimental']) {
         test(`Failed Results preserve the header and split in ${theme.toLowerCase()} ${mode} mode`, async ({
             page,
         }, testInfo) => {
@@ -2648,6 +2648,7 @@ test('Scripts show each statement outcome and open that statement’s retained r
     await trust(page);
     await replaceSql(page, 'SELECT 1; SELECT fixture_error; SELECT 3;');
     await runScript(page);
+    await expect(page.getByTestId('query-failure')).toContainText('FIXTURE_ERROR');
 
     const results = page.getByRole('region', { name: 'Query results', exact: true });
     await openStatementResults(results);

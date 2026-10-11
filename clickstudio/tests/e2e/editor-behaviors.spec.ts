@@ -121,7 +121,7 @@ test('switching tabs and detaching preserves independent undo and redo histories
         .click();
     const popup = await opened;
     await popup.locator('.cm-content').focus();
-    await popup.keyboard.press('ControlOrMeta+Shift+z');
+    await popup.keyboard.press('ControlOrMeta+Shift+Z');
     await expect.poll(async () => (await editorState(popup)).sql).toBe('SELECT 1 + 2');
     await page.getByRole('button', { name: 'Dock editor here', exact: true }).click();
     await page.locator('.cm-content').focus();

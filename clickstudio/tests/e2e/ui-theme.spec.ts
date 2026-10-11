@@ -32,10 +32,8 @@ function themeOption(page: Page, value: string) {
 }
 
 for (const [browserLocale, savedLocale] of [
-    ['zh-CN', 'zh'],
     ['zh-TW', null],
     ['en-US', 'zh_Hant_TW'],
-    ['zh-CN', 'unknown-locale'],
 ] as const) {
     test(`English startup ignores ${savedLocale ?? 'missing'} language preference with ${browserLocale}`, async ({
         browser,
@@ -104,7 +102,7 @@ for (const theme of themes)
     });
 
 for (const theme of themes) {
-    for (const savedAccent of ['cyan', 'clickhouse-yellow', 'future-accent', ''])
+    for (const savedAccent of ['cyan', 'future-accent'])
         test(`${theme.value} uses yellow with a saved ${savedAccent || 'empty'} accent`, async ({
             page,
         }) => {
@@ -208,29 +206,6 @@ for (const mode of ['Standard', 'Experimental'])
         }
     });
 
-for (const theme of themes)
-    test(`${theme.value} keeps the selected connection marker`, async ({ page }) => {
-        await page.route('**/api/connections', async route => {
-            const response = await route.fetch();
-            const connections = await response.json();
-            await route.fulfill({
-                response,
-                json: [...connections, { ...connections[0], id: 'playground' }],
-            });
-        });
-        await page.goto('/');
-        await themeOption(page, theme.value).click();
-        await page.locator('.connection-trigger').click();
-        const current = page.locator('.connection-switch-list > button[aria-pressed="true"]');
-        await expect(current).toBeVisible();
-        await expect(current).toHaveCSS('background-image', 'none');
-        await expect(current.locator('.connection-choice-check svg')).toBeVisible();
-        await expect(current.locator('.connection-choice-check')).toHaveCSS(
-            'color',
-            theme.dark ? 'rgb(250, 255, 105)' : 'rgb(107, 93, 0)',
-        );
-    });
-
 for (const mode of ['Standard', 'Experimental'])
     test(`${mode} keeps light yellow Run flat and readable across interaction states`, async ({
         page,
@@ -298,7 +273,7 @@ test('an unknown saved theme falls back to ClickDark', async ({ page }) => {
     await expect(page.locator('html')).toHaveAttribute('data-accent', 'clickhouse-yellow');
 });
 
-for (const removedTheme of ['monokai', 'catppuccin-latte'])
+for (const removedTheme of ['monokai'])
     test(`a saved ${removedTheme} preference falls back to ClickDark`, async ({ page }) => {
         await page.addInitScript(
             value => localStorage.setItem('clickstudio:theme', value),

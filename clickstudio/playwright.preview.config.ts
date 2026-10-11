@@ -11,7 +11,11 @@ export default defineConfig({
     retries: 0,
     forbidOnly: Boolean(process.env.CI),
     timeout: 45000,
-    reporter: [['line'], ['html', { open: 'never' }]],
+    reporter: [
+        ['line'],
+        ['html', { open: 'never' }],
+        ['json', { outputFile: 'test-results/results.json' }],
+    ],
     use: {
         baseURL,
         viewport: { width: 1280, height: 720 },

@@ -754,6 +754,9 @@ test('Standard can run a script and open its statement results', async ({ page }
     await runScript(page);
 
     const results = page.getByRole('region', { name: 'Query results', exact: true });
+    await expect(
+        results.getByRole('button', { name: /^Select a statement result/ }),
+    ).toHaveAccessibleName(/Statement 2: succeeded/);
     await openStatementResults(results);
     const first = results.getByRole('menuitemradio', {
         name: 'Statement 1: succeeded',

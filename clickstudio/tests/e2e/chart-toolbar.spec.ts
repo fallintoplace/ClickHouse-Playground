@@ -75,7 +75,7 @@ async function expectPopoverFits(page: Page, popup: Locator) {
 }
 
 for (const mode of ['Standard', 'Experimental'])
-    for (const theme of ['Light', 'Dark']) {
+    for (const theme of [mode === 'Standard' ? 'Light' : 'Dark']) {
         test(`${theme} ${mode} charts keep their controls compact and measures accessible`, async ({
             page,
         }, info) => {

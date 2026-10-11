@@ -141,6 +141,10 @@ for (const theme of ['Dark', 'Light']) {
         const current = menu.getByRole('button', { name: /ClickHouse Playground/ });
         await expect(current).toHaveAttribute('aria-pressed', 'true');
         await expect(current.locator('.connection-choice-check svg')).toBeVisible();
+        await expect(current.locator('.connection-choice-check')).toHaveCSS(
+            'color',
+            theme === 'Dark' ? 'rgb(250, 255, 105)' : 'rgb(107, 93, 0)',
+        );
         await expect(current).toHaveCSS('box-shadow', 'none');
         await page.keyboard.press('Tab');
         await current.focus();

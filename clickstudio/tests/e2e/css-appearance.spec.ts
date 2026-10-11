@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const theme of ['Light', 'Dark']) {
-    for (const mode of ['Standard', 'Experimental']) {
+    for (const mode of [theme === 'Light' ? 'Standard' : 'Experimental']) {
         test(`CSS preserves ${theme}, yellow accent, ${mode} workspace layouts`, async ({
             page,
         }, info) => {

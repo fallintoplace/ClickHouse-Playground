@@ -450,7 +450,7 @@ test('File import shows server mapping errors without attempting a write', async
     await expect(dialog.getByRole('alert')).toContainText(
         'IMPORT_MISSING_FIELD: An input row is missing events',
     );
-    await expect(dialog.getByRole('alert')).toBeFocused();
+    await expect(dialog.getByRole('alert')).not.toHaveAttribute('tabindex');
     expect(commitRequests).toBe(0);
 });
 

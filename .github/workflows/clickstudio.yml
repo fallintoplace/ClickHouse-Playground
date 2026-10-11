@@ -6,9 +6,11 @@ concurrency:
 
 on:
   push:
-    paths: ["clickstudio/**", "package.json", ".github/workflows/clickstudio.yml"]
+    paths:
+      ["clickstudio/**", "package.json", ".github/workflows/clickstudio.yml"]
   pull_request:
-    paths: ["clickstudio/**", "package.json", ".github/workflows/clickstudio.yml"]
+    paths:
+      ["clickstudio/**", "package.json", ".github/workflows/clickstudio.yml"]
   workflow_dispatch:
 
 permissions:
@@ -120,9 +122,13 @@ jobs:
         run: docker compose --profile app down -v
 
   browser-e2e:
-    name: Browser E2E
+    name: Browser E2E (${{ matrix.shard }}/8)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -134,25 +140,71 @@ jobs:
         run: npm ci
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
-      - name: Browser suite
-        run: npm run test:e2e
-      - name: Production preview parser and export smoke test
-        run: npm run test:e2e:preview
-      - name: Preserve browser diagnostics
-        if: failure()
+      - name: Functional browser suite
+        run: npm run test:e2e -- --project=functional --shard=${{ matrix.shard }}/8
+      - name: Preserve browser diagnostics and timings
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: clickstudio-browser-diagnostics
+          name: clickstudio-browser-${{ matrix.shard }}
           path: |
             clickstudio/playwright-report
             clickstudio/test-results
           if-no-files-found: ignore
           retention-days: 7
-      - name: Preserve UX screenshots
-        if: always()
+
+  browser-visual:
+    name: CSS appearance
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: clickstudio/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Compare application styles
+        run: npm run test:e2e -- --project=visual
+      - name: Preserve appearance diagnostics and timings
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: clickstudio-ux-screenshots
-          path: clickstudio/test-results/**/clickstudio-*.png
+          name: clickstudio-appearance
+          path: |
+            clickstudio/playwright-report
+            clickstudio/test-results
+          if-no-files-found: ignore
+          retention-days: 7
+
+  browser-preview:
+    name: Production preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: clickstudio/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Production preview parser and export smoke test
+        run: npm run test:e2e:preview
+      - name: Preserve preview diagnostics and timings
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: clickstudio-preview
+          path: |
+            clickstudio/playwright-report
+            clickstudio/test-results
           if-no-files-found: ignore
           retention-days: 7

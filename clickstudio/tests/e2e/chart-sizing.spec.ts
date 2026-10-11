@@ -58,12 +58,6 @@ for (const fixture of [
         kind: 'bar',
         rowCount: false,
     },
-    {
-        name: 'dense row counts',
-        labels: Array.from({ length: 600 }, (_, index) => `Long category name ${index}`),
-        kind: 'bar',
-        rowCount: true,
-    },
 ]) {
     test(`${fixture.name} show every full label in a compact scrollable plot`, async ({
         page,

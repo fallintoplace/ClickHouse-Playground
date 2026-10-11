@@ -14,8 +14,19 @@ export default defineConfig({
     retries: 0,
     forbidOnly: Boolean(process.env.CI),
     timeout: 30000,
-    reporter: [['line'], ['html', { open: 'never' }]],
+    reporter: [
+        ['line'],
+        ['html', { open: 'never' }],
+        ['json', { outputFile: 'test-results/results.json' }],
+    ],
     testIgnore: ['**/preview.spec.ts'],
+    projects: [
+        {
+            name: 'functional',
+            testIgnore: ['**/preview.spec.ts', '**/css-appearance.spec.ts'],
+        },
+        { name: 'visual', testMatch: '**/css-appearance.spec.ts' },
+    ],
     use: {
         baseURL,
         viewport: { width: 1280, height: 720 },
