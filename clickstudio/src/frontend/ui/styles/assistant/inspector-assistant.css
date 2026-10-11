@@ -1161,8 +1161,7 @@
     background: var(--panel-raised);
     box-shadow: var(--shadow-popover);
   }
-  .assistant-chat-history-popover[hidden],
-  .assistant-chat-row-actions[hidden] {
+  .assistant-chat-history-popover[hidden] {
     display: none;
   }
   .assistant-chat-history-heading {
@@ -1224,7 +1223,8 @@
     min-width: 0;
     border-radius: var(--radius-panel);
   }
-  .assistant-chat-history-item:hover {
+  .assistant-chat-history-item:hover,
+  .assistant-chat-history-item.is-active {
     background: var(--panel-hover);
   }
   .assistant-chat-history-row {
@@ -1248,7 +1248,7 @@
     background: transparent;
     color: var(--text-soft);
     font: inherit;
-    font-size: 8px;
+    font-size: 11px;
     text-align: left;
     cursor: pointer;
   }
@@ -1266,38 +1266,35 @@
   .assistant-chat-history-select[aria-current="page"] {
     color: var(--text);
   }
-  .assistant-chat-history-actions-trigger {
+  .assistant-chat-row-actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 2px;
+    padding-right: 2px;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .assistant-chat-history-item:hover .assistant-chat-row-actions,
+  .assistant-chat-history-item.is-active .assistant-chat-row-actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .assistant-chat-row-action {
     display: grid;
     width: 29px;
-    height: 29px;
+    min-height: 29px;
     flex: none;
     place-items: center;
-    border: 1px solid transparent;
-    border-radius: var(--radius-control);
-    outline: 0;
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
+    padding: 0;
   }
-  .assistant-chat-history-actions-trigger:hover,
-  .assistant-chat-history-actions-trigger[aria-expanded="true"] {
-    background: var(--control-hover);
-    color: var(--text);
-  }
-  .assistant-chat-history-actions-trigger svg {
+  .assistant-chat-row-action svg {
     width: 14px;
     height: 14px;
   }
-  .assistant-chat-row-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 4px;
-    padding: 0 5px 5px;
-  }
-  .assistant-chat-row-actions .button-base {
-    min-height: 27px;
-    padding-inline: 8px;
-    font-size: 8px;
+  .assistant-chat-row-action.is-delete:hover {
+    background: color-mix(in srgb, var(--red) 7%, transparent);
+    color: var(--red);
   }
   .assistant-chat-rename-inline {
     display: flex;
@@ -1318,7 +1315,7 @@
     outline: 0;
     background: var(--control-well);
     color: var(--text);
-    font-size: 8px;
+    font-size: 11px;
   }
   .assistant-chat-rename-inline .button-base {
     display: grid;

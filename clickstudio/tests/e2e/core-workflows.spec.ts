@@ -2466,10 +2466,7 @@ test('Ask AI keeps chat history when SQL changes and sends prior messages with f
     await page
         .getByRole('button', { name: 'Chat history: Show the old question', exact: true })
         .click();
-    await page
-        .getByRole('button', { name: 'Actions for Show the old question', exact: true })
-        .click();
-    await page.getByRole('button', { name: 'Rename', exact: true }).click();
+    await page.getByRole('button', { name: 'Rename Show the old question', exact: true }).click();
     const conversationName = page.getByRole('textbox', {
         name: 'New name for Show the old question',
         exact: true,
@@ -2490,10 +2487,7 @@ test('Ask AI keeps chat history when SQL changes and sends prior messages with f
     await page
         .getByRole('button', { name: 'Chat history: Flight delay analysis', exact: true })
         .click();
-    await page
-        .getByRole('button', { name: 'Actions for Flight delay analysis', exact: true })
-        .click();
-    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    await page.getByRole('button', { name: 'Delete Flight delay analysis', exact: true }).click();
     await expect(
         page.getByRole('alertdialog', {
             name: 'Delete this conversation?',
@@ -2695,8 +2689,7 @@ test('Ask AI keeps a custom conversation name after its first message', async ({
     await useAdvancedMode(page);
     await page.getByTestId('open-ai').click();
     await page.getByRole('button', { name: 'Chat history: New chat', exact: true }).click();
-    await page.getByRole('button', { name: 'Actions for New chat', exact: true }).click();
-    await page.getByRole('button', { name: 'Rename', exact: true }).click();
+    await page.getByRole('button', { name: 'Rename New chat', exact: true }).click();
     await page
         .getByRole('textbox', { name: 'New name for New chat', exact: true })
         .fill('Flight lookup');

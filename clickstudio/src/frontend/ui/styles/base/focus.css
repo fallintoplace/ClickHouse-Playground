@@ -87,6 +87,16 @@
   background: var(--panel-hover);
 }
 
+.assistant-chat-history-item:focus-within .assistant-chat-row-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.assistant-chat-row-action.is-delete:focus-visible {
+  background: color-mix(in srgb, var(--red) 7%, transparent);
+  color: var(--red);
+}
+
 .help-button:focus-visible {
   animation: none;
 }

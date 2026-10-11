@@ -23,9 +23,7 @@ export function AssistantChatHistory({
     const historyRef = useRef<HTMLDivElement>(null);
     const historyTriggerRef = useRef<HTMLButtonElement>(null);
     const selectButtonsRef = useRef(new Map<string, HTMLButtonElement>());
-    const actionButtonsRef = useRef(new Map<string, HTMLButtonElement>());
     const [historyOpen, setHistoryOpen] = useState(false);
-    const [actionsChatId, setActionsChatId] = useState<string | null>(null);
     const [renamingChatId, setRenamingChatId] = useState<string | null>(null);
     const [renameValue, setRenameValue] = useState('');
     const [search, setSearch] = useState('');
@@ -42,7 +40,6 @@ export function AssistantChatHistory({
         const closeOnOutsidePointer = (event: PointerEvent) => {
             if (event.target instanceof Node && !historyRef.current?.contains(event.target)) {
                 setHistoryOpen(false);
-                setActionsChatId(null);
                 setRenamingChatId(null);
             }
         };
@@ -54,18 +51,13 @@ export function AssistantChatHistory({
         window.requestAnimationFrame(() => historyTriggerRef.current?.focus());
     const closeHistory = () => {
         setHistoryOpen(false);
-        setActionsChatId(null);
         setRenamingChatId(null);
     };
     const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
         if (event.key !== 'Escape' || !historyOpen) return;
         event.preventDefault();
         event.stopPropagation();
-        if (actionsChatId) {
-            const chatId = actionsChatId;
-            setActionsChatId(null);
-            window.requestAnimationFrame(() => actionButtonsRef.current.get(chatId)?.focus());
-        } else if (renamingChatId) {
+        if (renamingChatId) {
             const chatId = renamingChatId;
             setRenamingChatId(null);
             setRenameValue('');
@@ -83,7 +75,6 @@ export function AssistantChatHistory({
     };
     const startRename = (chatId: string, title: string) => {
         setRenameValue(title);
-        setActionsChatId(null);
         setRenamingChatId(chatId);
     };
     const cancelRename = (chatId: string) => {
@@ -100,7 +91,6 @@ export function AssistantChatHistory({
     };
     const deleteChat = (chatId: string) => {
         onDeleteChat(chatId);
-        setActionsChatId(null);
         focusHistoryTrigger();
     };
 
@@ -124,7 +114,6 @@ export function AssistantChatHistory({
                     aria-controls="assistant-chat-history"
                     onClick={() => {
                         setHistoryOpen(open => !open);
-                        setActionsChatId(null);
                         setRenamingChatId(null);
                     }}
                     title={activeChat?.title ?? 'New chat'}
@@ -157,7 +146,10 @@ export function AssistantChatHistory({
                     )}
                     <ul className="assistant-chat-history-list" aria-label="Conversations">
                         {visibleChats.map(chat => (
-                            <li className="assistant-chat-history-item" key={chat.id}>
+                            <li
+                                className={`assistant-chat-history-item${chat.id === activeChatId ? ' is-active' : ''}`}
+                                key={chat.id}
+                            >
                                 {renamingChatId === chat.id ? (
                                     <form
                                         className="assistant-chat-rename-inline"
@@ -172,6 +164,7 @@ export function AssistantChatHistory({
                                             aria-label={`New name for ${chat.title}`}
                                             value={renameValue}
                                             maxLength={MAX_ASSISTANT_CHAT_TITLE_LENGTH}
+                                            onFocus={event => event.currentTarget.select()}
                                             onChange={event => setRenameValue(event.target.value)}
                                             onKeyDown={event => {
                                                 if (event.key === 'Escape') {
@@ -228,48 +221,28 @@ export function AssistantChatHistory({
                                                 </>
                                             )}
                                         </button>
-                                        <button
-                                            ref={element => {
-                                                if (element)
-                                                    actionButtonsRef.current.set(chat.id, element);
-                                                else actionButtonsRef.current.delete(chat.id);
-                                            }}
-                                            type="button"
-                                            className="assistant-chat-history-actions-trigger"
-                                            aria-label={`Actions for ${chat.title}`}
-                                            aria-expanded={actionsChatId === chat.id}
-                                            aria-controls={`assistant-chat-actions-${chat.id}`}
-                                            onClick={() =>
-                                                setActionsChatId(current =>
-                                                    current === chat.id ? null : chat.id,
-                                                )
-                                            }
-                                        >
-                                            <Icon name="more" />
-                                        </button>
+                                        <div className="assistant-chat-row-actions">
+                                            <Button
+                                                variant="ghost"
+                                                className="assistant-chat-row-action"
+                                                aria-label={`Rename ${chat.title}`}
+                                                title="Rename chat"
+                                                onClick={() => startRename(chat.id, chat.title)}
+                                            >
+                                                <Icon name="rename" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                className="assistant-chat-row-action is-delete"
+                                                aria-label={`Delete ${chat.title}`}
+                                                title="Delete chat"
+                                                onClick={() => deleteChat(chat.id)}
+                                            >
+                                                <Icon name="trash" />
+                                            </Button>
+                                        </div>
                                     </div>
                                 )}
-                                <div
-                                    id={`assistant-chat-actions-${chat.id}`}
-                                    className="assistant-chat-row-actions"
-                                    role="group"
-                                    aria-label={`Actions for ${chat.title}`}
-                                    hidden={actionsChatId !== chat.id || renamingChatId === chat.id}
-                                >
-                                    <Button
-                                        variant="ghost"
-                                        onClick={() => startRename(chat.id, chat.title)}
-                                    >
-                                        Rename
-                                    </Button>
-                                    <button
-                                        type="button"
-                                        className="button-base button-danger"
-                                        onClick={() => deleteChat(chat.id)}
-                                    >
-                                        Delete
-                                    </button>
-                                </div>
                             </li>
                         ))}
                         {!visibleChats.length && (

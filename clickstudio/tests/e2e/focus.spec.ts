@@ -274,9 +274,9 @@ async function openFocusHarness(page: Page) {
 }
 
 for (const theme of ['Dark', 'Light']) {
-    test(`${theme} chat history uses one search border and restores focus after immediate deletion`, async ({
+    test(`${theme} chat history exposes direct row actions and restores focus after immediate deletion`, async ({
         page,
-    }) => {
+    }, info) => {
         await loadFocusHarness(page);
         await page.evaluate(theme => {
             document.documentElement.dataset.theme =
@@ -291,8 +291,52 @@ for (const theme of ['Dark', 'Light']) {
         const wrapper = page.locator('#focus-harness .assistant-chat-search');
         await expect(wrapper).toHaveCSS('box-shadow', 'none');
         await expect(wrapper).toHaveCSS('border-color', await resolvedFocusColor(wrapper));
-        await page.getByRole('button', { name: 'Actions for Conversation 0', exact: true }).click();
-        const opener = page.getByRole('button', { name: 'Delete', exact: true });
+        await expect(page.locator('.assistant-chat-history-actions-trigger')).toHaveCount(0);
+        const row = page
+            .locator('.assistant-chat-history-item')
+            .filter({ hasText: 'Conversation 2' });
+        const title = row.locator('.assistant-chat-history-select > span:first-child');
+        await expect(row.locator('.assistant-chat-row-actions')).toHaveCSS('opacity', '0');
+        const bounds = await title.boundingBox();
+        await row.hover();
+        await expect(row.locator('.assistant-chat-row-actions')).toHaveCSS('opacity', '1');
+        expect(await title.boundingBox()).toEqual(bounds);
+        await page.locator('.assistant-chat-history-popover').screenshot({
+            path: info.outputPath('direct-chat-actions.png'),
+        });
+        await page.getByRole('button', { name: 'Rename Conversation 2', exact: true }).click();
+        const name = page.getByRole('textbox', {
+            name: 'New name for Conversation 2',
+            exact: true,
+        });
+        await expect(name).toBeFocused();
+        expect(
+            await name.evaluate((input: HTMLInputElement) => ({
+                start: input.selectionStart,
+                end: input.selectionEnd,
+            })),
+        ).toEqual({ start: 0, end: 'Conversation 2'.length });
+        await name.fill('Cancelled name');
+        await page.keyboard.press('Escape');
+        await expect(
+            row.getByRole('button', { name: 'Conversation 2', exact: true }),
+        ).toBeFocused();
+        await page.keyboard.press('Tab');
+        const rename = page.getByRole('button', { name: 'Rename Conversation 2', exact: true });
+        await expect(rename).toBeFocused();
+        await expect(row.locator('.assistant-chat-row-actions')).toHaveCSS('opacity', '1');
+        await page.keyboard.press('Enter');
+        await name.fill('   ');
+        await expect(
+            page.getByRole('button', { name: 'Save conversation name', exact: true }),
+        ).toBeDisabled();
+        await name.fill('Renamed chat');
+        await page.keyboard.press('Enter');
+        await expect(page.getByRole('button', { name: 'Renamed chat', exact: true })).toBeFocused();
+        await expect(
+            page.getByRole('button', { name: 'Chat history: Conversation 0', exact: true }),
+        ).toBeVisible();
+        const opener = page.getByRole('button', { name: 'Delete Conversation 0', exact: true });
         await opener.focus();
         await page.keyboard.press('Enter');
         const dialog = page.getByRole('alertdialog', {

@@ -59,8 +59,8 @@ async function selectChat(page: Page, title: string) {
 async function deleteChat(page: Page, title: string) {
     const history = page.getByRole('button', { name: /^Chat history:/ });
     if ((await history.getAttribute('aria-expanded')) !== 'true') await history.click();
-    await page.getByRole('button', { name: `Actions for ${title}`, exact: true }).click();
-    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    await page.locator('.assistant-chat-history-item').filter({ hasText: title }).hover();
+    await page.getByRole('button', { name: `Delete ${title}`, exact: true }).click();
     await expect(page.getByRole('alertdialog', { name: 'Delete this conversation?' })).toHaveCount(
         0,
     );

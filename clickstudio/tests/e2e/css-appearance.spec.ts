@@ -116,6 +116,11 @@ for (const theme of ['Light', 'Dark']) {
             await expect(page.getByRole('textbox', { name: 'Ask AI', exact: true })).toBeVisible();
             await expect(page.locator('.assistant-context-meta')).toHaveCount(0);
             await expectReferenceStyles(page, info, 'assistant-composer');
+            await page.getByRole('button', { name: /^Chat history:/ }).click();
+            const chatHistory = page.getByRole('region', { name: 'Chat history', exact: true });
+            await expectReferenceStyles(page, info, 'assistant-chat-history', chatHistory);
+            await chatHistory.getByRole('button', { name: 'Rename New chat', exact: true }).click();
+            await expectReferenceStyles(page, info, 'assistant-chat-rename', chatHistory);
         });
     }
 
