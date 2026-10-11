@@ -720,31 +720,13 @@ test('SQL-focused context allows sample data when the user requests examples', (
     const rules = JSON.parse(built.payload.context).workspaceRules;
     assert.doesNotMatch(rules, /read-only/i);
     assert.doesNotMatch(built.payload.instructions, /SELECT\/WITH only/i);
-    assert.match(built.payload.instructions, /fixed list of SQL statement types/i);
-    assert.match(
-        built.payload.instructions,
-        /If a requested source table is not listed and tablesIncomplete is false, say it is absent/i,
-    );
-    assert.match(
-        built.payload.instructions,
-        /If it is not listed and tablesIncomplete is true.*existence cannot be confirmed/i,
-    );
-    assert.match(
-        built.payload.instructions,
-        /Never infer that a table is absent because its columns are missing/i,
-    );
-    assert.match(built.payload.instructions, /label them as examples/i);
-    assert.match(
-        built.payload.instructions,
-        /Queries may reference tables created earlier in the same proposed script/i,
-    );
-    assert.match(
-        built.payload.instructions,
-        /sample rows only when the user requests examples, sample data, or a demonstration/i,
-    );
+    assert.equal(built.payload.question, 'Create a geography table with sample city rows.');
 });
-test('Assistant completion instructions preserve the full request across subjects', () => {
+test('Assistant passes full requests through with consistent general instructions', () => {
     const f = aiFixture();
+    const instructions = buildContext({ ...f.input, action: 'ask' }).payload.instructions;
+    assert.doesNotMatch(instructions, /Never claim a query ran|draft a useful starter table/i);
+    assert.doesNotMatch(instructions, /CREATE TABLE target ENGINE = MergeTree/i);
     for (const question of [
         'Create a table with all NHL winners from 2000 and write a query.',
         "Rank all capital cities by today's weather.",
@@ -754,18 +736,7 @@ test('Assistant completion instructions preserve the full request across subject
     ]) {
         const built = buildContext({ ...f.input, action: 'ask', question });
         assert.equal(built.payload.question, question);
-        assert.match(
-            built.payload.instructions,
-            /date ranges, entities, steps.*coverage requirements/i,
-        );
-        assert.match(built.payload.instructions, /continue searching.*requested scope/i);
-        assert.match(
-            built.payload.instructions,
-            /compare the answer and any SQL with the full request/i,
-        );
-        assert.match(built.payload.instructions, /Label partial results as partial/i);
-        assert.doesNotMatch(built.payload.instructions, /draft a useful starter table/i);
-        assert.doesNotMatch(built.payload.instructions, /answer briefly and steer/i);
+        assert.equal(built.payload.instructions, instructions);
     }
 });
 test('External facts can be researched without a matching database table', () => {
@@ -778,19 +749,9 @@ test('External facts can be researched without a matching database table', () =>
     });
     const context = JSON.parse(built.payload.context);
     assert.deepEqual(context.tables, []);
-    assert.match(
-        built.payload.instructions,
-        /External factual questions do not require matching tables/i,
-    );
-    assert.match(built.payload.instructions, /Use web search to verify current or external facts/i);
-    assert.match(
-        built.payload.instructions,
-        /Do not substitute fictional rows for requested real facts/i,
-    );
-    assert.match(
-        built.payload.instructions,
-        /do not claim completeness or invent missing entries/i,
-    );
+    assert.deepEqual(context.schema, []);
+    assert.equal(built.payload.question, 'List championship winners since 2000.');
+    assert.match(built.payload.instructions, /Research external facts with web search/i);
 });
 test('Assistant prioritizes tables named in the question, current SQL, or selected run SQL', () => {
     const f = aiFixture();
@@ -931,9 +892,9 @@ test('Assistant distinguishes a missing table in complete and incomplete table l
         question: 'Does missing_events exist?',
     });
     assert.equal(JSON.parse(complete.payload.context).tablesIncomplete, false);
-    assert.match(
-        complete.payload.instructions,
-        /If a requested source table is not listed and tablesIncomplete is false, say it is absent/i,
+    assert.equal(
+        JSON.parse(complete.payload.context).tables.some(table => table.name === 'missing_events'),
+        false,
     );
 
     const incomplete = buildContext({
@@ -943,9 +904,9 @@ test('Assistant distinguishes a missing table in complete and incomplete table l
         schema: { ...schema, truncated: true },
     });
     assert.equal(JSON.parse(incomplete.payload.context).tablesIncomplete, true);
-    assert.match(
-        incomplete.payload.instructions,
-        /If it is not listed and tablesIncomplete is true.*existence cannot be confirmed/i,
+    assert.deepEqual(
+        JSON.parse(incomplete.payload.context).tables,
+        JSON.parse(complete.payload.context).tables,
     );
 });
 test('Assistant keeps the named table while bounding table names to 60 KB', () => {
@@ -975,27 +936,12 @@ test('Assistant keeps the named table while bounding table names to 60 KB', () =
     assert.equal(context.tables[0].name, 'target');
     assert.equal(context.tablesIncomplete, true);
 });
-test('Plain-language assistant answers request concise Markdown list formatting', () => {
+test('Assistant instructions keep the main answer in the visible summary', () => {
     const f = aiFixture();
     const built = buildContext({ ...f.input, action: 'ask', question: 'List the top songs.' });
-    assert.match(
-        built.payload.instructions,
-        /summary contains a plain-language answer.*concise Markdown/i,
-    );
-    assert.match(
-        built.payload.instructions,
-        /put each ordered or bulleted list item on its own line/i,
-    );
-    assert.match(
-        built.payload.instructions,
-        /Put the complete requested answer, including lists or tables, in summary/i,
-    );
-    assert.match(
-        built.payload.instructions,
-        /do not return only an introduction or hide the main answer/i,
-    );
+    assert.match(built.payload.instructions, /Put the full plain-language answer in summary/i);
 });
-test('SQL context preserves all columns and rows when copying a known source table', () => {
+test('SQL context includes all source columns for a requested table copy', () => {
     const f = aiFixture();
     const copySchema = {
         ...schema,
@@ -1014,15 +960,11 @@ test('SQL context preserves all columns and rows when copying a known source tab
         schema: copySchema,
     });
     const context = JSON.parse(built.payload.context);
-    assert.match(
-        built.payload.instructions,
-        /CREATE TABLE target ENGINE = MergeTree ORDER BY tuple\(\) AS SELECT \* FROM source statement/i,
+    assert.equal(
+        built.payload.question,
+        'Create geography_copy from geography with all rows and columns.',
     );
-    assert.match(built.payload.instructions, /Do not omit the ENGINE clause/i);
-    assert.match(
-        built.payload.instructions,
-        /do not answer with a standalone SELECT, choose a subset/i,
-    );
+    assert.deepEqual(context.tables, [{ database: 'default', name: 'geography' }]);
     assert.deepEqual(
         context.schema.map(column => column.name),
         ['country', 'place', 'latitude', 'longitude'],

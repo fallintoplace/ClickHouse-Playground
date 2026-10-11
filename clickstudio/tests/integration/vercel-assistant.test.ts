@@ -472,15 +472,7 @@ test('Vercel assistant returns a requested table proposal with example geography
             return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
         const payload = JSON.parse(String(init?.body)) as { instructions?: string };
         assert.doesNotMatch(payload.instructions ?? '', /SQL must be SELECT\/WITH only/i);
-        assert.match(payload.instructions ?? '', /fixed list of SQL statement types/i);
-        assert.match(
-            payload.instructions ?? '',
-            /If a requested source table is not listed and tablesIncomplete is false, say it is absent/i,
-        );
-        assert.match(
-            payload.instructions ?? '',
-            /If it is not listed and tablesIncomplete is true.*existence cannot be confirmed/i,
-        );
+        assert.doesNotMatch(payload.instructions ?? '', /Never claim a query ran/i);
         return Response.json({
             id: 'resp_interview',
             status: 'completed',
@@ -527,7 +519,7 @@ test('Vercel assistant returns a requested table proposal with example geography
     }
 });
 
-test('Vercel assistant instructs a full table copy when the source is present', async () => {
+test('Vercel assistant returns a full table copy when the source is present', async () => {
     const priorKey = process.env.OPENAI_API_KEY;
     const priorFetch = globalThis.fetch;
     const sql =
@@ -545,17 +537,22 @@ test('Vercel assistant instructs a full table copy when the source is present', 
     globalThis.fetch = async (input, init) => {
         if (String(input).endsWith('/responses/input_tokens'))
             return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
-        const payload = JSON.parse(String(init?.body)) as { instructions?: string };
-        assert.match(
-            payload.instructions ?? '',
-            /copy a named source table.*all rows and columns/i,
+        const payload = JSON.parse(String(init?.body)) as {
+            input: Array<{ content: Array<{ text: string }> }>;
+        };
+        const supplied = JSON.parse(payload.input[0]!.content[0]!.text) as {
+            question: string;
+            context: {
+                tables: Array<{ database: string; name: string }>;
+                schema: Array<{ name: string }>;
+            };
+        };
+        assert.match(supplied.question, /Include all rows and columns from the source table/i);
+        assert.deepEqual(supplied.context.tables, [{ database: 'default', name: 'geography' }]);
+        assert.deepEqual(
+            supplied.context.schema.map(column => column.name),
+            ['country', 'place', 'latitude', 'longitude'],
         );
-        assert.match(
-            payload.instructions ?? '',
-            /CREATE TABLE target ENGINE = MergeTree ORDER BY tuple\(\) AS SELECT \* FROM source statement/i,
-        );
-        assert.match(payload.instructions ?? '', /Do not omit the ENGINE clause/i);
-        assert.match(payload.instructions ?? '', /do not answer with a standalone SELECT/i);
         return Response.json({
             id: 'resp_table_copy',
             status: 'completed',
