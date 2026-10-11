@@ -1,33 +1,37 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, RefCallback } from 'react';
 import { MAX_CHART_RENDER_POINTS } from '../../../../../shared/queries/results/results';
 import { formatCount, seriesColor, splitChartSegments } from '../chart-helpers';
 import type { ChartSvgModel } from './chart-svg-model';
 
-export function createChartSvgRenderer({
-    plotRight,
-    chartAriaLabel,
-    plotTop,
-    plotMiddle,
-    plotBottom,
-    plotLeft,
-    chartYTicks,
-    compactNumber,
-    chartKind,
-    zeroY,
-    scatterPoints,
-    scatterX,
-    scatterY,
-    result,
-    xIndex,
-    locale,
-    yIndex,
-    plotSeries,
-    x,
-    y,
-    barWidth,
-    chartRows,
-    chartXTicks,
-}: ChartSvgModel) {
+export function createChartSvgRenderer(
+    {
+        viewportWidth,
+        plotRight,
+        chartAriaLabel,
+        plotTop,
+        plotMiddle,
+        plotBottom,
+        plotLeft,
+        chartYTicks,
+        compactNumber,
+        chartKind,
+        zeroY,
+        scatterPoints,
+        scatterX,
+        scatterY,
+        result,
+        xIndex,
+        locale,
+        yIndex,
+        plotSeries,
+        x,
+        y,
+        barWidth,
+        chartRows,
+        chartXTicks,
+    }: ChartSvgModel,
+    onPlotViewport: RefCallback<SVGSVGElement>,
+) {
     return (categoryAxisIsScrollable: boolean) => {
         const renderSeries = () => {
             switch (chartKind) {
@@ -96,9 +100,7 @@ export function createChartSvgRenderer({
                                 height = Math.max(1, Math.abs(valueY - zeroY));
                             const groupOffset =
                                 (seriesIndex - (plotSeries.length - 1) / 2) * barWidth;
-                            const disableBarAnimation =
-                                categoryAxisIsScrollable &&
-                                chartRows.length > MAX_CHART_RENDER_POINTS;
+                            const disableBarAnimation = chartRows.length > MAX_CHART_RENDER_POINTS;
                             return [
                                 <rect
                                     key={`${series.columnIndex}-${point.index}`}
@@ -111,6 +113,9 @@ export function createChartSvgRenderer({
                                     style={
                                         {
                                             '--series-color': series.color,
+                                            strokeWidth: categoryAxisIsScrollable
+                                                ? undefined
+                                                : Math.min(1, barWidth * 0.4),
                                             ...(disableBarAnimation
                                                 ? {}
                                                 : { animationDelay: `${point.index * 20}ms` }),
@@ -124,8 +129,9 @@ export function createChartSvgRenderer({
         };
         return (
             <svg
+                ref={categoryAxisIsScrollable ? undefined : onPlotViewport}
                 className={categoryAxisIsScrollable ? 'chart-category-plot' : undefined}
-                viewBox={categoryAxisIsScrollable ? `0 0 ${plotRight} 230` : '0 0 760 230'}
+                viewBox={`0 0 ${categoryAxisIsScrollable ? plotRight : viewportWidth} 230`}
                 preserveAspectRatio={categoryAxisIsScrollable ? 'none' : undefined}
                 style={
                     categoryAxisIsScrollable

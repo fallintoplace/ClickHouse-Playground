@@ -3,6 +3,7 @@ import test from 'node:test';
 import { getCopy } from '../../.workspace-build/src/frontend/common/translations/i18n.js';
 import { prepareChartSelection } from '../../.workspace-build/src/frontend/workspace/results/charts/controls/chart-selection.js';
 import { prepareChartView } from '../../.workspace-build/src/frontend/workspace/results/charts/rendering/chart-view-model.js';
+import { fitChartTicks } from '../../.workspace-build/src/frontend/workspace/results/charts/chart-helpers.js';
 import {
     heatmapCellKey,
     MAX_CHART_RENDER_POINTS,
@@ -18,7 +19,7 @@ function result(columns, rows) {
     };
 }
 
-function prepare(data, overrides = {}, width = 652, locale = 'en') {
+function prepare(data, overrides = {}, width = 652, locale = 'en', plotViewportWidth = 760) {
     const chart = { kind: 'line', x: 0, ys: [1], title: 'Query result', ...overrides };
     return prepareChartView({
         result: data,
@@ -26,9 +27,199 @@ function prepare(data, overrides = {}, width = 652, locale = 'en') {
         chartCopy: getCopy(locale).chart,
         locale,
         categoryViewportWidth: width,
+        plotViewportWidth,
         selection: prepareChartSelection(data, chart),
     });
 }
+
+test('Timestamp ticks reduce to endpoints or a middle tick when their labels cannot fit', () => {
+    for (const [width, count] of [
+        [500, 3],
+        [300, 2],
+        [180, 1],
+    ]) {
+        const ticks = ['01:31:00', '02:01:00', '02:31:00'].map((time, index) => ({
+            label: `2026-10-11 ${time}`,
+            position: (index * width) / 2,
+        }));
+        let expected = ticks;
+        if (count === 2) expected = [ticks[0], ticks[2]];
+        else if (count === 1) expected = [ticks[1]];
+        assert.deepEqual(fitChartTicks(ticks), expected);
+    }
+    assert.deepEqual(fitChartTicks([]), []);
+    const tick = { label: '2026-10-11 01:31:00', position: 100 };
+    assert.deepEqual(fitChartTicks([tick]), [tick]);
+    const crowded = [80, 100, 732].map(position => ({ ...tick, position }));
+    assert.deepEqual(fitChartTicks(crowded), [crowded[0], crowded[2]]);
+});
+
+for (const [rowCount, width, tickCount] of [
+    [2, 408, 1],
+    [3, 508, 2],
+]) {
+    test(`${rowCount} timestamp bars at width ${width} avoid labels overlapping at slot centers`, () => {
+        const view = prepare(
+            result(
+                [
+                    ['time', 'DateTime'],
+                    ['value', 'Float64'],
+                ],
+                Array.from({ length: rowCount }, (_value, index) => [
+                    `2026-10-11 01:3${index}:00`,
+                    index + 1,
+                ]),
+            ),
+            { kind: 'bar' },
+            652,
+            'en',
+            width,
+        );
+        assert.equal(view.svg.chartXTicks.length, tickCount);
+    });
+}
+
+for (const xType of ['DateTime', 'Float64']) {
+    for (const kind of ['line', 'bar']) {
+        test(`${xType} ${kind} charts use the viewport width with readable sparse ticks`, () => {
+            const rows = Array.from({ length: 600 }, (_value, index) => [
+                xType === 'DateTime'
+                    ? new Date(Date.UTC(2026, 9, 11, 1, index)).toISOString()
+                    : index,
+                index + 1,
+            ]);
+            const data = result(
+                [
+                    ['x', xType],
+                    ['value', 'Float64'],
+                ],
+                rows,
+            );
+            for (const width of [320, 760, 1800]) {
+                const view = prepare(data, { kind }, 652, 'en', width);
+                assert.equal(view.categoricalAxis, false);
+                assert.equal(view.svg.viewportWidth, width);
+                assert.equal(view.svg.plotLeft, 80);
+                assert.equal(view.svg.plotRight, width - 28);
+                assert.equal(
+                    view.svg.chartXTicks.length,
+                    width === 320 && xType === 'DateTime' ? 1 : 3,
+                );
+                assert.deepEqual(view.chartRows[0], rows[0]);
+                assert.deepEqual(view.chartRows.at(-1), rows.at(-1));
+                if (kind === 'bar') {
+                    assert.equal(view.chartRows.length, rows.length);
+                    assert.ok(view.svg.x(0) - view.svg.barWidth / 2 >= view.svg.plotLeft - 1);
+                    assert.ok(
+                        view.svg.x(rows.length - 1) + view.svg.barWidth / 2 <=
+                            view.svg.plotRight + 1,
+                    );
+                } else {
+                    assert.equal(view.chartRows.length, MAX_CHART_RENDER_POINTS);
+                    assert.equal(view.svg.x(0), view.svg.plotLeft);
+                    assert.equal(view.svg.x(view.chartRows.length - 1), view.svg.plotRight);
+                }
+            }
+        });
+    }
+}
+
+for (const [rowCount, measureCount] of [
+    [61, MAX_CHART_SERIES],
+    [600, 3],
+]) {
+    test(`${rowCount} fitted bar groups with ${measureCount} measures stay inside their row slots`, () => {
+        const data = result(
+            [
+                ['x', 'Float64'],
+                ...Array.from({ length: measureCount }, (_value, index) => [
+                    `y${index}`,
+                    'Float64',
+                ]),
+            ],
+            Array.from({ length: rowCount }, (_value, index) => [
+                index,
+                ...Array.from({ length: measureCount }, () => index + 1),
+            ]),
+        );
+        for (const width of [320, 760, 1800]) {
+            const view = prepare(
+                data,
+                {
+                    kind: 'bar',
+                    ys: Array.from({ length: measureCount }, (_value, index) => index + 1),
+                },
+                652,
+                'en',
+                width,
+            );
+            const slotWidth = (view.svg.plotRight - view.svg.plotLeft) / rowCount;
+            const groupWidth = view.svg.barWidth * measureCount;
+            const strokeWidth = Math.min(1, view.svg.barWidth * 0.4);
+            assert.ok(groupWidth + strokeWidth < slotWidth);
+            assert.ok(view.svg.x(0) - (groupWidth + strokeWidth) / 2 >= view.svg.plotLeft);
+            assert.ok(
+                view.svg.x(rowCount - 1) + (groupWidth + strokeWidth) / 2 <= view.svg.plotRight,
+            );
+        }
+    });
+}
+
+for (const rows of [[], [[1, -10, 20]], [[1, null, null]]]) {
+    test(`Fitted bars keep finite and contained geometry with ${JSON.stringify(rows)}`, () => {
+        const view = prepare(
+            result(
+                [
+                    ['x', 'Float64'],
+                    ['first', 'Nullable(Float64)'],
+                    ['second', 'Nullable(Float64)'],
+                ],
+                rows,
+            ),
+            { kind: 'bar', ys: [1, 2] },
+            652,
+            'en',
+            1200,
+        );
+        assert.equal(view.svg.x(0), (80 + 1172) / 2);
+        assert.ok(Number.isFinite(view.svg.y(0)));
+        assert.ok(view.svg.x(0) - view.svg.barWidth >= view.svg.plotLeft);
+        assert.ok(view.svg.x(0) + view.svg.barWidth <= view.svg.plotRight);
+    });
+}
+
+test('Numeric scatter axes follow the viewport while named categories keep label spacing', () => {
+    const scatter = prepare(
+        result(
+            [
+                ['x', 'Float64'],
+                ['y', 'Float64'],
+            ],
+            [[10, 20]],
+        ),
+        { kind: 'scatter' },
+        652,
+        'en',
+        1200,
+    );
+    assert.equal(scatter.svg.scatterX(10), 1172);
+    const categories = prepare(
+        result(
+            [
+                ['x', 'String'],
+                ['y', 'Float64'],
+            ],
+            Array.from({ length: 61 }, (_value, index) => [`Named category ${index}`, index]),
+        ),
+        { kind: 'bar' },
+        1100,
+        'en',
+        1200,
+    );
+    assert.equal(categories.categoricalAxis, true);
+    assert.ok(categories.svg.plotRight > 1100);
+    assert.equal(categories.svg.chartXTicks.length, 61);
+});
 
 test('Chart preparation keeps valid saved measures and repairs unavailable axes', () => {
     const data = result(

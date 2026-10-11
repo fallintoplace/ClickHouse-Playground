@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 import type { Result } from '../../src/shared/queries/results/types.js';
 import { runButton, trust } from './helpers.js';
 
@@ -84,3 +84,183 @@ for (const fixture of [
         }
     });
 }
+
+async function expectPlotFits(results: Locator) {
+    const canvas = results.locator('.chart-canvas');
+    await expect(results.locator('.chart-category-scroll')).toHaveCount(0);
+    await expect
+        .poll(() =>
+            canvas.evaluate(element => {
+                const svg = element.querySelector('svg')!;
+                const grid = svg.querySelector('.chart-gridline')!.getBoundingClientRect();
+                const bounds = svg.getBoundingClientRect();
+                const matrix = svg.getScreenCTM()!;
+                return (
+                    grid.left - bounds.left < 100 &&
+                    bounds.right - grid.right < 45 &&
+                    grid.left >= bounds.left &&
+                    grid.right <= bounds.right + 1 &&
+                    Math.abs(matrix.a / matrix.d - 1) < 0.02
+                );
+            }),
+        )
+        .toBe(true);
+    await expect
+        .poll(() => canvas.evaluate(element => element.scrollWidth - element.clientWidth))
+        .toBeLessThanOrEqual(1);
+    await expect
+        .poll(() =>
+            results.locator('.chart-x-labels text').evaluateAll(labels => {
+                const bounds = labels.map(label => label.getBoundingClientRect());
+                return bounds.every(
+                    (rect, index) => index === 0 || rect.left >= bounds[index - 1]!.right,
+                );
+            }),
+        )
+        .toBe(true);
+}
+
+for (const xType of ['DateTime', 'Float64']) {
+    test(`${xType} line and bar charts fit all 61 rows into the results width`, async ({
+        page,
+    }, info) => {
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await page.setViewportSize({ width: 1778, height: 824 });
+        const rows = Array.from({ length: 61 }, (_value, index) => [
+            xType === 'DateTime'
+                ? new Date(Date.UTC(2026, 9, 11, 1, 31 + index))
+                      .toISOString()
+                      .replace('T', ' ')
+                      .slice(0, 19)
+                : index,
+            30 + (index % 20),
+        ]);
+        await page.route('**/api/runs/*/snapshot', async route => {
+            const response = await route.fetch();
+            await route.fulfill({
+                response,
+                json: {
+                    ...(await response.json()),
+                    columns: [
+                        { name: 'x', type: xType },
+                        { name: 'value', type: 'Float64' },
+                    ],
+                    rows,
+                    totalRows: rows.length,
+                    completeness: 'complete',
+                },
+            });
+        });
+        await trust(page);
+        await page.getByText('Standard', { exact: true }).click();
+        await runButton(page).click();
+        const results = page.getByRole('region', { name: 'Query results', exact: true });
+        await results.getByRole('tab', { name: 'Chart', exact: true }).click();
+        const type = results.getByRole('combobox', { name: 'Type', exact: true });
+        for (const kind of ['line', 'bar']) {
+            await type.selectOption(kind);
+            await expect(
+                results.locator(kind === 'bar' ? '.chart-bar' : '.chart-point'),
+            ).toHaveCount(rows.length);
+            await expectPlotFits(results);
+            await page.getByRole('button', { name: 'Ask AI', exact: true }).click();
+            for (const width of [1778, 1280, 900]) {
+                await page.setViewportSize({ width, height: 824 });
+                await expectPlotFits(results);
+            }
+            await page.setViewportSize({ width: 1280, height: 500 });
+            await expectPlotFits(results);
+            await page.getByRole('button', { name: 'Close inspector', exact: true }).click();
+            await page.setViewportSize({ width: 1778, height: 824 });
+            await expectPlotFits(results);
+            const marks = results.locator(kind === 'bar' ? '.chart-bar' : '.chart-point');
+            const first = await marks.first().boundingBox();
+            const last = await marks.last().boundingBox();
+            const canvas = (await results.locator('.chart-canvas').boundingBox())!;
+            expect(first!.x).toBeGreaterThanOrEqual(canvas.x);
+            expect(last!.x + last!.width).toBeLessThanOrEqual(canvas.x + canvas.width);
+            await results.locator('.chart-canvas').screenshot({
+                path: info.outputPath(`${xType}-${kind}.png`),
+            });
+        }
+    });
+}
+
+test('Row-count time lines fill the width after opening and closing the inspector', async ({
+    page,
+}) => {
+    await page.setViewportSize({ width: 1778, height: 824 });
+    await page.route('**/api/runs/*/snapshot', async route => {
+        const response = await route.fetch();
+        const rows = Array.from({ length: 61 }, (_value, index) => [
+            new Date(Date.UTC(2026, 9, 11, 1, index)).toISOString(),
+        ]);
+        await route.fulfill({
+            response,
+            json: {
+                ...(await response.json()),
+                columns: [{ name: 'time', type: 'DateTime' }],
+                rows,
+                totalRows: rows.length,
+                completeness: 'complete',
+            },
+        });
+    });
+    await trust(page);
+    await page.getByText('Standard', { exact: true }).click();
+    await runButton(page).click();
+    const results = page.getByRole('region', { name: 'Query results', exact: true });
+    await results.getByRole('tab', { name: 'Chart', exact: true }).click();
+    await expectPlotFits(results);
+    await page.getByRole('button', { name: 'Ask AI', exact: true }).click();
+    await expectPlotFits(results);
+    await page.getByRole('button', { name: 'Close inspector', exact: true }).click();
+    await expectPlotFits(results);
+});
+
+test('Dense fitted bars show every series without delayed animation or oversized outlines', async ({
+    page,
+}) => {
+    await page.setViewportSize({ width: 1778, height: 824 });
+    await page.route('**/api/runs/*/snapshot', async route => {
+        const response = await route.fetch();
+        const rows = Array.from({ length: 600 }, (_value, index) => [
+            index,
+            index + 1,
+            index + 2,
+            index + 3,
+        ]);
+        await route.fulfill({
+            response,
+            json: {
+                ...(await response.json()),
+                columns: [
+                    { name: 'x', type: 'Float64' },
+                    ...[1, 2, 3].map(index => ({ name: `y${index}`, type: 'Float64' })),
+                ],
+                rows,
+                totalRows: rows.length,
+                completeness: 'complete',
+            },
+        });
+    });
+    await trust(page);
+    await page.getByText('Standard', { exact: true }).click();
+    await runButton(page).click();
+    const results = page.getByRole('region', { name: 'Query results', exact: true });
+    await results.getByRole('tab', { name: 'Chart', exact: true }).click();
+    await results.getByRole('combobox', { name: 'Type', exact: true }).selectOption('bar');
+    await expect(results.locator('.chart-bar--static')).toHaveCount(1800);
+    await expectPlotFits(results);
+    expect(
+        await results.locator('.chart-bar').evaluateAll(bars =>
+            bars.every(bar => {
+                const styles = getComputedStyle(bar);
+                return (
+                    styles.animationName === 'none' &&
+                    Number.parseFloat(styles.strokeWidth) < Number(bar.getAttribute('width'))
+                );
+            }),
+        ),
+    ).toBe(true);
+});

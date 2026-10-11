@@ -113,6 +113,7 @@ export function prepareChartView({
     chartCopy,
     locale,
     categoryViewportWidth,
+    plotViewportWidth = 760,
     selection,
 }: {
     result: Result;
@@ -120,6 +121,7 @@ export function prepareChartView({
     chartCopy: Copy['chart'];
     locale: Locale;
     categoryViewportWidth: number;
+    plotViewportWidth?: number;
     selection: ReturnType<typeof prepareChartSelection>;
 }) {
     const { suggestion, numericIndexes, inferredCandle, canChooseCandlestick, candleX } = selection;
@@ -142,13 +144,14 @@ export function prepareChartView({
     );
     const xType = result.columns[xIndex]?.type ?? '';
     const categoricalAxis =
-        chartKind === 'bar' ||
-        (chartKind === 'line' && !numericType(xType) && !temporalType(xType));
+        (chartKind === 'bar' || chartKind === 'line') &&
+        !numericType(xType) &&
+        !temporalType(xType);
     let chartRows: typeof result.rows;
 
     if (chartKind === 'heatmap') {
         chartRows = [];
-    } else if (categoricalAxis) {
+    } else if (categoricalAxis || chartKind === 'bar') {
         chartRows = result.rows;
     } else {
         chartRows = sampleChartRows(result.rows, MAX_CHART_RENDER_POINTS);
@@ -175,7 +178,7 @@ export function prepareChartView({
         max = Math.max(0, ...values),
         range = max - min || 1;
     const plotLeft = categoricalAxis ? 0 : 80,
-        plotRight = categoryLayout?.width ?? 732,
+        plotRight = categoryLayout?.width ?? plotViewportWidth - 28,
         plotWidth = plotRight - plotLeft;
     const plotTop = 40,
         plotMiddle = 115,
@@ -183,11 +186,13 @@ export function prepareChartView({
         plotHeight = plotBottom - plotTop;
     const zeroY = plotBottom - ((0 - min) / range) * plotHeight;
     const y = (value: number) => plotBottom - ((value - min) / range) * plotHeight;
-    const x = (index: number) =>
-        categoryLayout?.positions[index] ??
-        (chartRows.length <= 1
-            ? (plotLeft + plotRight) / 2
-            : plotLeft + index * (plotWidth / (chartRows.length - 1)));
+    const x = (index: number) => {
+        const categoryX = categoryLayout?.positions[index];
+        if (categoryX !== undefined) return categoryX;
+        if (chartRows.length <= 1) return (plotLeft + plotRight) / 2;
+        if (chartKind === 'bar') return plotLeft + ((index + 0.5) * plotWidth) / chartRows.length;
+        return plotLeft + index * (plotWidth / (chartRows.length - 1));
+    };
     const rowSummary =
         chartRows.length < result.rows.length
             ? chartText(chartCopy.sampledRowsSummary, {
@@ -205,7 +210,7 @@ export function prepareChartView({
               );
     const categoryStep =
         categoryLayout?.minimumSlotWidth ?? plotWidth / Math.max(1, chartRows.length);
-    const barWidth = Math.max(1, Math.min(28, (categoryStep * 0.68) / measureIndexes.length));
+    const barWidth = Math.min(28, (categoryStep * 0.68) / measureIndexes.length);
     const collator = new Intl.Collator(locale, { numeric: true, sensitivity: 'base' });
     const heatmap =
         chartKind === 'heatmap' && groupByIndex !== undefined
@@ -267,6 +272,7 @@ export function prepareChartView({
     });
 
     const svg: ChartSvgModel = {
+        viewportWidth: plotViewportWidth,
         plotRight,
         chartAriaLabel,
         plotTop,

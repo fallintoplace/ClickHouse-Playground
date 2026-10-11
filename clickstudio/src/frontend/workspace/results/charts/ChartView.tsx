@@ -26,6 +26,8 @@ export function ChartView({
     locale: Locale;
 }) {
     const { width: categoryViewportWidth, onViewport: onCategoryViewport } = useChartPlotWidth();
+    const { width: plotViewportWidth, onViewport: onPlotViewport } =
+        useChartPlotWidth<SVGSVGElement>(230);
     const chartCopy = copy.chart;
     if (loading || !result)
         return (
@@ -60,8 +62,9 @@ export function ChartView({
         chartCopy,
         locale,
         categoryViewportWidth,
+        plotViewportWidth: plotViewportWidth || 760,
         selection,
     });
-    const renderChartSvg = createChartSvgRenderer(model.svg);
+    const renderChartSvg = createChartSvgRenderer(model.svg, onPlotViewport);
     return renderChartWorkspace({ ...model, onChart, onCategoryViewport, renderChartSvg });
 }

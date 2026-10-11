@@ -56,6 +56,26 @@ export function categoryAxisLayout(labels: readonly string[], minimumWidth = 652
     };
 }
 
+export function fitChartTicks(ticks: { label: string; position: number }[]) {
+    if (ticks.length <= 1) return ticks;
+    const labelsFit = (candidates: typeof ticks) => {
+        let previousRight = Number.NEGATIVE_INFINITY;
+        return candidates.every((tick, index) => {
+            const width = Array.from(tick.label).length * 6;
+            let left = tick.position;
+            if (index === candidates.length - 1) left -= width;
+            else if (index > 0) left -= width / 2;
+            const fits = left >= previousRight + 8;
+            previousRight = left + width;
+            return fits;
+        });
+    };
+    if (labelsFit(ticks)) return ticks;
+    const endpoints = [ticks[0]!, ticks.at(-1)!];
+    if (ticks.length > 2 && labelsFit(endpoints)) return endpoints;
+    return [ticks[Math.floor((ticks.length - 1) / 2)]!];
+}
+
 export function splitChartSegments(points: ChartPoint[]) {
     const segments: ChartPoint[][] = [];
     let current: ChartPoint[] = [];

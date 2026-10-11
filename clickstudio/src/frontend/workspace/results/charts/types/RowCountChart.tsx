@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, RefCallback } from 'react';
 import {
     type RowCountSeries,
     countRowsByCategory,
@@ -13,7 +13,13 @@ import type { Draft } from '../../../editor/drafts/workspace-state';
 import type { Copy, Locale } from '../../../../common/translations/i18n';
 import { ScrollEdgeFrame } from '../../../../common/components/ScrollEdgeShadows';
 import { ChartToolbar } from '../ChartToolbar';
-import { categoryAxisLayout, chartText, formatCount, seriesColor } from '../chart-helpers';
+import {
+    categoryAxisLayout,
+    chartText,
+    fitChartTicks,
+    formatCount,
+    seriesColor,
+} from '../chart-helpers';
 import { useChartPlotWidth } from '../useChartPlotWidth';
 
 export function RowCountChart({
@@ -32,6 +38,9 @@ export function RowCountChart({
     locale: Locale;
 }) {
     const { width: categoryViewportWidth, onViewport: onCategoryViewport } = useChartPlotWidth();
+    const { width: plotViewportWidth, onViewport: onPlotViewport } =
+        useChartPlotWidth<SVGSVGElement>(230);
+    const viewportWidth = plotViewportWidth || 760;
     const dimensions = result.columns.flatMap((column, index) =>
         numericType(column.type) ? [] : [index],
     );
@@ -68,7 +77,7 @@ export function RowCountChart({
               Math.max(652, categoryViewportWidth),
           );
     const plotLeft = timeAxis ? 80 : 0,
-        plotRight = categoryLayout?.width ?? 732,
+        plotRight = categoryLayout?.width ?? viewportWidth - 28,
         plotWidth = plotRight - plotLeft;
     const plotTop = 40,
         plotMiddle = 115,
@@ -93,12 +102,15 @@ export function RowCountChart({
     } else {
         labelIndexes = Array.from({ length: axisValueCount }, (_value, index) => index);
     }
-    const axisLabels = timeAxis
-        ? labelIndexes.map(index => timeTicks[index]?.label ?? '')
-        : labelIndexes.map(index => categoryData?.[index]?.label ?? '');
-    const axisLabelPositions = labelIndexes.map(index =>
-        timeAxis ? xTime(timeTicks[index]?.timestamp ?? timeMin) : xCategory(index, bars.length),
-    );
+    const ticks = labelIndexes.map(index => ({
+        label: timeAxis ? (timeTicks[index]?.label ?? '') : (categoryData?.[index]?.label ?? ''),
+        position: timeAxis
+            ? xTime(timeTicks[index]?.timestamp ?? timeMin)
+            : xCategory(index, bars.length),
+    }));
+    const fittedTicks = timeAxis ? fitChartTicks(ticks) : ticks;
+    const axisLabels = fittedTicks.map(tick => tick.label);
+    const axisLabelPositions = fittedTicks.map(tick => tick.position);
     const valueFormatter = new Intl.NumberFormat(locale, {
         notation: 'compact',
         maximumFractionDigits: 1,
@@ -175,6 +187,8 @@ export function RowCountChart({
     };
     const { title, customTitle, timeUnit, chartAriaLabel } = describeRowCountChart();
     const renderChartSvg = createRowCountSvgRenderer({
+        viewportWidth,
+        onPlotViewport,
         plotRight,
         chartAriaLabel,
         plotTop,
@@ -400,6 +414,8 @@ export function RowCountChart({
 }
 
 function createRowCountSvgRenderer({
+    viewportWidth,
+    onPlotViewport,
     plotRight,
     chartAriaLabel,
     plotTop,
@@ -421,6 +437,8 @@ function createRowCountSvgRenderer({
     axisLabels,
     axisLabelPositions,
 }: {
+    viewportWidth: number;
+    onPlotViewport: RefCallback<SVGSVGElement>;
     plotRight: number;
     chartAriaLabel: string;
     plotTop: number;
@@ -444,8 +462,9 @@ function createRowCountSvgRenderer({
 }) {
     return (categoryAxisIsScrollable: boolean) => (
         <svg
+            ref={categoryAxisIsScrollable ? undefined : onPlotViewport}
             className={categoryAxisIsScrollable ? 'chart-category-plot' : undefined}
-            viewBox={categoryAxisIsScrollable ? `0 0 ${plotRight} 230` : '0 0 760 230'}
+            viewBox={`0 0 ${categoryAxisIsScrollable ? plotRight : viewportWidth} 230`}
             preserveAspectRatio={categoryAxisIsScrollable ? 'none' : undefined}
             style={
                 categoryAxisIsScrollable

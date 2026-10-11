@@ -5,6 +5,7 @@ import type { Locale } from '../../../../common/translations/i18n.js';
 import { chartText } from '../chart-helpers.js';
 
 export type ChartSvgModel = {
+    viewportWidth: number;
     plotRight: number;
     chartAriaLabel: ReturnType<typeof chartText>;
     plotTop: number;
