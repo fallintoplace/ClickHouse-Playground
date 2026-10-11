@@ -1,5 +1,5 @@
 import { useImportWizardController } from '../useImportWizardController';
-import { Spinner } from '../../../common/components/ui';
+import { Spinner } from '../../../ui/components/ui';
 
 export function ImportWizardNotice({
     browserDemoImport,

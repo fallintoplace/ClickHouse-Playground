@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { AddressInfo } from 'node:net';
 import { createApp } from '../../src/backend/app/app.js';
-import { loadConfig } from '../../src/backend/system/settings/config.js';
-import { MemoryStore } from '../../src/backend/system/storage/store.js';
+import { loadConfig } from '../../src/backend/system/config.js';
+import { MemoryStore } from '../../src/backend/system/store.js';
 
 test('Native explorers require trust and validate bounded, fixed request types', async t => {
     const service = createApp(loadConfig({ DEMO_MODE: 'true' }), { store: new MemoryStore() });

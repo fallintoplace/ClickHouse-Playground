@@ -1,4 +1,4 @@
-import type { ExperienceLevel } from '../../../common/styles/appearance-types';
+import type { ExperienceLevel } from '../../../ui/styles/appearance-types';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export type DetachedWorkspaceWindow = Readonly<{

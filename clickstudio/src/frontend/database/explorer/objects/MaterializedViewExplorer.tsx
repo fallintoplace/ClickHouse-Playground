@@ -10,8 +10,8 @@ import {
 import { nativeCount, nativeTime } from '../format';
 import { useNativeExplorer } from '../useNativeExplorer';
 import { NativeExplorerDialog } from '../NativeExplorerDialog';
-import { Button } from '../../../common/components/ui';
-import { Icon } from '../../../common/components/icons';
+import { Button } from '../../../ui/components/ui';
+import { Icon } from '../../../ui/components/icons';
 
 const modeLabels = {
     incremental: 'Incremental MV',

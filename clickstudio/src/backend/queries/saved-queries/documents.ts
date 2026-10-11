@@ -12,7 +12,7 @@ import type { Principal } from '../../../shared/common/identity.js';
 import { DEFAULT_LIMITS } from '../../../shared/queries/execution/settings.js';
 import { AppError, requireThat } from '../../system/requests/errors.js';
 import { canWrite, mustOwn } from '../../system/login/permissions.js';
-import { hash, audit, MemoryStore, type Store } from '../../system/storage/store.js';
+import { hash, audit, MemoryStore, type Store } from '../../system/store.js';
 import { choice, integer, record, stringMap, text } from '../../system/requests/validation.js';
 import { boundResult, type RunService } from '../execution/runs.js';
 import { MAX_CHART_SERIES } from '../../../shared/queries/results/results.js';

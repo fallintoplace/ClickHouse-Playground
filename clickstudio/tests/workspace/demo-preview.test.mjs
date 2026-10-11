@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BrowserWorkspaceApi } from '../../.workspace-build/src/frontend/common/requests/browser-workspace.js';
+import { BrowserWorkspaceApi } from '../../.workspace-build/src/frontend/api/browser-workspace.js';
 
 test('Static preview scripts keep semicolons inside strings and comments', async () => {
     const api = new BrowserWorkspaceApi();

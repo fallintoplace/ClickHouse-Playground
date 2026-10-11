@@ -1,11 +1,11 @@
 import type { ApiError } from '../../shared/common/errors';
 import type { Run } from '../../shared/queries/execution/types';
-import { recommendGeo } from './results/maps/geo';
+import { recommendGeo } from '../queries/results/maps/geo';
 import type { NativeParseSnapshot } from '../../shared/sql/parser';
 import { selectedStatement, splitSql } from '../../shared/sql/sql';
-import { message, RequestError } from '../common/requests/api';
-import type { EditorHandle } from './editor/components/SqlEditor';
-import type { Copy, ExperienceLevel } from '../common/translations/i18n';
+import { message, RequestError } from '../api/client';
+import type { EditorHandle } from '../queries/editor/components/SqlEditor';
+import type { Copy, ExperienceLevel } from '../translations/i18n';
 import type { Connected, ResultsView } from './workspace-types';
 
 export function safeSelectedStatement(sql: string, from: number, to: number) {

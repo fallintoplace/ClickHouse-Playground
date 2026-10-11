@@ -6,11 +6,11 @@ import {
     saveCloudConnectionProfile,
     type CloudCredentials,
     type SavedCloudConnectionProfile,
-} from '../../common/requests/sources/cloud-connection';
+} from './cloud-connection';
 import type { Connected } from '../../workspace/workspace-types';
-import { Button, Spinner } from '../../common/components/ui';
-import { Icon } from '../../common/components/icons';
-import { OverlayPortal } from '../../common/components/OverlayPortal';
+import { Button, Spinner } from '../../ui/components/ui';
+import { Icon } from '../../ui/components/icons';
+import { OverlayPortal } from '../../ui/components/OverlayPortal';
 
 export function CloudConnectionDialog({
     onClose,

@@ -8,7 +8,7 @@ import type { Json } from '../../../shared/common/values';
 import type { Schema, SchemaColumn } from '../../../shared/database/schema/types';
 import { mapImportRows } from '../../../shared/database/imports/mapping';
 import { useImportJobPolling } from './recovery/useImportJobPolling';
-import { api, isFrontendDemoPreview, message, post, RequestError } from '../../common/requests/api';
+import { api, isFrontendDemoPreview, message, post, RequestError } from '../../api/client';
 import {
     checkClickHouseCloudImport,
     CLICKHOUSE_CLOUD_CONNECTION_ID,
@@ -16,12 +16,9 @@ import {
     getClickHouseCloudConnection,
     importClickHouseCloudFile,
     loadClickHouseCloudSchema,
-} from '../../common/requests/sources/cloud-connection';
+} from '../connections/cloud-connection';
 import { CREATE_TABLE_COLUMN_TYPES } from '../../../shared/database/tables/create-table';
-import {
-    DEMO_IMPORT_SAMPLE_CSV,
-    parseImportFile,
-} from '../../common/requests/samples/demo-import-data';
+import { DEMO_IMPORT_SAMPLE_CSV, parseImportFile } from '../../api/samples/demo-import-data';
 import {
     CREATE_CLOUD_TABLE_TARGET,
     cloudImportTargets,

@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import {
     draftSaveStatus,
     sameSavedContent,
-} from '../../.workspace-build/src/frontend/workspace/queries/saved-queries/draft-save.js';
+} from '../../.workspace-build/src/frontend/queries/saved-queries/draft-save.js';
 import {
     draftFromDocument,
     recoverDraft,
-} from '../../.workspace-build/src/frontend/workspace/editor/drafts/workspace-state.js';
+} from '../../.workspace-build/src/frontend/queries/editor/drafts/workspace-state.js';
 
 const candlestick = {
     open: 0,

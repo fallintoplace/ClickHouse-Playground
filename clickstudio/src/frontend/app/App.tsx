@@ -1,15 +1,15 @@
-import { THEMES, DEFAULT_ACCENT, EXPERIENCE_LEVELS } from '../common/styles/appearance-types';
+import { THEMES, DEFAULT_ACCENT, EXPERIENCE_LEVELS } from '../ui/styles/appearance-types';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, message, post } from '../common/requests/api';
-import { Button, cx, Spinner } from '../common/components/ui';
-import { Icon } from '../common/components/icons';
+import { api, message, post } from '../api/client';
+import { Button, cx, Spinner } from '../ui/components/ui';
+import { Icon } from '../ui/components/icons';
 import { CloudConnectionDialog } from '../database/connections/CloudConnectionDialog';
 import {
     CLICKHOUSE_CLOUD_CONNECTION_ID,
     disconnectClickHouseCloud,
     restoreClickHouseCloudSession,
     type SavedCloudConnectionProfile,
-} from '../common/requests/sources/cloud-connection';
+} from '../database/connections/cloud-connection';
 import { Workspace } from '../workspace/Workspace';
 import {
     experienceOptions,
@@ -19,7 +19,7 @@ import {
     type ExperienceLevel,
     type Locale,
     type Theme,
-} from '../common/translations/i18n';
+} from '../translations/i18n';
 import { RadioGroup } from '@clickhouse/click-ui/RadioGroup';
 import type { Connected, Session } from '../workspace/workspace-types';
 import { resolveConnectionSelection } from '../database/connections/selection';

@@ -1,4 +1,4 @@
-import type { Copy, Locale } from '../common/translations/i18n.js';
+import type { Copy, Locale } from '../translations/i18n.js';
 import type { SqlExample, SqlExampleCategory } from './examples/sql-examples.js';
 import { localizeSqlExample, localizeSqlExampleCategory } from './examples/sql-examples-locales.js';
 

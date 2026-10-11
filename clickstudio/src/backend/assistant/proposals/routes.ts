@@ -13,12 +13,12 @@ import {
     assistantResultFrom,
     assistantSchemaFrom,
 } from '../context/input.js';
-import { type Store } from '../../system/storage/store.js';
+import { type Store } from '../../system/store.js';
 import { AppError, requireThat } from '../../system/requests/errors.js';
 import { canWrite } from '../../system/login/permissions.js';
 import { choice, identifier, text } from '../../system/requests/validation.js';
 import { selectAssistantReferenceDocs } from '../../../shared/database/reference/catalog.js';
-import { type Config } from '../../system/settings/config.js';
+import { type Config } from '../../system/config.js';
 import type { Driver } from '../../app/types.js';
 import { principal, body, id } from '../../system/requests/http.js';
 import { assistantReferenceDocs } from '../context/reference.js';

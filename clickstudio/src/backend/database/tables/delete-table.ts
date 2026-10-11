@@ -6,7 +6,7 @@ import {
 } from '../../../shared/database/tables/delete-table.js';
 import { requireThat } from '../../system/requests/errors.js';
 import { canWrite } from '../../system/login/permissions.js';
-import { audit, type Store } from '../../system/storage/store.js';
+import { audit, type Store } from '../../system/store.js';
 
 export interface TableDeletionDriver {
     dropTable(

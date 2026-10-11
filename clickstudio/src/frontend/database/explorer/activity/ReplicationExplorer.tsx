@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ReplicationSnapshot } from '../../../../shared/database/explorer/activity/replication';
 import type { Capability } from '../../../../shared/database/connections/types';
-import { message } from '../../../common/requests/api';
+import { message } from '../../../api/client';
 import { loadReplication } from './observability-provider';
 
 export function ReplicationExplorer({

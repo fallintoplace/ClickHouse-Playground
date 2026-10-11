@@ -7,14 +7,14 @@ import { parseAssistantProposal } from './assistant-proposal';
 import type { AssistantConversationMessage } from '../../../shared/assistant/types';
 import type { Result } from '../../../shared/queries/results/types';
 import type { Schema } from '../../../shared/database/schema/types';
-import { isFrontendDemoPreview, message, post } from '../../common/requests/api';
+import { isFrontendDemoPreview, message, post } from '../../api/client';
 import { useAssistantChats } from '../chat/useAssistantChats';
 import { pendingEditorProposal, type AssistantChatTurn } from '../chat/assistant-chat-state';
 import {
     checkpoint,
     type Draft,
     type WorkspaceState,
-} from '../../workspace/editor/drafts/workspace-state';
+} from '../../queries/editor/drafts/workspace-state';
 
 function boundedAssistantResult(result?: Result): Result | undefined {
     if (!result) return undefined;

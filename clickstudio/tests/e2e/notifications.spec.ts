@@ -8,7 +8,7 @@ import {
     openStatementResults,
 } from './helpers.js';
 import type { Script } from '../../src/shared/queries/execution/types.js';
-import { newDraft } from '../../src/frontend/workspace/editor/drafts/workspace-state.js';
+import { newDraft } from '../../src/frontend/queries/editor/drafts/workspace-state.js';
 
 const popout = (page: Page) =>
     page.getByRole('button', { name: 'Open editor in a separate window', exact: true });

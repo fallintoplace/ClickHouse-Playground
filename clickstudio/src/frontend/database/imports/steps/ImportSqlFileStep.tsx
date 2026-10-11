@@ -1,5 +1,5 @@
 import { SQL_FILE_SIZE_LABEL } from '../../../../shared/queries/execution/limits';
-import { Icon } from '../../../common/components/icons';
+import { Icon } from '../../../ui/components/icons';
 
 export function ImportSqlFileStep({
     chooseQueryFile,

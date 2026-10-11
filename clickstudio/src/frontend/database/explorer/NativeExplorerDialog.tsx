@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
-import { Button } from '../../common/components/ui';
+import { Button } from '../../ui/components/ui';
 
 export function NativeExplorerDialog({
     title,

@@ -1,5 +1,5 @@
-import { Button, cx, Spinner } from '../../../common/components/ui';
-import { Icon } from '../../../common/components/icons';
+import { Button, cx, Spinner } from '../../../ui/components/ui';
+import { Icon } from '../../../ui/components/icons';
 import { ObjectDetails } from './ObjectExplorerDetails';
 import type { ObjectExplorerProps } from './tree/object-explorer-types';
 import { useObjectExplorerState } from './tree/useObjectExplorerState';

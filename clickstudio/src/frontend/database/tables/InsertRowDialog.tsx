@@ -1,14 +1,14 @@
 import type { ImportJobStatus } from '../../../shared/database/imports/status';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import type { SchemaColumn, SchemaTable } from '../../../shared/database/schema/types';
-import { api, message, post, RequestError } from '../../common/requests/api';
+import { api, message, post, RequestError } from '../../api/client';
 import {
     checkClickHouseCloudImport,
     CLICKHOUSE_CLOUD_CONNECTION_ID,
     CloudRequestError,
     getClickHouseCloudConnection,
     insertClickHouseCloudRow,
-} from '../../common/requests/sources/cloud-connection';
+} from '../connections/cloud-connection';
 
 type Props = {
     connectionId: string;

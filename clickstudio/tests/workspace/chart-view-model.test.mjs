@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getCopy } from '../../.workspace-build/src/frontend/common/translations/i18n.js';
-import { prepareChartSelection } from '../../.workspace-build/src/frontend/workspace/results/charts/controls/chart-selection.js';
-import { prepareChartView } from '../../.workspace-build/src/frontend/workspace/results/charts/rendering/chart-view-model.js';
-import { fitChartTicks } from '../../.workspace-build/src/frontend/workspace/results/charts/chart-helpers.js';
+import { getCopy } from '../../.workspace-build/src/frontend/translations/i18n.js';
+import { prepareChartSelection } from '../../.workspace-build/src/frontend/queries/results/charts/controls/chart-selection.js';
+import { prepareChartView } from '../../.workspace-build/src/frontend/queries/results/charts/rendering/chart-view-model.js';
+import { fitChartTicks } from '../../.workspace-build/src/frontend/queries/results/charts/chart-helpers.js';
 import {
     heatmapCellKey,
     MAX_CHART_RENDER_POINTS,

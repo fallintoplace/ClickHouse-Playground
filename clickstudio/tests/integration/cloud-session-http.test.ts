@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { AddressInfo } from 'node:net';
 import { createApp } from '../../src/backend/app/app.js';
-import { loadConfig } from '../../src/backend/system/settings/config.js';
+import { loadConfig } from '../../src/backend/system/config.js';
 import { CLOUD_SESSION_COOKIE } from '../../src/backend/database/connections/cloud-sessions.js';
-import { MemoryStore } from '../../src/backend/system/storage/store.js';
+import { MemoryStore } from '../../src/backend/system/store.js';
 import { DemoDriver } from '../../src/backend/database/clickhouse/sample-client.js';
 
 const credentials = {

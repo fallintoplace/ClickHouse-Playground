@@ -11,7 +11,7 @@ import {
 } from './cloud-sessions.js';
 import { requireThat } from '../../system/requests/errors.js';
 import { canWrite } from '../../system/login/permissions.js';
-import { type Config } from '../../system/settings/config.js';
+import { type Config } from '../../system/config.js';
 import { cloudSessionCookieOptions } from './cookies.js';
 import { body, principal, id, boolean } from '../../system/requests/http.js';
 import type { Driver } from '../../app/types.js';

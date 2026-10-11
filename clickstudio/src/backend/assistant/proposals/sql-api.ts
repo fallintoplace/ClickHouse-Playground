@@ -10,15 +10,15 @@ import {
     validateProposal,
     type PreparedContext,
 } from './assistant.js';
-import { evaluateProposal } from '../evaluation/evaluation.js';
+import { evaluateProposal } from '../evaluation.js';
 import {
     assistantRequestFrom,
     assistantResultFrom as resultFrom,
     assistantSchemaFrom as schemaFrom,
 } from '../context/input.js';
 import { AppError } from '../../system/requests/errors.js';
-import { OpenAIDriver } from '../openai/client.js';
-import { openaiServiceTier } from '../../system/settings/config.js';
+import { OpenAIDriver } from '../openai-client.js';
+import { openaiServiceTier } from '../../system/config.js';
 
 const MAX_BODY_BYTES = 300_000;
 const MAX_REQUESTS_PER_DAY = 20;

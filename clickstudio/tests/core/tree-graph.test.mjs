@@ -4,9 +4,9 @@ import {
     initialExpanded,
     indexTree,
     visibleTree,
-} from '../../.core-build/src/frontend/common/components/tree-model.js';
-import { buildNativeAstTree } from '../../.core-build/src/frontend/workspace/editor/parser/ast.js';
-import { parseQueryTree } from '../../.core-build/src/frontend/workspace/queries/inspection/diagrams/query-tree.js';
+} from '../../.core-build/src/frontend/ui/components/tree-model.js';
+import { buildNativeAstTree } from '../../.core-build/src/frontend/queries/editor/parser/ast.js';
+import { parseQueryTree } from '../../.core-build/src/frontend/queries/inspection/diagrams/query-tree.js';
 
 function node(id, children = []) {
     return {

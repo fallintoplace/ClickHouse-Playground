@@ -6,7 +6,7 @@ import { useWorkspaceAssistant } from '../../../src/frontend/assistant/proposals
 import {
     newDraft,
     type WorkspaceState,
-} from '../../../src/frontend/workspace/editor/drafts/workspace-state.js';
+} from '../../../src/frontend/queries/editor/drafts/workspace-state.js';
 import type { Schema } from '../../../src/shared/database/schema/types.js';
 
 const active = newDraft('Cancellation regression', 'SELECT 1');

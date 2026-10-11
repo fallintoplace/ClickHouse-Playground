@@ -13,7 +13,7 @@ import {
     tokenizedStatements,
 } from '../../.core-build/src/shared/sql/sql.js';
 import { guardSql } from '../../.core-build/src/backend/queries/execution/guards.js';
-import { statementOutline } from '../../.core-build/src/frontend/workspace/editor/tools.js';
+import { statementOutline } from '../../.core-build/src/frontend/queries/editor/tools.js';
 
 const fallback = await createSqlLexer(async () => {
     throw new Error('WASM unavailable');

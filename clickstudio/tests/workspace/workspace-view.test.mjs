@@ -4,7 +4,7 @@ import {
     sameSavedContent,
     draftSaveStatus,
     rememberRunIds,
-} from '../../.workspace-build/src/frontend/workspace/queries/saved-queries/draft-save.js';
+} from '../../.workspace-build/src/frontend/queries/saved-queries/draft-save.js';
 
 function saved(overrides = {}) {
     return {

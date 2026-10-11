@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseInput } from '../../src/backend/database/imports/imports.js';
 import { mapImportRows } from '../../src/shared/database/imports/mapping.js';
-import { parseImportFile } from '../../src/frontend/common/requests/samples/demo-import-data.js';
+import { parseImportFile } from '../../src/frontend/api/samples/demo-import-data.js';
 import type { ImportFormat } from '../../src/shared/database/imports/limits.js';
 
 const parsers = { server: parseInput, browser: parseImportFile };

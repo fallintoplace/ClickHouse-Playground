@@ -1,9 +1,9 @@
 import { type CSSProperties } from 'react';
 import { GEO_HELP_CITIES, GEO_HELP_EXAMPLE } from './help-demos';
-import { geoHueForValue } from '../../workspace/results/maps/geo-color';
+import { geoHueForValue } from '../../queries/results/maps/geo-color';
 import { MonitoringHelpPreview } from './MonitoringHelpPreview';
-import { Button, cx } from '../../common/components/ui';
-import { Icon } from '../../common/components/icons';
+import { Button, cx } from '../../ui/components/ui';
+import { Icon } from '../../ui/components/icons';
 import type { WorkspaceHelpPanelProps } from '../workspace-help-types';
 import { HelpSectionHeading } from '../HelpSectionHeading';
 

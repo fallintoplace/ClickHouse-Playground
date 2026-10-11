@@ -3,9 +3,9 @@ import type { SqlExample } from '../examples/sql-examples';
 import { MaterializedViewExplorer } from '../../database/explorer/objects/MaterializedViewExplorer';
 import { MergeTreePartsPanel } from '../../database/explorer/storage/MergeTreePartsPanel';
 import { ReferenceExplorer } from '../reference/ReferenceExplorer';
-import { RunComparisonView } from '../../workspace/queries/history/RunComparison';
-import { SqlFlowView } from '../../workspace/queries/inspection/diagrams/SqlFlowView';
-import { Icon } from '../../common/components/icons';
+import { RunComparisonView } from '../../queries/history/RunComparison';
+import { SqlFlowView } from '../../queries/inspection/diagrams/SqlFlowView';
+import { Icon } from '../../ui/components/icons';
 import {
     type HelpSectionDefinition,
     type CategoryFilter,

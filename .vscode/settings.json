@@ -1,0 +1,12 @@
+{
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.core-build": true,
+    "**/.workspace-build": true,
+    "**/.data": true,
+    "**/.vercel": true,
+    "**/playwright-report": true,
+    "**/test-results": true
+  }
+}

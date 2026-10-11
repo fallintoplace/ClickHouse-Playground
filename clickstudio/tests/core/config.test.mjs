@@ -4,7 +4,7 @@ import {
     loadConfig,
     publicProfile,
     redactor,
-} from '../../.core-build/src/backend/system/settings/config.js';
+} from '../../.core-build/src/backend/system/config.js';
 test('Local startup binds loopback by default', () =>
     assert.equal(loadConfig({}).host, '127.0.0.1'));
 test('The assistant defaults to Luna Fast mode and accepts Standard processing', () => {
@@ -162,7 +162,7 @@ test('The ClickHouse identity can write without target allowlist configuration',
 test('Demo publications remain labeled fixtures outside the workspace', async () => {
     const { DemoDriver } =
         await import('../../.core-build/src/backend/database/clickhouse/sample-client.js');
-    const { MemoryStore } = await import('../../.core-build/src/backend/system/storage/store.js');
+    const { MemoryStore } = await import('../../.core-build/src/backend/system/store.js');
     const { RunService } = await import('../../.core-build/src/backend/queries/execution/runs.js');
     const { ArtifactService } =
         await import('../../.core-build/src/backend/queries/saved-queries/documents.js');

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { MemoryStore } from '../../.core-build/src/backend/system/storage/store.js';
+import { MemoryStore } from '../../.core-build/src/backend/system/store.js';
 import { RunService } from '../../.core-build/src/backend/queries/execution/runs.js';
 import { DEFAULT_LIMITS } from '../../.core-build/src/shared/queries/execution/settings.js';
 export const owner = { id: 'local-owner', role: 'owner' };

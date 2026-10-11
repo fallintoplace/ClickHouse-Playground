@@ -94,7 +94,7 @@ The horizontal map sizes bars by compressed bytes by default. You can switch to 
 
 The preview shows at most 500 parts per state. Total counts and state counts remain exact even when the preview is limited.
 
-The object explorer helps you inspect database objects and open related SQL workflows. See [Native exploration workflows](../clickstudio/docs/native-explorers.md) for materialized views, merges, mutations, and run comparisons.
+The object explorer helps you inspect database objects and open related SQL workflows. See [Native exploration workflows](native-explorers.md) for materialized views, merges, mutations, and run comparisons.
 
 ## Example workflows
 

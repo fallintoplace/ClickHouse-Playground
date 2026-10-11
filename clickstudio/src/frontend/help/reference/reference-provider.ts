@@ -9,13 +9,13 @@ import {
     buildReferenceSearchQuery,
     isMissingDocumentationSourceColumn,
 } from '../../../shared/database/reference/reference.js';
-import { api, isFrontendDemoPreview, RequestError } from '../../common/requests/api.js';
+import { api, isFrontendDemoPreview, RequestError } from '../../api/client.js';
 import {
     PLAYGROUND_CONNECTION_ID,
     PlaygroundError,
     queryPlaygroundWithParams,
     type PlaygroundQueryResult,
-} from '../../common/requests/sources/playground.js';
+} from '../../database/connections/playground.js';
 import type { Connected } from '../../workspace/workspace-types.js';
 
 export type ReferenceProvider = {

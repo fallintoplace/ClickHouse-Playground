@@ -1,5 +1,5 @@
 import type { ProposalDecisionAction } from '../../../../shared/assistant/actions';
-import { RunComparisonLauncher } from '../../queries/history/RunComparison';
+import { RunComparisonLauncher } from '../../../queries/history/RunComparison';
 import {
     useCallback,
     useEffect,
@@ -16,19 +16,19 @@ import type {
     AssistantChatTurn,
 } from '../../../assistant/chat/assistant-chat-state';
 import { AssistantWorkflow } from '../../../assistant/proposals/AssistantWorkflow';
-import { Button, cx, Spinner } from '../../../common/components/ui';
-import { formatBytes } from '../../../common/browser/format';
-import { Icon } from '../../../common/components/icons';
+import { Button, cx, Spinner } from '../../../ui/components/ui';
+import { formatBytes } from '../../../browser/format';
+import { Icon } from '../../../ui/components/icons';
 import { inspectorLabel } from './labels';
-import { Status } from '../../queries/execution/status';
+import { Status } from '../../../queries/execution/status';
 import type { Connected, ImportedTableTarget, Inspector } from '../../workspace-types';
 import type { NativeParseSnapshot, NativeParserStatus } from '../../../../shared/sql/parser';
-import { NativeParserInspector } from '../../editor/parser/NativeParserInspector';
+import { NativeParserInspector } from '../../../queries/editor/parser/NativeParserInspector';
 import { ObjectExplorer } from '../../../database/explorer/objects/ObjectExplorer';
 import { ReferenceExplorer } from '../../../help/reference/ReferenceExplorer';
 import { WorkspaceInlineNotice } from '../notifications/WorkspaceInlineNotice';
 import type { WorkspaceFeedback } from '../notifications/useWorkspaceNotifications';
-import type { Copy } from '../../../common/translations/i18n';
+import type { Copy } from '../../../translations/i18n';
 import {
     inspectorMoreNavigation,
     PRIMARY_INSPECTOR_NAVIGATION,

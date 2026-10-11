@@ -73,12 +73,7 @@ import {
 } from '../../../shared/queries/inspection/explain-plan.js';
 import { sourcePositionFromUtf8ByteOffset } from '../../../shared/sql/parser.js';
 import { quotedTable } from '../imports/imports.js';
-import {
-    publicProfile,
-    redactor,
-    type Config,
-    type Profile,
-} from '../../system/settings/config.js';
+import { publicProfile, redactor, type Config, type Profile } from '../../system/config.js';
 /** All database addresses and credentials are operator-owned; the API accepts only profile IDs. */
 export class ClickHouseDriver implements QueryDriver, ImportDriver, CreateTableDriver {
     private readers = new Map<string, ClickHouseClient>();

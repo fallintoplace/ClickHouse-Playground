@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import type { Run } from '../../../shared/queries/execution/types';
-import { Button, cx } from '../../common/components/ui';
-import { formatBytes, formatCount } from '../../common/browser/format';
-import { Icon } from '../../common/components/icons';
-import { Status, terminal } from '../queries/execution/status';
-import type { IconName } from '../../common/components/icons';
+import { Button, cx } from '../../ui/components/ui';
+import { formatBytes, formatCount } from '../../browser/format';
+import { Icon } from '../../ui/components/icons';
+import { Status, terminal } from '../../queries/execution/status';
+import type { IconName } from '../../ui/components/icons';
 import type { RunEventState } from '../workspace-types';
-import type { Copy } from '../../common/translations/i18n';
+import type { Copy } from '../../translations/i18n';
 
 export type RunAction = {
     id: string;

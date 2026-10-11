@@ -1,4 +1,4 @@
-import { OverlayPortal } from '../../../common/components/OverlayPortal';
+import { OverlayPortal } from '../../../ui/components/OverlayPortal';
 import { StorageExplorer } from '../storage/StorageExplorer';
 import { MaterializedViewExplorer } from './MaterializedViewExplorer';
 import { CreateTableDialog } from '../../tables/CreateTableDialog';

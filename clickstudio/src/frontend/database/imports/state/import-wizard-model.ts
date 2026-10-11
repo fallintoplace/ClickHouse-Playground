@@ -2,7 +2,7 @@ import type { ImportJobStatus } from '../../../../shared/database/imports/status
 import type { ImportFormat } from '../../../../shared/database/imports/limits';
 import type { Json } from '../../../../shared/common/values';
 import type { Schema, SchemaColumn } from '../../../../shared/database/schema/types';
-import { api } from '../../../common/requests/api';
+import { api } from '../../../api/client';
 
 export type { ImportFormat } from '../../../../shared/database/imports/limits';
 export const importSteps = [

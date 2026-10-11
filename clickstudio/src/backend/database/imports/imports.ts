@@ -12,7 +12,7 @@ import type { Schema, SchemaColumn } from '../../../shared/database/schema/types
 import { quoteIdentifier } from '../../../shared/sql/sql.js';
 import { AppError, requireThat, asError } from '../../system/requests/errors.js';
 import { canWrite, mustOwn } from '../../system/login/permissions.js';
-import { hash, audit, type Store } from '../../system/storage/store.js';
+import { hash, audit, type Store } from '../../system/store.js';
 import { ImportMappingError, mapImportRows } from '../../../shared/database/imports/mapping.js';
 
 export interface InputPreview {

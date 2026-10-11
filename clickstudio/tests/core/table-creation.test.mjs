@@ -5,7 +5,7 @@ import {
     TableCreationService,
     createTableSql,
 } from '../../.core-build/src/backend/database/tables/create-table.js';
-import { MemoryStore } from '../../.core-build/src/backend/system/storage/store.js';
+import { MemoryStore } from '../../.core-build/src/backend/system/store.js';
 import { owner, viewer } from './helpers.mjs';
 
 const columns = [

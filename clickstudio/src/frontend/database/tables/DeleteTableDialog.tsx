@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { tableDeletionConfirmation } from '../../../shared/database/tables/delete-table';
 import type { SchemaTable } from '../../../shared/database/schema/types';
-import { api } from '../../common/requests/api';
+import { api } from '../../api/client';
 import {
     CLICKHOUSE_CLOUD_CONNECTION_ID,
     dropClickHouseCloudTable,
-} from '../../common/requests/sources/cloud-connection';
+} from '../connections/cloud-connection';
 
 type Props = {
     connectionId: string;

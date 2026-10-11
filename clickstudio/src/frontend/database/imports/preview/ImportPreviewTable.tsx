@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Json } from '../../../../shared/common/values';
-import type { Copy } from '../../../common/translations/i18n';
+import type { Copy } from '../../../translations/i18n';
 import type { ImportPreview } from '../state/import-wizard-model';
 import { displayImportValue, formatImportColumnRange } from '../state/import-wizard-model';
 

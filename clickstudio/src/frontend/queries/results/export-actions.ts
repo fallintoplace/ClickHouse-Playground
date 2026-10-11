@@ -1,0 +1,49 @@
+import type { Result } from '../../../shared/queries/results/types';
+import { exportCsv } from '../../../shared/queries/results/results';
+import { api, download, isFrontendDemoPreview, message } from '../../api/client';
+import { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../database/connections/cloud-connection';
+import type { Draft } from '../editor/drafts/workspace-state';
+import type { useRunEvidence } from '../execution/useRunEvidence';
+import type { useWorkspaceNotifications } from '../../workspace/layout/notifications/useWorkspaceNotifications';
+
+export function createQueryExportActions({
+    setError,
+    active,
+    evidence,
+}: {
+    setError: ReturnType<typeof useWorkspaceNotifications>['setError'];
+    active: Pick<Draft, 'name' | 'sql'>;
+    evidence: Pick<ReturnType<typeof useRunEvidence>, 'run' | 'snapshot'>;
+}) {
+    const { run, snapshot } = evidence;
+    const exportCurrentCsv = async () => {
+        if (!run) return;
+        try {
+            if (isFrontendDemoPreview || run.connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID) {
+                const full =
+                    snapshot?.runId === run.id
+                        ? snapshot
+                        : await api<Result>(`/runs/${encodeURIComponent(run.id)}/snapshot`);
+                download(`${run.queryId}.csv`, exportCsv(full), 'text/csv;charset=utf-8');
+                return;
+            }
+            const link = document.createElement('a');
+            link.href = `/api/runs/${encodeURIComponent(run.id)}/export?format=csv`;
+            link.download = `${run.queryId}.csv`;
+            link.click();
+        } catch (caught) {
+            setError('Couldn’t prepare the CSV export. Try again.', { detail: message(caught) });
+        }
+    };
+
+    const exportCurrentQuery = () => {
+        const baseName = active.name
+            .trim()
+            .replace(/\.sql$/i, '')
+            .replace(/[<>:"/\\|?*\p{Cc}]/gu, '_')
+            .trim();
+        download(`${baseName || 'query'}.sql`, active.sql, 'application/sql;charset=utf-8');
+    };
+
+    return { exportCurrentQuery, exportCurrentCsv };
+}

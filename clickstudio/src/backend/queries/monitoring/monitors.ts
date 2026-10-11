@@ -1,10 +1,10 @@
-import { MONITOR_CONDITIONS } from '../../../shared/queries/monitoring/conditions.js';
+import { MONITOR_CONDITIONS } from './conditions.js';
 import { randomUUID } from 'node:crypto';
-import type { Monitor, Notice } from '../../../shared/queries/monitoring/types.js';
+import type { Monitor, Notice } from './types.js';
 import type { Principal } from '../../../shared/common/identity.js';
 import { requireThat } from '../../system/requests/errors.js';
 import { canWrite, mustOwn } from '../../system/login/permissions.js';
-import { audit, hash, type Store } from '../../system/storage/store.js';
+import { audit, hash, type Store } from '../../system/store.js';
 import { integer } from '../../system/requests/validation.js';
 import { terminal, type RunService } from '../execution/runs.js';
 import type { ArtifactService } from '../saved-queries/documents.js';

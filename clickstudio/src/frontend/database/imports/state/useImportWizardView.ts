@@ -3,7 +3,7 @@ import {
     SQL_FILE_SIZE_LABEL,
 } from '../../../../shared/queries/execution/limits';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { api } from '../../../common/requests/api';
+import { api } from '../../../api/client';
 import { cloudImportDatabases } from './cloud-import';
 import {
     ImportMappingError,

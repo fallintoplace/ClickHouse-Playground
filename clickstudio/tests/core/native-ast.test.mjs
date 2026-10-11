@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 const { buildNativeAstTree, walkNativeAst } =
-    await import('../../.core-build/src/frontend/workspace/editor/parser/ast.js');
+    await import('../../.core-build/src/frontend/queries/editor/parser/ast.js');
 
 const ast = {
     type: 'SelectWithUnionQuery',

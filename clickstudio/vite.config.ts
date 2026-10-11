@@ -6,7 +6,7 @@ const webPort = Number(process.env.CLICKSTUDIO_WEB_PORT ?? 5173);
 const apiPort = Number(process.env.CLICKSTUDIO_API_PORT ?? 8080);
 export default defineConfig({
     root: fileURLToPath(new URL('./src/frontend/app', import.meta.url)),
-    publicDir: fileURLToPath(new URL('./src/frontend/common/assets/public', import.meta.url)),
+    publicDir: fileURLToPath(new URL('./public', import.meta.url)),
     plugins: [react(), tailwindcss()],
     server: {
         port: webPort,

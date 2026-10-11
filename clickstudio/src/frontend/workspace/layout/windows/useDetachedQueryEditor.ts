@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
-import type { ExperienceLevel } from '../../../common/translations/i18n';
-import type { EditorHandle } from '../../editor/components/SqlEditor';
+import type { ExperienceLevel } from '../../../translations/i18n';
+import type { EditorHandle } from '../../../queries/editor/components/SqlEditor';
 import type { WorkspacePanelController } from '../panels/useWorkspacePanels';
 import { useDetachedEditorWindow } from './useDetachedWorkspaceWindow';
 

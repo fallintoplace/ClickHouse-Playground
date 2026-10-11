@@ -8,10 +8,10 @@ import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/cli
 import { Client as LegacyClient } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport as LegacyTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { createApp } from '../../src/backend/app/app.js';
-import { loadConfig } from '../../src/backend/system/settings/config.js';
+import { loadConfig } from '../../src/backend/system/config.js';
 import { DemoDriver } from '../../src/backend/database/clickhouse/sample-client.js';
 import { AppError } from '../../src/backend/system/requests/errors.js';
-import { MemoryStore } from '../../src/backend/system/storage/store.js';
+import { MemoryStore } from '../../src/backend/system/store.js';
 import type { ApiError } from '../../src/shared/common/errors.js';
 import type { Connection } from '../../src/shared/database/connections/types.js';
 import type { ResultPage } from '../../src/shared/queries/results/types.js';

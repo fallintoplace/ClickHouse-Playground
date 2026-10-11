@@ -1,16 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { APIConnectionTimeoutError } from 'openai';
-import { OpenAIDriver } from '../../src/backend/assistant/openai/client.js';
+import { OpenAIDriver } from '../../src/backend/assistant/openai-client.js';
 import {
     ASSISTANT_REQUEST_TIMEOUT_MS,
     type PreparedContext,
 } from '../../src/backend/assistant/proposals/assistant.js';
 import { AppError } from '../../src/backend/system/requests/errors.js';
 import { createApp } from '../../src/backend/app/app.js';
-import { loadConfig } from '../../src/backend/system/settings/config.js';
+import { loadConfig } from '../../src/backend/system/config.js';
 import { DemoDriver } from '../../src/backend/database/clickhouse/sample-client.js';
-import { MemoryStore } from '../../src/backend/system/storage/store.js';
+import { MemoryStore } from '../../src/backend/system/store.js';
 
 function assistantContext(): PreparedContext {
     return {

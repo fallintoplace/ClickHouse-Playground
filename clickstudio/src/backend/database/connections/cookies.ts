@@ -1,4 +1,4 @@
-import { type Config } from '../../system/settings/config.js';
+import { type Config } from '../../system/config.js';
 
 export function cloudSessionCookieOptions(config: Config) {
     return {

@@ -6,7 +6,7 @@ import {
     type ImportPreview,
 } from '../state/import-wizard-model';
 import { useImportWizardController } from '../useImportWizardController';
-import { Icon } from '../../../common/components/icons';
+import { Icon } from '../../../ui/components/icons';
 import { ImportNewTableForm } from '../preview/ImportNewTableForm';
 import { ImportColumnMapping } from '../preview/ImportColumnMapping';
 

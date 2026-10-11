@@ -18,10 +18,10 @@ import {
 import {
     evaluateProposal,
     runAssistantBenchmarks,
-} from '../../.core-build/src/backend/assistant/evaluation/evaluation.js';
+} from '../../.core-build/src/backend/assistant/evaluation.js';
 import { ASSISTANT_ACTIONS } from '../../.core-build/src/shared/assistant/actions.js';
 import { selectAssistantReferenceDocs } from '../../.core-build/src/shared/database/reference/catalog.js';
-import { MemoryStore, hash } from '../../.core-build/src/backend/system/storage/store.js';
+import { MemoryStore, hash } from '../../.core-build/src/backend/system/store.js';
 import {
     exportCsv,
     chartNumber,

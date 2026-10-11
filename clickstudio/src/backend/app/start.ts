@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
-import { loadConfig } from '../system/settings/config.js';
-import { startTelemetry } from '../system/logging/telemetry.js';
+import { loadConfig } from '../system/config.js';
+import { startTelemetry } from '../system/telemetry.js';
 const config = loadConfig();
 const stopTelemetry = await startTelemetry(config.telemetryUrl);
 // Reserve the port before recovering persistent runs. A second accidental launch on

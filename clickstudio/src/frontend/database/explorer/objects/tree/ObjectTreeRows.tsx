@@ -1,8 +1,8 @@
 import { type CSSProperties } from 'react';
 import type { SchemaTable } from '../../../../../shared/database/schema/types';
 import { quoteIdentifier } from '../../../../../shared/sql/sql';
-import { cx } from '../../../../common/components/ui';
-import { Icon } from '../../../../common/components/icons';
+import { cx } from '../../../../ui/components/ui';
+import { Icon } from '../../../../ui/components/icons';
 
 export function ExplorerGroupRow({
     level,

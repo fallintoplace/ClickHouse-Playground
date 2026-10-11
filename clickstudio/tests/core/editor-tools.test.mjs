@@ -8,7 +8,7 @@ import {
     matchingNames,
     statementOutline,
     tableAliases,
-} from '../../.core-build/src/frontend/workspace/editor/tools.js';
+} from '../../.core-build/src/frontend/queries/editor/tools.js';
 import { selectedStatement, splitSql } from '../../.core-build/src/shared/sql/sql.js';
 
 for (const [name, sql, count] of [

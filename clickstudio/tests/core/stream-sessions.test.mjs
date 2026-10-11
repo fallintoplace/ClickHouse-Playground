@@ -4,11 +4,7 @@ import { Readable } from 'node:stream';
 import { collectCompactStream } from '../../.core-build/src/backend/database/clickhouse/result-stream.js';
 import { SessionService } from '../../.core-build/src/backend/system/login/sessions.js';
 import { DEFAULT_LIMITS } from '../../.core-build/src/shared/queries/execution/settings.js';
-import {
-    FileStore,
-    MemoryStore,
-    audit,
-} from '../../.core-build/src/backend/system/storage/store.js';
+import { FileStore, MemoryStore, audit } from '../../.core-build/src/backend/system/store.js';
 import { mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';

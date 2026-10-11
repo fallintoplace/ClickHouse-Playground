@@ -10,14 +10,14 @@ import {
 import type { QueryDocument } from '../../shared/queries/saved-queries/types';
 import type { Run } from '../../shared/queries/execution/types';
 import type { Schema } from '../../shared/database/schema/types';
-import { sameSavedContent } from './queries/saved-queries/draft-save';
-import { api, message } from '../common/requests/api';
+import { sameSavedContent } from '../queries/saved-queries/draft-save';
+import { api, message } from '../api/client';
 import {
     loadPlaygroundServerVersion,
     PLAYGROUND_CONNECTION_ID,
-} from '../common/requests/sources/playground';
-import type { WorkspaceState } from './editor/drafts/workspace-state';
-import { startVisiblePolling } from '../common/browser/visible-polling';
+} from '../database/connections/playground';
+import type { WorkspaceState } from '../queries/editor/drafts/workspace-state';
+import { startVisiblePolling } from '../browser/visible-polling';
 
 export function useWorkspaceData({
     connectionId,

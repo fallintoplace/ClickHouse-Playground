@@ -17,13 +17,9 @@ import type { Result } from '../../../shared/queries/results/types.js';
 import type { Schema } from '../../../shared/database/schema/types.js';
 import { AppError, requireThat } from '../../system/requests/errors.js';
 import { canWrite, mustOwn } from '../../system/login/permissions.js';
-import { audit, type Store } from '../../system/storage/store.js';
+import { audit, type Store } from '../../system/store.js';
 import { choice, record, text } from '../../system/requests/validation.js';
-import {
-    buildEvaluationReport,
-    evaluateProposal,
-    referencedTables,
-} from '../evaluation/evaluation.js';
+import { buildEvaluationReport, evaluateProposal, referencedTables } from '../evaluation.js';
 export const PROMPT_VERSION = 'clickstudio-assistant-v15';
 export const MAX_ASSISTANT_CONVERSATION_MESSAGES = 40;
 export const MAX_ASSISTANT_CONVERSATION_BYTES = 80_000;

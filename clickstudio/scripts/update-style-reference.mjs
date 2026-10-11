@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
 try {
     const stylesheet = fileURLToPath(
-        new URL('../src/frontend/common/styles/main.css', import.meta.url),
+        new URL('../src/frontend/ui/styles/main.css', import.meta.url),
     );
     const transformed = await server.transformRequest(`/@fs${stylesheet}`);
     const match = transformed?.code.match(/const __vite__css = ("(?:[^"\\]|\\.)*")/);

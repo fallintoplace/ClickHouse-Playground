@@ -3,17 +3,21 @@ import type { QueryDocument } from '../../../shared/queries/saved-queries/types'
 import type { Result } from '../../../shared/queries/results/types';
 import type { Run, Script } from '../../../shared/queries/execution/types';
 import { parseExplainPlan } from '../../../shared/queries/inspection/explain-plan';
-import { parseExplainAnalyze } from '../queries/inspection/performance/explain-analyze';
-import { parseExplainIndexAnalysis } from '../queries/inspection/plans/explain-indexes';
+import { parseExplainAnalyze } from '../../queries/inspection/performance/explain-analyze';
+import { parseExplainIndexAnalysis } from '../../queries/inspection/plans/explain-indexes';
 import { parsePipelineResult } from '../../../shared/queries/inspection/profile';
-import { retainedResultChange } from '../results/result-provenance';
+import { retainedResultChange } from '../../queries/results/result-provenance';
 import { recommendChart } from '../../../shared/queries/results/results';
-import { draftSaveStatus } from '../queries/saved-queries/draft-save';
+import { draftSaveStatus } from '../../queries/saved-queries/draft-save';
 import type { NativeParseSnapshot } from '../../../shared/sql/parser';
-import type { Copy, ExperienceLevel } from '../../common/translations/i18n';
-import { sqlErrorRange, sqlErrorRangeInDraft, sqlErrorLineColumn } from '../editor/sql-error';
+import type { Copy, ExperienceLevel } from '../../translations/i18n';
+import {
+    sqlErrorRange,
+    sqlErrorRangeInDraft,
+    sqlErrorLineColumn,
+} from '../../queries/editor/sql-error';
 import type { Connected, ResultsView } from '../workspace-types';
-import type { Draft } from '../editor/drafts/workspace-state';
+import type { Draft } from '../../queries/editor/drafts/workspace-state';
 import {
     resultPanelAriaLabel,
     resultsViewTitle,

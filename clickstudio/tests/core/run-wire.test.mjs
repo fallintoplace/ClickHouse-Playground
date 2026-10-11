@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
     isResult,
     parseRunEvent,
-} from '../../.core-build/src/frontend/workspace/queries/execution/events.js';
+} from '../../.core-build/src/frontend/queries/execution/events.js';
 import { terminal } from '../../.core-build/src/backend/queries/execution/runs.js';
 
 const run = {

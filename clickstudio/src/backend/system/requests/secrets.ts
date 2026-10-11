@@ -1,5 +1,5 @@
 import { requireThat } from './errors.js';
-import { configuredSecrets, type Config } from '../settings/config.js';
+import { configuredSecrets, type Config } from '../config.js';
 
 export function createSecretGuards(config: Config) {
     const secretFree = (value: unknown) =>

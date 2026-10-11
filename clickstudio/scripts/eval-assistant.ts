@@ -1,4 +1,4 @@
-import { runAssistantBenchmarks } from '../src/backend/assistant/evaluation/evaluation.js';
+import { runAssistantBenchmarks } from '../src/backend/assistant/evaluation.js';
 
 const report = runAssistantBenchmarks();
 for (const result of report.results)

@@ -3,15 +3,12 @@ import {
     type MergeTreePart,
     type MergeTreePartsSnapshot,
 } from '../../../../shared/database/explorer/storage/parts';
-import { api, isFrontendDemoPreview } from '../../../common/requests/api';
+import { api, isFrontendDemoPreview } from '../../../api/client';
 import {
     CLICKHOUSE_CLOUD_CONNECTION_ID,
     loadClickHouseCloudTableParts,
-} from '../../../common/requests/sources/cloud-connection';
-import {
-    loadPlaygroundTableParts,
-    PLAYGROUND_CONNECTION_ID,
-} from '../../../common/requests/sources/playground';
+} from '../../connections/cloud-connection';
+import { loadPlaygroundTableParts, PLAYGROUND_CONNECTION_ID } from '../../connections/playground';
 
 const PART_TEXT_FIELDS = [
     'partition',

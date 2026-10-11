@@ -1,4 +1,4 @@
-import type { IconName } from '../../../common/components/icons.js';
+import type { IconName } from '../../../ui/components/icons.js';
 import type { Inspector } from '../../workspace-types.js';
 
 type PrimaryInspector = 'schema' | 'reference' | 'assistant';

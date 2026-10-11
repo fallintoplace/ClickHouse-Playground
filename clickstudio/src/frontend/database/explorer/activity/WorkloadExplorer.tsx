@@ -6,11 +6,11 @@ import type {
 } from '../../../../shared/database/explorer/activity/workload';
 import type { Capability } from '../../../../shared/database/connections/types';
 import { loadWorkload } from './observability-provider';
-import { message } from '../../../common/requests/api';
-import { ScrollEdgeFrame } from '../../../common/components/ScrollEdgeShadows';
-import { Button } from '../../../common/components/ui';
-import { formatBytes } from '../../../common/browser/format';
-import { Icon } from '../../../common/components/icons';
+import { message } from '../../../api/client';
+import { ScrollEdgeFrame } from '../../../ui/components/ScrollEdgeShadows';
+import { Button } from '../../../ui/components/ui';
+import { formatBytes } from '../../../browser/format';
+import { Icon } from '../../../ui/components/icons';
 
 const windows: Array<{ value: WorkloadWindow; label: string }> = [
     { value: 15, label: '15 min' },

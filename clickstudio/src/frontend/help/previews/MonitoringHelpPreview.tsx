@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { demoReplication, demoWorkload } from '../../../shared/samples/activity';
 import type { WorkloadPoint } from '../../../shared/database/explorer/activity/workload';
-import { formatBytes } from '../../common/browser/format';
+import { formatBytes } from '../../browser/format';
 
 function bytes(value: string) {
     try {

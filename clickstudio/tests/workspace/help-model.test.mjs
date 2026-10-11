@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { english } from '../../.workspace-build/src/frontend/common/translations/i18n-english.js';
+import { english } from '../../.workspace-build/src/frontend/translations/i18n-english.js';
 import {
     categoryLabel,
     chartLabel,

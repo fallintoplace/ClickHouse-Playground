@@ -21,7 +21,7 @@ import { splitSql } from '../../../shared/sql/sql.js';
 import { AppError, asError, requireThat } from '../../system/requests/errors.js';
 import { canWrite, mustOwn } from '../../system/login/permissions.js';
 import { guardRun } from './guards.js';
-import { audit, hash, type Store } from '../../system/storage/store.js';
+import { audit, hash, type Store } from '../../system/store.js';
 import { limits, runRequest } from '../../system/requests/validation.js';
 export interface DriverResult {
     columns: Column[];

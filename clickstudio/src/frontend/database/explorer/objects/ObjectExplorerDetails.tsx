@@ -1,10 +1,10 @@
 import type { SchemaTable } from '../../../../shared/database/schema/types';
 import { tableQuerySql, type ExplorerSelection } from './model';
 import { quoteIdentifier } from '../../../../shared/sql/sql';
-import type { Copy } from '../../../common/translations/i18n';
-import { Button, cx } from '../../../common/components/ui';
-import { formatBytes, formatCount } from '../../../common/browser/format';
-import { Icon } from '../../../common/components/icons';
+import type { Copy } from '../../../translations/i18n';
+import { Button, cx } from '../../../ui/components/ui';
+import { formatBytes, formatCount } from '../../../browser/format';
+import { Icon } from '../../../ui/components/icons';
 
 export function ObjectDetails({
     copy,

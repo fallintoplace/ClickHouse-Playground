@@ -3,9 +3,9 @@ import type {
     NativeExplorerRequest,
     NativeExplorerSnapshot,
 } from '../../../shared/database/explorer/explorers';
-import { message } from '../../common/requests/api';
+import { message } from '../../api/client';
 import { requestNativeExplorer } from './native-explorer-provider';
-import { startVisiblePolling } from '../../common/browser/visible-polling';
+import { startVisiblePolling } from '../../browser/visible-polling';
 
 /** One in-flight inspection per scope; hidden or inactive panels do not poll. */
 export function useNativeExplorer(

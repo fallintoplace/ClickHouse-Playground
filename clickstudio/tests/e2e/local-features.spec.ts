@@ -2,7 +2,7 @@ import { test, expect, type Page, type Download } from '@playwright/test';
 import type { Result } from '../../src/shared/queries/results/types.js';
 import type { Schema } from '../../src/shared/database/schema/types.js';
 import { PLAYGROUND_CONNECTION } from '../../src/shared/database/connections/playground.js';
-import type { CloudConnectionTest } from '../../src/frontend/common/requests/sources/cloud-connection.js';
+import type { CloudConnectionTest } from '../../src/frontend/database/connections/cloud-connection.js';
 import { trust } from './helpers.js';
 
 const cloudSchema: Schema = {

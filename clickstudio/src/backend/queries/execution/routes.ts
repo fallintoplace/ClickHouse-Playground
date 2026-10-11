@@ -3,12 +3,12 @@ import express from 'express';
 import type { Principal } from '../../../shared/common/identity.js';
 import { RunService, terminal } from './runs.js';
 import { SessionService } from '../../system/login/sessions.js';
-import { type Store } from '../../system/storage/store.js';
+import { type Store } from '../../system/store.js';
 import { requireThat } from '../../system/requests/errors.js';
 import { exportCsv } from '../../../shared/queries/results/results.js';
 import { buildQueryProfile } from '../../../shared/queries/inspection/profile.js';
-import { type Config } from '../../system/settings/config.js';
-import { recordRun } from '../../system/logging/telemetry.js';
+import { type Config } from '../../system/config.js';
+import { recordRun } from '../../system/telemetry.js';
 import type { Driver } from '../../app/types.js';
 import { principal, id, number, body, boolean } from '../../system/requests/http.js';
 

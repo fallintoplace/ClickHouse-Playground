@@ -7,16 +7,16 @@ import type {
 } from '../../../shared/database/reference/types';
 import type { ReferenceCategory } from '../../../shared/database/reference/reference';
 import { REFERENCE_CATEGORIES, referenceId } from '../../../shared/database/reference/reference';
-import { message } from '../../common/requests/api';
+import { message } from '../../api/client';
 import {
     createReferenceProvider,
     isReferenceUnavailable,
     bundledProvider,
 } from './reference-provider';
 import type { Connected } from '../../workspace/workspace-types';
-import type { Copy } from '../../common/translations/i18n';
-import { Button, cx, Spinner } from '../../common/components/ui';
-import { Icon } from '../../common/components/icons';
+import type { Copy } from '../../translations/i18n';
+import { Button, cx, Spinner } from '../../ui/components/ui';
+import { Icon } from '../../ui/components/icons';
 
 type ReferenceTarget = { name: string; type: string };
 const REFERENCE_PAGE_SIZE = 100;

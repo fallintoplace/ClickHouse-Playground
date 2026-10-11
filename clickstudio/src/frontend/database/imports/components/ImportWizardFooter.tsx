@@ -3,7 +3,7 @@ import {
     IMPORT_FILE_SIZE_LABEL,
     IMPORT_ROW_LIMIT_LABEL,
 } from '../../../../shared/database/imports/limits';
-import { Button } from '../../../common/components/ui';
+import { Button } from '../../../ui/components/ui';
 import { formatImportColumnCount } from '../state/import-wizard-model';
 import { useImportWizardController } from '../useImportWizardController';
 

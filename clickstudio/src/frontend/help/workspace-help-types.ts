@@ -1,9 +1,9 @@
 import type { SchemaTable } from '../../shared/database/schema/types';
-import type { Copy, Locale } from '../common/translations/i18n';
+import type { Copy, Locale } from '../translations/i18n';
 import type { SqlExample } from './examples/sql-examples';
 import type { Connected } from '../workspace/workspace-types';
-import { type RunComparisonProps } from '../workspace/queries/history/RunComparison';
-import { type SqlFlowViewProps } from '../workspace/queries/inspection/diagrams/SqlFlowView';
+import { type RunComparisonProps } from '../queries/history/RunComparison';
+import { type SqlFlowViewProps } from '../queries/inspection/diagrams/SqlFlowView';
 import { type HelpPanelSection } from './workspace-help-model';
 
 export type WorkspaceHelpPanelProps = {

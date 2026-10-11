@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { MAX_ASSISTANT_CHAT_TITLE_LENGTH, type AssistantChat } from './assistant-chat-state';
-import { OverlayPortal } from '../../common/components/OverlayPortal';
-import { Button } from '../../common/components/ui';
-import { Icon } from '../../common/components/icons';
+import { OverlayPortal } from '../../ui/components/OverlayPortal';
+import { Button } from '../../ui/components/ui';
+import { Icon } from '../../ui/components/icons';
 
 export type AssistantChatHistoryProps = {
     chats: readonly AssistantChat[];

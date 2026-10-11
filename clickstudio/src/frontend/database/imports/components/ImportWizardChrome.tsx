@@ -1,7 +1,7 @@
 import { importSteps } from '../state/import-wizard-model';
 import { useImportWizardController } from '../useImportWizardController';
-import { Button } from '../../../common/components/ui';
-import { Icon } from '../../../common/components/icons';
+import { Button } from '../../../ui/components/ui';
+import { Icon } from '../../../ui/components/icons';
 
 export function ImportWizardHeader({
     browserDemoImport,

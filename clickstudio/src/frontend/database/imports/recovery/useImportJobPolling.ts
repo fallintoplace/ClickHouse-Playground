@@ -1,6 +1,6 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
-import { api, message, post } from '../../../common/requests/api';
-import { checkClickHouseCloudImport } from '../../../common/requests/sources/cloud-connection';
+import { api, message, post } from '../../../api/client';
+import { checkClickHouseCloudImport } from '../../connections/cloud-connection';
 import type { BusyAction, ImportJob, Step } from '../state/import-wizard-model';
 
 export function useImportJobPolling({

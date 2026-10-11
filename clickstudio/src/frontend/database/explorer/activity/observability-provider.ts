@@ -3,12 +3,12 @@ import type {
     WorkloadSnapshot,
     WorkloadWindow,
 } from '../../../../shared/database/explorer/activity/workload';
-import { api } from '../../../common/requests/api';
+import { api } from '../../../api/client';
 import {
     CLICKHOUSE_CLOUD_CONNECTION_ID,
     loadClickHouseCloudReplication,
     loadClickHouseCloudWorkload,
-} from '../../../common/requests/sources/cloud-connection';
+} from '../../connections/cloud-connection';
 
 export function loadWorkload(connectionId: string, minutes: WorkloadWindow, signal: AbortSignal) {
     if (connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID)

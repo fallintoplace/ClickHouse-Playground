@@ -1,9 +1,9 @@
 import { IMPORT_FILE_SIZE_LABEL } from '../../../../shared/database/imports/limits';
-import { api } from '../../../common/requests/api';
+import { api } from '../../../api/client';
 import { ImportPreviewTable } from '../preview/ImportPreviewTable';
 import { formatImportColumnCount, formatImportRowCount } from '../state/import-wizard-model';
 import { useImportWizardController } from '../useImportWizardController';
-import { Icon } from '../../../common/components/icons';
+import { Icon } from '../../../ui/components/icons';
 
 export function ImportFileStep({
     preview,

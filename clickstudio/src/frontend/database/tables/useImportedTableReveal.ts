@@ -3,7 +3,7 @@ import { lexSql } from '../../../shared/sql/sql';
 import type { Schema } from '../../../shared/database/schema/types';
 import type { Script } from '../../../shared/queries/execution/types';
 import type { ImportJob } from '../imports/state/import-wizard-model';
-import { isFrontendDemoPreview } from '../../common/requests/api';
+import { isFrontendDemoPreview } from '../../api/client';
 import type { WorkspaceFeedback } from '../../workspace/layout/notifications/useWorkspaceNotifications';
 import type { ImportedTableTarget, Inspector } from '../../workspace/workspace-types';
 

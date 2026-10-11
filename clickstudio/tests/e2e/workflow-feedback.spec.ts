@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import type { QueryDocument } from '../../src/shared/queries/saved-queries/types.js';
 import type { Run } from '../../src/shared/queries/execution/types.js';
-import { openWorkspacePanel, runButton, trust } from './helpers.js';
+import { openWorkspacePanel, runButton, trust, useAdvancedMode } from './helpers.js';
 
 async function replaceSql(page: Page, sql: string) {
     await page.locator('.cm-content').click();
@@ -172,6 +172,95 @@ test('Editing during a delayed save preserves the newer local SQL', async ({ pag
         release();
     }
 });
+
+for (const scenario of ['edit', 'switch tab'] as const) {
+    test(`Restoring a revision preserves the draft when users ${scenario} during the request`, async ({
+        page,
+    }) => {
+        await trust(page);
+        await useAdvancedMode(page);
+        await replaceSql(page, 'SELECT 111 AS revision_value');
+        const firstSave = page.waitForResponse(
+            response =>
+                response.request().method() === 'POST' &&
+                new URL(response.url()).pathname === '/api/documents',
+        );
+        await page.getByTestId('save-query').click();
+        const saved = (await (await firstSave).json()) as QueryDocument;
+        await replaceSql(page, 'SELECT 222 AS revision_value');
+        const secondSave = page.waitForResponse(
+            response =>
+                response.request().method() === 'PUT' &&
+                new URL(response.url()).pathname === `/api/documents/${saved.id}`,
+        );
+        await page.getByTestId('save-query').click();
+        expect((await secondSave).ok()).toBe(true);
+
+        await page
+            .getByRole('button', { name: 'Version history for Getting started.sql', exact: true })
+            .click();
+        await page
+            .locator('.revision-list')
+            .getByRole('button', { name: /Version 1/ })
+            .click();
+        let release = () => {};
+        const gate = new Promise<void>(resolve => {
+            release = resolve;
+        });
+        const restorePath = (url: URL) =>
+            url.pathname === `/api/documents/${saved.id}/restore-revision`;
+        await page.route(restorePath, async route => {
+            await gate;
+            await route.continue();
+        });
+        try {
+            const restoreRequest = page.waitForRequest(request =>
+                restorePath(new URL(request.url())),
+            );
+            const restoreResponse = page.waitForResponse(response =>
+                restorePath(new URL(response.url())),
+            );
+            await page
+                .locator('.revision-preview')
+                .getByRole('button', { name: 'Restore', exact: true })
+                .click();
+            await restoreRequest;
+            if (scenario === 'switch tab') await page.getByTestId('new-sql').click();
+            await replaceSql(page, 'SELECT 999 AS local_edit');
+            release();
+            const restored = (await (await restoreResponse).json()) as QueryDocument;
+            expect(restored.sql).toBe('SELECT 111 AS revision_value');
+            expect(restored.revision).toBe(3);
+            await expect(page.locator('.cm-content')).toContainText('SELECT 999 AS local_edit');
+            if (scenario === 'switch tab') {
+                await page.getByRole('tab', { name: 'Getting started.sql', exact: true }).click();
+                await expect(page.locator('.cm-content')).toContainText(
+                    'SELECT 111 AS revision_value',
+                );
+            } else {
+                const saveRequest = page.waitForRequest(
+                    request =>
+                        request.method() === 'PUT' &&
+                        new URL(request.url()).pathname === `/api/documents/${saved.id}`,
+                );
+                const saveResponse = page.waitForResponse(
+                    response =>
+                        response.request().method() === 'PUT' &&
+                        new URL(response.url()).pathname === `/api/documents/${saved.id}`,
+                );
+                await page.getByTestId('save-query').click();
+                expect((await saveRequest).postDataJSON()).toMatchObject({
+                    baseRevision: 3,
+                    sql: 'SELECT 999 AS local_edit',
+                });
+                expect((await saveResponse).ok()).toBe(true);
+            }
+        } finally {
+            release();
+            await page.unroute(restorePath);
+        }
+    });
+}
 
 test('Chart snapshot loads while a save is still in progress', async ({ page }) => {
     let release!: () => void,

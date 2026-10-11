@@ -12,12 +12,12 @@ import {
     type CreateTableColumn,
 } from '../../../shared/database/tables/create-table';
 import type { Connected } from '../../workspace/workspace-types';
-import { message, post } from '../../common/requests/api';
+import { message, post } from '../../api/client';
 import {
     CLICKHOUSE_CLOUD_CONNECTION_ID,
     createClickHouseCloudTable,
-} from '../../common/requests/sources/cloud-connection';
-import { Icon } from '../../common/components/icons';
+} from '../connections/cloud-connection';
+import { Icon } from '../../ui/components/icons';
 
 type Props = {
     connection: Connected;

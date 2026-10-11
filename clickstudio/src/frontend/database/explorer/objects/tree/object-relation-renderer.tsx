@@ -10,8 +10,8 @@ import {
     type ObjectExplorerModel,
 } from '../model';
 import { quoteIdentifier } from '../../../../../shared/sql/sql';
-import { cx } from '../../../../common/components/ui';
-import { Icon } from '../../../../common/components/icons';
+import { cx } from '../../../../ui/components/ui';
+import { Icon } from '../../../../ui/components/icons';
 import type { ObjectExplorerProps } from './object-explorer-types';
 import { ExplorerGroupRow } from './ObjectTreeRows';
 import { ObjectLeafRow } from './ObjectTreeRows';

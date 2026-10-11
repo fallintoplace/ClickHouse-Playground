@@ -1,9 +1,9 @@
-import { Icon } from '../../common/components/icons';
+import { Icon } from '../../ui/components/icons';
 import { type HelpSectionDefinition } from '../workspace-help-model';
 import type { WorkspaceHelpPanelProps } from '../workspace-help-types';
 import type { HelpExplainAction } from '../workspace-help-types';
 import { HelpSectionHeading } from '../HelpSectionHeading';
-import type { Copy } from '../../common/translations/i18n';
+import type { Copy } from '../../translations/i18n';
 
 export function HelpTour({
     copy,

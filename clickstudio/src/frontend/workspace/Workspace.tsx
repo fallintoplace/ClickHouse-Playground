@@ -1,44 +1,37 @@
-import type { ProposalDecisionAction } from '../../shared/assistant/actions';
+import { createInspectorProps } from './layout/panels/workspace-inspector-props';
 import { createPortal } from 'react-dom';
-import { parameterNames } from '../../shared/sql/sql';
-import { sqlReferencesQualifiedTable } from '../../shared/database/tables/delete-table';
-import type { Result } from '../../shared/queries/results/types';
-import type { Run } from '../../shared/queries/execution/types';
-import type { Schema, SchemaTable } from '../../shared/database/schema/types';
-import { api, download } from '../common/requests/api';
-import { DetachedQueryPlaceholder } from './editor/components/DetachedQueryPlaceholder';
-import { ExportDialog } from './results/export/ExportDialog';
-import { HelpButton } from '../common/components/HelpButton';
+import { download } from '../api/client';
+import { DetachedQueryPlaceholder } from '../queries/editor/components/DetachedQueryPlaceholder';
+import { ExportDialog } from '../queries/results/ExportDialog';
+import { HelpButton } from '../ui/components/HelpButton';
 import { ImportWizard } from '../database/imports/ImportWizard';
-import { InspectorPane, type InspectorPaneProps } from './layout/panels/InspectorPane';
+import { InspectorPane } from './layout/panels/InspectorPane';
 import { ObservabilityExplorer } from '../database/explorer/activity/ObservabilityExplorer';
-import { OverlayPortal } from '../common/components/OverlayPortal';
-import { RestoreRevisionDialog } from './queries/saved-queries/RestoreRevisionDialog';
-import { RestoreSqlMenu } from './editor/tabs/RestoreSqlMenu';
-import { Button, cx } from '../common/components/ui';
-import { Icon } from '../common/components/icons';
+import { OverlayPortal } from '../ui/components/OverlayPortal';
+import { RestoreRevisionDialog } from '../queries/saved-queries/RestoreRevisionDialog';
+import { RestoreSqlMenu } from '../queries/editor/tabs/RestoreSqlMenu';
+import { Button, cx } from '../ui/components/ui';
+import { Icon } from '../ui/components/icons';
 import { inspectorLabel } from './layout/panels/labels';
-import { terminal } from './queries/execution/status';
 import { ExecutionBar, RailButton } from './layout/WorkspaceChrome';
-import { WorkspaceDocumentTabs } from './editor/tabs/WorkspaceDocumentTabs';
+import { WorkspaceDocumentTabs } from '../queries/editor/tabs/WorkspaceDocumentTabs';
 import { WorkspaceHelpPanel } from '../help/WorkspaceHelpPanel';
 import { WorkspacePanelSplitter } from './layout/WorkspacePanelSplitter';
-import { WorkspaceQueryPanel } from './editor/WorkspaceQueryPanel';
-import { WorkspaceResultsPanel } from './results/WorkspaceResultsPanel';
+import { WorkspaceQueryPanel } from '../queries/editor/WorkspaceQueryPanel';
+import { WorkspaceResultsPanel } from '../queries/results/WorkspaceResultsPanel';
 import {
     EXPERT_BROWSE_NAVIGATION,
     EXPERT_EXECUTION_NAVIGATION,
     PRIMARY_INSPECTOR_NAVIGATION,
 } from './layout/panels/inspector-navigation';
-import { PLAYGROUND_CONNECTION_ID } from '../common/requests/sources/playground';
-import type { WorkspaceState } from './editor/drafts/workspace-state';
+import { PLAYGROUND_CONNECTION_ID } from '../database/connections/playground';
 import {
     closeDraft,
     MAX_TABS,
     newDraft,
     reopenDraft,
     type Draft,
-} from './editor/drafts/workspace-state';
+} from '../queries/editor/drafts/workspace-state';
 
 import { WorkspaceToast } from './layout/notifications/WorkspaceToast';
 import {
@@ -50,33 +43,10 @@ import {
     helpStatementSql,
     insertEditorText,
     revealEditorRange,
-    safeStatementCount,
 } from './workspace-helpers';
 
 import { useWorkspaceController, type WorkspaceProps } from './useWorkspaceController';
-import { createExampleDraft } from './queries/execution/useWorkspaceExecution';
-
-async function loadAssistantRunContext(
-    run: Run | undefined,
-    snapshot: Result | undefined,
-    signal: AbortSignal,
-) {
-    if (!run || !terminal(run))
-        throw new Error('Wait for the latest run to finish before including it.');
-    let result;
-
-    if (run.resultState === 'reopenable') {
-        if (snapshot?.runId === run.id) {
-            result = snapshot;
-        } else {
-            result = await api<Result>(`/runs/${encodeURIComponent(run.id)}/snapshot`, { signal });
-        }
-    } else {
-        result = undefined;
-    }
-    signal.throwIfAborted();
-    return { result, evidenceSql: run.sql, error: run.error?.message };
-}
+import { createExampleDraft } from '../queries/execution/useWorkspaceExecution';
 
 function openImportedSqlQuery(
     name: string,
@@ -90,27 +60,6 @@ function openImportedSqlQuery(
         markImported(draft.id);
     }
     return opened;
-}
-
-function workspaceAfterTableDeleted(
-    state: WorkspaceState,
-    table: Pick<SchemaTable, 'database' | 'name'>,
-): WorkspaceState {
-    return {
-        ...state,
-        tabs: state.tabs.map(draft =>
-            draft.activeRunId && sqlReferencesQualifiedTable(draft.sql, table.database, table.name)
-                ? {
-                      ...draft,
-                      invalidatedSource: {
-                          database: table.database,
-                          table: table.name,
-                          runId: draft.activeRunId,
-                      },
-                  }
-                : draft,
-        ),
-    };
 }
 
 export function Workspace({
@@ -369,212 +318,6 @@ export function Workspace({
         demoMode,
         model,
     });
-}
-
-function createInspectorProps({
-    copy,
-    connection,
-    active,
-    nativeParserEnabled,
-    experience,
-    model,
-}: {
-    copy: WorkspaceProps['copy'];
-    connection: WorkspaceProps['connection'];
-    active: Draft;
-    nativeParserEnabled: WorkspaceProps['nativeParserEnabled'];
-    experience: WorkspaceProps['experience'];
-    model: ReturnType<typeof useWorkspaceController>;
-}) {
-    const {
-        serverVersion: playgroundServerVersion,
-        schema,
-        schemaLoading,
-        schemaLoadingMore,
-        schemaError,
-        documents,
-        revisionsDocumentId,
-        documentRevisions,
-        revisionLoading,
-        revisionError,
-        documentsReadError,
-        documentsError,
-        historyError,
-        loadSchema,
-        loadMoreSchema,
-        loadHistory,
-        loadDocuments,
-        loadDocumentRevisions,
-    } = model.data;
-    const { run, profile, pipeline, profilesByRun, pipelinesByRun, snapshot } = model.evidence;
-    const {
-        assistantQuestion,
-        changeAssistantQuestion,
-        assistantChats,
-        activeAssistantChatId,
-        assistantTurns,
-        assistantChatStorageError,
-        newAssistantChat,
-        setIncludeRun,
-        selectAssistantChat,
-        renameAssistantChat,
-        deleteAssistantChat,
-        assistantBusy,
-        assistantCancelable,
-        assistantPhase,
-        assistantError,
-        assistantNotice,
-        requestAssistantSql,
-        includeRun,
-        cancelAssistantRequest,
-        decideAssistantProposal,
-    } = model.assistant;
-
-    const {
-        inspector,
-        showInspector,
-        search,
-        setSearch,
-        sortedHistory,
-        savedDocument,
-        saveStatus,
-        importedReveal,
-        editor,
-        openSqlDraft,
-        setWorkspace,
-        openRun,
-        openDocument,
-        perform,
-        loadProfile,
-        loadPipeline,
-        setView,
-        trusted,
-        restoreDocumentRevision,
-        selectableRunId,
-        nativeParserStatus,
-        nativeParseSnapshot,
-        execute,
-        busy,
-    } = model;
-
-    return {
-        copy: copy.common,
-        inspector,
-        setInspector: showInspector,
-        connection,
-        serverVersion:
-            connection.id === PLAYGROUND_CONNECTION_ID
-                ? playgroundServerVersion
-                : connection.manifest?.serverVersion,
-        schema,
-        schemaLoading,
-        schemaLoadingMore,
-        schemaError,
-        search,
-        setSearch,
-        history: sortedHistory,
-        importFeedback: model.importedReveal.importFeedback,
-        historyError,
-        documentsError,
-        evidenceFeedback: model.evidence.assetReadFeedback,
-        documents,
-        revisions: revisionsDocumentId === active.serverId ? documentRevisions : [],
-        revisionsDocumentId,
-        revisionLoading,
-        revisionError,
-        currentRevision:
-            revisionsDocumentId === active.serverId
-                ? (documentRevisions[0]?.revision ?? savedDocument?.revision ?? active.baseRevision)
-                : (savedDocument?.revision ?? active.baseRevision),
-        unsavedDraft: saveStatus.state !== 'saved' && saveStatus.state !== 'checking',
-        canRestoreRevision: Boolean(
-            active.serverId &&
-            revisionsDocumentId === active.serverId &&
-            documentRevisions.length > 1 &&
-            !revisionLoading &&
-            !documentsReadError &&
-            savedDocument &&
-            !savedDocument.deletedAt,
-        ),
-        run,
-        profile,
-        pipeline,
-        comparisonProfiles: profilesByRun,
-        comparisonPipelines: pipelinesByRun,
-        onRefreshSchema: () => void loadSchema(true),
-        onLoadMoreSchema: () => void loadMoreSchema(),
-        importedTableTarget: importedReveal.importedTableTarget,
-        onImportedTableRevealed: importedReveal.onImportedTableRevealed,
-        onRefreshHistory: () => void loadHistory().catch(() => undefined),
-        onInsert: (value: string) => editor.current?.insert(value),
-        onOpenSqlDraft: openSqlDraft,
-        onTableDeleted: table =>
-            setWorkspace(current => workspaceAfterTableDeleted(current, table)),
-        onOpenRun: openRun,
-        onOpenDocument: openDocument,
-        onLoadProfile: () => void perform(loadProfile, 'save'),
-        onLoadPipeline: () => void perform(loadPipeline, 'save'),
-        onOpenGraph: () => {
-            setView('insights');
-        },
-        connectionId: connection.id,
-        sql: active.sql,
-        draftId: active.id,
-        trusted,
-        onRefreshDocuments: () => void loadDocuments().catch(() => undefined),
-        onRefreshRevisions: () => void loadDocumentRevisions(active.serverId),
-        onRestoreRevision: restoreDocumentRevision,
-        assistantQuestion,
-        onAssistantQuestion: changeAssistantQuestion,
-        assistantChats,
-        activeAssistantChatId,
-        assistantTurns,
-        assistantChatStorageError,
-        onNewAssistantChat: () => {
-            newAssistantChat();
-            if (selectableRunId) setIncludeRun(true);
-        },
-        onSelectAssistantChat: selectAssistantChat,
-        onRenameAssistantChat: renameAssistantChat,
-        onDeleteAssistantChat: deleteAssistantChat,
-        assistantBusy,
-        assistantCancelable,
-        assistantPhase,
-        assistantError,
-        assistantNotice,
-        nativeParserEnabled,
-        nativeParserStatus,
-        nativeParseSnapshot,
-        onRetryParser: () => editor.current?.retryNativeParser(),
-        onAskAI: (currentSchema?: Schema, serverVersion?: string, database?: string) =>
-            void requestAssistantSql(
-                currentSchema,
-                serverVersion,
-                database,
-                includeRun ? signal => loadAssistantRunContext(run, snapshot, signal) : undefined,
-            ),
-        onCancelAssistantRequest: cancelAssistantRequest,
-        onDecideProposal: (turnId: string, decision: ProposalDecisionAction) =>
-            void decideAssistantProposal(turnId, decision),
-        onRunQuery: sql => void execute('query', sql),
-        runDisabled: sql => {
-            if (!trusted || busy || model.assistant.editorProposal) return true;
-            const statementCount = safeStatementCount(sql);
-            if (
-                statementCount !== undefined &&
-                statementCount > 1 &&
-                connection.manifest?.scripts.available !== true
-            )
-                return true;
-            if (connection.manifest?.parameters.available !== false) return false;
-            try {
-                return parameterNames(sql).length > 0;
-            } catch {
-                return true;
-            }
-        },
-        expert: experience === 'expert',
-    } satisfies InspectorPaneProps;
 }
 
 function renderWorkspaceLayout({

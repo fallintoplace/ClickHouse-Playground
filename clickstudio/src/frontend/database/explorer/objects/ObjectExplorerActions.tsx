@@ -1,5 +1,5 @@
-import { Button } from '../../../common/components/ui';
-import { Icon } from '../../../common/components/icons';
+import { Button } from '../../../ui/components/ui';
+import { Icon } from '../../../ui/components/icons';
 import type { ObjectExplorerProps } from './tree/object-explorer-types';
 import type { ObjectExplorerView } from './tree/useObjectExplorerState';
 

@@ -3,15 +3,12 @@ import {
     type NativeExplorerRequest,
     type NativeExplorerSnapshot,
 } from '../../../shared/database/explorer/explorers';
-import { api, isFrontendDemoPreview } from '../../common/requests/api';
+import { api, isFrontendDemoPreview } from '../../api/client';
 import {
     CLICKHOUSE_CLOUD_CONNECTION_ID,
     loadClickHouseCloudNativeExplorer,
-} from '../../common/requests/sources/cloud-connection';
-import {
-    PLAYGROUND_CONNECTION_ID,
-    queryPlaygroundWithParams,
-} from '../../common/requests/sources/playground';
+} from '../connections/cloud-connection';
+import { PLAYGROUND_CONNECTION_ID, queryPlaygroundWithParams } from '../connections/playground';
 
 export function requestNativeExplorer(
     connectionId: string,

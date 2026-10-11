@@ -8,7 +8,7 @@ import {
 } from '../../../../shared/database/explorer/storage/activity';
 import { nativeBytes, nativeCount, nativeTime } from '../format';
 import { useNativeExplorer } from '../useNativeExplorer';
-import { Button } from '../../../common/components/ui';
+import { Button } from '../../../ui/components/ui';
 
 function MergeCard({ item }: { item: MergeActivity }) {
     const percent = item.progress === undefined ? undefined : Math.round(item.progress * 100);

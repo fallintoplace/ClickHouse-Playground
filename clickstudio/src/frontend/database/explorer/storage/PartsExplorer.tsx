@@ -21,11 +21,11 @@ import {
 } from '../../../../shared/database/explorer/storage/parts';
 import type { Connection } from '../../../../shared/database/connections/types';
 import type { SchemaTable } from '../../../../shared/database/schema/types';
-import type { Copy } from '../../../common/translations/i18n';
+import type { Copy } from '../../../translations/i18n';
 import { loadTableParts } from './table-parts-provider';
-import { message } from '../../../common/requests/api';
-import { Button } from '../../../common/components/ui';
-import { formatBytes } from '../../../common/browser/format';
+import { message } from '../../../api/client';
+import { Button } from '../../../ui/components/ui';
+import { formatBytes } from '../../../browser/format';
 
 type Cell = {
     id: string;

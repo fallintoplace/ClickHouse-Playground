@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { WorkspaceToastMessage } from './useWorkspaceNotifications';
-import { cx } from '../../../common/components/ui';
-import { Icon } from '../../../common/components/icons';
+import { cx } from '../../../ui/components/ui';
+import { Icon } from '../../../ui/components/icons';
 
 export function WorkspaceToast({
     notification,
