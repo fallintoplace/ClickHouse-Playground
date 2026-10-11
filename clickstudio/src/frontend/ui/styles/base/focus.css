@@ -141,3 +141,9 @@
     outline-offset: 0;
   }
 }
+
+@media (min-width: 761px) and (pointer: fine) {
+  :is(.editor-heading, .results-header) button:focus-visible {
+    outline-offset: 0;
+  }
+}

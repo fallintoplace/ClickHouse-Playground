@@ -778,7 +778,7 @@ test('Failed execution replaces visible results and can collapse, reopen and ret
         await expect(page.locator('.execution-bar')).not.toContainText(
             '“Getting started.sql” failed.',
         );
-        await expect(page.locator('.query-failed-status')).toHaveText('Last execution failed');
+        await expect(page.locator('.editor-heading')).not.toContainText('Last execution failed');
         await expect(failure.locator('details')).not.toHaveAttribute('open');
         await expect(
             results.getByRole('button', { name: 'Close output', exact: true }),
@@ -786,7 +786,7 @@ test('Failed execution replaces visible results and can collapse, reopen and ret
         await page.screenshot({ path: testInfo.outputPath('failed-output.png') });
         await results.getByRole('button', { name: 'Collapse Query results', exact: true }).click();
         await expect(failure).toBeHidden();
-        await page.locator('.query-failed-status').click();
+        await results.getByRole('button', { name: 'Expand Query results', exact: true }).click();
         await expect(failure).toBeVisible();
         await results.getByRole('button', { name: 'Collapse Query results', exact: true }).click();
         await expect(failure).toBeHidden();
@@ -800,7 +800,7 @@ test('Failed execution replaces visible results and can collapse, reopen and ret
         await page.getByRole('tab').filter({ hasText: 'Getting started.sql' }).click();
         await expect(results).toHaveClass(/is-collapsed/);
         await expect(failure).toBeHidden();
-        await page.locator('.query-failed-status').click();
+        await results.getByRole('button', { name: 'Expand Query results', exact: true }).click();
         await expect(failure).toBeVisible();
 
         await openWorkspacePanel(page, 'history');
@@ -812,7 +812,6 @@ test('Failed execution replaces visible results and can collapse, reopen and ret
         await expect(results.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
         await expect(failure).toHaveCount(0);
         await page.getByRole('tab').filter({ hasText: 'Getting started.sql' }).first().click();
-        await page.locator('.query-failed-status').click();
         await expect(failure).toBeVisible();
         await results.getByRole('button', { name: 'Collapse Query results', exact: true }).click();
         await replaceSql(page, 'SELECT 1');
@@ -1008,7 +1007,9 @@ for (const theme of ['Dark', 'Light'])
             );
             await expect(header.getByRole('tablist')).toHaveCount(0);
             await expect(page.locator('.toast-error')).toHaveCount(0);
-            await expect(page.locator('.query-failed-status')).toBeVisible();
+            await expect(page.locator('.editor-heading')).not.toContainText(
+                'Last execution failed',
+            );
             await expect(page.locator('.cm-server-error-line')).toContainText('GROUP BY');
             await expect(page.locator('.cm-lint-marker-error')).toBeVisible();
             await page.locator('.cm-content').focus();
@@ -1212,7 +1213,7 @@ test('Failed output stays docked while editor markers open in a separate window'
         .getByRole('button', { name: 'Open editor in a separate window', exact: true })
         .click();
     const editor = await editorOpened;
-    await expect(editor.locator('.query-failed-status')).toBeVisible();
+    await expect(editor.locator('.editor-heading')).not.toContainText('Last execution failed');
     await expect(editor.locator('.cm-server-error-line')).toContainText('GROUP BY');
     await expect(editor.getByTestId('query-failure')).toHaveCount(0);
     await editor.close();
@@ -1228,7 +1229,7 @@ test('Failed output stays docked while editor markers open in a separate window'
     await page.getByRole('button', { name: 'Collapse Query results', exact: true }).click();
     await expect(page.getByTestId('query-failure')).toBeHidden();
     await expect(page.locator('.results-surface')).toHaveClass(/is-collapsed/);
-    await page.locator('.query-failed-status').click();
+    await page.getByRole('button', { name: 'Expand Query results', exact: true }).click();
     await expect(page.getByTestId('query-failure')).toBeVisible();
 });
 

@@ -65,7 +65,6 @@ export type WorkspaceQueryPanelActions = Readonly<{
     onNativeParseSnapshot: (snapshot?: NativeParseSnapshot) => void;
     onOpenDetached: () => void;
     onDockDetached: () => void;
-    onShowOutput: () => void;
 }>;
 
 export function WorkspaceQueryPanel({
@@ -205,7 +204,6 @@ export function WorkspaceQueryPanel({
             )}
         >
             {renderQueryHeading({
-                viewState,
                 state,
                 actions,
                 queryNameAtFocus,
@@ -415,7 +413,6 @@ export function WorkspaceQueryPanel({
 }
 
 function renderQueryHeading({
-    viewState,
     state,
     actions,
     queryNameAtFocus,
@@ -426,7 +423,6 @@ function renderQueryHeading({
     detached,
     panels,
 }: {
-    viewState: WorkspaceViewState;
     state: WorkspaceQueryPanelState;
     actions: WorkspaceQueryPanelActions;
     queryNameAtFocus: import('react').RefObject<string>;
@@ -444,17 +440,6 @@ function renderQueryHeading({
             <div className="editor-file-heading">
                 <span className="file-type-icon">SQL</span>
                 <div className="document-name">
-                    {viewState.failureError && !state.executionPending ? (
-                        <button
-                            type="button"
-                            className="query-failed-status"
-                            onClick={actions.onShowOutput}
-                            title={copy.common.showOutput}
-                        >
-                            <span className="status-light is-error" aria-hidden="true" />
-                            {copy.common.lastExecutionFailed}
-                        </button>
-                    ) : null}
                     <input
                         aria-label="SQL document name"
                         value={active.name}

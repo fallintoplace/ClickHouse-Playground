@@ -84,6 +84,55 @@ async function expectResultsToolbarFits(header: Locator) {
         .toBe(true);
 }
 
+async function expectHeaderFocusFits(header: Locator) {
+    for (const control of await header.locator('button, .result-filter').all()) {
+        if (!(await control.isVisible()) || (await control.isDisabled())) continue;
+        await control.focus();
+        const focus = await control.evaluate(element => {
+            const bounds = element.getBoundingClientRect();
+            const header = element
+                .closest('.editor-heading, .results-header')!
+                .getBoundingClientRect();
+            const style = getComputedStyle(element);
+            const ring =
+                style.outlineStyle === 'none'
+                    ? 0
+                    : Number.parseFloat(style.outlineWidth) +
+                      Number.parseFloat(style.outlineOffset);
+            return {
+                name: element.getAttribute('aria-label') ?? element.textContent,
+                style: style.outlineStyle,
+                width: bounds.width,
+                height: bounds.height,
+                edges: [
+                    bounds.left - ring - header.left,
+                    header.right - bounds.right - ring,
+                    bounds.top - ring - header.top,
+                    header.bottom - bounds.bottom - ring,
+                ],
+            };
+        });
+        expect(focus.style, `${focus.name}: keyboard focus`).toBe(
+            (await control.getAttribute('type')) === 'search' ? 'none' : 'solid',
+        );
+        if ((await control.getAttribute('type')) === 'search') {
+            const color = await control.evaluate(element => {
+                const probe = document.createElement('span');
+                probe.style.color = 'var(--focus-color)';
+                element.parentElement!.append(probe);
+                const color = getComputedStyle(probe).color;
+                probe.remove();
+                return color;
+            });
+            await expect(control).toHaveCSS('border-color', color);
+        }
+        expect(focus.width, `${focus.name}: target width`).toBeGreaterThanOrEqual(24);
+        expect(focus.height, `${focus.name}: target height`).toBeGreaterThanOrEqual(24);
+        for (const edge of focus.edges)
+            expect(edge, `${focus.name}: focus stays in the header`).toBeGreaterThanOrEqual(0);
+    }
+}
+
 test('A no-match row filter stays local and can be cleared without rerunning SQL', async ({
     page,
 }) => {
@@ -269,8 +318,14 @@ for (const mode of ['Standard', 'Experimental']) {
         const expectToolbarFits = () => expectResultsToolbarFits(header);
         for (const theme of ['Dark', 'Light']) {
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
-            for (const width of [1440, 900]) {
+            for (const width of [1440, 900, 761]) {
                 await page.setViewportSize({ width, height: 900 });
+                const queryHeader = page.locator('.editor-heading');
+                await expect(queryHeader).toHaveCSS('height', '34px');
+                await expect(header).toHaveCSS('height', '34px');
+                await page.keyboard.press('Tab');
+                await expectHeaderFocusFits(queryHeader);
+                await expectHeaderFocusFits(header);
                 await expect
                     .poll(() =>
                         page.evaluate(() => {
@@ -304,6 +359,7 @@ for (const mode of ['Standard', 'Experimental']) {
                     0,
                 );
                 await expectToolbarFits();
+                await expectHeaderFocusFits(header);
                 await filter.fill('2026-01-02');
                 await expect(header.locator('.result-row-count')).toHaveText('1 of 7 rows');
                 await expect(results.locator('tbody tr')).toHaveCount(1);

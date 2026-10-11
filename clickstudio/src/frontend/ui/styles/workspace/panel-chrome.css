@@ -127,8 +127,13 @@
 @media (min-width: 761px) and (pointer: fine) {
   .editor-heading,
   .results-header {
-    min-height: 40px;
-    padding-block: 3px;
+    min-height: 34px;
+    padding-block: 2px;
+  }
+  .editor-heading .file-type-icon,
+  .results-mark {
+    width: 26px;
+    height: 26px;
   }
   .editor-heading-actions {
     flex: none;
@@ -146,7 +151,7 @@
     padding-inline: 7px;
   }
   .editor-heading-actions > .run-query-button {
-    min-height: 30px;
+    min-height: 28px;
     padding-inline: 10px;
   }
   :is(.editor-heading, .results-header)
@@ -174,11 +179,16 @@
     display: flex;
     align-items: center;
     padding: 0 7px;
+    transition-property: background-color, color, box-shadow;
   }
   .results-header .result-filter {
     height: 26px;
     min-height: 26px;
     padding-block: 3px;
+  }
+  .results-header .script-results-trigger {
+    padding-block: 2px;
+    transition-property: border-color, background-color, color, box-shadow;
   }
 }
 

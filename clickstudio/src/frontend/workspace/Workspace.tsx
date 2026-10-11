@@ -178,10 +178,6 @@ export function Workspace({
                 onNativeParseSnapshot: setNativeParseSnapshot,
                 onOpenDetached: detachedEditor.openEditor,
                 onDockDetached: detachedEditor.dockEditor,
-                onShowOutput: () => {
-                    setView('results');
-                    panels.revealPanelTemporarily('results', active.id);
-                },
             }}
             panels={panels}
             viewState={viewState}

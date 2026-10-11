@@ -16,6 +16,43 @@ test('Statement results use a compact header dropdown and switch without executi
     await expect(results.locator('.script-statement-list')).toHaveCount(0);
     await expect(results.getByRole('menu')).toHaveCount(0);
     await expect(results.getByRole('table')).toBeVisible();
+    for (const theme of ['Dark', 'Light']) {
+        await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+        for (const mode of ['Standard', 'Experimental']) {
+            await page.getByText(mode, { exact: true }).click();
+            for (const width of [1440, 900]) {
+                await page.setViewportSize({ width, height: 900 });
+                if (width === 1440)
+                    await expect(results.locator('.results-header')).toHaveCSS('height', '34px');
+                await page.keyboard.press('Tab');
+                const focus = await trigger.evaluate(element => {
+                    element.focus();
+                    const bounds = element.getBoundingClientRect();
+                    const header = element.closest('.results-header')!.getBoundingClientRect();
+                    const style = getComputedStyle(element);
+                    const ring =
+                        Number.parseFloat(style.outlineWidth) +
+                        Number.parseFloat(style.outlineOffset);
+                    return {
+                        outline: style.outlineWidth,
+                        edges: [
+                            bounds.left - ring - header.left,
+                            header.right - bounds.right - ring,
+                            bounds.top - ring - header.top,
+                            header.bottom - bounds.bottom - ring,
+                        ],
+                    };
+                });
+                expect(focus.outline, `${theme} ${mode} ${width}: immediate focus`).toBe('2px');
+                for (const edge of focus.edges)
+                    expect(
+                        edge,
+                        `${theme} ${mode} ${width}: focus stays in the header`,
+                    ).toBeGreaterThanOrEqual(0);
+            }
+        }
+    }
+    await page.setViewportSize({ width: 1280, height: 720 });
     const thirdQueryId = await currentQueryId(page);
     const header = await results.locator('.results-header').boundingBox();
     const control = await trigger.boundingBox();

@@ -497,7 +497,7 @@
     border-radius: var(--radius-control);
     background: var(--page);
     color: var(--text);
-    font: 13px/1.55 var(--font-mono);
+    font: 12px/1.55 var(--font-mono);
     white-space: pre;
     overflow-wrap: normal;
   }
@@ -542,31 +542,6 @@
   }
   .result-failure-diagnostics summary:hover {
     color: var(--text);
-  }
-  .query-failed-status {
-    display: inline-flex;
-    width: max-content;
-    max-width: 100%;
-    align-items: center;
-    gap: 5px;
-    padding: 0;
-    border: 0;
-    border-radius: var(--radius-label);
-    background: transparent;
-    color: var(--red);
-    font: 10px/12px var(--font-sans);
-    white-space: nowrap;
-    cursor: pointer;
-  }
-  .query-failed-status:hover {
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-  .query-failed-status .status-light {
-    width: 6px;
-    height: 6px;
-    flex: none;
-    box-shadow: none;
   }
   .result-execution-progress {
     display: grid;
