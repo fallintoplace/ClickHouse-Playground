@@ -606,38 +606,6 @@
     position: relative;
     min-width: 0;
   }
-  .sql-editor-container {
-    display: flex;
-    height: 100%;
-    min-height: 0;
-    flex-direction: column;
-  }
-  .sql-editor-container > .sql-editor-scroll-frame {
-    flex: 1;
-    height: auto;
-    min-height: 0;
-  }
-  .sql-editor-diagnostics-footer {
-    display: flex;
-    flex: none;
-    align-items: center;
-    padding: 2px 10px;
-    border-top: 1px solid var(--line);
-    background: var(--panel);
-  }
-  .sql-issue-button {
-    min-height: 24px;
-    padding: 2px 5px;
-    color: var(--red);
-    font-size: 11px;
-  }
-  .sql-editor .cm-panel-lint {
-    border-top-color: var(--line);
-    background: var(--panel);
-    color: var(--text-soft);
-    font-family: var(--font-sans);
-    font-size: 11px;
-  }
   .draft-feedback-control {
     display: inline-flex;
     flex: none;

@@ -1,5 +1,4 @@
-import { forEachDiagnostic, type Diagnostic } from '@codemirror/lint';
-import { EditorState, Transaction } from '@codemirror/state';
+import type { Diagnostic } from '@codemirror/lint';
 import { heredocMarkerAt, type SqlScan } from '../../../../shared/sql/lexer-types.js';
 
 export function lexicalDiagnostic(sql: string, scan: SqlScan): Diagnostic | undefined {
@@ -15,24 +14,3 @@ export function lexicalDiagnostic(sql: string, scan: SqlScan): Diagnostic | unde
         source: 'SQL',
     };
 }
-
-// Lint navigation selects diagnostic text without a user event. Keep it a caret so
-// opening an issue cannot silently turn the next Run into a selected-text Run.
-export const diagnosticNavigation = EditorState.transactionFilter.of(transaction => {
-    const selection = transaction.selection?.main;
-    if (
-        !selection ||
-        selection.empty ||
-        transaction.docChanged ||
-        !transaction.scrollIntoView ||
-        transaction.annotation(Transaction.userEvent)
-    )
-        return transaction;
-    let diagnosticSelection = false;
-    forEachDiagnostic(transaction.startState, (_diagnostic, from, to) => {
-        if (selection.from === from && selection.to === to) diagnosticSelection = true;
-    });
-    return diagnosticSelection
-        ? [transaction, { selection: { anchor: selection.to }, sequential: true }]
-        : transaction;
-});

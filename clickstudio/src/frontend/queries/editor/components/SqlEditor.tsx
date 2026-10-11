@@ -6,7 +6,6 @@ import {
     useLayoutEffect,
     useMemo,
     useRef,
-    useState,
 } from 'react';
 import type { RefCallback } from 'react';
 import { EditorState, Compartment, StateEffect, StateField } from '@codemirror/state';
@@ -38,15 +37,8 @@ import {
     type CompletionResult,
 } from '@codemirror/autocomplete';
 import { sql } from '@codemirror/lang-sql';
-import {
-    closeLintPanel,
-    lintGutter,
-    lintKeymap,
-    setDiagnostics,
-    type Diagnostic,
-} from '@codemirror/lint';
-import { SqlDiagnosticsFooter } from './SqlDiagnosticsFooter';
-import { diagnosticNavigation, lexicalDiagnostic } from './editor-diagnostics';
+import { closeLintPanel, lintGutter, setDiagnostics, type Diagnostic } from '@codemirror/lint';
+import { lexicalDiagnostic } from './editor-diagnostics';
 import type { ApiError } from '../../../../shared/common/errors';
 import type { Schema } from '../../../../shared/database/schema/types';
 import type { SqlErrorRange } from '../sql-error';
@@ -299,7 +291,6 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
     const setScrollViewport = useRef<RefCallback<HTMLElement> | null>(null);
     const nativeDiagnostics = useRef<NativeDiagnostic[]>([]),
         validationRevision = useRef(0);
-    const [issueCount, setIssueCount] = useState(0);
     current.current = props;
     const schemaIndex = useMemo(
             () => indexSchema(props.schema, props.database),
@@ -369,8 +360,7 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
             editor.dispatch({ effects: setServerErrorDecorations.of(Decoration.none) });
         }
         editor.dispatch(setDiagnostics(editor.state, diagnostics));
-        if (!diagnostics.length) closeLintPanel(editor);
-        setIssueCount(diagnostics.length);
+        closeLintPanel(editor);
     }, []);
     const languageExtension = useCallback(() => sql({ dialect: clickhouse }), []);
     const invalidateNativeValidation = useCallback(() => {
@@ -399,7 +389,6 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
                     sqlMapHighlight,
                     lineNumbers(),
                     lintGutter(),
-                    diagnosticNavigation,
                     history(),
                     drawSelection(),
                     highlightActiveLine(),
@@ -452,7 +441,6 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
                         ...historyKeymap,
                         ...searchKeymap,
                         ...foldKeymap,
-                        ...lintKeymap,
                         indentWithTab,
                     ]),
                     EditorView.updateListener.of(update => {
@@ -671,14 +659,11 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
         [applyDiagnostics],
     );
     return (
-        <div className="sql-editor-container">
-            <ScrollEdgeFrame<HTMLElement> className="sql-editor-scroll-frame">
-                {setViewport => {
-                    setScrollViewport.current = setViewport;
-                    return <div className="sql-editor" ref={element} />;
-                }}
-            </ScrollEdgeFrame>
-            <SqlDiagnosticsFooter count={issueCount} editor={view} />
-        </div>
+        <ScrollEdgeFrame<HTMLElement> className="sql-editor-scroll-frame">
+            {setViewport => {
+                setScrollViewport.current = setViewport;
+                return <div className="sql-editor" ref={element} />;
+            }}
+        </ScrollEdgeFrame>
     );
 });

@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { openBlankSql, replaceSql, runButton, trust, useAdvancedMode } from './helpers.js';
 import type { QueryDocument } from '../../src/shared/queries/saved-queries/types.js';
 
-const issueButton = (page: Page) => page.getByRole('button', { name: /^\d+ SQL issues?$/ });
+const diagnosticMarker = (page: Page) => page.locator('.cm-lint-marker-error');
 
 async function runSuccessfully(page: Page) {
     const response = page.waitForResponse(
@@ -63,8 +63,9 @@ for (const mode of ['beginner', 'expert']) {
                     submissions++;
             });
             await replaceSql(page, sql!);
-            await expect(issueButton(page)).toHaveText('1 SQL issue');
-            await expect(page.locator('.cm-lint-marker-error')).toHaveCount(1);
+            await expect(diagnosticMarker(page)).toHaveCount(1);
+            await expect(page.getByRole('button', { name: /^\d+ SQL issues?$/ })).toHaveCount(0);
+            await expect(page.locator('.cm-panel-lint')).toHaveCount(0);
             await expect(page.locator('.editor-surface > .workspace-inline-notice')).toHaveCount(0);
             const capture = mode === 'expert' && sql === "SELECT 'unfinished";
             if (capture) {
@@ -72,28 +73,25 @@ for (const mode of ['beginner', 'expert']) {
                 await page.screenshot({ path });
                 await testInfo.attach('SQL editing', { path, contentType: 'image/png' });
             }
-            await issueButton(page).click();
-            await expect(page.locator('.cm-panel-lint')).toContainText(message!);
             await runButton(page).click();
             await runButton(page).click();
             await expect(page.getByTestId('query-failure')).toContainText(message!);
             await expect(
                 page.getByTestId('query-failure').locator('.result-execution-sql.is-full'),
             ).toContainText(sql!);
-            await expect(issueButton(page)).toHaveText('1 SQL issue');
+            await expect(diagnosticMarker(page)).toHaveCount(1);
             if (capture) {
-                await page.locator('.cm-panel-lint [name="close"]').click();
                 const path = testInfo.outputPath('sql-run-failed.png');
                 await page.screenshot({ path });
                 await testInfo.attach('Failed Run', { path, contentType: 'image/png' });
             }
             expect(submissions).toBe(0);
             await replaceSql(page, "SELECT 'unfinished'");
-            await expect(issueButton(page)).toHaveCount(0);
+            await expect(diagnosticMarker(page)).toHaveCount(0);
             await expect(page.locator('.cm-panel-lint')).toHaveCount(0);
             await expect(page.getByTestId('query-failure')).toContainText(message!);
             await runSuccessfully(page);
-            await expect(issueButton(page)).toHaveCount(0);
+            await expect(diagnosticMarker(page)).toHaveCount(0);
             await expect(page.getByTestId('query-failure')).toHaveCount(0);
             expect(submissions).toBe(1);
             expect(errors).toEqual([]);
@@ -107,15 +105,15 @@ test('lexical diagnostics work with the native parser unavailable and recover th
     await page.route('**/api/editor/clickhouse-parser*', route => route.abort('failed'));
     await trust(page);
     await replaceSql(page, "SELECT 'unfinished");
-    await expect(issueButton(page)).toHaveText('1 SQL issue');
+    await expect(diagnosticMarker(page)).toHaveCount(1);
     await page.waitForTimeout(600); // Separate edits into distinct undo history groups.
     await page.locator('.cm-content').focus();
     await page.keyboard.insertText("'");
-    await expect(issueButton(page)).toHaveCount(0);
+    await expect(diagnosticMarker(page)).toHaveCount(0);
     await page.keyboard.press('ControlOrMeta+z');
-    await expect(issueButton(page)).toHaveText('1 SQL issue');
+    await expect(diagnosticMarker(page)).toHaveCount(1);
     await page.keyboard.press('ControlOrMeta+Shift+z');
-    await expect(issueButton(page)).toHaveCount(0);
+    await expect(diagnosticMarker(page)).toHaveCount(0);
 });
 
 test('Save and Restore retries clear only their own feedback', async ({ page }) => {
@@ -239,32 +237,23 @@ test('Save details stay within a short detached desktop window and close with Es
     await page.getByRole('button', { name: 'Dock editor here', exact: true }).click();
 });
 
-test('lint keyboard and panel navigation keep Run on the full draft, including a collapsed editor', async ({
-    page,
-}) => {
+test('Run failures stay in Results without an editor diagnostics panel', async ({ page }) => {
     await trust(page);
     await replaceSql(page, "SELECT 'unfinished");
     await page.locator('.cm-content').focus();
-    await page.keyboard.press('F8');
-    await runButton(page).click();
+    await page.keyboard.press('ControlOrMeta+Shift+m');
     await expect(page.locator('.cm-panel-lint')).toHaveCount(0);
-    await issueButton(page).click();
-    const diagnostics = page.getByRole('listbox', { name: 'Diagnostics', exact: true });
-    await diagnostics.getByRole('option').click();
-    await diagnostics.press('ArrowDown');
+    await runButton(page).click();
+    await expect(page.getByTestId('query-failure')).toBeVisible();
+    await expect(page.locator('.cm-panel-lint')).toHaveCount(0);
     await runButton(page).click();
     await expect(
         page.getByTestId('query-failure').locator('.result-execution-sql.is-full'),
     ).toContainText("SELECT 'unfinished");
-    await expect(issueButton(page)).toHaveText('1 SQL issue');
     await page.getByRole('button', { name: 'Collapse SQL query', exact: true }).click();
-    await expect(page.locator('.cm-content')).not.toBeVisible();
     await runButton(page).click();
     await expect(page.locator('.cm-content')).not.toBeVisible();
     await expect(page.getByTestId('query-failure')).toBeVisible();
-    await expect(
-        page.getByTestId('query-failure').locator('.result-execution-sql.is-full'),
-    ).toContainText("SELECT 'unfinished");
 });
 
 test('a successful selected Run preserves diagnostics in the rest of the draft', async ({
@@ -272,15 +261,12 @@ test('a successful selected Run preserves diagnostics in the rest of the draft',
 }) => {
     await trust(page);
     await replaceSql(page, "SELECT 1;\nSELECT 'unfinished");
-    await expect(issueButton(page)).toHaveText('1 SQL issue');
+    await expect(diagnosticMarker(page)).toHaveCount(1);
     await selectRange(page, 0, 8);
     await runSuccessfully(page);
-    await expect(issueButton(page)).toHaveText('1 SQL issue');
+    await expect(diagnosticMarker(page)).toHaveCount(1);
     await expect(page.getByTestId('query-failure')).toHaveCount(0);
-    await issueButton(page).click();
-    await expect(page.locator('.cm-panel-lint')).toContainText(
-        'Unclosed quoted value or identifier',
-    );
+    await expect(page.locator('.cm-panel-lint')).toHaveCount(0);
 });
 
 test('a malformed selection in valid Unicode SQL shows its attempt in Results and clears editor marks on edit', async ({
@@ -289,7 +275,7 @@ test('a malformed selection in valid Unicode SQL shows its attempt in Results an
     await trust(page);
     const sql = "-- 你好🙂\nSELECT 'unfinished';";
     await replaceSql(page, sql);
-    await expect(issueButton(page)).toHaveCount(0);
+    await expect(diagnosticMarker(page)).toHaveCount(0);
     await selectRange(page, sql.indexOf('SELECT'), sql.lastIndexOf("'"));
     await runButton(page).click();
     await expect(page.getByTestId('query-failure')).toContainText('SQL_SYNTAX');
@@ -297,7 +283,7 @@ test('a malformed selection in valid Unicode SQL shows its attempt in Results an
     await expect(page.locator('.result-failure-location')).toContainText('Line 2, column 8');
     await expect(page.locator('.editor-surface > .workspace-inline-notice')).toHaveCount(0);
     await replaceSql(page, 'SELECT 2');
-    await expect(issueButton(page)).toHaveCount(0);
+    await expect(diagnosticMarker(page)).toHaveCount(0);
     await expect(page.locator('.cm-server-error-line')).toHaveCount(0);
     await expect(page.getByTestId('query-failure')).toContainText(
         'Unclosed quoted value or identifier',
@@ -315,23 +301,22 @@ test('diagnostics follow their draft through tab switches and detached editing',
         .getByRole('tab')
         .filter({ hasText: 'Getting started.sql' })
         .getAttribute('id');
-    await expect(issueButton(page)).toHaveText('1 SQL issue');
+    await expect(diagnosticMarker(page)).toHaveCount(1);
     await openBlankSql(page);
-    await expect(issueButton(page)).toHaveCount(0);
+    await expect(diagnosticMarker(page)).toHaveCount(0);
     await page.locator(`[id="${tabId}"]`).click();
-    await expect(issueButton(page)).toHaveText('1 SQL issue');
+    await expect(diagnosticMarker(page)).toHaveCount(1);
     const opened = page.waitForEvent('popup');
     await page
         .getByRole('button', { name: 'Open editor in a separate window', exact: true })
         .click();
     const popup = await opened;
-    await expect(issueButton(popup)).toHaveText('1 SQL issue');
-    await issueButton(popup).click();
-    await expect(popup.locator('.cm-panel-lint')).toContainText('Unclosed');
+    await expect(diagnosticMarker(popup)).toHaveCount(1);
+    await expect(popup.locator('.cm-panel-lint')).toHaveCount(0);
     await replaceSql(popup, "SELECT 'finished'");
-    await expect(issueButton(popup)).toHaveCount(0);
+    await expect(diagnosticMarker(popup)).toHaveCount(0);
     await page.getByRole('button', { name: 'Dock editor here', exact: true }).click();
-    await expect(issueButton(page)).toHaveCount(0);
+    await expect(diagnosticMarker(page)).toHaveCount(0);
 });
 
 test('SQL editing and successful Run preserve a save failure, while a successful save during edits clears only save feedback', async ({

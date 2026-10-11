@@ -258,7 +258,7 @@ test('incomplete SQL Run actions show errors in Results without editor banners o
         await runButton(page).click();
         await expect(page.getByTestId('query-failure')).toContainText('Unclosed');
         await expect(page.locator('.cm-panel-lint')).toHaveCount(0);
-        await expect(page.getByRole('button', { name: '1 SQL issue', exact: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: /^\d+ SQL issues?$/ })).toHaveCount(0);
         await expect(page.locator('.editor-surface > .workspace-inline-notice')).toHaveCount(0);
     }
     expect(errors).toEqual([]);
