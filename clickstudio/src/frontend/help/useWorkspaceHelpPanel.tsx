@@ -13,7 +13,7 @@ import { cx } from '../ui/components/ui';
 import {
     exampleText,
     helpCategories,
-    helpSections,
+    type HelpSectionDefinition,
     type CategoryFilter,
     type HelpPanelSection,
 } from './workspace-help-model';
@@ -21,7 +21,10 @@ import type { WorkspaceHelpPanelProps } from './workspace-help-types';
 import { createHelpExplainActions } from './examples/help-explain-actions';
 import { useDialogFocus } from '../ui/focus/useDialogFocus';
 
-export function useWorkspaceHelpPanel(props: WorkspaceHelpPanelProps) {
+export function useWorkspaceHelpPanel(
+    props: WorkspaceHelpPanelProps,
+    sections: HelpSectionDefinition[],
+) {
     const {
         examples,
         copy,
@@ -45,7 +48,6 @@ export function useWorkspaceHelpPanel(props: WorkspaceHelpPanelProps) {
     const sectionRef = useRef(section);
     sectionRef.current = section;
     const optionRefs = useRef(new Map<string, HTMLButtonElement>());
-    const sections = helpSections(copy, props.expert);
     const { explainActions } = createHelpExplainActions({
         copy,
         connection,
@@ -201,17 +203,20 @@ export function useWorkspaceHelpPanel(props: WorkspaceHelpPanelProps) {
         window.requestAnimationFrame(() => tabRefs.current.get(next)?.focus());
     };
 
-    const renderTabPanel = (id: HelpPanelSection, className: string, children: ReactNode) => (
-        <div
-            id={'workspace-help-panel-' + id}
-            className={cx('workspace-help-tabpanel', className)}
-            role="tabpanel"
-            aria-labelledby={'workspace-help-tab-' + id}
-            hidden={section !== id}
-        >
-            {children}
-        </div>
-    );
+    const renderTabPanel = (id: HelpPanelSection, className: string, children: ReactNode) => {
+        if (!sections.some(item => item.id === id)) return null;
+        return (
+            <div
+                id={'workspace-help-panel-' + id}
+                className={cx('workspace-help-tabpanel', className)}
+                role="tabpanel"
+                aria-labelledby={'workspace-help-tab-' + id}
+                hidden={section !== id}
+            >
+                {children}
+            </div>
+        );
+    };
     const tourSections = sections.filter(item => item.id !== 'tour');
     const standardTourSections = tourSections.filter(item => !item.experimental);
     const experimentalTourSections = tourSections.filter(item => item.experimental);

@@ -7,12 +7,14 @@ import type { Copy } from '../../ui/copy';
 
 export function HelpTour({
     copy,
+    expert,
     experimentalLabel,
     standardTourSections,
     experimentalTourSections,
     renderTourCard,
 }: {
     copy: Copy['common'];
+    expert: boolean;
     experimentalLabel: string;
     standardTourSections: HelpSectionDefinition[];
     experimentalTourSections: HelpSectionDefinition[];
@@ -23,7 +25,7 @@ export function HelpTour({
             <HelpSectionHeading
                 eyebrow="CLICKSTUDIO TOUR"
                 title={copy.helpTourTitle}
-                description={copy.helpTourDescription}
+                description={expert ? copy.helpTourDescription : copy.helpStandardTourDescription}
             />
             <div className="workspace-help-feature-grid">
                 {standardTourSections.map(renderTourCard)}
@@ -48,7 +50,7 @@ export function HelpTour({
     );
 }
 
-export function HelpWorkflows({ copy }: { copy: Copy['common'] }) {
+export function HelpWorkflows({ copy, expert }: { copy: Copy['common']; expert: boolean }) {
     return (
         <>
             <HelpSectionHeading
@@ -93,8 +95,13 @@ export function HelpWorkflows({ copy }: { copy: Copy['common'] }) {
                         <h4>{copy.results} and execution status</h4>
                         <p>
                             Inspect each script statement and its run in Results, then switch to{' '}
-                            {copy.chart}, SQL map, or {copy.insights} in Experimental mode. Cancel a
-                            running query from the execution bar.
+                            {copy.chart}
+                            {expert ? (
+                                <>, SQL map, or {copy.insights} in Experimental mode.</>
+                            ) : (
+                                '.'
+                            )}{' '}
+                            Cancel a running query from the execution bar.
                         </p>
                     </article>
                 </div>

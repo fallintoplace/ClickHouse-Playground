@@ -63,6 +63,7 @@ export const copy = {
         helpCenterTitle: 'Explore ClickStudio',
         helpCenterDescription:
             'Explore SQL examples, query workflows, ClickHouse observability, EXPLAIN views, storage, and reference docs.',
+        helpStandardCenterDescription: 'Explore SQL examples, query workflows, and AI assistance.',
         helpPanelSections: 'Explore ClickStudio sections',
         helpFeatureLabel: 'STORAGE VISUALIZER',
         helpPartsTitle: 'MergeTree parts',
@@ -74,6 +75,8 @@ export const copy = {
         helpTourTitle: 'Everything worth showing is one click away',
         helpTourDescription:
             'Use this panel as a fast tour of SQL examples, query workflows, AI assistance, and reference docs, plus experimental monitoring, query structure, EXPLAIN, storage, data flow, and run comparisons.',
+        helpStandardTourDescription:
+            'Use this panel as a fast tour of SQL examples, query workflows, and AI assistance.',
         helpQueryWorkflows: 'Query workflows',
         helpQueryWorkflowsDescription:
             'Prepare SQL, choose what to run, then inspect each result and its execution status.',

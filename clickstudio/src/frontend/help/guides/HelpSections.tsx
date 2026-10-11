@@ -46,7 +46,7 @@ export function HelpSections({
         id: HelpPanelSection,
         className: string,
         children: ReactNode,
-    ) => import('react').ReactElement;
+    ) => import('react').ReactElement | null;
     standardTourSections: HelpSectionDefinition[];
     renderTourCard: (item: HelpSectionDefinition) => import('react').ReactElement;
     experimentalTourSections: HelpSectionDefinition[];
@@ -89,6 +89,7 @@ export function HelpSections({
                 <HelpTour
                     {...{
                         copy,
+                        expert: props.expert,
                         experimentalLabel,
                         standardTourSections,
                         experimentalTourSections,
@@ -100,7 +101,9 @@ export function HelpSections({
             {renderTabPanel(
                 'workflows',
                 'workspace-help-feature-view workspace-help-workflows',
-                section === 'workflows' ? <HelpWorkflows {...{ copy }} /> : null,
+                section === 'workflows' ? (
+                    <HelpWorkflows copy={copy} expert={props.expert} />
+                ) : null,
             )}
 
             {renderTabPanel(

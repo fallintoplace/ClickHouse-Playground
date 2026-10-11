@@ -114,7 +114,12 @@ export type HelpSectionDefinition = {
 
 export function helpSections(copy: Copy['common'], expert = true): HelpSectionDefinition[] {
     const sections: HelpSectionDefinition[] = [
-        { id: 'tour', label: copy.helpTour, description: copy.helpTourDescription, icon: 'help' },
+        {
+            id: 'tour',
+            label: copy.helpTour,
+            description: expert ? copy.helpTourDescription : copy.helpStandardTourDescription,
+            icon: 'help',
+        },
         {
             id: 'examples',
             label: copy.sqlExamples,
@@ -190,5 +195,5 @@ export function helpSections(copy: Copy['common'], expert = true): HelpSectionDe
             experimental: true,
         },
     ];
-    return sections.filter(section => expert || section.id !== 'reference');
+    return sections.filter(section => expert || !section.experimental);
 }

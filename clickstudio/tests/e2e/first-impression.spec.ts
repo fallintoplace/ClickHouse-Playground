@@ -148,23 +148,91 @@ for (const panel of ['Objects', 'Reference', 'Query history', 'Saved queries', '
     });
 }
 
-test('Reference stays available in Experimental Help and is absent from Standard Help', async ({
-    page,
-}) => {
-    await trust(page);
-    const help = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });
-    await page.getByRole('button', { name: 'Help', exact: true }).click();
-    await help.getByTestId('help-section-reference').click();
-    await expect(help.getByTestId('reference-search')).toBeVisible();
-    await help.getByRole('button', { name: 'Close help', exact: true }).click();
-    await page.getByText('Standard', { exact: true }).click();
-    await page.getByRole('button', { name: 'Help', exact: true }).click();
-    await expect(help.getByTestId('help-section-reference')).toHaveCount(0);
-    await expect(help.locator('#workspace-help-panel-reference')).toHaveCount(0);
-    await expect(help.getByTestId('help-section-tour')).toHaveAttribute('aria-selected', 'true');
-    await help.getByTestId('help-section-examples').click();
-    await expect(help.getByTestId('sql-example-search')).toBeVisible();
-});
+for (const previousTopic of ['reference', 'monitoring'])
+    test(`Standard Help hides Experimental topics after visiting ${previousTopic}`, async ({
+        page,
+    }, info) => {
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await trust(page);
+        const help = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });
+        const experimentalTopics = [
+            'reference',
+            'monitoring',
+            'query',
+            'geo',
+            'explain',
+            'storage',
+            'dependencies',
+            'compare',
+        ];
+        await page.getByRole('button', { name: 'Help', exact: true }).click();
+        await expect(help.locator('.workspace-help-tour-experimental')).toBeVisible();
+        for (const topic of experimentalTopics)
+            await expect(help.getByTestId(`help-section-${topic}`)).toBeVisible();
+        await help.getByTestId(`help-section-${previousTopic}`).click();
+        await expect(help.locator(`#workspace-help-panel-${previousTopic}`)).toBeVisible();
+        if (previousTopic === 'reference')
+            await expect(help.getByTestId('reference-search')).toBeVisible();
+        await page
+            .getByRole('radio', { name: 'Standard', exact: true, includeHidden: true })
+            .evaluate(radio => (radio as HTMLElement).click());
+        await expect(help.locator('.workspace-help-tab strong')).toHaveText([
+            'Tour',
+            'SQL examples',
+            'Query workflows',
+            'AI assistant',
+        ]);
+        await expect(
+            help.locator('.workspace-help-tabs-group-label, .workspace-help-tour-experimental'),
+        ).toHaveCount(0);
+        for (const topic of experimentalTopics) {
+            await expect(help.getByTestId(`help-section-${topic}`)).toHaveCount(0);
+            await expect(help.locator(`#workspace-help-panel-${topic}`)).toHaveCount(0);
+        }
+        await expect(help.getByTestId('help-section-tour')).toHaveAttribute(
+            'aria-selected',
+            'true',
+        );
+        await expect(help.locator('.workspace-help-feature-card strong')).toHaveText([
+            'SQL examples',
+            'Query workflows',
+            'AI assistant',
+        ]);
+        await expect(help).not.toContainText(/experimental|EXPLAIN|observability|SQL map/i);
+        await page.screenshot({ path: info.outputPath('standard-help.png') });
+        await help.getByTestId('help-section-tour').press('End');
+        await expect(help.getByTestId('help-section-assistant')).toHaveAttribute(
+            'aria-selected',
+            'true',
+        );
+        await expect(help.getByTestId('help-section-assistant')).toBeFocused();
+        await help.getByTestId('help-section-assistant').press('ArrowDown');
+        await expect(help.getByTestId('help-section-tour')).toHaveAttribute(
+            'aria-selected',
+            'true',
+        );
+        await help.getByTestId('help-section-examples').click();
+        await expect(help.getByTestId('sql-example-search')).toBeVisible();
+        await help.getByTestId('help-section-workflows').click();
+        await expect(help.locator('#workspace-help-panel-workflows')).toContainText(
+            'Cancel a running query',
+        );
+        await expect(help).not.toContainText(/experimental|EXPLAIN|SQL map/i);
+        await help.getByRole('button', { name: 'Close help', exact: true }).click();
+        await page.getByText('Experimental', { exact: true }).click();
+        await page.getByRole('button', { name: 'Help', exact: true }).click();
+        await expect(help.getByTestId('help-section-tour')).toHaveAttribute(
+            'aria-selected',
+            'true',
+        );
+        await expect(help.locator('.workspace-help-tour-experimental')).toBeVisible();
+        for (const topic of experimentalTopics)
+            await expect(help.getByTestId(`help-section-${topic}`)).toBeVisible();
+        await help.getByTestId('help-section-workflows').click();
+        await expect(help.locator('#workspace-help-panel-workflows')).toContainText(
+            'SQL map, or Insights in Experimental mode.',
+        );
+    });
 
 test('One Run button and the explain actions stay visible in Experimental mode', async ({
     page,

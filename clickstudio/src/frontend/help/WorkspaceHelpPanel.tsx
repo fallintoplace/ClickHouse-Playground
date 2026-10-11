@@ -5,11 +5,13 @@ import { Icon } from '../ui/components/icons';
 import type { WorkspaceHelpPanelProps } from './workspace-help-types';
 import { useWorkspaceHelpPanel } from './useWorkspaceHelpPanel';
 import { HelpSections } from './guides/HelpSections';
+import { helpSections } from './workspace-help-model';
 
 export type { HelpPanelSection } from './workspace-help-model';
 export type { HelpExplainAction } from './workspace-help-types';
 export function WorkspaceHelpPanel(props: WorkspaceHelpPanelProps) {
-    const section = !props.expert && props.section === 'reference' ? 'tour' : props.section;
+    const sections = helpSections(props.copy, props.expert);
+    const section = sections.some(item => item.id === props.section) ? props.section : 'tour';
     const helpProps = { ...props, section };
     const {
         sourceLabel,
@@ -25,7 +27,6 @@ export function WorkspaceHelpPanel(props: WorkspaceHelpPanelProps) {
         searchRef,
         tabRefs,
         optionRefs,
-        sections,
         explainActions,
         search,
         setSearch,
@@ -42,7 +43,7 @@ export function WorkspaceHelpPanel(props: WorkspaceHelpPanelProps) {
         standardTourSections,
         experimentalTourSections,
         renderTourCard,
-    } = useWorkspaceHelpPanel(helpProps);
+    } = useWorkspaceHelpPanel(helpProps, sections);
     return (
         <>
             {open && (
@@ -66,7 +67,11 @@ export function WorkspaceHelpPanel(props: WorkspaceHelpPanelProps) {
                                 <div>
                                     <span className="eyebrow">{sourceLabel}</span>
                                     <h2 id="workspace-help-title">{copy.helpCenterTitle}</h2>
-                                    <p>{copy.helpCenterDescription}</p>
+                                    <p>
+                                        {props.expert
+                                            ? copy.helpCenterDescription
+                                            : copy.helpStandardCenterDescription}
+                                    </p>
                                 </div>
                                 <div className="workspace-help-header-actions">
                                     <Button
