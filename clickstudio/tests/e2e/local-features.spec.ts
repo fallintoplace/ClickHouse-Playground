@@ -211,7 +211,7 @@ test('Local Cloud connection restores after refresh and exports retained rows fr
             serverExportRequests.push(url.pathname);
     });
 
-    await page.goto('/');
+    await page.goto('/experimental');
     await page.getByRole('button', { name: 'Connect Cloud' }).click();
     const connectionDialog = page.getByRole('dialog', { name: 'Connect to your service' });
     await connectionDialog

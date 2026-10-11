@@ -1,6 +1,6 @@
-import { THEMES, EXPERIENCE_LEVELS } from './styles/appearance-types.js';
+import { THEMES } from './styles/appearance-types.js';
 import type { SelectOption } from '../workspace/workspace-types.js';
-import type { Theme, ExperienceLevel } from './styles/appearance-types.js';
+import type { Theme } from './styles/appearance-types.js';
 
 export type { Theme, ExperienceLevel } from './styles/appearance-types.js';
 
@@ -152,7 +152,6 @@ export const copy = {
         sqlExamplesSchemaRefreshFailed:
             'Could not refresh table details. Examples may use older schema.',
         sqlExamplesRefreshSchema: 'Refresh table details',
-        workspaceMode: 'WORKSPACE',
         browse: 'BROWSE',
         readOnly: 'Read only',
         tables: 'Tables',
@@ -550,6 +549,3 @@ export const themeOptions = (labels: Copy): readonly SelectOption<Theme>[] =>
         value,
         label: value === 'click-dark' ? labels.app.darkTheme : labels.app.lightTheme,
     }));
-
-export const experienceOptions = (labels: Copy): readonly SelectOption<ExperienceLevel>[] =>
-    EXPERIENCE_LEVELS.map(value => ({ value, label: labels.app[value] }));

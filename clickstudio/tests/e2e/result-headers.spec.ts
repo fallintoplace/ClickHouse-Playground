@@ -1,5 +1,5 @@
+import { setWorkspaceMode, openResultFilter, runButton, trust } from './helpers.js';
 import { test, expect } from '@playwright/test';
-import { openResultFilter, runButton, trust } from './helpers.js';
 
 const longName = 'latency_for_all_frontend_services_over_the_current_observation_window';
 const longType =
@@ -53,7 +53,7 @@ for (const theme of ['Light', 'Dark'])
                 },
             );
             await trust(page);
-            await page.getByText(mode, { exact: true }).click();
+            await setWorkspaceMode(page, mode);
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
             await runButton(page).click();
             const table = page.locator('.data-table');

@@ -66,11 +66,7 @@ async function rejectQuery(
 
 for (const mode of ['beginner', 'expert'])
     test(`Fix with AI repairs and reruns a failed query in ${mode} mode`, async ({ page }) => {
-        await page.addInitScript(
-            mode => localStorage.setItem('clickstudio:experience', mode),
-            mode,
-        );
-        await trust(page);
+        await trust(page, mode);
         await page.getByTestId('run-button').click();
         await expect(page.locator('.execution-bar')).toHaveAttribute(
             'data-run-status',

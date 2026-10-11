@@ -4,7 +4,7 @@ import type { Page } from '@playwright/test';
 import { jsonRecord } from './helpers.js';
 
 async function loadHarness(page: Page) {
-    await page.goto('/');
+    await page.goto('/experimental');
     await page.evaluate(() => {
         const container = document.createElement('div');
         container.id = 'assistant-harness';

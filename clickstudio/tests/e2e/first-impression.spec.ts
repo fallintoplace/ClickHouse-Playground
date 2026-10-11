@@ -1,5 +1,5 @@
+import { setWorkspaceMode, replaceSql, trust } from './helpers.js';
 import { test, expect } from '@playwright/test';
-import { replaceSql, trust } from './helpers.js';
 
 test('Experimental mode uses the Standard right inspector layout', async ({ page }) => {
     await trust(page);
@@ -71,8 +71,7 @@ test('Experimental mode uses the Standard right inspector layout', async ({ page
 });
 
 test('Standard keeps only AI and preserves execution and saving', async ({ page }) => {
-    await page.addInitScript(() => localStorage.setItem('clickstudio:experience', 'beginner'));
-    await trust(page);
+    await trust(page, 'beginner');
     const rail = page.locator('.icon-rail');
     const inspector = page.locator('.inspector-pane.is-docked-inspector');
     await expect(inspector).toHaveCount(0);
@@ -102,13 +101,13 @@ test('Standard keeps only AI and preserves execution and saving', async ({ page 
     expect((await saved).ok()).toBe(true);
     const sql = await page.locator('.cm-content').innerText();
     const queryId = await page.locator('.execution-bar').getAttribute('data-query-id');
-    await page.getByText('Experimental', { exact: true }).click();
+    await setWorkspaceMode(page, 'Experimental');
     await expect(page.getByTestId('save-query')).toBeVisible();
     await expect(page.getByTestId('execution-details')).toBeVisible();
     await inspector.getByRole('button', { name: 'More workspace panels', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Saved queries', exact: true }).click();
     await expect(inspector.locator('.document-card')).not.toHaveCount(0);
-    await page.getByText('Standard', { exact: true }).click();
+    await setWorkspaceMode(page, 'Standard');
     await expect(inspector).toHaveCount(0);
     await expect(page.getByTestId('save-query')).toHaveCount(0);
     await expect(page.locator('.tab-unsaved')).toHaveCount(0);
@@ -147,7 +146,7 @@ for (const panel of ['Objects', 'Reference', 'Query history', 'Saved queries', '
         }
         await expect(inspector.getByRole('heading', { name: panel, exact: true })).toBeVisible();
         const sql = await page.locator('.cm-content').innerText();
-        await page.getByText('Standard', { exact: true }).click();
+        await setWorkspaceMode(page, 'Standard');
         await expect(inspector).toHaveCount(0);
         await expect(
             page.locator('.icon-rail').getByRole('button', { name: 'AI', exact: true }),
@@ -155,7 +154,7 @@ for (const panel of ['Objects', 'Reference', 'Query history', 'Saved queries', '
         await page.locator('.editor-heading').getByTestId('open-ai').click();
         await expect(inspector.getByRole('heading', { name: 'AI', exact: true })).toBeVisible();
         await expect(inspector.locator('.inspector-tabs')).toHaveCount(0);
-        await page.getByText('Experimental', { exact: true }).click();
+        await setWorkspaceMode(page, 'Experimental');
         await expect(inspector.getByRole('heading', { name: panel, exact: true })).toBeVisible();
         await expect(page.locator('.cm-content')).toHaveText(sql, { useInnerText: true });
     });
@@ -186,9 +185,7 @@ for (const previousTopic of ['reference', 'monitoring'])
         await expect(help.locator(`#workspace-help-panel-${previousTopic}`)).toBeVisible();
         if (previousTopic === 'reference')
             await expect(help.getByTestId('reference-search')).toBeVisible();
-        await page
-            .getByRole('radio', { name: 'Standard', exact: true, includeHidden: true })
-            .evaluate(radio => (radio as HTMLElement).click());
+        await setWorkspaceMode(page, 'Standard');
         await expect(help.locator('.workspace-help-tab strong')).toHaveText([
             'Tour',
             'SQL examples',
@@ -232,7 +229,7 @@ for (const previousTopic of ['reference', 'monitoring'])
         );
         await expect(help).not.toContainText(/experimental|EXPLAIN|SQL map/i);
         await help.getByRole('button', { name: 'Close help', exact: true }).click();
-        await page.getByText('Experimental', { exact: true }).click();
+        await setWorkspaceMode(page, 'Experimental');
         await page.getByRole('button', { name: 'Help', exact: true }).click();
         await expect(help.getByTestId('help-section-tour')).toHaveAttribute(
             'aria-selected',

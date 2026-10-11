@@ -1,6 +1,12 @@
+import {
+    setWorkspaceMode,
+    jsonRecord,
+    replaceSql,
+    trust,
+    openStatementResults,
+} from './helpers.js';
 import { test, expect, type Page } from '@playwright/test';
 import type { Proposal } from '../../src/shared/assistant/types.js';
-import { jsonRecord, replaceSql, trust, openStatementResults } from './helpers.js';
 import { expectReferenceStyles } from './style-reference.js';
 
 const originalSql = 'SELECT 1 AS value';
@@ -91,14 +97,10 @@ for (const mode of ['beginner', 'expert']) {
             await page.clock.setFixedTime(new Date('2026-10-12T10:00:00Z'));
             await page.emulateMedia({ reducedMotion: 'reduce' });
             await page.setViewportSize({ width: 1440, height: 900 });
-            await page.addInitScript(
-                mode => localStorage.setItem('clickstudio:experience', mode),
-                mode,
-            );
             const firstSummary =
                 'Changed the output value from 1 to 2 while keeping the query structure unchanged.';
             await installProposal(page, proposedSql, { id: 'flat-first', summary: firstSummary });
-            await trust(page);
+            await trust(page, mode);
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
             await replaceSql(page, originalSql);
             await askForChanges(page, firstSummary);
@@ -286,10 +288,6 @@ for (const mode of ['beginner', 'expert']) {
         page,
     }, testInfo) => {
         const alternativeSql = 'SELECT 42 AS alternative; SELECT 43 AS next_value;';
-        await page.addInitScript(
-            mode => localStorage.setItem('clickstudio:experience', mode),
-            mode,
-        );
         const { decisions } = await installProposal(page, proposedSql, {
             alternatives: [
                 { title: 'Other query', summary: 'Try another value.', sql: alternativeSql },
@@ -303,7 +301,7 @@ for (const mode of ['beginner', 'expert']) {
             )
                 runs++;
         });
-        await trust(page);
+        await trust(page, mode);
         await replaceSql(page, originalSql);
         await askForChanges(page);
         await expect(review(page)).toBeVisible();
@@ -406,10 +404,6 @@ for (const mode of ['beginner', 'expert']) {
     test(`Inline SQL review accepts the whole proposal without running it in ${mode} mode`, async ({
         page,
     }) => {
-        await page.addInitScript(
-            mode => localStorage.setItem('clickstudio:experience', mode),
-            mode,
-        );
         const { decisions } = await installProposal(page, proposedSql, {
             findings: [
                 {
@@ -430,7 +424,7 @@ for (const mode of ['beginner', 'expert']) {
             if (path === '/api/runs' || path === '/api/scripts') runs++;
             if (path === '/api/documents') saves++;
         });
-        await trust(page);
+        await trust(page, mode);
         await replaceSql(page, originalSql);
         await expect.poll(async () => (await storedDraft(page))?.sql).toBe(originalSql);
         await askForChanges(page);
@@ -572,9 +566,8 @@ for (const decision of ['accepted', 'rejected'] as const) {
 test('Accepted query history stays informational through failed and text-only follow-ups', async ({
     page,
 }) => {
-    await page.addInitScript(() => localStorage.setItem('clickstudio:experience', 'beginner'));
     await installProposal(page, proposedSql, { id: 'first-query', summary: 'First query.' });
-    await trust(page);
+    await trust(page, 'beginner');
     await replaceSql(page, originalSql);
     await askForChanges(page, 'First query.');
     await review(page).getByRole('button', { name: 'Accept SQL changes', exact: true }).click();
@@ -987,7 +980,7 @@ for (const [status, score, token] of [
                 );
                 await page.screenshot({ path: info.outputPath(`light-${status}-checks.png`) });
             }
-            await page.getByText('Standard', { exact: true }).click();
+            await setWorkspaceMode(page, 'Standard');
             await page.getByTestId('open-ai').click();
             await expect(page.getByTestId('assistant-proposal-summary')).toHaveText(
                 'Updated query.',
@@ -1007,7 +1000,7 @@ for (const [status, score, token] of [
                 );
             } else await expect(accept).toBeEnabled();
             await page.screenshot({ path: info.outputPath(`${theme}-standard-no-checks.png`) });
-            await page.getByText('Experimental', { exact: true }).click();
+            await setWorkspaceMode(page, 'Experimental');
             await expect(badge).toBeVisible();
         }
     });

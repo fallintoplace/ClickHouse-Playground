@@ -1,5 +1,5 @@
+import { setWorkspaceMode, replaceSql, runButton, runScript, trust } from './helpers.js';
 import { test, expect } from '@playwright/test';
-import { replaceSql, runButton, runScript, trust } from './helpers.js';
 import type { Script } from '../../src/shared/queries/execution/types.js';
 import { chooseExistingTable, mockWritableWorkspace, previewCsv } from './import-helpers.js';
 import {
@@ -23,9 +23,9 @@ for (const theme of ['Light', 'Dark']) {
             await page.setViewportSize({ width: 1600, height: 1000 });
             await trust(page);
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
-            await page.getByText(mode, { exact: true }).click();
+            await setWorkspaceMode(page, mode);
             await expectReferenceStyles(page, info, 'empty-workspace');
-            if (mode === 'Standard') await page.getByText('Experimental', { exact: true }).click();
+            if (mode === 'Standard') await setWorkspaceMode(page, 'Experimental');
             const inspector = page.locator('.inspector-pane');
             if (!(await inspector.isVisible()))
                 await page
@@ -54,7 +54,7 @@ for (const theme of ['Light', 'Dark']) {
             await expect(inspector.getByLabel('Selected object')).toBeVisible();
             await expectReferenceStyles(page, info, 'object-details');
             await inspector.getByRole('button', { name: '‹ Objects', exact: true }).click();
-            if (mode === 'Standard') await page.getByText(mode, { exact: true }).click();
+            if (mode === 'Standard') await setWorkspaceMode(page, mode);
             await runButton(page).click();
             await expect(page.locator('.execution-bar')).toHaveAttribute(
                 'data-run-status',

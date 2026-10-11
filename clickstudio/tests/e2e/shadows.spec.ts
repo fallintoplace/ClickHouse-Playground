@@ -1,5 +1,5 @@
+import { setWorkspaceMode, openResultFilter, replaceSql, runButton, trust } from './helpers.js';
 import { test, expect, type Locator, type Page } from '@playwright/test';
-import { openResultFilter, replaceSql, runButton, trust } from './helpers.js';
 
 const shadow = (locator: Locator) =>
     locator
@@ -176,7 +176,7 @@ for (const theme of ['Dark', 'Light'])
             await page.emulateMedia({ reducedMotion: 'reduce' });
             await page.setViewportSize({ width: 1440, height: 900 });
             await trust(page);
-            await page.getByText(mode, { exact: true }).click();
+            await setWorkspaceMode(page, mode);
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
             await runButton(page).click();
             await expect(page.locator('.data-table')).toBeVisible();
@@ -222,7 +222,7 @@ for (const theme of ['Dark', 'Light'])
             await expect(page.locator('.data-table th').first()).toHaveCSS('border-radius', '0px');
             await expect(page.locator('.accent-mode-swatch')).toHaveCount(0);
             await expect(page.locator('.status-light').first()).toHaveCSS('border-radius', '50%');
-            await page.getByText('Experimental', { exact: true }).click();
+            await setWorkspaceMode(page, 'Experimental');
             const inspector = page.locator('.inspector-pane.is-docked-inspector');
             if (!(await inspector.isVisible()))
                 await page

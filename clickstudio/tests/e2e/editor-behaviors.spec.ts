@@ -1,5 +1,5 @@
+import { setWorkspaceMode, openBlankSql, runButton, trust } from './helpers.js';
 import { test, expect, type Page } from '@playwright/test';
-import { openBlankSql, runButton, trust } from './helpers.js';
 
 async function replaceSql(page: Page, sql: string) {
     await page.locator('.cm-content').focus();
@@ -365,7 +365,7 @@ test('Cmd/Ctrl+S saves SQL typed in the Standard detached window', async ({ page
         .getByRole('button', { name: 'Open editor in a separate window', exact: true })
         .click();
     const popup = await opened;
-    await page.getByText('Standard', { exact: true }).click();
+    await setWorkspaceMode(page, 'Standard');
     await expect(popup.getByTestId('save-query')).toHaveCount(0);
     await replaceSql(popup, 'SELECT 42 AS detached_save');
     const submitted = page.waitForResponse(

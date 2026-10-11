@@ -1,3 +1,4 @@
+import { workspacePath, setWorkspaceMode } from './helpers.js';
 import { test, expect, type Page, type Route } from '@playwright/test';
 
 const schema = {
@@ -56,7 +57,11 @@ const schema = {
     truncated: false,
 };
 
-async function mockLiveWorkspace(page: Page, respondToSchema: (route: Route) => Promise<void>) {
+async function mockLiveWorkspace(
+    page: Page,
+    respondToSchema: (route: Route) => Promise<void>,
+    mode = 'Experimental',
+) {
     let trusted = true;
     let schemaRequests = 0;
     await page.route('**/api/session', route =>
@@ -115,7 +120,7 @@ async function mockLiveWorkspace(page: Page, respondToSchema: (route: Route) => 
     });
     await page.route('**/api/runs**', route => route.fulfill({ json: [] }));
     await page.route('**/api/documents**', route => route.fulfill({ json: [] }));
-    await page.goto('/');
+    await page.goto(workspacePath(mode));
     await expect(page.getByTestId('run-button')).toBeEnabled();
     return {
         get schemaRequests() {
@@ -146,26 +151,25 @@ for (const mode of ['beginner', 'expert']) {
     test(`${mode} keeps denied table writes outside its available object actions`, async ({
         page,
     }) => {
-        await page.addInitScript(
-            value => localStorage.setItem('clickstudio:experience', value),
-            mode,
-        );
         let permissionRequests = 0;
         await page.route('**/api/connections/live/table-permissions', async route => {
             permissionRequests++;
             await route.fulfill({ json: { create: false, insert: false, drop: false } });
         });
-        await mockLiveWorkspace(page, route => route.fulfill({ json: schema }));
+        await mockLiveWorkspace(page, route => route.fulfill({ json: schema }), mode);
         if (mode === 'beginner') {
             await expect(page.locator('.object-explorer-section')).toHaveCount(0);
             await expect(
                 page.locator('.icon-rail').getByRole('button', { name: 'Objects', exact: true }),
             ).toHaveCount(0);
-            await page.getByText('Experimental', { exact: true }).click();
+            await setWorkspaceMode(page, 'Experimental');
         }
         await expect.poll(() => permissionRequests).toBeGreaterThan(0);
         await expect(page.getByRole('button', { name: 'New table', exact: true })).toHaveCount(0);
-        await page.getByText('events', { exact: true }).first().click();
+        await page
+            .getByRole('tree', { name: 'Objects', exact: true })
+            .getByRole('button', { name: 'events MergeTree', exact: true })
+            .click();
         await expect(page.getByRole('button', { name: 'Insert row', exact: true })).toHaveCount(0);
         await expect(page.getByRole('button', { name: 'Delete table', exact: true })).toHaveCount(
             0,
@@ -436,18 +440,17 @@ test('Object explorer keeps the partial-schema notice beside an empty loaded pag
 test('Standard loads schema without opening Objects and keeps it available in Experimental', async ({
     page,
 }) => {
-    await page.addInitScript(() => localStorage.setItem('clickstudio:experience', 'beginner'));
     const loaded = page.waitForResponse(
         response => new URL(response.url()).pathname === '/api/connections/live/schema',
     );
-    await mockLiveWorkspace(page, route => route.fulfill({ json: schema }));
+    await mockLiveWorkspace(page, route => route.fulfill({ json: schema }), 'beginner');
     expect((await loaded).ok()).toBe(true);
     const inspector = page.locator('.inspector-pane.is-docked-inspector');
     await expect(inspector).toHaveCount(0);
     await expect(
         page.locator('.icon-rail').getByRole('button', { name: 'Objects', exact: true }),
     ).toHaveCount(0);
-    await page.getByText('Experimental', { exact: true }).click();
+    await setWorkspaceMode(page, 'Experimental');
     await expect(inspector.getByRole('heading', { name: 'Objects', exact: true })).toBeVisible();
     await page.getByText('events', { exact: true }).first().click();
     await expect(page.getByLabel('Selected object')).toContainText('analytics.events');

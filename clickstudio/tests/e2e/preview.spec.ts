@@ -1,12 +1,39 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
-import { openSqlExamples, openWorkspacePanel } from './helpers.js';
+import { openBlankSql, openSqlExamples, openWorkspacePanel, replaceSql } from './helpers.js';
 import {
     previewCloudSchema,
     mockCloudEndpoint,
     connectPreviewCloud,
     chooseExistingCloudTable,
 } from './cloud-import-helpers.js';
+
+test('Static preview opens Standard at root and shares SQL with the Experimental URL', async ({
+    page,
+}) => {
+    await page.addInitScript(() => localStorage.setItem('clickstudio:experience', 'expert'));
+    const parserResponse = page.waitForResponse(
+        response => new URL(response.url()).pathname === '/assets/clickhouse-parser.wasm',
+    );
+    await page.goto('/?connection=demo');
+    expect((await parserResponse).status()).toBe(200);
+    await expect(page.locator('.application')).toHaveAttribute('data-experience', 'beginner');
+    await expect(page.locator('.navbar-mode-control, .experimental-workspace-status')).toHaveCount(
+        0,
+    );
+    await openBlankSql(page);
+    await replaceSql(page, 'SELECT 42 AS preserved_preview_draft');
+    await page.goto('/experimental/?connection=demo');
+    await expect(page.locator('.application')).toHaveAttribute('data-experience', 'expert');
+    await expect(page.locator('.cm-content')).toContainText('SELECT 42 AS preserved_preview_draft');
+    await page.reload();
+    await expect(page.locator('.application')).toHaveAttribute('data-experience', 'expert');
+    await expect(page.locator('.cm-content')).toContainText('SELECT 42 AS preserved_preview_draft');
+    await page.getByRole('link', { name: 'Back to workspace', exact: true }).click();
+    await expect(page).toHaveURL(/\/\?connection=demo$/);
+    await expect(page.locator('.application')).toHaveAttribute('data-experience', 'beginner');
+    await expect(page.locator('.cm-content')).toContainText('SELECT 42 AS preserved_preview_draft');
+});
 
 for (const hasRows of [true, false]) {
     test(`Legacy result history ${hasRows ? 'keeps rows' : 'stays silent without rows'} after reload`, async ({
@@ -18,7 +45,7 @@ for (const hasRows of [true, false]) {
             if (sql.includes('interview_query')) queryRequests.push(sql);
             await route.fulfill({ body: '[]\n[]\n', contentType: 'text/plain' });
         });
-        await page.goto('/?connection=demo');
+        await page.goto('/experimental?connection=demo');
         await expect(page.locator('.cm-content')).toBeVisible();
         await page.evaluate(hasRows => {
             const databaseKey = 'clickstudio:vercel-preview-database:v1';
@@ -73,7 +100,7 @@ for (const hasRows of [true, false]) {
                 }),
             );
         }, hasRows);
-        await page.goto('/?connection=playground');
+        await page.goto('/experimental?connection=playground');
         await expect(page.locator('.cm-content')).toContainText('SELECT 42 AS interview_query');
         await expect(page.locator('.execution-bar')).toHaveAttribute(
             'data-query-id',
@@ -120,7 +147,7 @@ test('Footer shows version detection and keeps connection versions isolated in s
     });
     await mockCloudEndpoint(page);
     try {
-        await page.goto('/');
+        await page.goto('/experimental');
         const version = page.getByTestId('server-version');
         await expect(version).toHaveText('ClickHouse …');
         await page.getByRole('button', { name: 'Connect Cloud', exact: true }).click();
@@ -152,7 +179,7 @@ test('Footer shows version detection and keeps connection versions isolated in s
 
 test('Connect Cloud matches neutral secondary controls in both themes', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.goto('/');
+    await page.goto('/experimental');
     const connect = page.getByRole('button', { name: 'Connect Cloud', exact: true });
     const save = page.getByTestId('save-query');
     for (const theme of ['Dark', 'Light']) {
@@ -234,7 +261,7 @@ test('Static production preview loads the native parser and exports retained sam
     const wasmResponsePromise = page.waitForResponse(
         response => new URL(response.url()).pathname === '/assets/clickhouse-parser.wasm',
     );
-    await page.goto('/');
+    await page.goto('/experimental');
 
     const wasmResponse = await wasmResponsePromise;
     expect(wasmResponse.status()).toBe(200);
@@ -337,7 +364,7 @@ test('Static production preview searches native Playground docs with bound query
         });
     });
 
-    await page.goto('/');
+    await page.goto('/experimental');
     await page
         .getByRole('navigation', { name: 'Workspace browser' })
         .getByRole('button', { name: 'Reference' })
@@ -407,7 +434,7 @@ test('Static production preview retries missing source metadata and uses native 
         });
     });
 
-    await page.goto('/');
+    await page.goto('/experimental');
     await page
         .getByRole('navigation', { name: 'Workspace browser' })
         .getByRole('button', { name: 'Reference' })
@@ -443,7 +470,7 @@ test('Playground examples preview real SQL and open a draft without executing it
         )
             exampleSqlRequests.push(requestText);
     });
-    await page.goto('/');
+    await page.goto('/experimental');
     const dialog = await openSqlExamples(page);
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText('ClickHouse Playground', { exact: true })).toBeVisible();
@@ -498,7 +525,7 @@ test('Restoring a draft with an unavailable run keeps its SQL without an error t
         { workspaceKey: 'clickstudio:workspace:playground:v1', runId: 'missing-retained-run' },
     );
 
-    await page.goto('/?connection=playground');
+    await page.goto('/experimental?connection=playground');
     await expect(page.locator('.cm-content')).toContainText('SELECT 42 AS preserved_query');
     await expect
         .poll(() =>
@@ -539,7 +566,7 @@ test('Charts filter opens a chart example in a new SQL tab without executing it'
             exampleSqlRequests.push(requestText);
     });
 
-    await page.goto('/');
+    await page.goto('/experimental');
     const dialog = await openSqlExamples(page);
     await dialog.getByTestId('sql-example-category-charts').click();
 
@@ -562,7 +589,7 @@ test('Charts filter opens a chart example in a new SQL tab without executing it'
 test('Static preview includes materialized views and storage activity in sample mode', async ({
     page,
 }) => {
-    await page.goto('/');
+    await page.goto('/experimental');
     await page.locator('.connection-trigger').click();
     await page
         .getByRole('dialog', { name: 'Data source options' })
@@ -587,7 +614,7 @@ test('Static preview includes materialized views and storage activity in sample 
 });
 
 test('Geo Help demo runs native Point values and renders twenty cities', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/experimental');
     await page.getByRole('button', { name: 'Help', exact: true }).click();
 
     const dialog = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });

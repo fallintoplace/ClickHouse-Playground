@@ -1,6 +1,6 @@
+import { setWorkspaceMode, runButton, trust } from './helpers.js';
 import { expect, test, type Locator } from '@playwright/test';
 import type { Result } from '../../src/shared/queries/results/types.js';
-import { runButton, trust } from './helpers.js';
 
 const eventRows = [
     ['PushEvent', 573_100_000],
@@ -95,7 +95,7 @@ for (const fixture of [
             await page.addStyleTag({
                 content: '.chart-category-scroll {border-bottom: 16px solid transparent}',
             });
-        await page.getByText('Standard', { exact: true }).click();
+        await setWorkspaceMode(page, 'Standard');
         await runButton(page).click();
         const results = page.getByRole('region', { name: 'Query results', exact: true });
         await results.getByRole('tab', { name: 'Chart', exact: true }).click();
@@ -301,7 +301,7 @@ for (const fixture of [
             });
         });
         await trust(page);
-        await page.getByText('Standard', { exact: true }).click();
+        await setWorkspaceMode(page, 'Standard');
         await runButton(page).click();
         const results = page.getByRole('region', { name: 'Query results', exact: true });
         await results.getByRole('tab', { name: 'Chart', exact: true }).click();
@@ -400,7 +400,7 @@ for (const xType of ['DateTime', 'Float64']) {
             });
         });
         await trust(page);
-        await page.getByText('Standard', { exact: true }).click();
+        await setWorkspaceMode(page, 'Standard');
         await runButton(page).click();
         const results = page.getByRole('region', { name: 'Query results', exact: true });
         await results.getByRole('tab', { name: 'Chart', exact: true }).click();
@@ -455,7 +455,7 @@ test('Row-count time lines fill the width after opening and closing the inspecto
         });
     });
     await trust(page);
-    await page.getByText('Standard', { exact: true }).click();
+    await setWorkspaceMode(page, 'Standard');
     await runButton(page).click();
     const results = page.getByRole('region', { name: 'Query results', exact: true });
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();
@@ -493,7 +493,7 @@ test('Dense fitted bars show every series without delayed animation or oversized
         });
     });
     await trust(page);
-    await page.getByText('Standard', { exact: true }).click();
+    await setWorkspaceMode(page, 'Standard');
     await runButton(page).click();
     const results = page.getByRole('region', { name: 'Query results', exact: true });
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();

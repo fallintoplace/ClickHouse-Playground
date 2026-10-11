@@ -1,6 +1,13 @@
+import {
+    setWorkspaceMode,
+    currentQueryId,
+    openStatementResults,
+    replaceSql,
+    runScript,
+    trust,
+} from './helpers.js';
 import { test, expect } from '@playwright/test';
 import type { Run, Script } from '../../src/shared/queries/execution/types.js';
-import { currentQueryId, openStatementResults, replaceSql, runScript, trust } from './helpers.js';
 
 test('Statement results use a compact header dropdown and switch without executing SQL', async ({
     page,
@@ -20,7 +27,7 @@ test('Statement results use a compact header dropdown and switch without executi
     for (const theme of ['Dark', 'Light']) {
         await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
         for (const mode of ['Standard', 'Experimental']) {
-            await page.getByText(mode, { exact: true }).click();
+            await setWorkspaceMode(page, mode);
             for (const width of [1440, 900]) {
                 await page.setViewportSize({ width, height: 900 });
                 if (width === 1440)
@@ -142,7 +149,7 @@ test('A single query uses the same clickable dropdown through view and draft cha
     const queryId = await currentQueryId(page);
     const menu = results.getByRole('menu', { name: 'Statement results', exact: true });
     for (const mode of ['Standard', 'Experimental']) {
-        await page.getByText(mode, { exact: true }).click();
+        await setWorkspaceMode(page, mode);
         for (const theme of ['Dark', 'Light']) {
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
             for (const width of [1440, 900]) {
@@ -461,7 +468,7 @@ test('Running cards track progress and return to the existing dropdown after com
     for (const theme of ['Light', 'Dark']) {
         await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
         for (const mode of ['Standard', 'Experimental']) {
-            await page.getByText(mode, { exact: true }).click();
+            await setWorkspaceMode(page, mode);
             await page.setViewportSize({ width: 761, height: 720 });
             const header = (await results.locator('.results-header').boundingBox())!;
             const strip = (await results.locator('.script-running-results').boundingBox())!;

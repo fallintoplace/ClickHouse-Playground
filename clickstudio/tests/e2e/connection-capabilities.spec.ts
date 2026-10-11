@@ -72,7 +72,7 @@ test('Connection review tests capabilities before trust and can retest after res
         }
     });
 
-    await page.goto('/');
+    await page.goto('/experimental');
     await expect(page.locator('.connection-quick-status')).toHaveText('Test needed');
     await expect(page.getByTestId('server-version')).toHaveText('ClickHouse version unavailable');
     await page.locator('.connection-trigger').click();

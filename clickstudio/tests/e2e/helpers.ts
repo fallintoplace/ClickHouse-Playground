@@ -69,14 +69,35 @@ export async function openWorkspacePanel(page: Page, panel: WorkspacePanel) {
     await page.getByTestId(`workspace-panel-${panel}`).click();
 }
 
-export async function trust(page: Page) {
-    await page.goto('/');
+export function workspacePath(mode: string = 'Experimental') {
+    if (mode === 'Standard' || mode === 'beginner') return '/';
+    if (mode === 'Experimental' || mode === 'expert') return '/experimental';
+    throw new Error(`Unknown workspace mode: ${mode}`);
+}
+
+export async function setWorkspaceMode(page: Page, mode: string) {
+    const path = workspacePath(mode);
+    await page.evaluate(path => {
+        const url = new URL(window.location.href);
+        if (url.pathname === path) return;
+        url.pathname = path;
+        window.history.pushState(window.history.state, '', url);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+    }, path);
+    await expect(page.locator('.application')).toHaveAttribute(
+        'data-experience',
+        path === '/' ? 'beginner' : 'expert',
+    );
+}
+
+export async function trust(page: Page, mode: string = 'Experimental') {
+    await page.goto(workspacePath(mode));
     await trustCurrentConnection(page);
     await expect(runButton(page)).toBeEnabled();
 }
 
 export async function useAdvancedMode(page: Page) {
-    await page.getByText('Experimental', { exact: true }).click();
+    await setWorkspaceMode(page, 'Experimental');
     await expect(page.locator('.workspace-root')).toHaveClass(/is-expert/);
 }
 

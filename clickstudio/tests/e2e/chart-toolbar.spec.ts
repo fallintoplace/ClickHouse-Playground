@@ -1,6 +1,6 @@
+import { setWorkspaceMode, runButton, trust } from './helpers.js';
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import type { Result } from '../../src/shared/queries/results/types.js';
-import { runButton, trust } from './helpers.js';
 
 test.beforeEach(async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -108,7 +108,7 @@ for (const mode of ['Standard', 'Experimental'])
                 completeness: 'truncated',
             });
             const results = await openChart(page);
-            await page.getByText(mode, { exact: true }).click();
+            await setWorkspaceMode(page, mode);
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
             const toolbar = results.locator('.chart-toolbar');
             const measures = toolbar.getByRole('button', { name: 'Measures', exact: true });

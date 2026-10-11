@@ -47,11 +47,7 @@ for (const mode of ['beginner', 'expert']) {
         test(`${mode} clears ${JSON.stringify(sql)} diagnostics after correction and Run`, async ({
             page,
         }, testInfo) => {
-            await page.addInitScript(
-                mode => localStorage.setItem('clickstudio:experience', mode),
-                mode,
-            );
-            await trust(page);
+            await trust(page, mode);
             let submissions = 0;
             const errors: string[] = [];
             page.on('pageerror', error => errors.push(error.message));

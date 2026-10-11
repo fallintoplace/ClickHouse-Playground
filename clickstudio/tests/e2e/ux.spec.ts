@@ -1,5 +1,5 @@
-import { test, expect, type Locator, type Page } from '@playwright/test';
 import {
+    setWorkspaceMode,
     openBlankSql,
     openResultFilter,
     openStatementResults,
@@ -7,6 +7,7 @@ import {
     runButton,
     trust,
 } from './helpers.js';
+import { test, expect, type Locator, type Page } from '@playwright/test';
 
 function countRuns(page: Page) {
     let count = 0;
@@ -234,7 +235,7 @@ for (const mode of ['Standard', 'Experimental']) {
         const runs = countRuns(page);
         await mockPaginatedResult(page);
         await trust(page);
-        await page.getByText(mode, { exact: true }).click();
+        await setWorkspaceMode(page, mode);
         await runButton(page).click();
         const results = page.getByRole('region', { name: 'Query results', exact: true });
         const header = results.locator('.results-header');
@@ -338,7 +339,7 @@ for (const mode of ['Standard', 'Experimental']) {
     }) => {
         await page.emulateMedia({ reducedMotion: 'reduce' });
         await trust(page);
-        await page.getByText(mode, { exact: true }).click();
+        await setWorkspaceMode(page, mode);
         await runButton(page).click();
         const results = page.getByRole('region', { name: 'Query results', exact: true });
         const header = results.locator('.results-header');

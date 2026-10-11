@@ -1,5 +1,6 @@
-import { test, expect, type Page } from '@playwright/test';
 import {
+    workspacePath,
+    setWorkspaceMode,
     currentQueryId,
     openBlankSql,
     openStatementResults,
@@ -12,6 +13,7 @@ import {
     trustCurrentConnection,
     useAdvancedMode,
 } from './helpers.js';
+import { test, expect, type Page } from '@playwright/test';
 
 declare global {
     interface Window {
@@ -166,12 +168,12 @@ test('Run evidence stays with its draft through tab and mode switches', async ({
     ).toHaveAttribute('aria-selected', 'true');
     await expect(firstResultsPanel.locator('.chart-canvas svg[role="img"]')).toBeVisible();
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-query-id', firstQueryId);
-    await page.getByText('Standard', { exact: true }).click();
+    await setWorkspaceMode(page, 'Standard');
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-query-id', firstQueryId);
     await expect(
         firstResultsPanel.getByRole('tab', { name: 'Chart', exact: true }),
     ).toHaveAttribute('aria-selected', 'true');
-    await page.getByText('Experimental', { exact: true }).click();
+    await setWorkspaceMode(page, 'Experimental');
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-query-id', firstQueryId);
     await expect(page.getByRole('group', { name: 'Workspace layouts' })).toHaveCount(0);
     await expect(page.getByRole('navigation', { name: 'Workspace browser' })).toBeVisible();
@@ -411,7 +413,7 @@ for (const theme of ['Dark', 'Light']) {
         const results = await runQuery(page);
         const queryId = await currentQueryId(page);
         for (const mode of ['Standard', 'Experimental']) {
-            await page.getByText(mode, { exact: true }).click();
+            await setWorkspaceMode(page, mode);
             await page.setViewportSize({ width: 1440, height: 900 });
             await replaceSql(page, 'SELECT 42');
             await expect(results.locator('.result-provenance-header')).toHaveCount(0);
@@ -873,7 +875,7 @@ for (const theme of ['Dark', 'Light'])
             await page.emulateMedia({ reducedMotion: 'reduce' });
             await trust(page);
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
-            await page.getByText(mode, { exact: true }).click();
+            await setWorkspaceMode(page, mode);
             const results = await runQuery(page);
             await expect(results.locator('.results-header .result-row-count')).toBeVisible();
             await page.evaluate(() => document.fonts.ready);
@@ -1333,7 +1335,7 @@ test('Experimental panels retain collapse settings while Standard keeps them exp
     await expect(page.locator('#sql-editor-content')).toBeHidden();
     await expect(page.locator('#query-results-content')).toBeHidden();
 
-    await page.getByText('Standard', { exact: true }).click();
+    await setWorkspaceMode(page, 'Standard');
     await expect(page.locator('.panel-collapse-button')).toHaveCount(0);
     await expect(page.locator('#sql-editor-content')).toBeVisible();
     await expect(page.locator('#query-results-content')).toBeVisible();
@@ -1426,7 +1428,7 @@ for (const legacyMode of ['floating', 'maximized'])
                 .getByRole('radio', { name: theme })
                 .click();
             for (const mode of ['Standard', 'Experimental']) {
-                await page.getByText(mode, { exact: true }).click();
+                await setWorkspaceMode(page, mode);
                 await expect(
                     page.getByRole('button', {
                         name: /^(Float|Maximize|Restore) (query|output) panel$/,
@@ -1463,7 +1465,7 @@ for (const mode of ['Standard', 'Experimental'])
     }) => {
         await page.setViewportSize({ width: 1400, height: 1000 });
         await trust(page);
-        await page.getByText(mode, { exact: true }).click();
+        await setWorkspaceMode(page, mode);
         const results = await runQuery(page);
         const retainedRows = await results
             .getByRole('table', { name: 'Retained query rows' })
@@ -1475,7 +1477,7 @@ for (const mode of ['Standard', 'Experimental'])
                     exact: true,
                 }),
             ).toHaveCount(0);
-            await page.getByText('Experimental', { exact: true }).click();
+            await setWorkspaceMode(page, 'Experimental');
         }
         await page.locator('button[aria-controls="sql-editor-content"]').click();
         const editorPopupPromise = page.waitForEvent('popup');
@@ -1483,7 +1485,7 @@ for (const mode of ['Standard', 'Experimental'])
             .getByRole('button', { name: 'Open editor in a separate window', exact: true })
             .click();
         const editorPopup = await editorPopupPromise;
-        if (mode === 'Standard') await page.getByText('Standard', { exact: true }).click();
+        if (mode === 'Standard') await setWorkspaceMode(page, 'Standard');
         await expect(editorPopup.locator('.cm-content')).toBeVisible();
         await expect(editorPopup.getByTestId('save-query')).toHaveCount(
             mode === 'Experimental' ? 1 : 0,
@@ -1552,20 +1554,19 @@ for (const mode of ['Standard', 'Experimental'])
 test('Switching to Standard keeps a detached editor dockable with a compact workspace header', async ({
     page,
 }) => {
-    await page.addInitScript(() => localStorage.setItem('clickstudio:experience', 'beginner'));
     await page.setViewportSize({ width: 1400, height: 1000 });
-    await trust(page);
+    await trust(page, 'beginner');
 
     await expect(
         page.getByRole('button', { name: 'Open editor in a separate window', exact: true }),
     ).toHaveCount(0);
-    await page.getByText('Experimental', { exact: true }).click();
+    await setWorkspaceMode(page, 'Experimental');
     const editorPopupPromise = page.waitForEvent('popup');
     await page
         .getByRole('button', { name: 'Open editor in a separate window', exact: true })
         .click();
     const editorPopup = await editorPopupPromise;
-    await page.getByText('Standard', { exact: true }).click();
+    await setWorkspaceMode(page, 'Standard');
     await expect(editorPopup.locator('#sql-editor-content')).toBeVisible();
     await expect(
         editorPopup.getByRole('button', { name: 'Dock editor here', exact: true }),
@@ -1683,7 +1684,7 @@ test('Experimental parser inspector shows native AST, UTF-8 semantic highlights,
         ],
     };
     await page.addInitScript(parserWorkerStub('ready', parserResponse));
-    await page.goto('/');
+    await page.goto('/experimental');
     await replaceSql(page, sql);
     await expect(page.locator('.cm-native-function')).toHaveText('uniqExact');
 
@@ -1837,7 +1838,7 @@ test('A delayed native parse cannot replace parser details for newer SQL', async
         highlights: [{ begin: 7, end: 13, type: 'function' }],
     };
     await page.addInitScript(parserWorkerStub('ready', oldResult));
-    await page.goto('/');
+    await page.goto('/experimental');
     await expect
         .poll(() => page.evaluate(() => Number(window.__parserParseCount ?? 0)))
         .toBeGreaterThan(0);
@@ -1886,8 +1887,7 @@ test('Experimental formatting preserves SQL comments when native formatting fall
     page,
 }) => {
     await page.addInitScript(parserWorkerStub('ready'));
-    await page.addInitScript(() => localStorage.setItem('clickstudio:experience', 'expert'));
-    await page.goto('/');
+    await page.goto(workspacePath('expert'));
     await replaceSql(page, '-- keep this comment\nselect 1 as value from numbers(1)');
     await expect
         .poll(() => page.evaluate(() => Number(window.__parserParseCount ?? 0)))

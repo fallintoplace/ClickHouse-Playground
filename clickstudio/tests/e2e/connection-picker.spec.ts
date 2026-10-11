@@ -1,3 +1,4 @@
+import { setWorkspaceMode } from './helpers.js';
 import { test, expect } from '@playwright/test';
 import { PLAYGROUND_CONNECTION } from '../../src/shared/database/connections/playground.js';
 import { expectReferenceStyles } from './style-reference.js';
@@ -11,7 +12,7 @@ test.beforeEach(async ({ page }) => {
             json: [...(await response.json()), PLAYGROUND_CONNECTION],
         });
     });
-    await page.goto('/?connection=demo');
+    await page.goto('/experimental?connection=demo');
 });
 
 for (const mode of ['Standard', 'Experimental']) {
@@ -29,8 +30,8 @@ for (const mode of ['Standard', 'Experimental']) {
                 },
             }),
         );
-        await page.goto('/?connection=playground');
-        await page.getByText(mode, { exact: true }).click();
+        await page.goto('/experimental?connection=playground');
+        await setWorkspaceMode(page, mode);
         await expect(page.getByRole('button', { name: 'New table', exact: true })).toHaveCount(0);
         if (mode === 'Standard') {
             await expect(
@@ -49,7 +50,7 @@ for (const mode of ['Standard', 'Experimental']) {
             await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
     });
     test(`${mode} closes the source picker on an outside editor click`, async ({ page }) => {
-        await page.getByText(mode, { exact: true }).click();
+        await setWorkspaceMode(page, mode);
         const trigger = page.locator('.connection-trigger');
         const menu = page.getByRole('dialog', { name: 'Data source options' });
         await trigger.click();
@@ -132,7 +133,7 @@ for (const theme of ['Dark', 'Light']) {
     test(`${theme} source picker uses flat surfaces and a clear selection marker`, async ({
         page,
     }, info) => {
-        await page.goto('/?connection=playground');
+        await page.goto('/experimental?connection=playground');
         await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
         await page.locator('.connection-trigger').click();
         const menu = page.getByRole('dialog', { name: 'Data source options' });

@@ -21,15 +21,6 @@ export default defineConfig({
         viewport: { width: 1280, height: 720 },
         trace: 'retain-on-failure',
         screenshot: 'only-on-failure',
-        storageState: {
-            cookies: [],
-            origins: [
-                {
-                    origin: baseURL,
-                    localStorage: [{ name: 'clickstudio:experience', value: 'expert' }],
-                },
-            ],
-        },
     },
     webServer: {
         command: `npm run build:preview && npx vite preview --host 127.0.0.1 --port ${webPort} --strictPort`,

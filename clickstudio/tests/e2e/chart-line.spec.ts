@@ -1,9 +1,9 @@
+import { setWorkspaceMode, runButton, trust } from './helpers.js';
 import { test, expect } from '@playwright/test';
 import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
 import type { Result } from '../../src/shared/queries/results/types.js';
 import { GEO_HELP_CITIES } from '../../src/frontend/help/previews/help-demos.js';
-import { runButton, trust } from './helpers.js';
 
 const cityOrder = [
     'San Francisco',
@@ -115,7 +115,7 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const)
                 });
             });
             await trust(page);
-            await page.getByText('Standard', { exact: true }).click();
+            await setWorkspaceMode(page, 'Standard');
             if (reducedMotion === 'reduce') {
                 await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
             }

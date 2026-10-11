@@ -1,7 +1,7 @@
+import { setWorkspaceMode, openSqlExamples, replaceSql, runButton, trust } from './helpers.js';
 import { fileURLToPath } from 'node:url';
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import { mockWritableWorkspace } from './import-helpers.js';
-import { openSqlExamples, replaceSql, runButton, trust } from './helpers.js';
 
 async function expectFieldFocus(field: Locator) {
     await expect(field).toBeFocused();
@@ -25,7 +25,7 @@ for (const theme of ['Dark', 'Light']) {
         page,
     }) => {
         await page.emulateMedia({ forcedColors: 'active' });
-        await page.goto('/');
+        await page.goto('/experimental');
         const radio = page.getByRole('radio', { name: `${theme} theme`, exact: true });
         await radio.click();
         await page.keyboard.press('Tab');
@@ -40,8 +40,8 @@ for (const theme of ['Dark', 'Light']) {
         test(`${theme} ${mode} uses one keyboard ring and quiet pointer selection`, async ({
             page,
         }, info) => {
-            await page.goto('/');
-            await page.getByText(mode, { exact: true }).click();
+            await page.goto('/experimental');
+            await setWorkspaceMode(page, mode);
             const radio = page.getByRole('radio', { name: `${theme} theme`, exact: true });
             const wrapper = page.locator('.theme-mode-option').filter({ has: radio });
             await radio.click();
@@ -69,7 +69,7 @@ for (const theme of ['Dark', 'Light']) {
             page,
         }, info) => {
             await mockWritableWorkspace(page);
-            await page.getByText(mode, { exact: true }).click();
+            await setWorkspaceMode(page, mode);
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
             await page.getByRole('button', { name: 'New table', exact: true }).click();
             const dialog = page.getByRole('dialog', { name: 'New table', exact: true });
@@ -201,7 +201,7 @@ test('Cloud dialog keeps typing focus across busy changes and restores its opene
             json: { error: { code: 'CONNECTION_FAILED', message: 'Try another host.' } },
         });
     });
-    await page.goto('/');
+    await page.goto('/experimental');
     const opener = page.getByRole('button', { name: 'Connect Cloud', exact: true });
     await opener.click();
     const dialog = page.getByRole('dialog', { name: 'Connect to your service' });
@@ -256,7 +256,7 @@ test('A delayed run response keeps focus on the field the user chose', async ({ 
 });
 
 async function loadFocusHarness(page: Page) {
-    await page.goto('/');
+    await page.goto('/experimental');
     await page.evaluate(() => {
         const container = document.createElement('div');
         container.id = 'focus-harness';
@@ -356,7 +356,7 @@ for (const theme of ['Dark', 'Light']) {
 test('Reference consumes Escape for its search before the surrounding dialog closes', async ({
     page,
 }) => {
-    await page.goto('/');
+    await page.goto('/experimental');
     const help = await openSqlExamples(page);
     await help.getByTestId('help-section-reference').click();
     const search = help.getByRole('textbox', { name: 'Search ClickHouse…', exact: true });

@@ -76,12 +76,8 @@ for (const mode of ['beginner', 'expert']) {
         }, info) => {
             const requests = await deferredReplies(page);
             try {
-                await page.addInitScript(
-                    mode => localStorage.setItem('clickstudio:experience', mode),
-                    mode,
-                );
                 await page.setViewportSize({ width: 1440, height: 900 });
-                await trust(page);
+                await trust(page, mode);
                 await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
                 await page.getByTestId('open-ai').click();
                 const input = page.getByRole('textbox', { name: 'Ask AI', exact: true });
@@ -214,11 +210,7 @@ for (const mode of ['beginner', 'expert']) {
         page,
     }) => {
         const requests = await deferredReplies(page);
-        await page.addInitScript(
-            mode => localStorage.setItem('clickstudio:experience', mode),
-            mode,
-        );
-        await trust(page);
+        await trust(page, mode);
         await replaceSql(page, 'SELECT 1 AS original');
         await page.getByTestId('open-ai').click();
         await ask(page, 'Improve original SQL');
@@ -347,11 +339,7 @@ for (const mode of ['beginner', 'expert']) {
         page,
     }) => {
         const requests = await deferredReplies(page);
-        await page.addInitScript(
-            mode => localStorage.setItem('clickstudio:experience', mode),
-            mode,
-        );
-        await trust(page);
+        await trust(page, mode);
         await page.getByTestId('open-ai').click();
         await ask(page, 'Deleted question');
         await expect.poll(() => requests.length).toBe(1);

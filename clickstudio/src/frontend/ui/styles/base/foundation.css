@@ -107,77 +107,6 @@
   align-items: center;
   gap: 4px;
 }
-.topbar .navbar-mode-control {
-  display: flex;
-  width: max-content;
-  min-width: max-content;
-  flex: 0 0 auto;
-  flex-flow: row nowrap;
-  align-items: center;
-  gap: 4px;
-}
-.topbar .navbar-mode-option {
-  position: relative;
-  display: flex;
-  width: auto;
-  flex: 0 0 auto;
-  align-items: center;
-  padding: 0;
-  white-space: nowrap;
-}
-.topbar .navbar-mode-option > button {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  margin: -1px;
-  padding: 0;
-  border: 0;
-  opacity: 0;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-.topbar .navbar-mode-option > label {
-  display: inline-flex;
-  min-height: 32px;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 11px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-control);
-  background: transparent;
-  color: var(--muted);
-  font: inherit;
-  font-size: var(--font-size-control-prominent);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.topbar .navbar-mode-option > label:hover {
-  background: var(--control-hover);
-  color: var(--text);
-}
-.topbar .navbar-mode-option.is-active > label {
-  background: var(--active-surface);
-  color: var(--text);
-}
-.topbar .navbar-mode-option > label::before {
-  width: 7px;
-  height: 7px;
-  flex: none;
-  content: "";
-}
-.topbar .navbar-mode-option.is-beginner > label::before {
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: var(--status-ring);
-  color: var(--accent);
-}
-.topbar .navbar-mode-option.is-expert > label::before {
-  border-radius: 1px;
-  background: var(--accent);
-  transform: rotate(45deg);
-}
 .topbar .theme-switch {
   gap: 0;
   padding: 3px;
@@ -232,17 +161,9 @@
     gap: 12px;
     padding-inline: 14px;
   }
-  .topbar .mode-caption {
-    display: none;
-  }
 }
 
 @media (min-width: 851px) and (pointer: fine) {
-  .topbar .navbar-mode-option > label {
-    min-height: 30px;
-    gap: 6px;
-    padding: 5px 10px;
-  }
   .topbar .theme-switch {
     padding: 1px;
   }

@@ -1,5 +1,5 @@
+import { setWorkspaceMode, runButton, trust } from './helpers.js';
 import { test, expect, type Page } from '@playwright/test';
-import { runButton, trust } from './helpers.js';
 import { mockWritableWorkspace } from './import-helpers.js';
 import { connectPreviewCloud, mockCloudEndpoint } from './cloud-import-helpers.js';
 
@@ -64,7 +64,7 @@ for (const [browserLocale, savedLocale] of [
 
 for (const theme of themes)
     test(`${theme.value} applies its palette and survives reload`, async ({ page }) => {
-        await page.goto('/');
+        await page.goto('/experimental');
         const option = themeOption(page, theme.value);
         await expect(option).toBeVisible();
         await option.click();
@@ -116,12 +116,12 @@ for (const theme of themes) {
                 },
                 { theme: theme.value, accent: savedAccent },
             );
-            await page.goto('/');
+            await page.goto('/experimental');
             await expect(themeOption(page, theme.value)).toBeChecked();
             await expect(page.locator('html')).toHaveAttribute('data-accent', 'clickhouse-yellow');
             await expect(page.locator('.accent-mode-control')).toHaveCount(0);
             for (const mode of ['Standard', 'Experimental']) {
-                await page.getByText(mode, { exact: true }).click();
+                await setWorkspaceMode(page, mode);
                 await expect(page.locator('html')).toHaveAttribute(
                     'data-accent',
                     'clickhouse-yellow',
@@ -137,7 +137,7 @@ for (const theme of themes) {
     test(`${theme.value} uses its theme accent when the accent attribute is absent`, async ({
         page,
     }) => {
-        await page.goto('/');
+        await page.goto('/experimental');
         await themeOption(page, theme.value).click();
         const palette = await page.locator('html').evaluate(element => {
             element.removeAttribute('data-accent');
@@ -169,7 +169,7 @@ test('theme accents work when preference storage is unavailable', async ({ page 
             setItem.call(this, key, value);
         };
     });
-    await page.goto('/');
+    await page.goto('/experimental');
     await expect(themeOption(page, 'click-dark')).toBeChecked();
     await expect(page.locator('html')).toHaveAttribute('data-accent', 'clickhouse-yellow');
     await themeOption(page, 'click-light').click();
@@ -182,7 +182,7 @@ for (const mode of ['Standard', 'Experimental'])
         page,
     }) => {
         await trust(page);
-        await page.getByText(mode, { exact: true }).click();
+        await setWorkspaceMode(page, mode);
         await themeOption(page, 'click-light').click();
         await runButton(page).click();
         await expect(page.locator('.execution-bar')).toHaveAttribute(
@@ -217,7 +217,7 @@ for (const mode of ['Standard', 'Experimental'])
     }) => {
         await page.emulateMedia({ reducedMotion: 'reduce' });
         await trust(page);
-        await page.getByText(mode, { exact: true }).click();
+        await setWorkspaceMode(page, mode);
         await themeOption(page, 'click-light').click();
         const run = runButton(page);
         await expect(run).toHaveCSS('background-image', 'none');
@@ -272,7 +272,7 @@ test('an unknown saved theme falls back to ClickDark', async ({ page }) => {
         localStorage.setItem('clickstudio:theme', 'future-theme');
         localStorage.setItem('clickstudio:accent', 'future-accent');
     });
-    await page.goto('/');
+    await page.goto('/experimental');
     await expect(themeOption(page, 'click-dark')).toBeChecked();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'click-dark');
     await expect(page.locator('html')).toHaveAttribute('data-accent', 'clickhouse-yellow');
@@ -284,7 +284,7 @@ for (const removedTheme of ['monokai'])
             value => localStorage.setItem('clickstudio:theme', value),
             removedTheme,
         );
-        await page.goto('/');
+        await page.goto('/experimental');
         await expect(themeOption(page, 'click-dark')).toBeChecked();
         await expect(page.locator('html')).toHaveAttribute('data-theme', 'click-dark');
     });
@@ -293,11 +293,12 @@ test('desktop header keeps controls and keyboard focus in view', async ({ page }
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await mockWritableWorkspace(page);
     await mockCloudEndpoint(page);
-    await page.goto('/');
+    await page.goto('/experimental');
 
     const topbar = page.locator('.topbar');
     const themeSwitch = page.locator('.theme-mode-control');
     const accentSwitch = page.locator('.accent-mode-control');
+    const returnLink = page.getByRole('link', { name: 'Back to workspace', exact: true });
 
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
     await expect(page.locator('.topbar-preferences select')).toHaveCount(0);
@@ -322,10 +323,7 @@ test('desktop header keeps controls and keyboard focus in view', async ({ page }
                 for (const [control, visual] of [
                     [page.locator('.connection-trigger'), page.locator('.connection-trigger')],
                     [page.locator('.cloud-topbar-action'), page.locator('.cloud-topbar-action')],
-                    [
-                        page.locator('.navbar-mode-option > button').first(),
-                        page.locator('.navbar-mode-option > label').first(),
-                    ],
+                    [returnLink, returnLink],
                     [themeOption(page, theme.value), page.locator('.theme-mode-option.is-active')],
                 ]) {
                     await control!.focus();

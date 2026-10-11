@@ -1,4 +1,4 @@
-import { THEMES, DEFAULT_ACCENT, EXPERIENCE_LEVELS } from '../ui/styles/appearance-types';
+import { THEMES, DEFAULT_ACCENT } from '../ui/styles/appearance-types';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, message, post } from '../api/client';
 import { Button, cx, Spinner } from '../ui/components/ui';
@@ -11,15 +11,8 @@ import {
     type SavedCloudConnectionProfile,
 } from '../database/connections/cloud-connection';
 import { Workspace } from '../workspace/Workspace';
-import {
-    experienceOptions,
-    copy,
-    type Copy,
-    themeOptions,
-    type ExperienceLevel,
-    type Theme,
-} from '../ui/copy';
-import { RadioGroup } from '@clickhouse/click-ui/RadioGroup';
+import { copy, type Copy, themeOptions, type Theme } from '../ui/copy';
+import { useWorkspaceRoute } from './useWorkspaceRoute';
 import type { Connected, Session } from '../workspace/workspace-types';
 import { resolveConnectionSelection } from '../database/connections/selection';
 
@@ -67,9 +60,7 @@ function App() {
     const [theme, setTheme] = useState<Theme>(() =>
         pref('clickstudio:theme', THEMES, 'click-dark'),
     );
-    const [experience, setExperience] = useState<ExperienceLevel>(() =>
-        pref('clickstudio:experience', EXPERIENCE_LEVELS, 'beginner'),
-    );
+    const { experience, standardHref, returnToWorkspace } = useWorkspaceRoute();
     const [session, setSession] = useState<Session>();
     const [connections, setConnections] = useState<Connected[]>([]);
     const [connectionId, setConnectionId] = useState(
@@ -130,6 +121,18 @@ function App() {
         writeConnectionToUrl(id);
     }, []);
 
+    useEffect(() => {
+        const update = () =>
+            setConnectionId(
+                resolveConnectionSelection(
+                    connections,
+                    new URLSearchParams(window.location.search).get('connection') ?? '',
+                ),
+            );
+        window.addEventListener('popstate', update);
+        return () => window.removeEventListener('popstate', update);
+    }, [connections]);
+
     const disconnectCloud = async () => {
         setCloudConnectionError('');
         try {
@@ -174,9 +177,8 @@ function App() {
             );
         try {
             localStorage.setItem('clickstudio:theme', theme);
-            localStorage.setItem('clickstudio:experience', experience);
         } catch {}
-    }, [dark, experience, theme]);
+    }, [dark, theme]);
 
     const loadSession = useCallback(async () => {
         const next = await api<Session>('/session');
@@ -387,7 +389,8 @@ function App() {
                 {renderAppearanceControls({
                     copy,
                     experience,
-                    setExperience,
+                    standardHref,
+                    returnToWorkspace,
                     theme,
                     setTheme,
                 })}
@@ -763,13 +766,15 @@ function ConnectionPicker({
 function renderAppearanceControls({
     copy,
     experience,
-    setExperience,
+    standardHref,
+    returnToWorkspace,
     theme,
     setTheme,
 }: {
     copy: Copy;
     experience: 'beginner' | 'expert';
-    setExperience: import('react').Dispatch<import('react').SetStateAction<'beginner' | 'expert'>>;
+    standardHref: string;
+    returnToWorkspace: (event: import('react').MouseEvent<HTMLAnchorElement>) => void;
     theme: 'click-dark' | 'click-light';
     setTheme: import('react').Dispatch<
         import('react').SetStateAction<'click-dark' | 'click-light'>
@@ -777,34 +782,14 @@ function renderAppearanceControls({
 }) {
     return (
         <div className="topbar-control-rail">
-            <div className="experience-switch">
-                <span className="mode-caption">{copy.common.workspaceMode}</span>
-                <RadioGroup
-                    className="navbar-mode-control"
-                    value={experience}
-                    onValueChange={value => {
-                        const selected = experienceOptions(copy).find(
-                            option => option.value === value,
-                        );
-                        if (selected) setExperience(selected.value);
-                    }}
-                    aria-label={copy.common.workspaceMode}
-                    inline
-                    orientation="horizontal"
-                    dir="end"
-                >
-                    <RadioGroup.Item
-                        value="beginner"
-                        className={`navbar-mode-option is-beginner ${experience === 'beginner' ? 'is-active' : ''}`}
-                        label={copy.app.beginner}
-                    />
-                    <RadioGroup.Item
-                        value="expert"
-                        className={`navbar-mode-option is-expert ${experience === 'expert' ? 'is-active' : ''}`}
-                        label={copy.app.expert}
-                    />
-                </RadioGroup>
-            </div>
+            {experience === 'expert' && (
+                <div className="experimental-workspace-status">
+                    <span>{copy.app.expert}</span>
+                    <a href={standardHref} onClick={returnToWorkspace}>
+                        Back to workspace
+                    </a>
+                </div>
+            )}
             <div className="topbar-preferences">
                 <div className="experience-switch theme-switch">
                     <div

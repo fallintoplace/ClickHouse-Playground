@@ -270,7 +270,7 @@ export function ImportWizard({
                                                 !onInspectDestination(job)
                                             ) {
                                                 setError(
-                                                    'Couldn’t open the inspection query. Switch to Experimental to inspect the table.',
+                                                    'Couldn’t open the inspection query. Check the destination table or close a SQL tab, then try again.',
                                                 );
                                                 return;
                                             }

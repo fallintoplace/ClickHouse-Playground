@@ -1,5 +1,5 @@
+import { setWorkspaceMode, trust } from './helpers.js';
 import { test, expect } from '@playwright/test';
-import { trust } from './helpers.js';
 import {
     schema,
     mockWritableWorkspace,
@@ -47,11 +47,7 @@ for (const mode of ['beginner', 'expert']) {
     test(`${mode} file import reports a successful insert without reopening hidden panels`, async ({
         page,
     }) => {
-        await page.addInitScript(
-            value => localStorage.setItem('clickstudio:experience', value),
-            mode,
-        );
-        await mockWritableWorkspace(page);
+        await mockWritableWorkspace(page, undefined, undefined, mode);
         let mappingBody: Record<string, unknown> | undefined;
         let commitBody: Record<string, unknown> | undefined;
 
@@ -127,7 +123,7 @@ for (const mode of ['beginner', 'expert']) {
             await page.getByTestId('open-ai').click();
             await expect(inspector.getByRole('heading', { name: 'AI', exact: true })).toBeVisible();
             await expect(inspector.locator('.inspector-tabs')).toHaveCount(0);
-            await page.getByText('Experimental', { exact: true }).click();
+            await setWorkspaceMode(page, 'Experimental');
         }
         await expect(
             inspector.getByRole('heading', { name: 'Objects', exact: true }),
@@ -544,8 +540,7 @@ test('File import reports an unknown insert without retrying automatically', asy
 test('Standard opens an inspection query for an unconfirmed import without running it', async ({
     page,
 }) => {
-    await page.addInitScript(() => localStorage.setItem('clickstudio:experience', 'beginner'));
-    await mockWritableWorkspace(page);
+    await mockWritableWorkspace(page, undefined, undefined, 'beginner');
     const originalSql = await page.locator('.cm-content').innerText();
     let runRequests = 0;
     page.on('request', request => {

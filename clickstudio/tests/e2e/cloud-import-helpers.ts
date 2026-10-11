@@ -221,7 +221,7 @@ export async function mockCloudEndpoint(
 }
 
 export async function connectPreviewCloud(page: Page) {
-    await page.goto('/');
+    await page.goto('/experimental');
     const connectButton = page.getByRole('button', { name: 'Connect Cloud' });
     await expect(connectButton).toBeVisible();
     await expect(page.getByRole('dialog', { name: 'Data source options' })).toHaveCount(0);

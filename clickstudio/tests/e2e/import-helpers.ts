@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
+import { workspacePath } from './helpers.js';
 
 export const schema = {
     connectionId: 'live',
@@ -30,6 +31,7 @@ export async function mockWritableWorkspace(
     page: Page,
     targets = ['demo.events'],
     workspaceSchema = schema,
+    mode = 'Experimental',
 ) {
     await page.route('**/api/session', route =>
         route.fulfill({
@@ -89,7 +91,7 @@ export async function mockWritableWorkspace(
         url => url.pathname === '/api/imports' && url.searchParams.get('recoverable') === 'true',
         route => route.fulfill({ json: [] }),
     );
-    await page.goto('/');
+    await page.goto(workspacePath(mode));
     await expect(page.getByRole('button', { name: 'Import', exact: true })).toBeVisible();
 }
 

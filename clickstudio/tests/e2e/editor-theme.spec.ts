@@ -146,7 +146,7 @@ for (const parser of ['ready', 'unavailable']) {
                 .route('**/clickhouse-parser.wasm', route =>
                     route.fulfill({ status: 503, body: 'Parser unavailable' }),
                 );
-        await page.goto('/');
+        await page.goto('/experimental');
         await replaceSql(page, sql);
         if (parser === 'ready')
             await expect(
@@ -191,7 +191,7 @@ test('Light editor selections stay visible over the active line with the brown a
     page,
 }, info) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.goto('/');
+    await page.goto('/experimental');
     await replaceSql(page, `SELECT${' '.repeat(20)}1`);
     await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
     const editor = page.locator('.cm-content');
@@ -225,7 +225,7 @@ test('Light editor selections stay visible over the active line with the brown a
 });
 
 test('Switching the editor theme preserves the cursor and undo history', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/experimental');
     await replaceSql(page, 'SELECT 0.50');
     const editor = page.locator('.cm-content');
     await page.keyboard.press('ControlOrMeta+End');

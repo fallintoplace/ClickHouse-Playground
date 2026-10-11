@@ -48,7 +48,6 @@
   box-shadow: none;
 }
 
-.topbar .navbar-mode-option > button:focus-visible + label,
 .topbar .theme-mode-option:has(input:focus-visible),
 .import-destination-option:has(input:focus-visible),
 .import-file-picker:has(.import-file-input:focus-visible) {

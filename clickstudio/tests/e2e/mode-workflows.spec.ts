@@ -1,5 +1,6 @@
-import { test, expect, type Page } from '@playwright/test';
 import {
+    workspacePath,
+    setWorkspaceMode,
     currentQueryId,
     jsonRecord,
     openBlankSql,
@@ -12,12 +13,12 @@ import {
     trustCurrentConnection,
     useAdvancedMode,
 } from './helpers.js';
+import { test, expect, type Page } from '@playwright/test';
 
 const generatedSql = 'SELECT day, events FROM demo.events ORDER BY day';
 
 async function beginInCompactMode(page: Page) {
-    await page.addInitScript(() => localStorage.setItem('clickstudio:experience', 'beginner'));
-    await page.goto('/');
+    await page.goto(workspacePath('beginner'));
     await expect(page.getByRole('textbox', { name: 'SQL editor', exact: true })).toBeVisible();
     await expect(page.getByTestId('open-ai')).toBeVisible();
     await expect(page.locator('.icon-rail').getByTestId('open-ai')).toHaveCount(0);
@@ -66,8 +67,7 @@ test('Standard exposes assignment actions and can run a query without opening AI
         )
             contextRequests++;
     });
-    await page.addInitScript(() => localStorage.setItem('clickstudio:experience', 'beginner'));
-    await page.goto('/');
+    await page.goto(workspacePath('beginner'));
 
     const editor = page.getByRole('textbox', { name: 'SQL editor', exact: true });
     await expect(editor).toBeVisible();
@@ -138,7 +138,7 @@ test('Standard exposes assignment actions and can run a query without opening AI
     await expect(
         page.getByRole('tablist', { name: 'SQL documents', exact: true }).getByRole('tab'),
     ).toHaveCount(1);
-    await page.getByText('Standard', { exact: true }).click();
+    await setWorkspaceMode(page, 'Standard');
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-query-id', queryId);
     await expect(
         results.getByRole('table', { name: 'Retained query rows', exact: true }),
@@ -174,15 +174,11 @@ for (const experience of ['beginner', 'expert']) {
         test(`${experience} uses WASM with ${preference ?? 'no'} saved parser preference`, async ({
             page,
         }) => {
-            await page.addInitScript(
-                ({ experience, preference }) => {
-                    localStorage.setItem('clickstudio:experience', experience);
-                    if (preference === null) localStorage.removeItem('clickstudio:parser-mode');
-                    else localStorage.setItem('clickstudio:parser-mode', preference);
-                },
-                { experience, preference },
-            );
-            await page.goto('/');
+            await page.addInitScript(preference => {
+                if (preference === null) localStorage.removeItem('clickstudio:parser-mode');
+                else localStorage.setItem('clickstudio:parser-mode', preference);
+            }, preference);
+            await page.goto(workspacePath(experience));
             await expect(page.locator('.parser-switch')).toHaveCount(0);
             const banner = page.getByRole('banner');
             await expect(banner.getByRole('radio', { name: 'WASM', exact: true })).toHaveCount(0);
@@ -208,14 +204,13 @@ test('Experimental Format stays available while WASM loads', async ({ page }) =>
     const pendingParser = new Promise<void>(resolve => {
         releaseParser = resolve;
     });
-    await page.addInitScript(() => localStorage.setItem('clickstudio:experience', 'expert'));
     await page.context().route('**/clickhouse-parser.wasm', async route => {
         parserRequested = true;
         await pendingParser;
         await route.continue();
     });
     try {
-        await page.goto('/');
+        await page.goto(workspacePath('expert'));
         await expect.poll(() => parserRequested).toBe(true);
         await replaceSql(page, 'select 1 as value from numbers(1)');
         await page.getByTestId('format-sql').click();
@@ -234,13 +229,12 @@ test('Experimental Format stays available while WASM loads', async ({ page }) =>
 test('Experimental Format uses the built-in formatter when WASM is unavailable', async ({
     page,
 }) => {
-    await page.addInitScript(() => localStorage.setItem('clickstudio:experience', 'expert'));
     await page
         .context()
         .route('**/clickhouse-parser.wasm', route =>
             route.fulfill({ status: 503, body: 'Parser unavailable' }),
         );
-    await page.goto('/');
+    await page.goto(workspacePath('expert'));
     await expect(page.getByRole('button', { name: 'Retry parser', exact: true })).toBeVisible();
     await replaceSql(page, 'select 1 as value from numbers(1)');
     await page.getByTestId('format-sql').click();
@@ -476,7 +470,7 @@ test('Switching to Experimental keeps the AI chat, query and run evidence', asyn
 
     await expect(page.locator('.cm-content')).toContainText(generatedSql);
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-query-id', queryId);
-    await page.getByText('Standard', { exact: true }).click();
+    await setWorkspaceMode(page, 'Standard');
     await expect(page.getByTestId('open-ai')).toBeVisible();
     await expect(results.getByRole('tab', { name: 'Chart', exact: true })).toBeVisible();
     await expect(results.getByRole('tab', { name: 'Insights', exact: true })).toHaveCount(0);
@@ -898,7 +892,7 @@ test('Experimental insights and AI requests do not execute SQL', async ({ page }
     ).toBeVisible();
     const details = page.locator('.assistant-supporting-details');
     await expect(details).toHaveCount(2);
-    await page.getByText('Standard', { exact: true }).click();
+    await setWorkspaceMode(page, 'Standard');
     await page.getByTestId('open-ai').click();
     await expect(page.getByTestId('assistant-answer-markdown')).toHaveText(
         'The fixture has no measured performance data.',
@@ -970,7 +964,7 @@ for (const theme of ['Dark', 'Light'])
                     }),
                 );
             const experimentalStyles = await readActionStyles();
-            await page.getByText('Standard', { exact: true }).click();
+            await setWorkspaceMode(page, 'Standard');
             await expect(page.locator('.workspace-root')).toHaveClass(/is-beginner/);
             await expect(page.getByTestId('save-query')).toHaveCount(0);
             await expect(page.locator('.tab-unsaved')).toHaveCount(0);

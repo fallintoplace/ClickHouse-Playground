@@ -20,10 +20,6 @@ function countRunRequests(page: Page) {
 
 for (const mode of ['Standard', 'Experimental']) {
     test(`${mode} ignores empty SQL without leaving a warning`, async ({ page }) => {
-        await page.addInitScript(
-            experience => localStorage.setItem('clickstudio:experience', experience),
-            mode === 'Standard' ? 'beginner' : 'expert',
-        );
         let submissions = 0;
         page.on('request', request => {
             if (
@@ -32,7 +28,7 @@ for (const mode of ['Standard', 'Experimental']) {
             )
                 submissions++;
         });
-        await trust(page);
+        await trust(page, mode);
         await openBlankSql(page);
         const footer = page.locator('.execution-bar');
         const notice = page.locator('.editor-surface .workspace-inline-notice');
@@ -85,12 +81,8 @@ for (const mode of ['Standard', 'Experimental']) {
     });
 
     test(`${mode} plus opens a blank SQL tab and preserves the current draft`, async ({ page }) => {
-        await page.addInitScript(
-            experience => localStorage.setItem('clickstudio:experience', experience),
-            mode === 'Standard' ? 'beginner' : 'expert',
-        );
         const runs = countRunRequests(page);
-        await trust(page);
+        await trust(page, mode);
         for (const theme of ['Light', 'Dark']) {
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
             await expect(page.getByTestId('new-sql')).toHaveCSS(
@@ -193,7 +185,7 @@ test('Server version stays visible through execution and follows the active conn
             }),
         });
     });
-    await page.goto('/');
+    await page.goto('/experimental');
     const footer = page.locator('.execution-bar');
     const version = footer.getByTestId('server-version');
     await expect(footer).toHaveAttribute('data-run-status', 'ready');

@@ -14,7 +14,7 @@ function countQuerySubmissions(page: Page) {
 
 test('Local SQL drafts recover after reload without running a query', async ({ page }) => {
     const submissions = countQuerySubmissions(page);
-    await page.goto('/');
+    await page.goto('/experimental');
     await page
         .getByRole('textbox', { name: 'SQL document name', exact: true })
         .fill('Local draft.sql');
