@@ -82,7 +82,7 @@
     border-radius: var(--radius-compact);
     background: transparent;
     color: var(--muted);
-    font-size: 9px;
+    font-size: var(--font-size-tab-compact);
     cursor: pointer;
     transition: 0.18s ease;
   }
@@ -229,8 +229,8 @@
     border-collapse: separate;
     border-spacing: 0;
     color: var(--text-soft);
-    font-family: var(--font-mono);
-    font-size: 10px;
+    font-family: var(--font-sans);
+    font-size: var(--font-size-result-value);
     font-variant-ligatures: none;
     font-variant-numeric: tabular-nums;
   }
@@ -285,8 +285,8 @@
   .result-column-heading > span {
     max-width: 260px;
     flex-shrink: 0;
-    font-size: 10px;
-    font-weight: 720;
+    font-size: var(--font-size-result-column);
+    font-weight: var(--font-weight-emphasis);
   }
   .result-column-heading > small {
     --result-badge-tint: 8%;
@@ -300,8 +300,9 @@
       var(--panel-raised)
     );
     color: var(--result-type-accent);
-    font-size: 9px;
-    font-weight: 400;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-result-type);
+    font-weight: var(--font-weight-regular);
   }
   :root[data-theme="click-light"] .result-column-heading > small {
     --result-badge-tint: 4%;
@@ -322,7 +323,7 @@
     border-radius: var(--radius-control);
     background: var(--panel-raised);
     color: var(--text-soft);
-    font: 10px/1.4 var(--font-mono);
+    font: var(--font-size-result-column)/1.4 var(--font-mono);
     overflow-wrap: anywhere;
     box-shadow: var(--shadow-popover);
   }
@@ -334,7 +335,9 @@
     min-width: 0;
     margin: 0;
     color: var(--text);
+    font-family: var(--font-sans);
     font-size: inherit;
+    font-weight: var(--font-weight-emphasis);
     overflow-wrap: anywhere;
   }
   .result-column-details > span {
@@ -361,7 +364,10 @@
   }
   .data-table tbody td[data-type-group="boolean"] {
     color: var(--result-boolean);
-    font-weight: 620;
+    font-weight: var(--font-weight-medium);
+  }
+  .data-table tbody td[data-type-group="complex"]:not(.cell-null) {
+    font-family: var(--font-mono);
   }
   .data-table .row-number {
     position: sticky;
@@ -372,8 +378,8 @@
     border-right-color: var(--line-bright);
     background: var(--panel-raised);
     color: var(--muted);
-    font-size: 9px;
-    font-weight: 630;
+    font-size: var(--font-size-result-row-number);
+    font-weight: var(--font-weight-medium);
     text-align: left;
   }
   .data-table th.row-number {

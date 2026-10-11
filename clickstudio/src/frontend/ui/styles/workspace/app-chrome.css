@@ -706,7 +706,7 @@
     border-bottom: 0;
     border-radius: var(--radius-control) var(--radius-control) 0 0;
     color: var(--muted);
-    font-size: 10px;
+    font-size: var(--font-size-tab);
     cursor: pointer;
     transition: 0.18s ease;
   }
@@ -977,7 +977,7 @@
     max-width: 260px;
     gap: 5px;
     padding: 0 7px;
-    font-size: 9px;
+    font-size: var(--font-size-tab-compact);
   }
   .document-tab-actions {
     padding-left: 3px;

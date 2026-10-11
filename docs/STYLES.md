@@ -4,6 +4,8 @@ All application styles enter through `clickstudio/src/frontend/ui/styles/main.cs
 
 `foundation.css` owns typography, spacing roles, borders, shadows and shared control tokens. `colors.css` owns theme palettes. Components consume these variables. Component-specific light rules and breakpoints live in their owning stylesheet. `responsive.css` contains only application layout and the global reduced-motion override; `animations.css` owns shared keyframes. `controls.css` owns shared light input, invalid and placeholder states. `focus.css` loads last and owns all focus states.
 
+UI text and headings share the native system font stack. Shared typography sizes and weights live in `foundation.css`; keep different roles separate even when their current sizes match. Results use the UI font with tabular digits, while structured values and type badges retain the monospace stack.
+
 ## Focus
 
 - Actions use one outline for `:focus-visible`. Mouse clicks follow the browser's focus visibility preference.

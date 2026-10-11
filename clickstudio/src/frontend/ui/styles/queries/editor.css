@@ -346,8 +346,8 @@
     padding: 0 11px;
     border: 1px solid transparent;
     border-radius: var(--radius-compact);
-    font-size: 10px;
-    font-weight: 620;
+    font-size: var(--font-size-control);
+    font-weight: var(--font-weight-medium);
     line-height: 1;
     white-space: nowrap;
     cursor: pointer;
@@ -431,13 +431,13 @@
   .toolbar-small {
     min-height: 27px;
     padding: 0 8px;
-    font-size: 8px;
+    font-size: var(--font-size-control-small);
     letter-spacing: 0.04em;
   }
   .editor-heading-actions > .toolbar-small {
     min-height: 29px;
     padding-inline: 9px;
-    font-size: 9px;
+    font-size: var(--font-size-control-compact);
     letter-spacing: 0.01em;
   }
   .editor-heading-actions > [role="status"] {
@@ -460,7 +460,8 @@
   .run-query-button {
     min-height: 34px;
     padding: 0 13px;
-    font-size: 11px;
+    font-size: var(--font-size-control-prominent);
+    font-weight: var(--font-weight-emphasis);
   }
   .run-action-group {
     display: flex;
