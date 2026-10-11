@@ -808,7 +808,7 @@ for (const [status, score, token] of [
     ['warn', 50, '--amber'],
     ['fail', 0, '--red'],
 ] as const)
-    test(`SQL check badges show the ${status} status color in both themes`, async ({
+    test(`Experimental keeps the ${status} check badge while Standard hides it in both themes`, async ({
         page,
     }, info) => {
         await installProposal(page, proposedSql, {
@@ -850,6 +850,28 @@ for (const [status, score, token] of [
                 );
                 await page.screenshot({ path: info.outputPath(`light-${status}-checks.png`) });
             }
+            await page.getByText('Standard', { exact: true }).click();
+            await page.getByTestId('open-ai').click();
+            await expect(page.getByTestId('assistant-proposal-summary')).toHaveText(
+                'Updated query.',
+            );
+            await expect(badge).toHaveCount(0);
+            await expect(page.getByTestId('sql-proposal-diff')).toContainText(
+                status === 'fail' ? 'Checks failed' : 'Needs review',
+            );
+            const accept = review(page).getByRole('button', {
+                name: 'Accept SQL changes',
+                exact: true,
+            });
+            if (status === 'fail') {
+                await expect(accept).toBeDisabled();
+                await expect(review(page).getByRole('alert')).toHaveText(
+                    'This proposal did not pass SQL checks.',
+                );
+            } else await expect(accept).toBeEnabled();
+            await page.screenshot({ path: info.outputPath(`${theme}-standard-no-checks.png`) });
+            await page.getByText('Experimental', { exact: true }).click();
+            await expect(badge).toBeVisible();
         }
     });
 

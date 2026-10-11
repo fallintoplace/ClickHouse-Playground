@@ -533,7 +533,7 @@ function AssistantOutput({
     return (
         <div className={cx('proposal-card', beginner && 'beginner-proposal-card')}>
             <div className="proposal-heading">
-                {proposalSql !== null && (
+                {!beginner && proposalSql !== null && (
                     <span
                         className={cx('proposal-quality', proposal.quality?.status)}
                         title="Automated SQL checks, not a guarantee that the query returns the right answer."
