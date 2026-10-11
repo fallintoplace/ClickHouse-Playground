@@ -1,6 +1,6 @@
 import {
     lexSql,
-    splitSql,
+    tokenizedStatements,
     SqlSyntaxError,
     type Statement,
     type Token,
@@ -84,11 +84,10 @@ function classifyTokens(tokens: readonly Token[]): SqlOperation {
 export function statementOutline(text: string): StatementOutline {
     try {
         return {
-            statements: splitSql(text).map(statement => {
-                const tokens = lexSql(statement.sql);
+            statements: tokenizedStatements(text).map(({ tokens, ...statement }) => {
                 const first = tokens[0];
                 const preview = statement.sql
-                    .slice(first?.from ?? 0)
+                    .slice((first?.from ?? statement.from) - statement.from)
                     .replace(/\s+/g, ' ')
                     .trim();
                 return {

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { trust } from './helpers.js';
+import { runScript, trust } from './helpers.js';
 
 function readSql(page: Page) {
     return page.locator('.cm-content').evaluate(editor =>
@@ -46,3 +46,44 @@ test('keyword completion is available outside strings and comments', async ({ pa
     await page.keyboard.press('Control+Space');
     await expect(page.locator('.cm-tooltip-autocomplete')).toHaveCount(0);
 });
+
+for (const engine of ['native', 'fallback'] as const) {
+    test(`${engine} lexer preserves Unicode heredocs through script execution`, async ({
+        page,
+    }) => {
+        if (engine === 'fallback') {
+            await page.addInitScript(() => {
+                WebAssembly.instantiate = (): Promise<never> =>
+                    Promise.reject(new Error('WASM blocked in test'));
+            });
+        }
+        const errors: string[] = [];
+        page.on('pageerror', error => errors.push(error.message));
+        await trust(page);
+        const first = 'SELECT $123$😀; DROP TABLE events$123$ AS note';
+        const second = 'SELECT ‘hello;world’ AS note';
+        const sql = `${first};\n${second}`;
+        await replaceSql(page, sql);
+        const submitted = page.waitForResponse(
+            response =>
+                response.request().method() === 'POST' &&
+                new URL(response.url()).pathname === '/api/scripts',
+        );
+        await runScript(page);
+        const script: { statements: Array<{ sql: string; from: number; to: number }> } = await (
+            await submitted
+        ).json();
+        expect(script.statements.map(statement => statement.sql)).toEqual([first, second]);
+        for (const statement of script.statements)
+            expect(sql.slice(statement.from, statement.to)).toBe(statement.sql);
+        const results = page.getByRole('region', { name: 'Query results', exact: true });
+        await expect(
+            results.getByRole('button', { name: 'Statement 1: succeeded', exact: true }),
+        ).toBeVisible();
+        await expect(
+            results.getByRole('button', { name: 'Statement 2: succeeded', exact: true }),
+        ).toBeVisible();
+        await expect(results.getByRole('button', { name: /^Statement 3:/ })).toHaveCount(0);
+        expect(errors).toEqual([]);
+    });
+}
