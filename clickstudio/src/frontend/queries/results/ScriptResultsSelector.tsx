@@ -61,6 +61,20 @@ function moveMenuFocus(event: KeyboardEvent<HTMLDivElement>) {
     items[next]?.focus();
 }
 
+export function SingleResultCard({ sql }: { sql: string }) {
+    return (
+        <span
+            className="script-results-trigger is-static"
+            role="group"
+            aria-label="Executed SQL"
+            title={sql}
+        >
+            <span className="script-statement-index">01</span>
+            <code>{sql.replace(/\s+/g, ' ').trim()}</code>
+        </span>
+    );
+}
+
 export function ScriptResultsSelector({
     script,
     runs,
@@ -123,7 +137,8 @@ export function ScriptResultsSelector({
         };
     }, []);
 
-    if (script.statements.length < 2) return null;
+    if (script.statements.length < 2)
+        return script.statements[0] ? <SingleResultCard sql={script.statements[0].sql} /> : null;
 
     return (
         <span className="script-results-selector">

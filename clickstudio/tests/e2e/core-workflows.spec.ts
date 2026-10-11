@@ -770,7 +770,9 @@ test('Failed execution replaces visible results and can collapse, reopen and ret
         const failure = page.getByTestId('query-failure');
         await expect(failure).toContainText('SYNTAX_ERROR');
         await expect(failure).toContainText('Syntax error at position 15');
-        await expect(results.getByRole('heading', { name: 'Results', exact: true })).toBeVisible();
+        await expect(
+            results.getByRole('group', { name: 'Executed SQL', exact: true }),
+        ).toBeVisible();
         await expect(results.getByRole('table')).toHaveCount(0);
         await expect(results.locator('.result-provenance-header')).toHaveCount(0);
         await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'failed');
@@ -887,7 +889,7 @@ for (const theme of ['Dark', 'Light'])
                 await new Promise(requestAnimationFrame);
             });
             const header = results.locator('.results-header');
-            const title = header.getByRole('heading', { name: 'Results', exact: true });
+            const title = header.getByRole('group', { name: 'Executed SQL', exact: true });
             await expect(title).toBeVisible();
             const headerBefore = (await header.boundingBox())!;
             const titleBefore = (await title.boundingBox())!;
@@ -923,13 +925,16 @@ for (const theme of ['Dark', 'Light'])
             ).toBe('none');
             for (const [element, previous] of [
                 [header, headerBefore],
-                [title, titleBefore],
                 [header.locator('.results-mark'), markBefore],
             ] as const) {
                 const current = (await element.boundingBox())!;
                 for (const dimension of ['x', 'y', 'width', 'height'] as const)
                     expect(current[dimension]).toBeCloseTo(previous[dimension], 0);
             }
+            const titleAfter = (await title.boundingBox())!;
+            for (const dimension of ['x', 'y', 'height'] as const)
+                expect(titleAfter[dimension]).toBeCloseTo(titleBefore[dimension], 0);
+            await expect(title).toHaveAttribute('title', 'SELECT 1\nGROUP BY');
             const fix = header.getByRole('button', { name: 'Fix with AI', exact: true });
             await expect(fix).toBeVisible();
             await expect(

@@ -616,7 +616,10 @@
     color: var(--text-soft);
     cursor: pointer;
   }
-  .script-results-trigger:hover,
+  .script-results-trigger.is-static {
+    cursor: default;
+  }
+  .script-results-trigger:not(.is-static):hover,
   .script-results-trigger[aria-expanded="true"] {
     border-color: var(--line-bright);
     background: var(--active-surface);

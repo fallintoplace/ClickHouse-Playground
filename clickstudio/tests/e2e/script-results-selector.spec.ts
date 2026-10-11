@@ -10,6 +10,7 @@ test('Statement results use a compact header dropdown and switch without executi
     await runScript(page);
     const results = page.getByRole('region', { name: 'Query results', exact: true });
     const trigger = results.getByRole('button', { name: /^Select a statement result/ });
+    await expect(results.getByRole('heading', { name: 'Results', exact: true })).toHaveCount(0);
     await expect(trigger).toContainText('03');
     await expect(trigger).toContainText('SELECT 3');
     await expect(trigger).toHaveAttribute('aria-expanded', 'false');
@@ -105,7 +106,7 @@ test('Statement results use a compact header dropdown and switch without executi
     await page.keyboard.press('Tab');
     await expect(menu).toBeHidden();
     await openStatementResults(results);
-    await results.getByRole('heading', { name: 'Results', exact: true }).click();
+    await results.locator('.results-mark').click();
     await expect(menu).toBeHidden();
     await openStatementResults(results);
     await page.getByTestId('format-sql').focus();
@@ -113,15 +114,76 @@ test('Statement results use a compact header dropdown and switch without executi
     expect(executions).toBe(0);
 });
 
-test('A single query does not show a statement dropdown', async ({ page }) => {
+test('A single query shows its SQL card without a dropdown through view and draft changes', async ({
+    page,
+}, testInfo) => {
+    await trust(page);
+    const sql = 'SELECT 1 AS a_long_column_name_that_should_not_expand_the_output_header';
+    await replaceSql(page, sql);
+    await runScript(page);
+    const results = page.getByRole('region', { name: 'Query results', exact: true });
+    const card = results.getByRole('group', { name: 'Executed SQL', exact: true });
+    await expect(results.getByRole('table')).toBeVisible();
+    await expect(card).toHaveAttribute('title', sql);
+    await expect(card.locator('.script-statement-index')).toHaveText('01');
+    await expect(card.locator('svg')).toHaveCount(0);
+    await expect(results.getByRole('heading', { name: 'Results', exact: true })).toHaveCount(0);
+    await expect(results.getByRole('button', { name: /^Select a statement result/ })).toHaveCount(
+        0,
+    );
+    for (const mode of ['Standard', 'Experimental']) {
+        await page.getByText(mode, { exact: true }).click();
+        for (const theme of ['Dark', 'Light']) {
+            await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+            for (const width of [1440, 900]) {
+                await page.setViewportSize({ width, height: 900 });
+                await expect(card).toBeVisible();
+                expect(
+                    await card
+                        .locator('code')
+                        .evaluate(element => element.scrollWidth > element.clientWidth),
+                ).toBe(true);
+                const bounds = (await card.boundingBox())!;
+                const header = (await results.locator('.results-header').boundingBox())!;
+                expect(bounds.x).toBeGreaterThanOrEqual(header.x);
+                expect(bounds.x + bounds.width).toBeLessThanOrEqual(header.x + header.width);
+                expect(bounds.y + bounds.height).toBeLessThanOrEqual(header.y + header.height);
+                if (width === 1440)
+                    await results.locator('.results-header').screenshot({
+                        path: testInfo.outputPath(`single-query-${mode}-${theme}.png`),
+                    });
+            }
+        }
+    }
+    await results.getByRole('tab', { name: 'Chart', exact: true }).click();
+    await expect(card).toHaveAttribute('title', sql);
+    await results.getByRole('tab', { name: 'Table', exact: true }).click();
+    await replaceSql(page, 'SELECT 2');
+    await expect(card).toHaveAttribute('title', sql);
+});
+
+test('A single failed query shows the submitted SQL card and replaces it after a successful Run', async ({
+    page,
+}) => {
     await trust(page);
     await replaceSql(page, 'SELECT 1');
     await runScript(page);
     const results = page.getByRole('region', { name: 'Query results', exact: true });
+    const card = results.getByRole('group', { name: 'Executed SQL', exact: true });
+    await expect(card).toHaveAttribute('title', 'SELECT 1');
     await expect(results.getByRole('table')).toBeVisible();
+    await replaceSql(page, "SELECT 'unfinished");
+    await page.getByTestId('run-button').click();
+    await expect(results.getByTestId('query-failure')).toBeVisible();
+    await expect(card).toHaveAttribute('title', "SELECT 'unfinished");
     await expect(results.getByRole('button', { name: /^Select a statement result/ })).toHaveCount(
         0,
     );
+    await replaceSql(page, 'SELECT 2');
+    await expect(card).toHaveAttribute('title', "SELECT 'unfinished");
+    await runScript(page);
+    await expect(results.getByTestId('query-failure')).toHaveCount(0);
+    await expect(card).toHaveAttribute('title', 'SELECT 2');
 });
 
 test('Failures stay visible while browsing successful results and skipped statements stay disabled', async ({

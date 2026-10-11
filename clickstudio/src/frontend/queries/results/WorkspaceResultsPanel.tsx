@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { ProfilePipeline, QueryProfile } from '../../../shared/queries/inspection/types';
 import type { ResultPage } from '../../../shared/queries/results/types';
 import type { Run, Script } from '../../../shared/queries/execution/types';
@@ -19,7 +19,11 @@ import { PipelineGraph } from '../inspection/diagrams/PipelineGraph';
 import { SqlFlowView } from '../inspection/diagrams/SqlFlowView';
 import { Button, cx, Spinner } from '../../ui/components/ui';
 import { Icon } from '../../ui/components/icons';
-import { ScriptCancelAction, ScriptResultsSelector } from './ScriptResultsSelector';
+import {
+    ScriptCancelAction,
+    ScriptResultsSelector,
+    SingleResultCard,
+} from './ScriptResultsSelector';
 import { ScrollEdgeFrame } from '../../ui/components/ScrollEdgeShadows';
 import { QueryFailureNotice } from './QueryFailureNotice';
 import { resultsTabLabel } from '../../workspace/workspace-helpers';
@@ -431,10 +435,43 @@ function renderResultsHeader({
         resultsPanelLabel,
         failureSql,
     } = viewState;
-    const { copy, run, script, history, cancelling, connection, assistantBusy, busy } = state;
+    const {
+        copy,
+        run,
+        script,
+        history,
+        cancelling,
+        connection,
+        assistantBusy,
+        busy,
+        execution,
+        failedAttempt,
+    } = state;
     const headerView = showFailure ? 'results' : visibleResultsView;
     const headerPanelLabel = showFailure ? copy.common.queryResults : resultsPanelLabel;
     const failedStatement = script?.statements.find(statement => statement.error);
+    const showQueryCard = ['results', 'chart', 'insights'].includes(headerView);
+    const querySql = showFailure ? failureSql : (execution?.sql ?? run?.sql);
+    let queryCard: ReactNode = null;
+    if (showQueryCard && script && !failedAttempt && (!execution || execution.sql === script.sql)) {
+        queryCard = (
+            <ScriptResultsSelector
+                key={script.id}
+                script={script}
+                runs={history}
+                activeRunId={run?.id}
+                onSelectRun={actions.onSelectScriptRun}
+                onSelectError={actions.onSelectScriptError}
+                errorSelected={
+                    showFailure &&
+                    viewState.failureError === failedStatement?.error &&
+                    !failedStatement?.runId
+                }
+            />
+        );
+    } else if (showQueryCard && querySql) {
+        queryCard = <SingleResultCard sql={querySql} />;
+    }
 
     return (
         <div className="results-header">
@@ -451,24 +488,12 @@ function renderResultsHeader({
                         }
                     />
                 </span>
-                <div>
-                    <h2>{showFailure ? copy.common.results : resultsTitle}</h2>
-                </div>
-                {headerView === 'results' && script && (
-                    <ScriptResultsSelector
-                        key={script.id}
-                        script={script}
-                        runs={history}
-                        activeRunId={run?.id}
-                        onSelectRun={actions.onSelectScriptRun}
-                        onSelectError={actions.onSelectScriptError}
-                        errorSelected={
-                            showFailure &&
-                            viewState.failureError === failedStatement?.error &&
-                            !failedStatement?.runId
-                        }
-                    />
+                {!showQueryCard && (
+                    <div>
+                        <h2>{resultsTitle}</h2>
+                    </div>
                 )}
+                {queryCard}
             </div>
             <div className="results-actions">
                 {headerView === 'results' && script && (
