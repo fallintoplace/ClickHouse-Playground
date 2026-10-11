@@ -2279,6 +2279,24 @@
     padding-inline: 7px;
     font-size: 7px;
   }
+  .assistant-execution-pagination {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .assistant-execution-pagination > span {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 8px;
+    white-space: nowrap;
+  }
+  .assistant-execution-pagination > .button-base {
+    min-height: 29px;
+    padding-inline: 9px;
+    font-size: 8px;
+  }
   .assistant-execution-actions {
     display: flex;
     min-width: 0;

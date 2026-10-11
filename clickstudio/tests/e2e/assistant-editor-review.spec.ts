@@ -82,6 +82,115 @@ async function storedDraft(page: Page) {
     });
 }
 
+for (const count of [2, 5, 6, 10, 11, 61]) {
+    test(`Script plans paginate ${count} statements with Previous and Next buttons`, async ({
+        page,
+    }, testInfo) => {
+        const script = Array.from(
+            { length: count },
+            (_, index) => `SELECT ${index + 1} AS value;`,
+        ).join('\n');
+        const runs: Record<string, unknown>[] = [];
+        page.on('request', request => {
+            if (
+                request.method() === 'POST' &&
+                ['/api/runs', '/api/scripts'].includes(new URL(request.url()).pathname)
+            )
+                runs.push(jsonRecord(request.postDataJSON()));
+        });
+        await installProposal(page, script);
+        await trust(page);
+        await replaceSql(page, originalSql);
+        await askForChanges(page);
+        const plan = page.getByTestId('assistant-execution-option');
+        const steps = plan.locator('.assistant-execution-steps > li');
+        const pager = plan.getByRole('navigation', { name: 'Script plan pages', exact: true });
+        await expect(steps).toHaveCount(Math.min(5, count));
+        if (count <= 5) {
+            await expect(pager).toHaveCount(0);
+            return;
+        }
+        const previous = pager.getByRole('button', { name: 'Previous', exact: true });
+        const next = pager.getByRole('button', { name: 'Next', exact: true });
+        await expect(previous).toBeDisabled();
+        for (let start = 0; start < count; start += 5) {
+            const end = Math.min(start + 5, count);
+            await expect(pager).toContainText(`${start + 1}–${end} of ${count}`);
+            await expect(steps).toHaveCount(end - start);
+            await expect(steps.locator('.assistant-execution-number')).toHaveText(
+                Array.from({ length: end - start }, (_, index) => String(start + index + 1)),
+            );
+            await expect(steps.locator('details[open]')).toHaveCount(0);
+            if (end < count) {
+                await expect(next).toBeEnabled();
+                await next.click();
+            }
+        }
+        await expect(next).toBeDisabled();
+        await expect(previous).toBeEnabled();
+        await steps.last().locator('summary').click();
+        await expect(steps.last().locator('code')).toContainText(`SELECT ${count} AS value`);
+        await review(page).getByRole('button', { name: 'Accept SQL changes', exact: true }).click();
+        await plan
+            .getByRole('button', { name: `Run only statement ${count}: Read`, exact: true })
+            .click();
+        await expect.poll(() => runs.length).toBe(1);
+        expect(runs[0]).toMatchObject({ sql: `SELECT ${count} AS value`, connectionId: 'demo' });
+        const runAll = plan.getByRole('button', {
+            name: `Run all ${count} statements`,
+            exact: true,
+        });
+        if (count === 61) {
+            await expect(runAll).toBeDisabled();
+            await expect(plan).toContainText(
+                'Scripts with more than 50 statements cannot run as one script.',
+            );
+            await expect(plan).not.toContainText('Showing the first 50');
+            await page.screenshot({ path: testInfo.outputPath('script-plan-last-page.png') });
+        } else {
+            await expect(runAll).toBeEnabled();
+            if (count === 11) {
+                await runAll.click();
+                await expect.poll(() => runs.length).toBe(2);
+                expect(runs[1]).toMatchObject({ sql: script, connectionId: 'demo' });
+            }
+        }
+        for (let start = Math.floor((count - 1) / 5) * 5; start > 0; start -= 5)
+            await previous.click();
+        await expect(pager).toContainText(`1–5 of ${count}`);
+        await expect(previous).toBeDisabled();
+        await expect(steps.locator('.assistant-execution-number')).toHaveText([
+            '1',
+            '2',
+            '3',
+            '4',
+            '5',
+        ]);
+    });
+}
+
+test('Script plan pages are independent and new proposals start on the first page', async ({
+    page,
+}) => {
+    const script = Array.from({ length: 11 }, (_, index) => `SELECT ${index + 1};`).join('\n');
+    await installProposal(page, script, {
+        id: 'paged-script',
+        alternatives: [{ title: 'Other script', summary: 'Another script.', sql: script }],
+    });
+    await trust(page);
+    await replaceSql(page, originalSql);
+    await askForChanges(page);
+    const plans = page.getByTestId('assistant-execution-option');
+    await plans.first().getByRole('button', { name: 'Next', exact: true }).click();
+    await expect(plans.first().getByRole('navigation')).toContainText('6–10 of 11');
+    await expect(plans.last().getByRole('navigation')).toContainText('1–5 of 11');
+    await review(page).getByRole('button', { name: 'Accept SQL changes', exact: true }).click();
+    await installProposal(page, script, { id: 'new-paged-script', summary: 'New script.' });
+    await askForChanges(page, 'New script.');
+    await expect(plans.last().getByRole('navigation')).toContainText('1–5 of 11');
+    await expect(plans.first().getByRole('navigation')).toContainText('6–10 of 11');
+});
+
 for (const mode of ['beginner', 'expert']) {
     test(`Inline SQL review accepts the whole proposal without running it in ${mode} mode`, async ({
         page,

@@ -322,6 +322,7 @@ const operationLabels: Record<SqlOperation, string> = {
     schema: 'Schema',
     unknown: 'Unknown',
 };
+const SCRIPT_PLAN_PAGE_SIZE = 5;
 
 function AssistantExecutionOption({
     title,
@@ -344,6 +345,11 @@ function AssistantExecutionOption({
 }) {
     const outline = useMemo(() => statementOutline(sql), [sql]);
     const statements = outline.statements;
+    const [page, setPage] = useState(0);
+    const lastPage = Math.max(0, Math.ceil(statements.length / SCRIPT_PLAN_PAGE_SIZE) - 1);
+    const currentPage = Math.min(page, lastPage);
+    const pageStart = currentPage * SCRIPT_PLAN_PAGE_SIZE;
+    const pageEnd = Math.min(pageStart + SCRIPT_PLAN_PAGE_SIZE, statements.length);
     const hasUpdateBeforeDelete = statements.some(
         (statement, index) =>
             statement.operation === 'update' &&
@@ -437,12 +443,18 @@ function AssistantExecutionOption({
                     There are no SQL statements to run.
                 </p>
             )}
-            <ol className="assistant-execution-steps" aria-label="Statements in execution order">
-                {statements.slice(0, MAX_SCRIPT_STATEMENTS).map((statement, index) => (
-                    <li key={`${statement.from}-${index}`} data-operation={statement.operation}>
+            <ol
+                className="assistant-execution-steps"
+                aria-label="Statements in execution order"
+                start={pageStart + 1}
+            >
+                {statements.slice(pageStart, pageEnd).map((statement, index) => (
+                    <li key={statement.from} data-operation={statement.operation}>
                         <details className="assistant-execution-step-details">
                             <summary className="assistant-execution-step-heading">
-                                <span className="assistant-execution-number">{index + 1}</span>
+                                <span className="assistant-execution-number">
+                                    {pageStart + index + 1}
+                                </span>
                                 <span
                                     className={cx(
                                         'assistant-operation-badge',
@@ -470,7 +482,7 @@ function AssistantExecutionOption({
                                 variant="secondary"
                                 onClick={() => onRunQuery(statement.sql)}
                                 disabled={busy || runDisabled(statement.sql)}
-                                aria-label={`Run only statement ${index + 1}: ${operationLabels[statement.operation]}`}
+                                aria-label={`Run only statement ${pageStart + index + 1}: ${operationLabels[statement.operation]}`}
                             >
                                 Run only {operationLabels[statement.operation]}
                             </Button>
@@ -478,9 +490,29 @@ function AssistantExecutionOption({
                     </li>
                 ))}
             </ol>
+            {statements.length > SCRIPT_PLAN_PAGE_SIZE && (
+                <nav className="assistant-execution-pagination" aria-label="Script plan pages">
+                    <Button
+                        variant="secondary"
+                        onClick={() => setPage(currentPage - 1)}
+                        disabled={currentPage === 0}
+                    >
+                        Previous
+                    </Button>
+                    <span aria-live="polite" aria-atomic="true">
+                        {pageStart + 1}–{pageEnd} of {statements.length}
+                    </span>
+                    <Button
+                        variant="secondary"
+                        onClick={() => setPage(currentPage + 1)}
+                        disabled={currentPage === lastPage}
+                    >
+                        Next
+                    </Button>
+                </nav>
+            )}
             {statements.length > MAX_SCRIPT_STATEMENTS && (
                 <p className="assistant-execution-error" role="status">
-                    Showing the first {MAX_SCRIPT_STATEMENTS} of {statements.length} statements.
                     Scripts with more than {MAX_SCRIPT_STATEMENTS} statements cannot run as one
                     script.
                 </p>
