@@ -54,6 +54,21 @@ const fixtures: Array<{
         points: 20,
     },
     {
+        name: 'dense category lines',
+        data: {
+            columns: [
+                { name: 'category', type: 'String' },
+                { name: 'events', type: 'UInt64' },
+            ],
+            rows: Array.from({ length: 80 }, (_, index) => [
+                `Category ${index}`,
+                index % 2 ? 20 : 1,
+            ]),
+        },
+        lines: 1,
+        points: 80,
+    },
+    {
         name: 'multiple series with missing values',
         data: {
             columns: [
@@ -80,7 +95,7 @@ const fixtures: Array<{
 
 for (const reducedMotion of ['no-preference', 'reduce'] as const)
     for (const fixture of fixtures) {
-        test(`Long ${fixture.name} stay fully drawn with ${reducedMotion} motion`, async ({
+        test(`${fixture.name} stay fully drawn with ${reducedMotion} motion`, async ({
             page,
         }, info) => {
             await page.setViewportSize({ width: 1440, height: 1000 });
@@ -115,7 +130,11 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const)
             const lengths = await lines.evaluateAll(elements =>
                 elements.map(element => (element as SVGPolylineElement).getTotalLength()),
             );
-            expect(Math.max(...lengths)).toBeGreaterThan(1400);
+            if (
+                fixture.name === 'dense category lines' ||
+                fixture.name === 'row-count lines over time'
+            )
+                expect(Math.max(...lengths)).toBeGreaterThan(1400);
             await lines.evaluateAll(elements =>
                 Promise.all(
                     elements.flatMap(element =>

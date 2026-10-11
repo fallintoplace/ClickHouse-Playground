@@ -2,7 +2,7 @@ import { useCallback, useLayoutEffect, useState } from 'react';
 
 export function useChartPlotWidth<T extends Element = HTMLDivElement>(viewBoxHeight?: number) {
     const [viewport, setViewport] = useState<T | null>(null);
-    const [width, setWidth] = useState(0);
+    const [size, setSize] = useState({ width: 0, height: 0 });
     const onViewport = useCallback((element: T | null) => setViewport(element), []);
 
     useLayoutEffect(() => {
@@ -14,7 +14,11 @@ export function useChartPlotWidth<T extends Element = HTMLDivElement>(viewBoxHei
                 measuredWidth =
                     bounds.height > 0 ? (bounds.width * viewBoxHeight) / bounds.height : 0;
             }
-            setWidth(measuredWidth);
+            setSize(current =>
+                current.width === measuredWidth && current.height === bounds.height
+                    ? current
+                    : { width: measuredWidth, height: bounds.height },
+            );
         };
         measure();
         const observer = new ResizeObserver(measure);
@@ -22,5 +26,5 @@ export function useChartPlotWidth<T extends Element = HTMLDivElement>(viewBoxHei
         return () => observer.disconnect();
     }, [viewport, viewBoxHeight]);
 
-    return { width, onViewport };
+    return { ...size, onViewport };
 }

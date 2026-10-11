@@ -2,10 +2,12 @@ import type { CSSProperties, RefCallback } from 'react';
 import { MAX_CHART_RENDER_POINTS } from '../../../../../shared/queries/results/results';
 import { formatCount, seriesColor, splitChartSegments } from '../chart-helpers';
 import type { ChartSvgModel } from './chart-svg-model';
+import { ChartAxisLabels } from '../ChartAxisLabels';
 
 export function createChartSvgRenderer(
     {
         viewportWidth,
+        viewportHeight,
         plotRight,
         chartAriaLabel,
         plotTop,
@@ -31,7 +33,7 @@ export function createChartSvgRenderer(
     }: ChartSvgModel,
     onPlotViewport: RefCallback<SVGSVGElement>,
 ) {
-    return (categoryAxisIsScrollable: boolean) => {
+    return (categoricalAxis: boolean) => {
         const renderSeries = () => {
             switch (chartKind) {
                 case 'scatter':
@@ -84,7 +86,9 @@ export function createChartSvgRenderer(
                                             cy={y(point.value!)}
                                             r="3.5"
                                             className="chart-point"
-                                        />
+                                        >
+                                            <title>{`${point.label}: ${result.columns[series.columnIndex]?.name} ${point.value}`}</title>
+                                        </circle>
                                     ))}
                             </g>
                         );
@@ -112,15 +116,15 @@ export function createChartSvgRenderer(
                                     style={
                                         {
                                             '--series-color': series.color,
-                                            strokeWidth: categoryAxisIsScrollable
-                                                ? undefined
-                                                : Math.min(1, barWidth * 0.4),
+                                            strokeWidth: Math.min(1, barWidth * 0.4),
                                             ...(disableBarAnimation
                                                 ? {}
                                                 : { animationDelay: `${point.index * 20}ms` }),
                                         } as CSSProperties
                                     }
-                                />,
+                                >
+                                    <title>{`${point.label}: ${result.columns[series.columnIndex]?.name} ${point.value}`}</title>
+                                </rect>,
                             ];
                         }),
                     );
@@ -128,15 +132,10 @@ export function createChartSvgRenderer(
         };
         return (
             <svg
-                ref={categoryAxisIsScrollable ? undefined : onPlotViewport}
-                className={categoryAxisIsScrollable ? 'chart-category-plot' : undefined}
-                viewBox={`0 0 ${categoryAxisIsScrollable ? plotRight : viewportWidth} 230`}
-                preserveAspectRatio={categoryAxisIsScrollable ? 'none' : undefined}
-                style={
-                    categoryAxisIsScrollable
-                        ? ({ '--chart-plot-width': `${plotRight}px` } as CSSProperties)
-                        : undefined
-                }
+                ref={categoricalAxis ? undefined : onPlotViewport}
+                className={categoricalAxis ? 'chart-category-plot' : undefined}
+                viewBox={`0 0 ${categoricalAxis ? plotRight : viewportWidth} ${viewportHeight}`}
+                preserveAspectRatio={categoricalAxis ? 'none' : undefined}
                 role="img"
                 aria-label={chartAriaLabel}
             >
@@ -150,7 +149,7 @@ export function createChartSvgRenderer(
                         className="chart-gridline"
                     />
                 ))}
-                {!categoryAxisIsScrollable &&
+                {!categoricalAxis &&
                     chartYTicks.map(tick => (
                         <text
                             key={`${tick.position}-${tick.value}`}
@@ -173,39 +172,7 @@ export function createChartSvgRenderer(
                     />
                 )}
                 {renderSeries()}
-                <g className="chart-x-labels">
-                    {chartXTicks.map((tick, index) => {
-                        const getTickAnchor = (): 'middle' | 'start' | 'end' => {
-                            if (categoryAxisIsScrollable) {
-                                return 'middle';
-                            }
-
-                            if (chartXTicks.length === 1) {
-                                return 'middle';
-                            }
-
-                            if (index === 0) {
-                                return 'start';
-                            }
-
-                            if (index === chartXTicks.length - 1) {
-                                return 'end';
-                            }
-
-                            return 'middle';
-                        };
-                        return (
-                            <text
-                                key={`${tick.position}-${categoryAxisIsScrollable ? index : tick.label}`}
-                                x={tick.position}
-                                y="218"
-                                textAnchor={getTickAnchor()}
-                            >
-                                {tick.label}
-                            </text>
-                        );
-                    })}
-                </g>
+                <ChartAxisLabels ticks={chartXTicks} y={categoricalAxis ? plotBottom + 18 : 218} />
             </svg>
         );
     };

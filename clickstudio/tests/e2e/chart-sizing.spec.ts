@@ -10,6 +10,180 @@ const eventRows = [
     ['IssuesEvent', 30_000_000],
 ];
 
+const teamNames = [
+    'Detroit Red Wings',
+    'Chicago Blackhawks',
+    'Colorado Avalanche',
+    'New Jersey Devils',
+    'Pittsburgh Penguins',
+    'Tampa Bay Lightning',
+    'Los Angeles Kings',
+    'Florida Panthers',
+    'Anaheim Ducks',
+    'Boston Bruins',
+    'Carolina Hurricanes',
+    'Dallas Stars',
+    'New York Rangers',
+    'St. Louis Blues',
+    'Vegas Golden Knights',
+    'Washington Capitals',
+];
+
+for (const fixture of [
+    { name: 'team bars', labels: teamNames, kind: 'bar', rowCount: false },
+    { name: 'team lines', labels: teamNames, kind: 'line', rowCount: false },
+    { name: 'team row counts', labels: teamNames, kind: 'bar', rowCount: true },
+    {
+        name: 'Chinese category lines',
+        labels: Array.from({ length: 16 }, (_, index) => `超级无敌宇宙中文分类名字${index}`),
+        kind: 'line',
+        rowCount: false,
+    },
+    {
+        name: 'emoji category bars',
+        labels: Array.from({ length: 16 }, (_, index) => `${'😀🏆🦆'.repeat(6)}${index}`),
+        kind: 'bar',
+        rowCount: false,
+    },
+    { name: 'two short categories', labels: ['A', 'B'], kind: 'bar', rowCount: false },
+    {
+        name: 'dense category bars',
+        labels: Array.from({ length: 600 }, (_, index) => `Long category name ${index}`),
+        kind: 'bar',
+        rowCount: false,
+    },
+    {
+        name: 'dense row counts',
+        labels: Array.from({ length: 600 }, (_, index) => `Long category name ${index}`),
+        kind: 'bar',
+        rowCount: true,
+    },
+]) {
+    test(`${fixture.name} fit every mark with wrapped labels and a visible footer`, async ({
+        page,
+    }, info) => {
+        const expectedLabels = fixture.rowCount
+            ? [...fixture.labels].sort(
+                  new Intl.Collator('en', { numeric: true, sensitivity: 'base' }).compare,
+              )
+            : fixture.labels;
+        await page.setViewportSize({ width: 1280, height: 824 });
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await page.route('**/api/runs/*/snapshot', async route => {
+            const response = await route.fetch();
+            const rows = fixture.labels.map((label, index) =>
+                fixture.rowCount ? [label] : [label, 4 - (index % 4)],
+            );
+            await route.fulfill({
+                response,
+                json: {
+                    ...(await response.json()),
+                    columns: [
+                        { name: 'team', type: 'String' },
+                        ...(fixture.rowCount ? [] : [{ name: 'titles_won', type: 'UInt64' }]),
+                    ],
+                    rows,
+                    totalRows: rows.length,
+                    completeness: 'complete',
+                },
+            });
+        });
+        await trust(page);
+        await page.getByText('Standard', { exact: true }).click();
+        await runButton(page).click();
+        const results = page.getByRole('region', { name: 'Query results', exact: true });
+        await results.getByRole('tab', { name: 'Chart', exact: true }).click();
+        if (!fixture.rowCount)
+            await results
+                .getByRole('combobox', { name: 'Type', exact: true })
+                .selectOption(fixture.kind);
+        await page.getByRole('button', { name: 'Ask AI', exact: true }).click();
+        const plot = results.locator('.chart-category-plot');
+        const marks = plot.locator(fixture.kind === 'line' ? '.chart-point' : '.chart-bar');
+        await expect(marks).toHaveCount(fixture.labels.length);
+        await expect(marks.first().locator('title')).toContainText(expectedLabels[0]!);
+        const checkLayout = async () => {
+            await expect
+                .poll(() =>
+                    results.locator('.chart-workspace').evaluate(workspace => {
+                        const viewport = workspace.querySelector('.chart-category-scroll')!;
+                        const svg = workspace.querySelector(
+                            '.chart-category-plot',
+                        )! as SVGSVGElement;
+                        const bounds = svg.getBoundingClientRect();
+                        const labels = [...svg.querySelectorAll('.chart-x-labels text')].map(
+                            label => label.getBoundingClientRect(),
+                        );
+                        const marks = [...svg.querySelectorAll('.chart-bar, .chart-point')].map(
+                            mark => mark.getBoundingClientRect(),
+                        );
+                        const footer = workspace
+                            .querySelector('.chart-footer')!
+                            .getBoundingClientRect();
+                        const matrix = svg.getScreenCTM()!;
+                        return (
+                            viewport.scrollWidth <= viewport.clientWidth + 1 &&
+                            workspace.scrollHeight <= workspace.clientHeight + 1 &&
+                            footer.bottom <= workspace.getBoundingClientRect().bottom + 1 &&
+                            Math.abs(matrix.a / matrix.d - 1) < 0.02 &&
+                            marks.every(
+                                mark =>
+                                    mark.left >= bounds.left - 1 && mark.right <= bounds.right + 1,
+                            ) &&
+                            labels.every(
+                                (label, index) =>
+                                    label.left >= bounds.left - 1 &&
+                                    label.right <= bounds.right + 1 &&
+                                    label.bottom <= bounds.bottom + 1 &&
+                                    (index === 0 || label.left >= labels[index - 1]!.right + 2),
+                            )
+                        );
+                    }),
+                )
+                .toBe(true);
+        };
+        await checkLayout();
+        if (fixture.labels.length > 2)
+            await expect(plot.locator('.chart-x-labels text tspan[dy="11"]').first()).toBeVisible();
+        else {
+            const positions = await plot.locator('.chart-x-labels text').evaluateAll(labels =>
+                labels.map(label => ({
+                    x: Number(label.getAttribute('x')),
+                    anchor: label.getAttribute('text-anchor'),
+                })),
+            );
+            const centers = await marks.evaluateAll(bars =>
+                bars.map(
+                    bar => Number(bar.getAttribute('x')) + Number(bar.getAttribute('width')) / 2,
+                ),
+            );
+            expect(positions.map(label => label.x)).toEqual(centers);
+            expect(positions.every(label => label.anchor === 'middle')).toBe(true);
+        }
+        await expect(plot.locator('.chart-x-labels text').first().locator('title')).toHaveText(
+            expectedLabels[0]!,
+        );
+        await expect(plot.locator('.chart-x-labels text').last().locator('title')).toHaveText(
+            expectedLabels.at(-1)!,
+        );
+        await results.screenshot({
+            path: info.outputPath('fitted-chart.png'),
+            animations: 'disabled',
+        });
+        for (const viewport of [
+            { width: 900, height: 824 },
+            { width: 1280, height: 650 },
+        ]) {
+            await page.setViewportSize(viewport);
+            await checkLayout();
+        }
+        await page.getByRole('button', { name: 'Close inspector', exact: true }).click();
+        await page.setViewportSize({ width: 1778, height: 824 });
+        await checkLayout();
+        await expect(marks).toHaveCount(fixture.labels.length);
+    });
+}
+
 for (const fixture of [
     {
         name: 'bar chart',
@@ -95,12 +269,16 @@ async function expectPlotFits(results: Locator) {
                 const grid = svg.querySelector('.chart-gridline')!.getBoundingClientRect();
                 const bounds = svg.getBoundingClientRect();
                 const matrix = svg.getScreenCTM()!;
+                const marks = [...svg.querySelectorAll('.chart-bar, .chart-point')].map(mark =>
+                    mark.getBoundingClientRect(),
+                );
                 return (
                     grid.left - bounds.left < 100 &&
                     bounds.right - grid.right < 45 &&
                     grid.left >= bounds.left &&
                     grid.right <= bounds.right + 1 &&
-                    Math.abs(matrix.a / matrix.d - 1) < 0.02
+                    Math.abs(matrix.a / matrix.d - 1) < 0.02 &&
+                    marks.every(mark => mark.left >= bounds.left && mark.right <= bounds.right + 1)
                 );
             }),
         )

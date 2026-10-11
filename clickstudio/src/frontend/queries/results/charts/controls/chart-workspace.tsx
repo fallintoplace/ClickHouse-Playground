@@ -34,6 +34,7 @@ export function renderChartWorkspace({
     compactNumber,
     values,
     categoricalAxis,
+    svg,
     onCategoryViewport,
     chartYTicks,
     renderChartSvg,
@@ -136,7 +137,7 @@ export function renderChartWorkspace({
                             {categoricalAxis && (
                                 <svg
                                     className="chart-category-y-axis"
-                                    viewBox="0 0 80 230"
+                                    viewBox={`0 0 80 ${svg.viewportHeight}`}
                                     preserveAspectRatio="none"
                                     aria-hidden="true"
                                 >

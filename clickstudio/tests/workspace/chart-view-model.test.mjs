@@ -3,7 +3,12 @@ import test from 'node:test';
 import { copy } from '../../.workspace-build/src/frontend/ui/copy.js';
 import { prepareChartSelection } from '../../.workspace-build/src/frontend/queries/results/charts/controls/chart-selection.js';
 import { prepareChartView } from '../../.workspace-build/src/frontend/queries/results/charts/rendering/chart-view-model.js';
-import { fitChartTicks } from '../../.workspace-build/src/frontend/queries/results/charts/chart-helpers.js';
+import {
+    categoryAxisLayout,
+    chartLabelWidth,
+    fitCategoryTicks,
+    fitChartTicks,
+} from '../../.workspace-build/src/frontend/queries/results/charts/chart-helpers.js';
 import {
     heatmapCellKey,
     MAX_CHART_RENDER_POINTS,
@@ -184,7 +189,7 @@ for (const rows of [[], [[1, -10, 20]], [[1, null, null]]]) {
     });
 }
 
-test('Numeric scatter axes follow the viewport while named categories keep label spacing', () => {
+test('Numeric scatter axes and named categories follow the viewport', () => {
     const scatter = prepare(
         result(
             [
@@ -211,8 +216,9 @@ test('Numeric scatter axes follow the viewport while named categories keep label
         1200,
     );
     assert.equal(categories.categoricalAxis, true);
-    assert.ok(categories.svg.plotRight > 1100);
-    assert.equal(categories.svg.chartXTicks.length, 61);
+    assert.equal(categories.svg.plotRight, 1100);
+    assert.equal(categories.chartRows.length, 61);
+    assert.ok(categories.svg.chartXTicks.length < 61);
 });
 
 test('Chart preparation keeps valid saved measures and repairs unavailable axes', () => {
@@ -373,7 +379,7 @@ test('Continuous charts sample large results while retaining both endpoints', ()
     assert.match(view.rowSummary, /240.*600/);
 });
 
-test('Categorical charts retain every category and make room for long labels', () => {
+test('Categorical charts retain every category while fitting long labels to the viewport', () => {
     const rows = Array.from({ length: 300 }, (_, index) => [`long category label ${index}`, index]);
     const view = prepare(
         result(
@@ -385,8 +391,101 @@ test('Categorical charts retain every category and make room for long labels', (
         ),
     );
     assert.equal(view.chartRows, rows);
-    assert.equal(view.svg.chartXTicks.length, rows.length);
-    assert.ok(view.svg.plotRight > 300 * 72);
+    assert.ok(view.svg.chartXTicks.length < rows.length);
+    assert.equal(view.svg.chartXTicks[0].label, rows[0][0]);
+    assert.equal(view.svg.chartXTicks.at(-1).label, rows.at(-1)[0]);
+    assert.equal(view.svg.plotRight, 652);
+    assert.ok(view.svg.x(299) < 652);
+});
+
+for (const width of [48, 320, 630, 1200]) {
+    for (const labels of [
+        [],
+        [''],
+        ['Detroit Red Wings'],
+        ['a', 'b'],
+        ['Detroit Red Wings', 'Chicago Blackhawks', 'Colorado Avalanche', 'New Jersey Devils'],
+        Array.from({ length: 300 }, (_, index) => `Team with a very long name ${index}`),
+        ['😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀', '  Team    with\nspaces  '],
+        Array.from({ length: 16 }, (_, index) => `超级无敌宇宙中文分类名字${index}`),
+    ]) {
+        test(`${labels.length} category labels fit width ${width} without dropping plotted data`, () => {
+            const layout = categoryAxisLayout(labels, width);
+            assert.equal(layout.width, width);
+            assert.equal(layout.positions.length, labels.length);
+            assert.ok(layout.positions.every(position => position > 0 && position < width));
+            const ticks = fitCategoryTicks(
+                labels.map((label, index) => ({ label, position: layout.positions[index] })),
+                width,
+            );
+            let previousRight = -Infinity;
+            for (const tick of ticks) {
+                assert.ok(labels.includes(tick.label));
+                assert.ok(tick.lines.length <= 2);
+                const labelWidth = Math.max(...tick.lines.map(chartLabelWidth));
+                let left = tick.position - labelWidth / 2;
+                if (tick.anchor === 'start') left = tick.position;
+                if (tick.anchor === 'end') left = tick.position - labelWidth;
+                assert.equal(tick.position, layout.positions[labels.indexOf(tick.label)]);
+                assert.ok(left >= -1);
+                assert.ok(left + labelWidth <= width + 1);
+                assert.ok(left >= previousRight + 8);
+                previousRight = left + labelWidth;
+                for (const line of tick.lines)
+                    assert.doesNotMatch(
+                        line,
+                        /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u,
+                    );
+            }
+            if (ticks.length > 1) {
+                assert.equal(ticks[0].label, labels[0]);
+                assert.equal(ticks.at(-1).label, labels.at(-1));
+            }
+        });
+    }
+}
+
+test('Wrapped category labels retain their full text and truncate only the displayed lines', () => {
+    const label = 'AReallyLongUnbrokenCategoryNameThatCannotFitOnTwoLines';
+    const [tick] = fitCategoryTicks([{ label, position: 48 }], 96);
+    assert.equal(tick.label, label);
+    assert.equal(tick.lines.length, 2);
+    assert.ok(tick.lines[1].endsWith('…'));
+});
+
+test('Category layout has a finite fallback before the viewport is measured', () => {
+    for (const width of [0, -1, NaN, Infinity]) {
+        assert.equal(categoryAxisLayout(['a'], width).width, 652);
+    }
+});
+
+test('Categorical chart geometry follows the available height with stable labels and marks', () => {
+    const data = result(
+        [
+            ['name', 'String'],
+            ['value', 'Int64'],
+        ],
+        [
+            ['a', -3],
+            ['b', 5],
+        ],
+    );
+    const chart = { kind: 'bar', x: 0, ys: [1], title: 'Query result' };
+    for (const height of [110, 230, 480]) {
+        const view = prepareChartView({
+            result: data,
+            chart,
+            chartCopy: copy.chart,
+            categoryViewportWidth: 630,
+            categoryViewportHeight: height,
+            selection: prepareChartSelection(data, chart),
+        });
+        assert.equal(view.svg.viewportHeight, height);
+        assert.equal(view.svg.plotBottom, height - 44);
+        assert.ok(view.svg.y(5) >= 0);
+        assert.ok(view.svg.y(-3) <= height - 44);
+        assert.ok(view.svg.plotBottom + 29 < height);
+    }
 });
 
 test('Categorical viewport changes update geometry without changing measures or rows', () => {

@@ -23,7 +23,11 @@ export function ChartView({
     onChart: (chart: Draft['chart']) => void;
     copy: Copy;
 }) {
-    const { width: categoryViewportWidth, onViewport: onCategoryViewport } = useChartPlotWidth();
+    const {
+        width: categoryViewportWidth,
+        height: categoryViewportHeight,
+        onViewport: onCategoryViewport,
+    } = useChartPlotWidth();
     const { width: plotViewportWidth, onViewport: onPlotViewport } =
         useChartPlotWidth<SVGSVGElement>(230);
     const chartCopy = copy.chart;
@@ -58,6 +62,7 @@ export function ChartView({
         chart,
         chartCopy,
         categoryViewportWidth,
+        categoryViewportHeight,
         plotViewportWidth: plotViewportWidth || 760,
         selection,
     });

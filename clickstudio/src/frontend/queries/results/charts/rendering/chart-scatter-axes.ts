@@ -3,7 +3,13 @@ import { chartNumber, displayValue } from '../../../../../shared/queries/results
 import type { Result } from '../../../../../shared/queries/results/types.js';
 import type { Row } from '../../../../../shared/common/values.js';
 import type { Copy } from '../../../../ui/copy.js';
-import { chartText, fitChartTicks, formatCount } from '../chart-helpers.js';
+import {
+    chartText,
+    fitCategoryTicks,
+    fitChartTicks,
+    formatCount,
+    type ChartAxisTick,
+} from '../chart-helpers.js';
 
 export function prepareScatterAxes({
     chartRows,
@@ -98,7 +104,7 @@ export function prepareScatterAxes({
             { value: min, position: plotBottom },
         ];
     }
-    let chartXTicks;
+    let chartXTicks: ChartAxisTick[];
 
     if (chartKind === 'scatter') {
         if (scatterMinX === scatterMaxX) {
@@ -132,6 +138,8 @@ export function prepareScatterAxes({
             position: x(index),
         }));
     }
-    if (!categoricalAxis) chartXTicks = fitChartTicks(chartXTicks);
+    chartXTicks = categoricalAxis
+        ? fitCategoryTicks(chartXTicks, plotWidth)
+        : fitChartTicks(chartXTicks);
     return { chartYTicks, scatterPoints, scatterX, scatterY, chartXTicks, scatterSummary };
 }

@@ -11,6 +11,14 @@
   .chart-workspace {
     padding: 0 10px 8px;
   }
+  .chart-workspace:has(> .chart-canvas) {
+    display: flex;
+    flex-direction: column;
+  }
+  .chart-workspace:has(> .chart-canvas) > .chart-toolbar,
+  .chart-workspace:has(> .chart-canvas) > .chart-footer {
+    flex-shrink: 0;
+  }
   .insights-heading {
     display: flex;
     align-items: flex-start;
@@ -1630,7 +1638,9 @@
   .chart-canvas {
     position: relative;
     display: block;
-    height: min(250px, 45vh);
+    min-height: 120px;
+    max-height: 250px;
+    flex: 1;
     margin: 12px 0 0;
     padding: 8px 12px 0;
     border: 1px solid var(--line);
@@ -1652,6 +1662,7 @@
   .chart-canvas--categorical {
     display: grid;
     grid-template-columns: 80px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     overflow: hidden;
   }
   .chart-canvas--categorical > .chart-category-y-axis {
@@ -1670,13 +1681,11 @@
   .chart-category-scroll {
     width: 100%;
     height: 100%;
-    overflow-x: auto;
+    overflow-x: hidden;
     overflow-y: hidden;
-    scrollbar-gutter: stable;
   }
   .chart-canvas--categorical .chart-category-scroll > svg {
-    width: max(100%, var(--chart-plot-width));
-    min-width: var(--chart-plot-width);
+    width: 100%;
     height: 100%;
     overflow: visible;
   }

@@ -13,6 +13,7 @@ import type { Draft } from '../../../editor/drafts/workspace-state.js';
 import type { Copy } from '../../../../ui/copy.js';
 import {
     categoryAxisLayout,
+    chartPlotBounds,
     chartText,
     chartTypeLabel,
     formatCount,
@@ -112,6 +113,7 @@ export function prepareChartView({
     chart,
     chartCopy,
     categoryViewportWidth,
+    categoryViewportHeight = 230,
     plotViewportWidth = 760,
     selection,
 }: {
@@ -119,6 +121,7 @@ export function prepareChartView({
     chart: Draft['chart'];
     chartCopy: Copy['chart'];
     categoryViewportWidth: number;
+    categoryViewportHeight?: number;
     plotViewportWidth?: number;
     selection: ReturnType<typeof prepareChartSelection>;
 }) {
@@ -166,7 +169,7 @@ export function prepareChartView({
     const categoryLayout = categoricalAxis
         ? categoryAxisLayout(
               plotSeries[0]?.points.map(point => point.label) ?? [],
-              Math.max(652, categoryViewportWidth),
+              categoryViewportWidth,
           )
         : undefined;
     const values = plotSeries.flatMap(series =>
@@ -178,10 +181,10 @@ export function prepareChartView({
     const plotLeft = categoricalAxis ? 0 : 80,
         plotRight = categoryLayout?.width ?? plotViewportWidth - 28,
         plotWidth = plotRight - plotLeft;
-    const plotTop = 40,
-        plotMiddle = 115,
-        plotBottom = 190,
-        plotHeight = plotBottom - plotTop;
+    const { viewportHeight, plotTop, plotBottom, plotMiddle, plotHeight } = chartPlotBounds(
+        categoricalAxis,
+        categoryViewportHeight,
+    );
     const zeroY = plotBottom - ((0 - min) / range) * plotHeight;
     const y = (value: number) => plotBottom - ((value - min) / range) * plotHeight;
     const x = (index: number) => {
@@ -270,6 +273,7 @@ export function prepareChartView({
 
     const svg: ChartSvgModel = {
         viewportWidth: plotViewportWidth,
+        viewportHeight,
         plotRight,
         chartAriaLabel,
         plotTop,

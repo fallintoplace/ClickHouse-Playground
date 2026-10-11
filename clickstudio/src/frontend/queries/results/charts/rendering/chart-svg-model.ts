@@ -1,10 +1,11 @@
 import type { ChartKind } from '../../../../../shared/queries/results/chart-types.js';
 import type { Result } from '../../../../../shared/queries/results/types.js';
 import type { Row } from '../../../../../shared/common/values.js';
-import { chartText } from '../chart-helpers.js';
+import { chartText, type ChartAxisTick } from '../chart-helpers.js';
 
 export type ChartSvgModel = {
     viewportWidth: number;
+    viewportHeight: number;
     plotRight: number;
     chartAriaLabel: ReturnType<typeof chartText>;
     plotTop: number;
@@ -30,5 +31,5 @@ export type ChartSvgModel = {
     y: (value: number) => number;
     barWidth: number;
     chartRows: Row[];
-    chartXTicks: { label: string; position: number }[];
+    chartXTicks: ChartAxisTick[];
 };

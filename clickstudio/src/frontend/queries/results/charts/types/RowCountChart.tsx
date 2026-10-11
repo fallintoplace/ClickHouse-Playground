@@ -13,12 +13,16 @@ import type { Draft } from '../../../editor/drafts/workspace-state';
 import type { Copy } from '../../../../ui/copy';
 import { ScrollEdgeFrame } from '../../../../ui/components/ScrollEdgeShadows';
 import { ChartToolbar } from '../ChartToolbar';
+import { ChartAxisLabels } from '../ChartAxisLabels';
 import {
     categoryAxisLayout,
+    chartPlotBounds,
     chartText,
+    fitCategoryTicks,
     fitChartTicks,
     formatCount,
     seriesColor,
+    type ChartAxisTick,
 } from '../chart-helpers';
 import { useChartPlotWidth } from '../useChartPlotWidth';
 
@@ -35,7 +39,11 @@ export function RowCountChart({
     onChart: (chart: Draft['chart']) => void;
     copy: Copy['chart'];
 }) {
-    const { width: categoryViewportWidth, onViewport: onCategoryViewport } = useChartPlotWidth();
+    const {
+        width: categoryViewportWidth,
+        height: categoryViewportHeight,
+        onViewport: onCategoryViewport,
+    } = useChartPlotWidth();
     const { width: plotViewportWidth, onViewport: onPlotViewport } =
         useChartPlotWidth<SVGSVGElement>(230);
     const viewportWidth = plotViewportWidth || 760;
@@ -72,15 +80,15 @@ export function RowCountChart({
         ? undefined
         : categoryAxisLayout(
               bars.map(group => group.label),
-              Math.max(652, categoryViewportWidth),
+              categoryViewportWidth,
           );
     const plotLeft = timeAxis ? 80 : 0,
         plotRight = categoryLayout?.width ?? viewportWidth - 28,
         plotWidth = plotRight - plotLeft;
-    const plotTop = 40,
-        plotMiddle = 115,
-        plotBottom = 190,
-        plotHeight = plotBottom - plotTop;
+    const { viewportHeight, plotTop, plotBottom, plotMiddle, plotHeight } = chartPlotBounds(
+        !timeAxis,
+        categoryViewportHeight,
+    );
     const y = (value: number) => plotBottom - (value / range) * plotHeight;
     const timeMin = allTimePoints[0]?.timestamp ?? 0;
     const timeMax = allTimePoints.at(-1)?.timestamp ?? timeMin;
@@ -106,15 +114,13 @@ export function RowCountChart({
             ? xTime(timeTicks[index]?.timestamp ?? timeMin)
             : xCategory(index, bars.length),
     }));
-    const fittedTicks = timeAxis ? fitChartTicks(ticks) : ticks;
-    const axisLabels = fittedTicks.map(tick => tick.label);
-    const axisLabelPositions = fittedTicks.map(tick => tick.position);
+    const fittedTicks = timeAxis ? fitChartTicks(ticks) : fitCategoryTicks(ticks, plotWidth);
     const valueFormatter = new Intl.NumberFormat('en', {
         notation: 'compact',
         maximumFractionDigits: 1,
     });
     const barStep = categoryLayout?.minimumSlotWidth ?? plotWidth / Math.max(1, bars.length);
-    const barWidth = Math.max(4, Math.min(32, barStep * 0.64));
+    const barWidth = Math.min(32, barStep * 0.64);
     const hasRows = result.rows.length > 0;
     const noTimeValues = timeAxis && !series.length;
     const dimensionName = result.columns[xIndex]?.name ?? '';
@@ -186,6 +192,7 @@ export function RowCountChart({
     const { title, customTitle, timeUnit, chartAriaLabel } = describeRowCountChart();
     const renderChartSvg = createRowCountSvgRenderer({
         viewportWidth,
+        viewportHeight,
         onPlotViewport,
         plotRight,
         chartAriaLabel,
@@ -204,8 +211,7 @@ export function RowCountChart({
         bars,
         xCategory,
         barWidth,
-        axisLabels,
-        axisLabelPositions,
+        axisTicks: fittedTicks,
     });
 
     return (
@@ -227,7 +233,7 @@ export function RowCountChart({
                             {!timeAxis && (
                                 <svg
                                     className="chart-category-y-axis"
-                                    viewBox="0 0 80 230"
+                                    viewBox={`0 0 80 ${viewportHeight}`}
                                     preserveAspectRatio="none"
                                     aria-hidden="true"
                                 >
@@ -412,6 +418,7 @@ export function RowCountChart({
 
 function createRowCountSvgRenderer({
     viewportWidth,
+    viewportHeight,
     onPlotViewport,
     plotRight,
     chartAriaLabel,
@@ -430,10 +437,10 @@ function createRowCountSvgRenderer({
     bars,
     xCategory,
     barWidth,
-    axisLabels,
-    axisLabelPositions,
+    axisTicks,
 }: {
     viewportWidth: number;
+    viewportHeight: number;
     onPlotViewport: RefCallback<SVGSVGElement>;
     plotRight: number;
     chartAriaLabel: string;
@@ -452,20 +459,14 @@ function createRowCountSvgRenderer({
     bars: { key: string; label: string; count: number }[];
     xCategory: (index: number, length: number) => number;
     barWidth: number;
-    axisLabels: string[];
-    axisLabelPositions: number[];
+    axisTicks: ChartAxisTick[];
 }) {
-    return (categoryAxisIsScrollable: boolean) => (
+    return (categoricalAxis: boolean) => (
         <svg
-            ref={categoryAxisIsScrollable ? undefined : onPlotViewport}
-            className={categoryAxisIsScrollable ? 'chart-category-plot' : undefined}
-            viewBox={`0 0 ${categoryAxisIsScrollable ? plotRight : viewportWidth} 230`}
-            preserveAspectRatio={categoryAxisIsScrollable ? 'none' : undefined}
-            style={
-                categoryAxisIsScrollable
-                    ? ({ '--chart-plot-width': `${plotRight}px` } as CSSProperties)
-                    : undefined
-            }
+            ref={categoricalAxis ? undefined : onPlotViewport}
+            className={categoricalAxis ? 'chart-category-plot' : undefined}
+            viewBox={`0 0 ${categoricalAxis ? plotRight : viewportWidth} ${viewportHeight}`}
+            preserveAspectRatio={categoricalAxis ? 'none' : undefined}
             role="img"
             aria-label={chartAriaLabel}
         >
@@ -479,7 +480,7 @@ function createRowCountSvgRenderer({
                     className="chart-gridline"
                 />
             ))}
-            {!categoryAxisIsScrollable &&
+            {!categoricalAxis &&
                 [
                     { value: max, position: plotTop },
                     { value: max / 2, position: plotMiddle },
@@ -554,6 +555,7 @@ function createRowCountSvgRenderer({
                               style={
                                   {
                                       '--series-color': seriesColor(0),
+                                      strokeWidth: Math.min(1, barWidth * 0.4),
                                       ...(disableBarAnimation
                                           ? {}
                                           : { animationDelay: `${index * 25}ms` }),
@@ -569,39 +571,7 @@ function createRowCountSvgRenderer({
                           </rect>
                       );
                   })}
-            <g className="chart-x-labels">
-                {axisLabels.map((label, index) => {
-                    const getTickAnchor = (): 'middle' | 'start' | 'end' => {
-                        if (categoryAxisIsScrollable) {
-                            return 'middle';
-                        }
-
-                        if (axisLabels.length === 1) {
-                            return 'middle';
-                        }
-
-                        if (index === 0) {
-                            return 'start';
-                        }
-
-                        if (index === axisLabels.length - 1) {
-                            return 'end';
-                        }
-
-                        return 'middle';
-                    };
-                    return (
-                        <text
-                            key={`${label}-${index}`}
-                            x={axisLabelPositions[index]}
-                            y="218"
-                            textAnchor={getTickAnchor()}
-                        >
-                            {label}
-                        </text>
-                    );
-                })}
-            </g>
+            <ChartAxisLabels ticks={axisTicks} y={categoricalAxis ? plotBottom + 18 : 218} />
         </svg>
     );
 }
