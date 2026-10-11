@@ -12,9 +12,7 @@
   }
 
   .workspace-help-panel {
-    --help-space-xs: 4px;
     --help-space-sm: 8px;
-    --help-space-md: 12px;
     --help-space-lg: 16px;
     --help-radius-control: var(--radius-control);
     --help-radius-card: var(--radius-panel);

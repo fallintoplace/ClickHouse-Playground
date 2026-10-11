@@ -9,7 +9,6 @@ import {
 import {
     WORKSPACE_LAYOUT_STORAGE_KEY,
     clampPanelSplitRatio,
-    normalizeWorkspacePanelLayout,
     recoverWorkspacePanelLayout,
     type WorkspacePanelId,
 } from '../workspace-layout';
@@ -21,8 +20,6 @@ export type PanelPointerStartEvent = {
     preventDefault: () => void;
     stopPropagation: () => void;
 };
-
-const panelViewport = () => ({ width: window.innerWidth, height: window.innerHeight });
 
 export function useWorkspacePanels({
     activeDraftId,
@@ -38,7 +35,7 @@ export function useWorkspacePanels({
         try {
             stored = window.localStorage.getItem(WORKSPACE_LAYOUT_STORAGE_KEY);
         } catch {}
-        return recoverWorkspacePanelLayout(stored, panelViewport());
+        return recoverWorkspacePanelLayout(stored);
     });
     const [temporaryReveals, setTemporaryReveals] = useState<
         Partial<Record<WorkspacePanelId, string>>
@@ -64,13 +61,6 @@ export function useWorkspacePanels({
             return changed ? next : current;
         });
     }, [activeDraftId]);
-
-    useEffect(() => {
-        const normalize = () =>
-            setPanelLayout(current => normalizeWorkspacePanelLayout(current, panelViewport()));
-        window.addEventListener('resize', normalize);
-        return () => window.removeEventListener('resize', normalize);
-    }, []);
 
     const queryCollapsed = panelLayout.query.collapsed && temporaryReveals.query !== activeDraftId;
     const resultsCollapsed =

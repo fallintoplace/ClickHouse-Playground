@@ -1,99 +1,82 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-    PANEL_MARGIN,
-    PANEL_MIN_HEIGHT,
-    PANEL_MIN_WIDTH,
     clampPanelSplitRatio,
     defaultWorkspacePanelLayout,
-    normalizePanelGeometry,
-    normalizeWorkspacePanelLayout,
     recoverWorkspacePanelLayout,
 } from '../../.workspace-build/src/frontend/workspace/layout/workspace-layout.js';
-
-const viewport = { width: 1440, height: 900 };
-
-test('panel geometry stays recoverable inside the viewport', () => {
-    const value = normalizePanelGeometry({ x: -900, y: 1200, width: 3000, height: 1800 }, viewport);
-    assert.deepEqual(value, { x: PANEL_MARGIN, y: PANEL_MARGIN, width: 1424, height: 884 });
-});
-
-test('saved layouts are validated and normalized on recovery', () => {
-    const recovered = recoverWorkspacePanelLayout(
-        JSON.stringify({
-            splitRatio: 0.99,
-            query: { mode: 'floating', geometry: { x: 3000, y: 2000, width: 650, height: 400 } },
-            results: { mode: 'wat', geometry: { x: 10, y: 10, width: 10, height: 10 } },
-        }),
-        viewport,
-    );
-    assert.equal(recovered.splitRatio, 0.75);
-    assert.equal(recovered.query.mode, 'docked');
-    assert.equal(recovered.query.collapsed, false);
-    assert.equal(
-        recovered.query.geometry.x + recovered.query.geometry.width,
-        viewport.width - PANEL_MARGIN,
-    );
-    assert.equal(recovered.results.mode, 'docked');
-    assert.equal(recovered.results.collapsed, false);
-    assert.equal(recovered.results.geometry.width, PANEL_MIN_WIDTH);
-    assert.equal(recovered.results.geometry.height, PANEL_MIN_HEIGHT);
-});
 
 test('saved collapsed panel preferences survive recovery', () => {
     const recovered = recoverWorkspacePanelLayout(
         JSON.stringify({
-            query: { mode: 'docked', collapsed: true },
-            results: { mode: 'floating', collapsed: false },
+            query: { collapsed: true },
+            results: { collapsed: false },
         }),
-        viewport,
     );
-    assert.equal(recovered.query.collapsed, true);
-    assert.equal(recovered.results.collapsed, false);
-    assert.equal(recovered.results.mode, 'docked');
+    assert.deepEqual(recovered, {
+        version: 1,
+        splitRatio: 0.54,
+        query: { collapsed: true },
+        results: { collapsed: false },
+    });
 });
 
-for (const mode of ['floating', 'maximized'])
-    test(`saved ${mode} panels dock while preserving their preferences`, () => {
+for (const mode of ['docked', 'floating', 'maximized'])
+    test(`saved ${mode} panels retain their preferences without obsolete window state`, () => {
         const recovered = recoverWorkspacePanelLayout(
             JSON.stringify({
                 version: 1,
                 splitRatio: 0.63,
-                query: { mode, collapsed: true },
-                results: { mode, collapsed: false },
+                query: {
+                    mode,
+                    collapsed: true,
+                    geometry: { x: 3000, y: -20, width: 650, height: 400 },
+                },
+                results: { mode, collapsed: false, geometry: null },
             }),
-            viewport,
         );
-        assert.equal(recovered.query.mode, 'docked');
-        assert.equal(recovered.results.mode, 'docked');
-        assert.equal(recovered.query.collapsed, true);
-        assert.equal(recovered.results.collapsed, false);
-        assert.equal(recovered.splitRatio, 0.63);
-        assert.deepEqual(
-            recoverWorkspacePanelLayout(JSON.stringify(recovered), viewport),
-            recovered,
-        );
+        assert.deepEqual(recovered, {
+            version: 1,
+            splitRatio: 0.63,
+            query: { collapsed: true },
+            results: { collapsed: false },
+        });
+        assert.deepEqual(recoverWorkspacePanelLayout(JSON.stringify(recovered)), recovered);
     });
 
-test('viewport normalization docks legacy modes without resetting collapse or split preferences', () => {
-    const layout = defaultWorkspacePanelLayout(viewport);
-    layout.query.mode = 'floating';
-    layout.query.collapsed = true;
-    layout.results.mode = 'maximized';
-    layout.splitRatio = 0.6;
-    const normalized = normalizeWorkspacePanelLayout(layout, { width: 700, height: 500 });
-    assert.equal(normalized.query.mode, 'docked');
-    assert.equal(normalized.results.mode, 'docked');
-    assert.equal(normalized.query.collapsed, true);
-    assert.equal(normalized.splitRatio, 0.6);
-    assert.equal(layout.query.mode, 'floating');
-    assert.equal(layout.results.mode, 'maximized');
-});
+for (const raw of [null, '', '{broken', 'null', '[]', 'true', '17', '"layout"'])
+    test(`missing or malformed storage ${JSON.stringify(raw)} uses the default layout`, () => {
+        assert.deepEqual(recoverWorkspacePanelLayout(raw), defaultWorkspacePanelLayout());
+    });
 
-test('bad storage falls back to a stable docked layout', () => {
-    const recovered = recoverWorkspacePanelLayout('{broken', viewport);
-    const expected = defaultWorkspacePanelLayout(viewport);
-    assert.deepEqual(recovered, expected);
+for (const value of [null, false, 1, 'true', {}, { collapsed: 'true' }, { collapsed: 1 }])
+    test(`malformed panel state ${JSON.stringify(value)} leaves the panel expanded`, () => {
+        const recovered = recoverWorkspacePanelLayout(
+            JSON.stringify({ query: value, results: value }),
+        );
+        assert.equal(recovered.query.collapsed, false);
+        assert.equal(recovered.results.collapsed, false);
+    });
+
+for (const raw of ['null', '"0.63"', 'true', '{}', '1e400', '-1e400', '"NaN"'])
+    test(`invalid saved split ratio ${raw} uses the default`, () => {
+        const recovered = recoverWorkspacePanelLayout(`{"splitRatio":${raw}}`);
+        assert.equal(recovered.splitRatio, 0.54);
+    });
+
+test('saved split ratios are clamped without resetting collapsed panels', () => {
+    for (const [value, expected] of [
+        [-1, 0.25],
+        [0.6, 0.6],
+        [2, 0.75],
+    ]) {
+        const recovered = recoverWorkspacePanelLayout(
+            JSON.stringify({ splitRatio: value, query: { collapsed: true } }),
+        );
+        assert.equal(recovered.splitRatio, expected);
+        assert.equal(recovered.query.collapsed, true);
+        assert.equal(recovered.results.collapsed, false);
+    }
 });
 
 test('split ratio stays useful for both docked panels', () => {

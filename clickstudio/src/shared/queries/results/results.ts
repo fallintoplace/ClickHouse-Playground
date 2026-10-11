@@ -129,7 +129,7 @@ export function chartTimestamp(value: Json | undefined): number | null {
     return Number.isFinite(timestamp) ? timestamp : null;
 }
 
-export function recommendCandlestickConfig(
+function recommendCandlestickConfig(
     columns: Column[],
 ): { x: number; candlestick: CandlestickConfig } | undefined {
     const numeric = (index: number) => index >= 0 && numericType(columns[index]?.type ?? '');
@@ -374,7 +374,7 @@ export function filterRows(rows: Row[], term: string, searchableRows?: string[])
           )
         : rows;
 }
-export function csvCell(value: Json | undefined, type?: string): string {
+function csvCell(value: Json | undefined, type?: string): string {
     let cell = value === null || value === undefined ? '' : displayValue(value);
     // Formula-prefix escaping is for textual spreadsheet cells. Numeric ClickHouse
     // values such as -42 stay numeric in CSV; JSON remains the exact typed export.

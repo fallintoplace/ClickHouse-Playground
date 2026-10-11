@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
     CloudConnectionSessions,
     CLOUD_SESSION_COOKIE,
+    CLOUD_SESSION_TTL_MS,
 } from '../../src/backend/database/connections/cloud-sessions.js';
 
 const credentials = {
@@ -38,25 +39,38 @@ test('Local Cloud sessions keep credentials private and restore the tested conne
 
 test('Local Cloud sessions refresh their idle expiry when used and expire after inactivity', () => {
     let now = 1_000;
-    const sessions = new CloudConnectionSessions(() => now, 10),
+    const sessions = new CloudConnectionSessions(() => now, 10, 1),
         token = sessions.create(credentials, tested);
     const cookie = `${CLOUD_SESSION_COOKIE}=${token}`;
     now = 1_009;
+    assert.throws(() => sessions.create(credentials, tested), { code: 'CLOUD_SESSION_LIMIT' });
     assert.ok(sessions.credentials(cookie));
     now = 1_018;
     assert.ok(sessions.snapshot(cookie));
     now = 1_028;
     assert.equal(sessions.credentials(cookie), undefined);
-    assert.equal(sessions.size, 0);
+    const replacement = sessions.create(credentials, tested);
+    assert.deepEqual(sessions.credentials(`${CLOUD_SESSION_COOKIE}=${replacement}`), credentials);
 });
 
 test('Revoking a local Cloud session immediately removes its credentials', () => {
-    const sessions = new CloudConnectionSessions(),
+    const sessions = new CloudConnectionSessions(Date.now, CLOUD_SESSION_TTL_MS, 1),
         token = sessions.create(credentials, tested);
     const cookie = `${CLOUD_SESSION_COOKIE}=${token}`;
     sessions.revoke(`other=value; ${cookie}`);
     assert.equal(sessions.credentials(cookie), undefined);
-    assert.equal(sessions.size, 0);
+    const replacement = sessions.create(credentials, tested);
+    assert.deepEqual(sessions.credentials(`${CLOUD_SESSION_COOKIE}=${replacement}`), credentials);
+});
+
+test('Creating a local Cloud session frees expired capacity without a prior lookup', () => {
+    let now = 1_000;
+    const sessions = new CloudConnectionSessions(() => now, 10, 1);
+    const expired = sessions.create(credentials, tested);
+    now = 1_010;
+    const replacement = sessions.create(credentials, tested);
+    assert.equal(sessions.credentials(`${CLOUD_SESSION_COOKIE}=${expired}`), undefined);
+    assert.deepEqual(sessions.credentials(`${CLOUD_SESSION_COOKIE}=${replacement}`), credentials);
 });
 
 test('Replacing a local Cloud session revokes only the matching previous browser session', () => {

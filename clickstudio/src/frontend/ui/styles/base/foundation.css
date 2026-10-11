@@ -43,10 +43,8 @@
   --z-popover: 500;
   --z-tooltip: 550;
   --z-overlay-backdrop: 600;
-  --z-drawer: 610;
   --z-dialog: 620;
   --z-toast: 800;
-  --z-splash: 1000;
   font-family: var(--font-sans);
   background: var(--page);
   color: var(--text);

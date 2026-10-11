@@ -317,7 +317,7 @@ export interface AssistantBenchmarkResult {
     quality: ProposalQuality;
 }
 
-export function gradeBenchmarkCase(testCase: AssistantBenchmarkCase): AssistantBenchmarkResult {
+function gradeBenchmarkCase(testCase: AssistantBenchmarkCase): AssistantBenchmarkResult {
     const quality = evaluateProposal(testCase.candidate, testCase.action, {
         schema: benchmarkSchema,
     });

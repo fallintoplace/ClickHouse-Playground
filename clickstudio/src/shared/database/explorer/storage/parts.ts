@@ -167,7 +167,7 @@ export function parseMergeTreeParts(
     };
 }
 
-export function partMetric(part: MergeTreePart, metric: PartsMetric) {
+function partMetric(part: MergeTreePart, metric: PartsMetric) {
     return BigInt(part[metric]);
 }
 

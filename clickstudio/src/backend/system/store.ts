@@ -152,7 +152,7 @@ export class FileStore implements Store {
             .filter(Boolean);
     }
 }
-export function stableStringify(value: unknown): string {
+function stableStringify(value: unknown): string {
     if (Array.isArray(value)) return '[' + value.map(stableStringify).join(',') + ']';
     if (value && typeof value === 'object')
         return (

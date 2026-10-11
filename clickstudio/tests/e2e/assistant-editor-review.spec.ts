@@ -632,6 +632,43 @@ test('Failed SQL checks block acceptance while allowing rejection', async ({ pag
     await expect(liveEditor(page)).toHaveText(originalSql);
 });
 
+for (const [status, score, token] of [
+    ['pass', 100, '--green'],
+    ['warn', 50, '--amber'],
+    ['fail', 0, '--red'],
+] as const)
+    test(`SQL check badges show the ${status} status color in both themes`, async ({ page }) => {
+        await installProposal(page, proposedSql, {
+            quality: {
+                evaluatorVersion: 'test',
+                evaluatedAt: '2026-10-11T00:00:00.000Z',
+                status,
+                score,
+                checks: [],
+            },
+        });
+        await trust(page);
+        await replaceSql(page, originalSql);
+        await askForChanges(page);
+        const badge = page.locator('.proposal-quality');
+        await expect(badge).toBeVisible();
+        for (const theme of ['Dark theme', 'Light theme']) {
+            await page
+                .getByRole('radiogroup', { name: 'Theme' })
+                .getByRole('radio', { name: theme })
+                .click();
+            const expectedColor = await page.evaluate(variable => {
+                const probe = document.createElement('span');
+                probe.style.color = `var(${variable})`;
+                document.body.append(probe);
+                const color = getComputedStyle(probe).color;
+                probe.remove();
+                return color;
+            }, token);
+            await expect(badge).toHaveCSS('color', expectedColor);
+        }
+    });
+
 for (const reply of [
     { name: 'explanations', sql: proposedSql, action: 'explain' },
     { name: 'reviews', sql: proposedSql, action: 'review' },

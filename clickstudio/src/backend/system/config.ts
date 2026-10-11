@@ -58,7 +58,6 @@ export interface Config {
     sensitiveColumns: string[];
     telemetryUrl?: string;
     traceUrl?: string;
-    production: boolean;
 }
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     const host = env.HOST ?? '127.0.0.1',
@@ -202,7 +201,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
             .map(s => s.trim()),
         telemetryUrl: env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
         traceUrl: env.TRACE_URL_TEMPLATE,
-        production: env.NODE_ENV === 'production',
     };
 }
 export function publicProfile(p: Profile): Connection {

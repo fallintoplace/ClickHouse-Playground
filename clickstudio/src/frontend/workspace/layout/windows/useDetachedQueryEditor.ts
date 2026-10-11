@@ -21,17 +21,13 @@ export function useDetachedQueryEditor({
 }) {
     const { detached, open, focus, dock, setTitle } = useDetachedEditorWindow();
     const detachedWasOpen = useRef(false);
-    const { setPanelLayout, revealPanelTemporarily, clearTemporaryPanelReveal } = panels;
+    const { revealPanelTemporarily, clearTemporaryPanelReveal } = panels;
 
     useEffect(() => {
         if (!detached) {
             if (detachedWasOpen.current) {
                 detachedWasOpen.current = false;
                 clearTemporaryPanelReveal('query');
-                setPanelLayout(current => ({
-                    ...current,
-                    query: { ...current.query, mode: 'docked' },
-                }));
                 window.requestAnimationFrame(() => editorRef.current?.focus());
             }
             return;
@@ -48,15 +44,7 @@ export function useDetachedQueryEditor({
         detached.container.classList.toggle('is-beginner', experience === 'beginner');
         detached.container.classList.toggle('is-expert', experience === 'expert');
         setTitle(activeName);
-    }, [
-        activeName,
-        clearTemporaryPanelReveal,
-        detached,
-        editorRef,
-        experience,
-        setPanelLayout,
-        setTitle,
-    ]);
+    }, [activeName, clearTemporaryPanelReveal, detached, editorRef, experience, setTitle]);
 
     const openEditor = useCallback(() => {
         if (!open(activeName, experience)) {
@@ -64,16 +52,7 @@ export function useDetachedQueryEditor({
             return;
         }
         revealPanelTemporarily('query', activeDraftId);
-        setPanelLayout(current => ({ ...current, query: { ...current.query, mode: 'docked' } }));
-    }, [
-        activeDraftId,
-        activeName,
-        experience,
-        open,
-        revealPanelTemporarily,
-        setError,
-        setPanelLayout,
-    ]);
+    }, [activeDraftId, activeName, experience, open, revealPanelTemporarily, setError]);
 
     const dockEditor = useCallback(() => dock(), [dock]);
     const closeEditor = useCallback(() => dock(), [dock]);

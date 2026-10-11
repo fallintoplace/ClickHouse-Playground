@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-    parseCsv,
     parseInput,
     ImportService,
 } from '../../.core-build/src/backend/database/imports/imports.js';
+import { parseCsv } from '../../.core-build/src/shared/database/imports/parser.js';
 import {
     AssistantService,
     ASSISTANT_REQUEST_TIMEOUT_MS,

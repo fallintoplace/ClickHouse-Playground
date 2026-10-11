@@ -1367,20 +1367,13 @@ for (const legacyMode of ['floating', 'maximized'])
                     const layout = JSON.parse(
                         localStorage.getItem('clickstudio:workspace-layout:v1') ?? '{}',
                     );
-                    return {
-                        queryMode: layout.query?.mode,
-                        resultsMode: layout.results?.mode,
-                        queryCollapsed: layout.query?.collapsed,
-                        resultsCollapsed: layout.results?.collapsed,
-                        splitRatio: layout.splitRatio,
-                    };
+                    return layout;
                 }),
             )
             .toEqual({
-                queryMode: 'docked',
-                resultsMode: 'docked',
-                queryCollapsed: true,
-                resultsCollapsed: false,
+                version: 1,
+                query: { collapsed: true },
+                results: { collapsed: false },
                 splitRatio: 0.63,
             });
 

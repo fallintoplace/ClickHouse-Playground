@@ -2244,8 +2244,12 @@
     font-family: var(--font-sans);
     font-size: 7px;
   }
-  .proposal-quality.low,
-  .proposal-quality.poor {
+  .proposal-quality.warn {
+    border-color: color-mix(in srgb, var(--amber) 29%, transparent);
+    background: color-mix(in srgb, var(--amber) 5%, transparent);
+    color: var(--amber);
+  }
+  .proposal-quality.fail {
     border-color: color-mix(in srgb, var(--red) 29%, transparent);
     background: color-mix(in srgb, var(--red) 5%, transparent);
     color: var(--red);

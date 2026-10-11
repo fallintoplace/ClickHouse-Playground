@@ -58,8 +58,6 @@
   --status-ring-opacity: 18%;
   --status-ring: 0 0 0 var(--status-ring-width)
     color-mix(in srgb, currentColor var(--status-ring-opacity), transparent);
-  --status-ring-accent: 0 0 0 var(--status-ring-width)
-    color-mix(in srgb, var(--accent) var(--status-ring-opacity), transparent);
   --overlay-backdrop: #03080cad;
   --surface-glass: var(--page-raised);
   --panel-header: var(--panel-raised);

@@ -498,7 +498,7 @@ export class ArtifactService {
             if (Date.parse(s.expiresAt) <= Date.now()) this.store.delete('shares', s.id);
     }
 }
-export function parseChart(value: unknown): ChartConfig {
+function parseChart(value: unknown): ChartConfig {
     if (value === undefined) return { kind: 'table', x: 0, ys: [], title: 'Query result' };
     const v = record(value),
         kind = CHART_KINDS.find(candidate => candidate === v.kind);

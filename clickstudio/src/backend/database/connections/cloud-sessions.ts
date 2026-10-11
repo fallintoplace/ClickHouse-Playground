@@ -103,8 +103,4 @@ export class CloudConnectionSessions {
     revoke(cookie?: string) {
         for (const token of tokensFromCookie(cookie)) this.sessions.delete(keyFor(token));
     }
-
-    get size() {
-        return this.sessions.size;
-    }
 }

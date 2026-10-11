@@ -1,10 +1,6 @@
-import {
-    ImportParseError,
-    parseCsv as parseImportCsv,
-    parseImportSource,
-} from '../../../shared/database/imports/parser.js';
+import { ImportParseError, parseImportSource } from '../../../shared/database/imports/parser.js';
 import type { ImportJobStatus } from '../../../shared/database/imports/status.js';
-import { MAX_IMPORT_ROWS, type ImportFormat } from '../../../shared/database/imports/limits.js';
+import type { ImportFormat } from '../../../shared/database/imports/limits.js';
 import { randomUUID } from 'node:crypto';
 import type { Json } from '../../../shared/common/values.js';
 import type { Principal } from '../../../shared/common/identity.js';
@@ -33,10 +29,6 @@ function parsedImport<T>(parse: () => T): T {
             throw new AppError(error.status, error.code, error.message);
         throw error;
     }
-}
-
-export function parseCsv(source: string, maxRows = MAX_IMPORT_ROWS) {
-    return parsedImport(() => parseImportCsv(source, maxRows));
 }
 
 export function parseInput(source: string, format: InputPreview['format']) {

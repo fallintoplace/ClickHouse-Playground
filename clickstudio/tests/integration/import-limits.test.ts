@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseInput } from '../../src/backend/database/imports/imports.js';
+import { parseCsv } from '../../src/shared/database/imports/parser.js';
 import { mapImportRows } from '../../src/shared/database/imports/mapping.js';
 import { parseImportFile } from '../../src/frontend/api/samples/demo-import-data.js';
 import type { ImportFormat } from '../../src/shared/database/imports/limits.js';
@@ -143,8 +144,7 @@ for (const [format, source, code, message] of errorCases) {
     });
 }
 
-test('CSV row limits preserve custom server limits and distinct overflow messages', async () => {
-    const { parseCsv } = await import('../../src/backend/database/imports/imports.js');
+test('CSV row limits preserve custom parser limits and distinct overflow messages', () => {
     assert.equal(parseCsv('a\n', 0).rows.length, 0);
     assert.equal(parseCsv('a\n1', 1).rows.length, 1);
     assert.throws(() => parseCsv('a\n1\n2', 1), {
