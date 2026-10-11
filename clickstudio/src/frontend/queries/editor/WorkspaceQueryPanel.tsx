@@ -552,7 +552,7 @@ function renderQueryHeading({
                         </Button>
                     )
                 )}
-                {!detached && (
+                {!detached && panels.canCollapse && (
                     <Button
                         variant="ghost"
                         className="panel-collapse-button"

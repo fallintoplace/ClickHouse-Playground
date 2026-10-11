@@ -732,6 +732,7 @@ function useWorkspaceExecutionView({
     );
     const panels = useWorkspacePanels({
         activeDraftId: active.id,
+        canCollapse: experience === 'expert',
         compactViewport,
         hasOutput: outputVisible,
     });

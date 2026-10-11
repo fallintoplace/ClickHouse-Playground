@@ -61,8 +61,14 @@ for (const theme of ['Light', 'Dark']) {
                 'succeeded',
             );
             await expectReferenceStyles(page, info, 'query-results');
-            await page.getByRole('button', { name: 'Collapse SQL query', exact: true }).click();
-            await expectReferenceStyles(page, info, 'collapsed-query');
+            if (mode === 'Experimental') {
+                await page.getByRole('button', { name: 'Collapse SQL query', exact: true }).click();
+                await expectReferenceStyles(page, info, 'collapsed-query');
+            } else {
+                await expect(page.locator('.panel-collapse-button')).toHaveCount(0);
+                await expect(page.locator('#sql-editor-content')).toBeVisible();
+                await expectReferenceStyles(page, info, 'expanded-query');
+            }
             await page.route(
                 url => url.pathname.endsWith('/result'),
                 async route => {

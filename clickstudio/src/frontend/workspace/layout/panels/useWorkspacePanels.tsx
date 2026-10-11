@@ -23,10 +23,12 @@ export type PanelPointerStartEvent = {
 
 export function useWorkspacePanels({
     activeDraftId,
+    canCollapse,
     compactViewport,
     hasOutput,
 }: {
     activeDraftId: string;
+    canCollapse: boolean;
     compactViewport: boolean;
     hasOutput: boolean;
 }) {
@@ -62,9 +64,10 @@ export function useWorkspacePanels({
         });
     }, [activeDraftId]);
 
-    const queryCollapsed = panelLayout.query.collapsed && temporaryReveals.query !== activeDraftId;
+    const queryCollapsed =
+        canCollapse && panelLayout.query.collapsed && temporaryReveals.query !== activeDraftId;
     const resultsCollapsed =
-        panelLayout.results.collapsed && temporaryReveals.results !== activeDraftId;
+        canCollapse && panelLayout.results.collapsed && temporaryReveals.results !== activeDraftId;
     const revealPanelTemporarily = (panel: WorkspacePanelId, draftId = activeDraftId) => {
         setTemporaryReveals(current => ({ ...current, [panel]: draftId }));
     };
@@ -119,6 +122,7 @@ export function useWorkspacePanels({
     };
 
     return {
+        canCollapse,
         compactViewport,
         queryCollapsed,
         setQueryCollapsed,

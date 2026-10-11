@@ -940,18 +940,34 @@ for (const theme of ['Dark', 'Light'])
                 failure.getByRole('button', { name: 'Fix with AI', exact: true }),
             ).toHaveCount(0);
             const headerBounds = (await header.boundingBox())!;
-            const collapseBounds = (await header.locator('.panel-collapse-button').boundingBox())!;
             const fixBounds = (await fix.boundingBox())!;
             expect(fixBounds.x).toBeGreaterThanOrEqual(headerBounds.x);
-            expect(fixBounds.x + fixBounds.width).toBeLessThan(collapseBounds.x);
+            expect(fixBounds.x + fixBounds.width).toBeLessThanOrEqual(
+                headerBounds.x + headerBounds.width,
+            );
             expect(fixBounds.y).toBeGreaterThanOrEqual(headerBounds.y);
             expect(fixBounds.y + fixBounds.height).toBeLessThanOrEqual(
                 headerBounds.y + headerBounds.height,
             );
-            expect(fixBounds.y + fixBounds.height / 2).toBeCloseTo(
-                collapseBounds.y + collapseBounds.height / 2,
-                0,
-            );
+            if (mode === 'Experimental') {
+                const collapseBounds = (await header
+                    .locator('.panel-collapse-button')
+                    .boundingBox())!;
+                expect(fixBounds.x + fixBounds.width).toBeLessThan(collapseBounds.x);
+                expect(fixBounds.y + fixBounds.height / 2).toBeCloseTo(
+                    collapseBounds.y + collapseBounds.height / 2,
+                    0,
+                );
+            } else {
+                await expect(header.locator('.panel-collapse-button')).toHaveCount(0);
+                expect(
+                    Math.abs(
+                        fixBounds.y +
+                            fixBounds.height / 2 -
+                            (headerBounds.y + headerBounds.height / 2),
+                    ),
+                ).toBeLessThanOrEqual(1);
+            }
             const contrast = await fix.evaluate(element => {
                 const style = getComputedStyle(element);
                 const rgb = (color: string) =>
@@ -1281,11 +1297,16 @@ test('Run Script shows the full submitted script while submission is pending', a
     }
 });
 
-test('Query and result panels collapse to their headings', async ({ page }) => {
+test('Experimental panels retain collapse settings while Standard keeps them expanded', async ({
+    page,
+}) => {
     await page.setViewportSize({ width: 1905, height: 1280 });
     await trust(page);
+    await useAdvancedMode(page);
     const results = await runQuery(page);
-    await page.getByText('Standard', { exact: true }).click();
+    const sql = await page.locator('.cm-content').textContent();
+    const rows = await results.getByRole('table', { name: 'Retained query rows' }).innerText();
+    const queryId = await currentQueryId(page);
     const queryPanel = page.locator('.editor-surface');
     const resultsPanel = results;
 
@@ -1309,6 +1330,23 @@ test('Query and result panels collapse to their headings', async ({ page }) => {
         )
         .toBe(true);
     await page.reload();
+    await expect(page.locator('#sql-editor-content')).toBeHidden();
+    await expect(page.locator('#query-results-content')).toBeHidden();
+
+    await page.getByText('Standard', { exact: true }).click();
+    await expect(page.locator('.panel-collapse-button')).toHaveCount(0);
+    await expect(page.locator('#sql-editor-content')).toBeVisible();
+    await expect(page.locator('#query-results-content')).toBeVisible();
+    await expect(page.locator('.cm-content')).toHaveText(sql!);
+    await expect(results.getByRole('table', { name: 'Retained query rows' })).toHaveText(rows, {
+        useInnerText: true,
+    });
+    await expect(page.locator('.execution-bar')).toHaveAttribute('data-query-id', queryId);
+    await page.reload();
+    await expect(page.locator('.panel-collapse-button')).toHaveCount(0);
+    await expect(page.locator('#sql-editor-content')).toBeVisible();
+    await expect(page.locator('#query-results-content')).toBeVisible();
+    await useAdvancedMode(page);
     await expect(page.locator('#sql-editor-content')).toBeHidden();
     await expect(page.locator('#query-results-content')).toBeHidden();
 
@@ -1430,8 +1468,6 @@ for (const mode of ['Standard', 'Experimental'])
         const retainedRows = await results
             .getByRole('table', { name: 'Retained query rows' })
             .innerText();
-        await page.locator('button[aria-controls="sql-editor-content"]').click();
-
         if (mode === 'Standard') {
             await expect(
                 page.getByRole('button', {
@@ -1441,6 +1477,7 @@ for (const mode of ['Standard', 'Experimental'])
             ).toHaveCount(0);
             await page.getByText('Experimental', { exact: true }).click();
         }
+        await page.locator('button[aria-controls="sql-editor-content"]').click();
         const editorPopupPromise = page.waitForEvent('popup');
         await page
             .getByRole('button', { name: 'Open editor in a separate window', exact: true })
@@ -1489,8 +1526,13 @@ for (const mode of ['Standard', 'Experimental'])
         await editorPopup.getByRole('button', { name: 'Dock editor here', exact: true }).click();
         await expect.poll(() => editorPopup.isClosed()).toBe(true);
         await expect(page.locator('.detached-query-placeholder')).toHaveCount(0);
-        await expect(page.locator('#sql-editor-content')).toBeHidden();
-        await page.locator('button[aria-controls="sql-editor-content"]').click();
+        if (mode === 'Experimental') {
+            await expect(page.locator('#sql-editor-content')).toBeHidden();
+            await page.locator('button[aria-controls="sql-editor-content"]').click();
+        } else {
+            await expect(page.locator('#sql-editor-content')).toBeVisible();
+            await expect(page.locator('.panel-collapse-button')).toHaveCount(0);
+        }
         await expect(page.locator('.cm-content')).toHaveText(editedSql);
         await expect(
             page.getByRole('button', { name: 'Open editor in a separate window', exact: true }),

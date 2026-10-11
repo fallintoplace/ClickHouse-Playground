@@ -88,8 +88,13 @@ for (const mode of ['beginner', 'expert'])
         await replaceSql(page, failedSql);
         await rejectQuery(page);
         await expect(title).toBeVisible();
-        await page.getByRole('button', { name: 'Collapse Query results', exact: true }).click();
-        await expect(page.getByTestId('query-failure')).toBeHidden();
+        if (mode === 'expert') {
+            await page.getByRole('button', { name: 'Collapse Query results', exact: true }).click();
+            await expect(page.getByTestId('query-failure')).toBeHidden();
+        } else {
+            await expect(header.locator('.panel-collapse-button')).toHaveCount(0);
+            await expect(page.getByTestId('query-failure')).toBeVisible();
+        }
         await expect(title).toBeVisible();
         const fix = header.getByRole('button', { name: 'Fix with AI', exact: true });
         await expect(fix).toBeVisible();

@@ -107,7 +107,9 @@ for (const mode of ['Standard', 'Experimental']) {
         const tabs = page.getByRole('tablist', { name: 'SQL documents', exact: true });
         const originalTab = tabs.getByRole('tab').first();
         const originalName = await originalTab.getAttribute('aria-label');
-        await page.getByRole('button', { name: 'Collapse SQL query', exact: true }).click();
+        if (mode === 'Experimental')
+            await page.getByRole('button', { name: 'Collapse SQL query', exact: true }).click();
+        else await expect(page.locator('.panel-collapse-button')).toHaveCount(0);
 
         await page.getByTestId('new-sql').click();
 
@@ -130,7 +132,8 @@ for (const mode of ['Standard', 'Experimental']) {
             await expect(tabs.getByRole('tab').last()).toHaveAttribute('aria-selected', 'true');
         }
         await page.getByRole('tab', { name: originalName!, exact: true }).click();
-        await page.getByRole('button', { name: 'Expand SQL query', exact: true }).click();
+        if (mode === 'Experimental')
+            await page.getByRole('button', { name: 'Expand SQL query', exact: true }).click();
         await expect(page.locator('.cm-content')).toHaveText(sql);
         expect(runs()).toBe(0);
     });

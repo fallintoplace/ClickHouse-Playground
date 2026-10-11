@@ -607,21 +607,23 @@ function renderResultsHeader({
                         {copy.common.fixWithAi}
                     </Button>
                 )}
-                <Button
-                    variant="ghost"
-                    className="panel-collapse-button"
-                    aria-label={`${panels.resultsCollapsed ? copy.common.expand : copy.common.collapse} ${headerPanelLabel}`}
-                    aria-expanded={!panels.resultsCollapsed}
-                    aria-controls="query-results-content"
-                    title={
-                        panels.resultsCollapsed
-                            ? copy.common.expandOutput
-                            : copy.common.collapseOutput
-                    }
-                    onClick={() => panels.setResultsCollapsed(value => !value)}
-                >
-                    <Icon className="panel-toggle-icon" name="chevron" />
-                </Button>
+                {panels.canCollapse && (
+                    <Button
+                        variant="ghost"
+                        className="panel-collapse-button"
+                        aria-label={`${panels.resultsCollapsed ? copy.common.expand : copy.common.collapse} ${headerPanelLabel}`}
+                        aria-expanded={!panels.resultsCollapsed}
+                        aria-controls="query-results-content"
+                        title={
+                            panels.resultsCollapsed
+                                ? copy.common.expandOutput
+                                : copy.common.collapseOutput
+                        }
+                        onClick={() => panels.setResultsCollapsed(value => !value)}
+                    >
+                        <Icon className="panel-toggle-icon" name="chevron" />
+                    </Button>
+                )}
             </div>
         </div>
     );

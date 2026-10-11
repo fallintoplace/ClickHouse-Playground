@@ -190,7 +190,7 @@ for (const theme of ['Dark', 'Light'])
                 '[data-testid="run-button"]',
                 ...(mode === 'Experimental' ? ['[data-testid="save-query"]'] : []),
                 ...(mode === 'Experimental' ? ['.panel-window-button'] : []),
-                '.panel-collapse-button',
+                ...(mode === 'Experimental' ? ['.panel-collapse-button'] : []),
                 '.result-filter',
             ]) {
                 await expect(page.locator(selector).first()).toHaveCSS('border-radius', '4px');
