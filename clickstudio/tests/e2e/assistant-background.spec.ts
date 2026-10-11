@@ -57,10 +57,16 @@ async function selectChat(page: Page, title: string) {
 }
 
 async function deleteChat(page: Page, title: string) {
-    await page.getByRole('button', { name: /^Chat history:/ }).click();
+    const history = page.getByRole('button', { name: /^Chat history:/ });
+    if ((await history.getAttribute('aria-expanded')) !== 'true') await history.click();
     await page.getByRole('button', { name: `Actions for ${title}`, exact: true }).click();
     await page.getByRole('button', { name: 'Delete', exact: true }).click();
-    await page.getByRole('button', { name: 'Delete conversation', exact: true }).click();
+    await expect(page.getByRole('alertdialog', { name: 'Delete this conversation?' })).toHaveCount(
+        0,
+    );
+    await expect(
+        page.locator('.assistant-chat-history-select').filter({ hasText: title }),
+    ).toHaveCount(0);
 }
 
 for (const mode of ['beginner', 'expert']) {
@@ -196,30 +202,48 @@ test('Stopping one chat does not cancel another or overwrite a replacement reque
     );
 });
 
-test('Deleting a background chat cancels only its reply and cannot restore the deleted chat', async ({
-    page,
-}) => {
-    const requests = await deferredReplies(page);
-    await trust(page);
-    await page.getByTestId('open-ai').click();
-    await ask(page, 'Deleted question');
-    await expect.poll(() => requests.length).toBe(1);
-    await page.getByRole('button', { name: 'New chat', exact: true }).click();
-    await ask(page, 'Retained question');
-    await expect.poll(() => requests.length).toBe(2);
-    await deleteChat(page, 'Deleted question');
-    requests[0]!.reply('SELECT 999');
-    await expect(page.locator('.assistant-pending')).toBeVisible();
-    requests[1]!.reply();
-    await expect(page.getByTestId('assistant-answer-markdown')).toHaveText(
-        'Reply to Retained question',
-    );
-    await page.getByRole('button', { name: /^Chat history:/ }).click();
-    await expect(page.locator('.assistant-chat-history-select')).toHaveCount(1);
-    await expect(page.locator('.assistant-chat-history-select > span:first-child')).toHaveText(
-        'Retained question',
-    );
-});
+for (const mode of ['beginner', 'expert']) {
+    test(`Deleting a background chat immediately cancels only its reply in ${mode} mode`, async ({
+        page,
+    }) => {
+        const requests = await deferredReplies(page);
+        await page.addInitScript(
+            mode => localStorage.setItem('clickstudio:experience', mode),
+            mode,
+        );
+        await trust(page);
+        await page.getByTestId('open-ai').click();
+        await ask(page, 'Deleted question');
+        await expect.poll(() => requests.length).toBe(1);
+        await page.getByRole('button', { name: 'New chat', exact: true }).click();
+        await ask(page, 'Retained question');
+        await expect.poll(() => requests.length).toBe(2);
+        await deleteChat(page, 'Deleted question');
+        requests[0]!.reply('SELECT 999');
+        await expect(page.locator('.assistant-pending')).toBeVisible();
+        requests[1]!.reply();
+        await expect(page.getByTestId('assistant-answer-markdown')).toHaveText(
+            'Reply to Retained question',
+        );
+        await page.getByRole('button', { name: /^Chat history:/ }).click();
+        await expect(page.locator('.assistant-chat-history-select')).toHaveCount(1);
+        await expect(page.locator('.assistant-chat-history-select > span:first-child')).toHaveText(
+            'Retained question',
+        );
+        await deleteChat(page, 'Retained question');
+        await expect(page.locator('.assistant-empty-chat')).toBeVisible();
+        await expect(
+            page.getByRole('button', { name: 'Chat history: New chat', exact: true }),
+        ).toBeFocused();
+        await page.reload();
+        await page.getByTestId('open-ai').click();
+        await expect(page.locator('.assistant-empty-chat')).toBeVisible();
+        await page.getByRole('button', { name: /^Chat history:/ }).click();
+        await expect(page.locator('.assistant-chat-history-select > span:first-child')).toHaveText(
+            'New chat',
+        );
+    });
+}
 
 test('A failed background reply records its error only in the original chat', async ({ page }) => {
     const requests = await deferredReplies(page);

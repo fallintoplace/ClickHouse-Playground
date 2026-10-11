@@ -274,7 +274,7 @@ async function openFocusHarness(page: Page) {
 }
 
 for (const theme of ['Dark', 'Light']) {
-    test(`${theme} chat history uses one search border and restores focus after cancelling deletion`, async ({
+    test(`${theme} chat history uses one search border and restores focus after immediate deletion`, async ({
         page,
     }) => {
         await loadFocusHarness(page);
@@ -293,22 +293,19 @@ for (const theme of ['Dark', 'Light']) {
         await expect(wrapper).toHaveCSS('border-color', await resolvedFocusColor(wrapper));
         await page.getByRole('button', { name: 'Actions for Conversation 0', exact: true }).click();
         const opener = page.getByRole('button', { name: 'Delete', exact: true });
-        await opener.click();
+        await opener.focus();
+        await page.keyboard.press('Enter');
         const dialog = page.getByRole('alertdialog', {
             name: 'Delete this conversation?',
             exact: true,
         });
-        const cancel = dialog.getByRole('button', { name: 'Cancel', exact: true });
-        await expect(cancel).toBeFocused();
-        await page.keyboard.press('Shift+Tab');
+        await expect(dialog).toHaveCount(0);
         await expect(
-            dialog.getByRole('button', { name: 'Delete conversation', exact: true }),
-        ).toBeFocused();
-        await page.keyboard.press('Tab');
-        await expect(cancel).toBeFocused();
+            page.locator('.assistant-chat-history-select').filter({ hasText: 'Conversation 0' }),
+        ).toHaveCount(0);
+        await expect(page.getByRole('button', { name: /^Chat history:/ })).toBeFocused();
         await page.keyboard.press('Escape');
-        await expect(dialog).toBeHidden();
-        await expect(opener).toBeFocused();
+        await expect(page.getByRole('region', { name: 'Chat history', exact: true })).toBeHidden();
     });
 }
 
