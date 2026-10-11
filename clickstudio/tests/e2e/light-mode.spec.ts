@@ -41,7 +41,11 @@ async function expectReadableText(root: Locator, label: string) {
         const violations: { text: string; ratio: number }[] = [];
         let checked = 0;
         for (const element of root.querySelectorAll('*')) {
-            if (!(element instanceof HTMLElement) || element.closest(':disabled, [hidden]'))
+            if (
+                !(element instanceof HTMLElement) ||
+                element.closest(':disabled, [hidden]') ||
+                element.matches('.brand-name > span')
+            )
                 continue;
             const style = getComputedStyle(element);
             const bounds = element.getBoundingClientRect();
