@@ -1,5 +1,10 @@
 import { useRef, type Dispatch, type RefObject, type SetStateAction } from 'react';
-import { parameterNames, selectedStatement, splitSql } from '../../../shared/sql/sql';
+import {
+    parameterNames,
+    selectedStatement,
+    splitSql,
+    SqlSyntaxError,
+} from '../../../shared/sql/sql';
 import type { Run, Script } from '../../../shared/queries/execution/types';
 import type { RunKind } from '../../../shared/queries/execution/status';
 import { DEFAULT_LIMITS } from '../../../shared/queries/execution/settings';
@@ -17,10 +22,7 @@ import type { usePendingExecution } from './usePendingExecution';
 import type { useRunEvidence } from './useRunEvidence';
 import type { useScopedValue } from '../../browser/useScopedValue';
 import type { useScriptExecution } from './useScriptExecution';
-import type {
-    WorkspaceFeedback,
-    useWorkspaceNotifications,
-} from '../../workspace/layout/notifications/useWorkspaceNotifications';
+import type { useWorkspaceNotifications } from '../../workspace/layout/notifications/useWorkspaceNotifications';
 import type { WorkspacePanelController } from '../../workspace/layout/panels/useWorkspacePanels';
 import { apiErrorDetail, type FailedQueryError } from '../../workspace/workspace-helpers';
 import {
@@ -58,7 +60,6 @@ type WorkspaceExecutionOptions = {
     setCancelling: Dispatch<SetStateAction<boolean>>;
     setExampleChartRunId: Dispatch<SetStateAction<string | undefined>>;
     setError: ReturnType<typeof useWorkspaceNotifications>['setError'];
-    setDraftFeedback: ReturnType<typeof useScopedValue<WorkspaceFeedback | undefined>>[1];
     clearFailedQueryError: (draftId: string) => void;
     storeFailedQueryError: (failure: FailedQueryError) => void;
     setViewForDraft: ReturnType<typeof useScopedValue<ResultsView>>[1];
@@ -119,12 +120,10 @@ export function useWorkspaceExecution({
     setCancelling,
     setExampleChartRunId,
     setError,
-    setDraftFeedback,
     clearFailedQueryError,
     storeFailedQueryError,
     setViewForDraft,
 }: WorkspaceExecutionOptions) {
-    const executionFailureRef = useRef<{ id: string; name: string } | undefined>(undefined);
     const executionInFlightRef = useRef(false);
     const cancellingRef = useRef(false);
     const { run, setRunForRun } = evidence;
@@ -139,53 +138,24 @@ export function useWorkspaceExecution({
         try {
             await task();
         } catch (caught) {
-            if (executionFailureRef.current) {
-                const failedDraft = executionFailureRef.current;
-                executionFailureRef.current = undefined;
-                if (workspaceRef.current.activeId !== failedDraft.id) {
-                    const canOpen = workspaceRef.current.tabs.some(
-                        item => item.id === failedDraft.id,
-                    );
-                    setError(
-                        `“${failedDraft.name}” failed.${canOpen ? ' Open the tab to see the error.' : ''}`,
-                        {
-                            context: `query:${failedDraft.id}`,
-                            detail: message(caught),
-                            action: canOpen
-                                ? {
-                                      label: 'Open tab',
-                                      onSelect: () => {
-                                          if (
-                                              !workspaceRef.current.tabs.some(
-                                                  item => item.id === failedDraft.id,
-                                              )
-                                          )
-                                              return;
-                                          setWorkspace(current => ({
-                                              ...current,
-                                              activeId: failedDraft.id,
-                                          }));
-                                          panels.revealPanelTemporarily('results', failedDraft.id);
-                                      },
-                                  }
-                                : undefined,
-                        },
-                    );
-                }
-            } else if (onFailure) {
+            if (onFailure) {
                 onFailure(caught);
             } else {
-                setDraftFeedback(active.id, { tone: 'warning', message: message(caught) }, true);
+                setError(message(caught));
             }
         } finally {
             setBusy('');
         }
     };
-    const performExecution = async (task: () => Promise<void>, kind: BusyAction = 'run') => {
+    const performExecution = async (
+        task: () => Promise<void>,
+        kind: BusyAction = 'run',
+        onFailure?: (caught: unknown) => void,
+    ) => {
         if (executionInFlightRef.current) return;
         executionInFlightRef.current = true;
         try {
-            await perform(task, kind);
+            await perform(task, kind, onFailure);
         } finally {
             executionInFlightRef.current = false;
         }
@@ -212,17 +182,35 @@ export function useWorkspaceExecution({
         return true;
     };
     const recordFailedQueryError = (failure: FailedQueryError) => {
-        executionFailureRef.current = {
-            id: failure.draftId,
-            name:
-                (
-                    workspaceRef.current.tabs.find(draft => draft.id === failure.draftId) ??
-                    workspaceRef.current.closedTabs?.find(draft => draft.id === failure.draftId)
-                )?.name ?? 'Query',
-        };
         storeFailedQueryError(failure);
-        if (workspaceRef.current.activeId !== failure.draftId) return;
         setViewForDraft(failure.draftId, 'results', true);
+        if (workspaceRef.current.activeId !== failure.draftId) {
+            const draft = workspaceRef.current.tabs.find(item => item.id === failure.draftId);
+            const name =
+                draft?.name ??
+                workspaceRef.current.closedTabs?.find(item => item.id === failure.draftId)?.name ??
+                'Query';
+            setError(`“${name}” failed.${draft ? ' Open the tab to see the error.' : ''}`, {
+                context: `query:${failure.draftId}`,
+                detail: failure.error.message,
+                action: draft
+                    ? {
+                          label: 'Open tab',
+                          onSelect: () => {
+                              if (
+                                  !workspaceRef.current.tabs.some(
+                                      item => item.id === failure.draftId,
+                                  )
+                              )
+                                  return;
+                              setWorkspace(current => ({ ...current, activeId: failure.draftId }));
+                              panels.revealPanelTemporarily('results', failure.draftId);
+                          },
+                      }
+                    : undefined,
+            });
+            return;
+        }
         panels.revealPanelTemporarily('results', failure.draftId);
     };
 
@@ -431,7 +419,11 @@ function createDraftExecutor({
     loadHistory,
     evidence,
 }: {
-    performExecution: (task: () => Promise<void>, kind?: BusyAction) => Promise<void>;
+    performExecution: (
+        task: () => Promise<void>,
+        kind?: BusyAction,
+        onFailure?: (caught: unknown) => void,
+    ) => Promise<void>;
     trusted: WorkspaceExecutionOptions['trusted'];
     connection: WorkspaceExecutionOptions['connection'];
     importedReveal: WorkspaceExecutionOptions['importedReveal'];
@@ -479,7 +471,7 @@ function createDraftExecutor({
         const isScript = kind === 'query' && statements.length > 1;
         const statement = isScript ? undefined : statements[0];
         const draftSql = options.draftSql ?? draft.sql;
-        let sourceRange: { from: number; to: number } | undefined;
+        let sourceRange: { from: number; to: number } | undefined = options.sourceRange;
         if (isScript) sourceRange = options.sourceRange;
         else if (statement) {
             if (options.sourceRange)
@@ -582,13 +574,6 @@ function createDraftExecutor({
                         created = await post<Script>('/scripts', { ...payload, stopOnError: true });
                     } catch (caught) {
                         pendingExecution.clear(payload.clientRequestId);
-                        recordFailedQueryError({
-                            draftId: draft.id,
-                            draftSql,
-                            statementSql: payload.sql,
-                            sourceFrom: sourceRange?.from ?? 0,
-                            error: apiErrorDetail(caught),
-                        });
                         throw caught;
                     }
                     pendingExecution.acceptScript(payload.clientRequestId, created.id);
@@ -625,14 +610,6 @@ function createDraftExecutor({
                         created = await post<Run>('/runs', payload);
                     } catch (caught) {
                         pendingExecution.clear(payload.clientRequestId);
-                        if (statement)
-                            recordFailedQueryError({
-                                draftId: draft.id,
-                                draftSql,
-                                statementSql: statement.sql,
-                                sourceFrom: sourceRange?.from ?? 0,
-                                error: apiErrorDetail(caught),
-                            });
                         throw caught;
                     }
                     pendingExecution.acceptRun(payload.clientRequestId, created.id);
@@ -678,6 +655,21 @@ function createDraftExecutor({
                 void loadHistory().catch(() => undefined);
             },
             isScript ? 'script' : 'run',
+            caught =>
+                recordFailedQueryError({
+                    draftId: draft.id,
+                    draftSql,
+                    statementSql: statement?.sql ?? sql,
+                    sourceFrom: sourceRange?.from ?? 0,
+                    error:
+                        caught instanceof SqlSyntaxError
+                            ? {
+                                  code: 'SQL_SYNTAX',
+                                  message: caught.message,
+                                  position: caught.position,
+                              }
+                            : apiErrorDetail(caught),
+                }),
         );
     };
 }

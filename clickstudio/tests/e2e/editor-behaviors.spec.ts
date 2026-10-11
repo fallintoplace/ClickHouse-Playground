@@ -239,7 +239,7 @@ for (const parser of ['native', 'fallback'] as const) {
     });
 }
 
-test('incomplete SQL Run actions show feedback without unhandled errors or requests', async ({
+test('incomplete SQL Run actions show errors in Results without editor banners or requests', async ({
     page,
 }) => {
     await trust(page);
@@ -256,12 +256,10 @@ test('incomplete SQL Run actions show feedback without unhandled errors or reque
     for (const sql of ["SELECT 'unfinished", 'SELECT /* unfinished', 'SELECT $tag$unfinished']) {
         await replaceSql(page, sql);
         await runButton(page).click();
-        await expect(
-            page
-                .getByRole('alert')
-                .filter({ hasText: /Unclosed/ })
-                .first(),
-        ).toBeVisible();
+        await expect(page.getByTestId('query-failure')).toContainText('Unclosed');
+        await expect(page.locator('.cm-panel-lint')).toHaveCount(0);
+        await expect(page.getByRole('button', { name: '1 SQL issue', exact: true })).toBeVisible();
+        await expect(page.locator('.editor-surface > .workspace-inline-notice')).toHaveCount(0);
     }
     expect(errors).toEqual([]);
     expect(runs).toBe(0);

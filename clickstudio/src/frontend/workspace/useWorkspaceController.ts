@@ -190,7 +190,8 @@ export function useWorkspaceController({
         busy,
         setError,
         clearToast,
-        setDraftFeedback,
+        beginDraftFeedback,
+        clearDraftFeedbackInfo,
         setSearch,
         setInspector,
         setDrawerOpen,
@@ -280,12 +281,15 @@ export function useWorkspaceController({
     );
     const patch = useCallback(
         (values: Partial<Draft>) => {
-            update(active.id, draft => ({ ...draft, ...values }));
-            setDraftFeedback(active.id, current =>
-                current?.tone === 'info' ? undefined : current,
+            const draft = workspaceRef.current.tabs.find(item => item.id === active.id);
+            const contentChanged = Object.entries(values).some(
+                ([key, value]) =>
+                    key !== 'from' && key !== 'to' && value !== draft?.[key as keyof Draft],
             );
+            update(active.id, draft => ({ ...draft, ...values }));
+            if (contentChanged) clearDraftFeedbackInfo(active.id);
         },
-        [active.id, update, setDraftFeedback],
+        [active.id, update, clearDraftFeedbackInfo, workspaceRef],
     );
     const formatActiveSql = useWorkspaceSqlFormatter(
         active,
@@ -355,7 +359,6 @@ export function useWorkspaceController({
     const reportDocumentFailure = createDocumentFailureReporter({
         workspaceRef,
         setWorkspace,
-        setDraftFeedback,
         setError,
         panels: executionView.panels,
     });
@@ -372,9 +375,10 @@ export function useWorkspaceController({
         setSavingDraftIds,
         setDocuments,
         loadDocumentRevisions,
-        setDraftFeedback,
+        beginDraftFeedback,
         clearToast,
-        onFailure: (draft, caught) => reportDocumentFailure(draft, 'save', caught),
+        onFailure: (draft, caught, complete) =>
+            reportDocumentFailure(draft, 'save', caught, complete),
     });
 
     const finishTabRename = (
@@ -393,7 +397,7 @@ export function useWorkspaceController({
         setRestoreRevisionConfirmation,
         update,
         data,
-        setDraftFeedback,
+        beginDraftFeedback,
         clearToast,
         reportDocumentFailure,
     });
@@ -556,7 +560,8 @@ function useDismissVisibleDraftToast(
     clearToast: ReturnType<typeof useWorkspaceNotifications>['clearToast'],
 ) {
     useEffect(() => {
-        clearToast(`draft:${draftId}`);
+        clearToast(`draft:${draftId}:save`);
+        clearToast(`draft:${draftId}:restore`);
         clearToast(`query:${draftId}`);
     }, [draftId, clearToast]);
 }
@@ -675,7 +680,6 @@ function useWorkspaceExecutionView({
         failedQueryError,
         compactViewport,
         setError,
-        setDraftFeedback,
         busy,
         setBusy,
         setCancelling,
@@ -775,7 +779,6 @@ function useWorkspaceExecutionView({
         setCancelling,
         setExampleChartRunId,
         setError,
-        setDraftFeedback,
         clearFailedQueryError,
         storeFailedQueryError,
         setViewForDraft,

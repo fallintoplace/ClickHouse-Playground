@@ -6,6 +6,7 @@ import {
     useLayoutEffect,
     useMemo,
     useRef,
+    useState,
 } from 'react';
 import type { RefCallback } from 'react';
 import { EditorState, Compartment, StateEffect, StateField } from '@codemirror/state';
@@ -37,7 +38,15 @@ import {
     type CompletionResult,
 } from '@codemirror/autocomplete';
 import { sql } from '@codemirror/lang-sql';
-import { lintGutter, setDiagnostics } from '@codemirror/lint';
+import {
+    closeLintPanel,
+    lintGutter,
+    lintKeymap,
+    setDiagnostics,
+    type Diagnostic,
+} from '@codemirror/lint';
+import { SqlDiagnosticsFooter } from './SqlDiagnosticsFooter';
+import { diagnosticNavigation, lexicalDiagnostic } from './editor-diagnostics';
 import type { ApiError } from '../../../../shared/common/errors';
 import type { Schema } from '../../../../shared/database/schema/types';
 import type { SqlErrorRange } from '../sql-error';
@@ -260,6 +269,27 @@ export interface SqlEditorProps {
     onNativeParserStatus?: (status: NativeParserStatus) => void;
     onNativeParseSnapshot?: (snapshot?: NativeParseSnapshot) => void;
 }
+function snapshotEditor(editor: EditorView | undefined, fallback: SqlEditorProps) {
+    const state = editor?.state;
+    const selection = state?.selection.main;
+    return {
+        sql: state?.doc.toString() ?? fallback.value,
+        from: selection?.from ?? fallback.from,
+        to: selection?.to ?? fallback.to,
+    };
+}
+
+function formatEditorBuiltIn(editor: EditorView | undefined, source: string) {
+    if (!editor || editor.state.doc.toString() !== source) return;
+    const formatted = formatSql(source);
+    if (formatted !== source)
+        editor.dispatch({
+            changes: { from: 0, to: editor.state.doc.length, insert: formatted },
+            annotations: sqlDocumentEdit(),
+        });
+    editor.focus();
+}
+
 export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEditor(props, ref) {
     const element = useRef<HTMLDivElement>(null),
         view = useRef<EditorView | undefined>(undefined),
@@ -269,6 +299,7 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
     const setScrollViewport = useRef<RefCallback<HTMLElement> | null>(null);
     const nativeDiagnostics = useRef<NativeDiagnostic[]>([]),
         validationRevision = useRef(0);
+    const [issueCount, setIssueCount] = useState(0);
     current.current = props;
     const schemaIndex = useMemo(
             () => indexSchema(props.schema, props.database),
@@ -279,12 +310,22 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
     const applyDiagnostics = useCallback(() => {
         const editor = view.current;
         if (!editor) return;
-        const diagnostics = nativeDiagnostics.current.map(item => ({
+        const lexical = lexicalDiagnostic(
+            editor.state.doc.toString(),
+            editor.state.field(sqlLexicalContext),
+        );
+        const diagnostics: Diagnostic[] = nativeDiagnostics.current.map(item => ({
             ...item,
             severity: 'error' as const,
             source: 'ClickHouse native parser',
         }));
-        const errorRange = current.current.errorRange;
+        if (lexical) diagnostics.unshift(lexical);
+        const duplicateLexicalError =
+            lexical &&
+            current.current.error?.code === 'SQL_SYNTAX' &&
+            lexical.from === current.current.errorRange?.from &&
+            lexical.message === current.current.error.message;
+        const errorRange = duplicateLexicalError ? undefined : current.current.errorRange;
         const position = errorRange?.from;
         const from =
             position === undefined
@@ -300,7 +341,10 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
                 to,
                 severity: 'error',
                 message: current.current.error?.message ?? 'ClickHouse reported an error here.',
-                source: 'ClickHouse server',
+                source:
+                    current.current.error?.code === 'SQL_SYNTAX'
+                        ? 'SQL selection'
+                        : 'ClickHouse server',
             });
             const decorations =
                 editor.state.doc.length > 0
@@ -325,6 +369,8 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
             editor.dispatch({ effects: setServerErrorDecorations.of(Decoration.none) });
         }
         editor.dispatch(setDiagnostics(editor.state, diagnostics));
+        if (!diagnostics.length) closeLintPanel(editor);
+        setIssueCount(diagnostics.length);
     }, []);
     const languageExtension = useCallback(() => sql({ dialect: clickhouse }), []);
     const invalidateNativeValidation = useCallback(() => {
@@ -353,6 +399,7 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
                     sqlMapHighlight,
                     lineNumbers(),
                     lintGutter(),
+                    diagnosticNavigation,
                     history(),
                     drawSelection(),
                     highlightActiveLine(),
@@ -405,6 +452,7 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
                         ...historyKeymap,
                         ...searchKeymap,
                         ...foldKeymap,
+                        ...lintKeymap,
                         indentWithTab,
                     ]),
                     EditorView.updateListener.of(update => {
@@ -574,17 +622,7 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
             indent: () => {
                 if (view.current) indentSelection(view.current);
             },
-            formatBuiltIn: source => {
-                const editor = view.current;
-                if (!editor || editor.state.doc.toString() !== source) return;
-                const formatted = formatSql(source);
-                if (formatted !== source)
-                    editor.dispatch({
-                        changes: { from: 0, to: editor.state.doc.length, insert: formatted },
-                        annotations: sqlDocumentEdit(),
-                    });
-                editor.focus();
-            },
+            formatBuiltIn: source => formatEditorBuiltIn(view.current, source),
             retryNativeParser: () => clickHouseNativeParser.retry(),
             formatNative: async () => {
                 const editor = view.current;
@@ -628,24 +666,19 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
                     return 'unavailable';
                 }
             },
-            snapshot: () => {
-                const state = view.current?.state,
-                    selection = state?.selection.main;
-                return {
-                    sql: state?.doc.toString() ?? current.current.value,
-                    from: selection?.from ?? current.current.from,
-                    to: selection?.to ?? current.current.to,
-                };
-            },
+            snapshot: () => snapshotEditor(view.current, current.current),
         }),
         [applyDiagnostics],
     );
     return (
-        <ScrollEdgeFrame<HTMLElement> className="sql-editor-scroll-frame">
-            {setViewport => {
-                setScrollViewport.current = setViewport;
-                return <div className="sql-editor" ref={element} />;
-            }}
-        </ScrollEdgeFrame>
+        <div className="sql-editor-container">
+            <ScrollEdgeFrame<HTMLElement> className="sql-editor-scroll-frame">
+                {setViewport => {
+                    setScrollViewport.current = setViewport;
+                    return <div className="sql-editor" ref={element} />;
+                }}
+            </ScrollEdgeFrame>
+            <SqlDiagnosticsFooter count={issueCount} editor={view} />
+        </div>
     );
 });

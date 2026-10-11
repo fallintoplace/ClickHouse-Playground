@@ -18,6 +18,12 @@ Press **Tab / Shift+Tab** to move between placeholder fields. When a placeholder
 
 Formatting creates a separate undo step. **Cmd+S / Ctrl+S** saves the active draft in both the workspace and detached editor.
 
+## SQL diagnostics
+
+Syntax issues appear as editor underlines and gutter markers. Click the **SQL issue** count below the editor to jump to an issue and open its details. Diagnostics update with the current SQL and disappear when corrected, including quote, comment, and heredoc errors when the native parser is unavailable.
+
+Run failures, including errors caught before submission, appear in Results with the submitted SQL. Editor highlights apply only while that SQL still matches the draft. Save and Restore warnings appear beside Save; click the warning to read its details. A successful retry clears only that operation's feedback.
+
 ## Completion
 
 Autocomplete suggests SQL keywords, ClickHouse functions, schema names and types, function descriptions, table aliases, and tables with database-qualified names.

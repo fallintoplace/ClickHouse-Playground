@@ -1,8 +1,10 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import type { QueryDocument } from '../../../shared/queries/saved-queries/types';
 import { api } from '../../api/client';
-import type { WorkspaceFeedback } from '../../workspace/layout/notifications/useWorkspaceNotifications';
-import type { useScopedValue } from '../../browser/useScopedValue';
+import type {
+    CompleteDraftFeedback,
+    useDraftFeedback,
+} from '../../workspace/layout/notifications/useDraftFeedback';
 import type { Draft, WorkspaceState } from '../editor/drafts/workspace-state';
 import type { BusyAction, Inspector } from '../../workspace/workspace-types';
 
@@ -21,9 +23,9 @@ type SaveDraftOptions = Readonly<{
     updateDraft: (id: string, change: (draft: Draft) => Draft) => void;
     setSavingDraftIds: Dispatch<SetStateAction<Record<string, boolean>>>;
     setDocuments: Dispatch<SetStateAction<QueryDocument[]>>;
-    setDraftFeedback: ReturnType<typeof useScopedValue<WorkspaceFeedback | undefined>>[1];
+    beginDraftFeedback: ReturnType<typeof useDraftFeedback>['begin'];
     clearToast: (context: string) => void;
-    onFailure: (draft: Draft, caught: unknown) => void;
+    onFailure: (draft: Draft, caught: unknown, complete: CompleteDraftFeedback) => void;
     loadDocumentRevisions: (documentId: string) => Promise<void>;
 }>;
 
@@ -38,7 +40,7 @@ export function useWorkspaceDocumentSave({
     updateDraft,
     setSavingDraftIds,
     setDocuments,
-    setDraftFeedback,
+    beginDraftFeedback,
     clearToast,
     onFailure,
     loadDocumentRevisions,
@@ -93,6 +95,7 @@ export function useWorkspaceDocumentSave({
 
         saveRunningRef.current = true;
         inFlightSaveDraftsRef.current.set(target.id, target);
+        const complete = beginDraftFeedback(target.id, 'save');
         return perform(
             async () => {
                 const draft = resolveDraft();
@@ -119,8 +122,8 @@ export function useWorkspaceDocumentSave({
                         saved,
                         ...current.filter(document => document.id !== saved.id),
                     ]);
-                    clearToast(`draft:${draft.id}`);
-                    setDraftFeedback(draft.id, undefined, true);
+                    clearToast(`draft:${draft.id}:save`);
+                    complete();
                     if (draft.serverId && inspectorRef.current === 'revisions')
                         void loadDocumentRevisions(saved.id);
                 } finally {
@@ -128,7 +131,7 @@ export function useWorkspaceDocumentSave({
                 }
             },
             'save',
-            caught => onFailure(target, caught),
+            caught => onFailure(target, caught, complete),
         ).finally(() => {
             saveRunningRef.current = false;
             inFlightSaveDraftsRef.current.delete(target.id);

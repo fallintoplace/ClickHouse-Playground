@@ -1,15 +1,12 @@
 import { useCallback, useRef, useState } from 'react';
 import type { QueryDocument } from '../../../shared/queries/saved-queries/types';
-import { useScopedValue } from '../../browser/useScopedValue';
 import type { HelpPanelSection } from '../../help/WorkspaceHelpPanel';
 import type { ExperienceLevel } from '../../ui/copy';
 import type { Draft } from '../../queries/editor/drafts/workspace-state';
 import { useFailedQueryErrors } from '../../queries/execution/useFailedQueryErrors';
 import type { BusyAction, Inspector } from '../workspace-types';
-import {
-    useWorkspaceNotifications,
-    type WorkspaceFeedback,
-} from './notifications/useWorkspaceNotifications';
+import { useWorkspaceNotifications } from './notifications/useWorkspaceNotifications';
+import { useDraftFeedback } from './notifications/useDraftFeedback';
 
 function useWorkspaceHelpState() {
     const [helpPanelOpen, setHelpPanelOpen] = useState(false);
@@ -83,9 +80,11 @@ export function useWorkspaceUiState({
     const [busy, setBusy] = useState<BusyAction>('');
     const [cancelling, setCancelling] = useState(false);
     const { toast, setError, dismissToast, clearToast } = useWorkspaceNotifications();
-    const [draftFeedback, setDraftFeedback] = useScopedValue<WorkspaceFeedback | undefined>(
-        active.id,
-    );
+    const {
+        feedback: draftFeedback,
+        begin: beginDraftFeedback,
+        clearInfo: clearDraftFeedbackInfo,
+    } = useDraftFeedback(active.id);
     const {
         error: failedQueryError,
         clear: clearFailedQueryError,
@@ -96,7 +95,8 @@ export function useWorkspaceUiState({
         busy,
         setError,
         clearToast,
-        setDraftFeedback,
+        beginDraftFeedback,
+        clearDraftFeedbackInfo,
         draftFeedback,
         toast,
         dismissToast,

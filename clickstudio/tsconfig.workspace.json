@@ -42,6 +42,7 @@
     "src/frontend/help/reference/reference-data.ts",
     "src/frontend/ui/copy.ts",
     "src/frontend/queries/editor/schema-context.ts",
-    "src/frontend/queries/editor/components/editor-session.ts"
+    "src/frontend/queries/editor/components/editor-session.ts",
+    "src/frontend/queries/editor/components/editor-diagnostics.ts"
   ]
 }

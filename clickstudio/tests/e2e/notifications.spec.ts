@@ -132,7 +132,7 @@ for (const failure of [
         message: 'Couldn’t confirm the save of “Getting started.sql”. Check its saved version.',
     },
 ]) {
-    test(`Save HTTP ${failure.status} stays beside its draft with collapsed diagnostics`, async ({
+    test(`Save HTTP ${failure.status} stays beside Save with collapsed diagnostics`, async ({
         page,
     }) => {
         await page.route('**/api/documents', route =>
@@ -151,7 +151,15 @@ for (const failure of [
         await trust(page);
         await replaceSql(page, 'SELECT 987');
         await page.getByTestId('save-query').click();
-        const notice = page.locator('.editor-surface .workspace-inline-notice');
+        const trigger = page.getByRole('button', {
+            name: failure.status === 400 ? 'Save failed' : 'Check save',
+            exact: true,
+        });
+        await expect(trigger).toBeVisible();
+        await expect(page.locator('.editor-surface > .workspace-inline-notice')).toHaveCount(0);
+        await trigger.click();
+        const details = page.getByRole('dialog', { name: 'Save details', exact: true });
+        const notice = details.locator('.workspace-inline-notice');
         await expect(notice).toContainText(failure.message);
         await expect(notice.locator('pre')).not.toBeVisible();
         await expect(page.locator('.toast')).toHaveCount(0);
@@ -195,7 +203,8 @@ test('An unconfirmed save in another tab persists and opens the affected draft',
     await expect(toast).toBeVisible();
     await toast.getByRole('button', { name: 'Open tab', exact: true }).click();
     await expect(page.locator('.cm-content')).toContainText('SELECT 345');
-    await expect(page.locator('.editor-surface .workspace-inline-notice')).toContainText(
+    await page.getByRole('button', { name: 'Check save', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Save details', exact: true })).toContainText(
         'Couldn’t confirm',
     );
     await expect(page.locator('.toast')).toHaveCount(0);
@@ -431,4 +440,43 @@ test('A query failure after its tab closes keeps the name without a dead Open ta
     await expect(toast.locator('pre')).not.toBeVisible();
     await toast.getByText('Details', { exact: true }).click();
     await expect(toast.locator('pre')).toContainText('Invalid query syntax');
+});
+
+test('Opening a background query failure shows Results instead of its previous SQL map view', async ({
+    page,
+}) => {
+    await trust(page);
+    await replaceSql(page, 'SELECT 1');
+    await runButton(page).click();
+    await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'succeeded');
+    await page.getByRole('tab', { name: 'SQL map', exact: true }).click();
+    let release = () => {};
+    const gate = new Promise<void>(resolve => {
+        release = resolve;
+    });
+    await page.route('**/api/runs', async route => {
+        if (route.request().method() !== 'POST') return route.continue();
+        await gate;
+        return route.fulfill({
+            status: 400,
+            json: { error: { code: 'SYNTAX_ERROR', message: 'Invalid query syntax' } },
+        });
+    });
+    const submitted = page.waitForRequest(
+        request => request.method() === 'POST' && new URL(request.url()).pathname === '/api/runs',
+    );
+    await runButton(page).click();
+    await submitted;
+    await openBlankSql(page);
+    release();
+    const toast = page.locator('.toast-error');
+    await expect(toast).toContainText('“Getting started.sql” failed.');
+    await toast.getByRole('button', { name: 'Open tab', exact: true }).click();
+    await expect(page.getByTestId('query-failure')).toBeVisible();
+    await expect(page.getByTestId('query-failure')).toContainText('Invalid query syntax');
+    await expect(
+        page
+            .getByRole('region', { name: 'Query results', exact: true })
+            .getByRole('heading', { name: 'Results', exact: true }),
+    ).toBeVisible();
 });

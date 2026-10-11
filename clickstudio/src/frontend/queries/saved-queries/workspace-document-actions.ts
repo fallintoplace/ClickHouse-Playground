@@ -1,32 +1,35 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { QueryDocument } from '../../../shared/queries/saved-queries/types';
 import { message, post, RequestError } from '../../api/client';
-import type { useScopedValue } from '../../browser/useScopedValue';
 import { checkpoint, type Draft, type WorkspaceState } from '../editor/drafts/workspace-state';
 import type { useWorkspaceExecution } from '../execution/useWorkspaceExecution';
 import { sameSavedContent } from './draft-save';
 import { documentFailureNotice } from '../../workspace/layout/notifications/workspace-notification-policy';
+import type { useWorkspaceNotifications } from '../../workspace/layout/notifications/useWorkspaceNotifications';
 import type {
-    useWorkspaceNotifications,
-    WorkspaceFeedback,
-} from '../../workspace/layout/notifications/useWorkspaceNotifications';
+    CompleteDraftFeedback,
+    useDraftFeedback,
+} from '../../workspace/layout/notifications/useDraftFeedback';
 import type { WorkspacePanelController } from '../../workspace/layout/panels/useWorkspacePanels';
 import type { useWorkspaceData } from '../../workspace/useWorkspaceData';
 
 export function createDocumentFailureReporter({
     workspaceRef,
     setWorkspace,
-    setDraftFeedback,
     setError,
     panels,
 }: {
     workspaceRef: import('react').RefObject<WorkspaceState>;
     setWorkspace: Dispatch<SetStateAction<WorkspaceState>>;
-    setDraftFeedback: ReturnType<typeof useScopedValue<WorkspaceFeedback | undefined>>[1];
     setError: ReturnType<typeof useWorkspaceNotifications>['setError'];
     panels: Pick<WorkspacePanelController, 'revealPanelTemporarily'>;
 }) {
-    return (draft: Pick<Draft, 'id' | 'name'>, operation: 'save' | 'restore', caught: unknown) => {
+    return (
+        draft: Pick<Draft, 'id' | 'name'>,
+        operation: 'save' | 'restore',
+        caught: unknown,
+        complete: CompleteDraftFeedback,
+    ) => {
         const failure = documentFailureNotice(
             draft.name,
             operation,
@@ -37,12 +40,12 @@ export function createDocumentFailureReporter({
                   }
                 : {},
         );
-        setDraftFeedback(draft.id, { ...failure, detail: message(caught) }, true);
+        if (!complete({ ...failure, detail: message(caught) })) return;
         if (workspaceRef.current.activeId !== draft.id)
             setError(failure.message, {
                 ...failure,
                 detail: message(caught),
-                context: `draft:${draft.id}`,
+                context: `draft:${draft.id}:${operation}`,
                 action: workspaceRef.current.tabs.some(item => item.id === draft.id)
                     ? {
                           label: 'Open tab',
@@ -64,7 +67,7 @@ export function createRevisionRestorer({
     setRestoreRevisionConfirmation,
     update,
     data,
-    setDraftFeedback,
+    beginDraftFeedback,
     clearToast,
     reportDocumentFailure,
 }: {
@@ -74,12 +77,13 @@ export function createRevisionRestorer({
         import('react').SetStateAction<QueryDocument | undefined>
     >;
     update: (id: string, change: (draft: Draft) => Draft) => void;
-    setDraftFeedback: ReturnType<typeof useScopedValue<WorkspaceFeedback | undefined>>[1];
+    beginDraftFeedback: ReturnType<typeof useDraftFeedback>['begin'];
     clearToast: ReturnType<typeof useWorkspaceNotifications>['clearToast'];
     reportDocumentFailure: (
         draft: Pick<Draft, 'id' | 'name'>,
         operation: 'save' | 'restore',
         caught: unknown,
+        complete: CompleteDraftFeedback,
     ) => void;
     data: Pick<
         ReturnType<typeof useWorkspaceData>,
@@ -102,11 +106,11 @@ export function createRevisionRestorer({
         const target = workspaceRef.current.tabs.find(
             item => item.id === workspaceRef.current.activeId,
         );
+        let complete: CompleteDraftFeedback = () => false;
         void perform(
             async () => {
-                const draft = workspaceRef.current.tabs.find(
-                    item => item.id === workspaceRef.current.activeId,
-                );
+                const draft = workspaceRef.current.tabs.find(item => item.id === target?.id);
+                complete = beginDraftFeedback(target?.id ?? `document:${revision.id}`, 'restore');
                 if (!draft?.serverId || draft.serverId !== revision.id)
                     throw new Error('Open the saved query before restoring one of its versions.');
                 const latestSaved =
@@ -185,18 +189,14 @@ export function createRevisionRestorer({
                     restored,
                     ...current.filter(document => document.id !== restored.id),
                 ]);
-                clearToast(`draft:${draft.id}`);
-                setDraftFeedback(
-                    draft.id,
-                    {
-                        tone: 'info',
-                        message: editedDuringRestore
-                            ? `Restored Version ${revision.revision} as Version ${restored.revision}. Edits made during restore are still in your draft.`
-                            : `Restored Version ${revision.revision} as Version ${restored.revision}.`,
-                    },
-                    true,
-                );
-                await loadDocumentRevisions(restored.id);
+                clearToast(`draft:${draft.id}:restore`);
+                complete({
+                    tone: 'info',
+                    message: editedDuringRestore
+                        ? `Restored Version ${revision.revision} as Version ${restored.revision}. Edits made during restore are still in your draft.`
+                        : `Restored Version ${revision.revision} as Version ${restored.revision}.`,
+                });
+                void loadDocumentRevisions(restored.id);
             },
             'save',
             caught => {
@@ -204,6 +204,7 @@ export function createRevisionRestorer({
                     target ?? { id: `document:${revision.id}`, name: revision.name },
                     'restore',
                     caught,
+                    complete,
                 );
             },
         );

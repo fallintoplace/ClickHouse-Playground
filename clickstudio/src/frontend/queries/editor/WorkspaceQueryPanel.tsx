@@ -20,8 +20,8 @@ import { SqlEditor, type EditorHandle } from './components/SqlEditor';
 import { Button, cx } from '../../ui/components/ui';
 import { Icon } from '../../ui/components/icons';
 import { RunActionGroup } from '../../workspace/layout/WorkspaceChrome';
-import { WorkspaceInlineNotice } from '../../workspace/layout/notifications/WorkspaceInlineNotice';
-import type { WorkspaceFeedback } from '../../workspace/layout/notifications/useWorkspaceNotifications';
+import type { DraftFeedback } from '../../workspace/layout/notifications/useDraftFeedback';
+import { DraftFeedbackNotice } from './components/DraftFeedbackNotice';
 import type { pendingEditorProposal } from '../../assistant/chat/assistant-chat-state';
 import type { ProposalDecisionAction } from '../../../shared/assistant/actions';
 import { SqlProposalReview } from './components/SqlProposalReview';
@@ -43,7 +43,7 @@ export type WorkspaceQueryPanelState = Readonly<{
     demoMode: boolean;
     executionPending: boolean;
     cancelling: boolean;
-    draftFeedback?: WorkspaceFeedback;
+    draftFeedback: readonly DraftFeedback[];
     editorProposal?: ReturnType<typeof pendingEditorProposal>;
     proposalBusy?: boolean;
     proposalError?: string;
@@ -217,7 +217,6 @@ export function WorkspaceQueryPanel({
                 detached,
                 panels,
             })}
-            <WorkspaceInlineNotice feedback={state.draftFeedback} />
             <div
                 id="sql-editor-content"
                 className="panel-content editor-content"
@@ -522,6 +521,12 @@ function renderQueryHeading({
                     {copy.common.format}
                 </Button>
                 {saveButton}
+                {state.draftFeedback.map(feedback => (
+                    <DraftFeedbackNotice
+                        key={`${active.id}:${feedback.source}`}
+                        feedback={feedback}
+                    />
+                ))}
                 {runButton}
                 {detached ? (
                     <Button
