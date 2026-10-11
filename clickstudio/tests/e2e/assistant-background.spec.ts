@@ -89,6 +89,8 @@ for (const mode of ['beginner', 'expert']) {
                 const send = page.getByRole('button', { name: 'Send', exact: true });
                 const height = () => input.evaluate(element => element.clientHeight);
                 const emptyHeight = await height();
+                expect(emptyHeight).toBe(32);
+                expect(await composer.evaluate(element => element.clientHeight)).toBe(48);
                 const idleBorder = await composer.evaluate(
                     element => getComputedStyle(element).borderColor,
                 );
@@ -101,7 +103,23 @@ for (const mode of ['beginner', 'expert']) {
                 await expect(input).toHaveCSS('resize', 'none');
                 await expect(input).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
                 await expect(composer.locator('details')).toHaveCount(0);
+                await expect(input).toHaveAccessibleDescription(
+                    'Enter to send. Shift+Enter for a new line.',
+                );
+                await expect(send).toHaveAttribute('title', 'Send (Enter)');
+                await expect(send).toHaveText('');
                 await composer.screenshot({ path: info.outputPath('composer-empty.png') });
+
+                await input.pressSequentially('Explain this query.');
+                await expect.poll(height).toBe(emptyHeight);
+                await input.press('Shift+Enter');
+                await input.pressSequentially('Keep the answer concise.');
+                await expect.poll(height).toBeGreaterThan(emptyHeight);
+                await input.press('Tab');
+                await expect(send).toBeFocused();
+                await expect(send).toHaveCSS('outline-style', 'solid');
+                await page.keyboard.press('Shift+Tab');
+                await expect(input).toBeFocused();
 
                 const draft =
                     'Explain this query.\nCompare its alternatives.\nKeep the answer concise.';
@@ -140,7 +158,7 @@ for (const mode of ['beginner', 'expert']) {
                     name: 'Stop assistant response',
                     exact: true,
                 });
-                await expect(stop).toHaveCSS('width', '86px');
+                await expect(stop).toHaveCSS('width', '32px');
                 await expect(stop).toHaveCSS('height', '32px');
                 await input.fill('Pending follow-up');
                 await input.press('Enter');
@@ -150,15 +168,23 @@ for (const mode of ['beginner', 'expert']) {
                 await expect(page.locator('.assistant-turn-error')).toHaveText(
                     'Request cancelled.',
                 );
-                await expect(send).toHaveCSS('width', '86px');
+                await expect(send).toHaveCSS('width', '32px');
                 await expect(send).toHaveCSS('height', '32px');
 
                 await input.fill(
                     Array.from({ length: 20 }, (_, index) => `Pasted line ${index}`).join('\n'),
                 );
-                await expect.poll(height).toBe(100);
-                expect(await input.evaluate(element => element.scrollHeight)).toBeGreaterThan(100);
+                await expect.poll(height).toBe(122);
+                expect(await input.evaluate(element => element.scrollHeight)).toBeGreaterThan(122);
                 await expect(input).toBeInViewport();
+                await input.press('End');
+                await input.pressSequentially(' More text at the caret.');
+                expect(
+                    await input.evaluate(
+                        element => element.scrollHeight - element.clientHeight - element.scrollTop,
+                    ),
+                ).toBeLessThanOrEqual(1);
+                await composer.screenshot({ path: info.outputPath('composer-capped.png') });
                 await input.fill('Explain how these ClickHouse queries work together. '.repeat(2));
                 const wideHeight = await height();
                 await page.setViewportSize({ width: 900, height: 900 });

@@ -738,26 +738,39 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
                 return (
                     <Button
                         variant="danger"
+                        className="assistant-composer-submit"
                         onClick={onCancelRequest}
                         aria-label="Stop assistant response"
                         title="Stop generating"
                     >
-                        Stop
+                        <Icon name="stop" />
                     </Button>
                 );
             }
 
             return (
-                <Button variant="secondary" disabled>
-                    {phase === 'deciding' ? 'Applying…' : 'Working…'}
+                <Button
+                    variant="secondary"
+                    className="assistant-composer-submit"
+                    disabled
+                    aria-label={phase === 'deciding' ? 'Applying…' : 'Working…'}
+                    title={phase === 'deciding' ? 'Applying…' : 'Working…'}
+                >
+                    <Spinner size={14} />
                 </Button>
             );
         }
 
         return (
-            <Button variant="primary" disabled={!canSubmit} onClick={ask} title="Send (Enter)">
-                <Icon name="send" />
-                Send
+            <Button
+                variant="primary"
+                className="assistant-composer-submit"
+                disabled={!canSubmit}
+                onClick={ask}
+                aria-label="Send"
+                title="Send (Enter)"
+            >
+                <Icon name="arrowUp" />
             </Button>
         );
     };
@@ -878,14 +891,15 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
                                 onChange={event => onQuestionChange(event.target.value)}
                                 onKeyDown={sendOnEnter}
                                 placeholder="Ask about your SQL…"
-                                rows={2}
+                                title="Enter to send. Shift+Enter for a new line."
+                                rows={1}
                             />
                         )}
                     </ScrollEdgeFrame>
-                    <div className="assistant-composer-footer">
-                        <span id="assistant-composer-shortcuts">Shift+Enter for a new line</span>
-                        {renderSubmitAction()}
-                    </div>
+                    {renderSubmitAction()}
+                    <span id="assistant-composer-shortcuts" className="sr-only">
+                        Enter to send. Shift+Enter for a new line.
+                    </span>
                 </div>
             </div>
         </section>

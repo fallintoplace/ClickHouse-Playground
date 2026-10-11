@@ -1605,11 +1605,13 @@
   }
   .assistant-chat-composer {
     display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     min-width: 0;
-    gap: 4px;
-    padding: 10px;
+    align-items: end;
+    gap: 8px;
+    padding: 8px;
     border: 1px solid var(--line);
-    border-radius: var(--radius-panel);
+    border-radius: calc(var(--radius-panel) * 3);
     background: var(--panel-raised);
     box-shadow: none;
   }
@@ -1620,11 +1622,11 @@
     display: block;
     box-sizing: border-box;
     width: 100%;
-    min-height: 40px;
-    max-height: 100px;
+    min-height: 32px;
+    max-height: 122px;
     overflow-y: auto;
     resize: none;
-    padding: 4px 2px;
+    padding: 7px 4px;
     border: 0;
     border-radius: var(--radius-shell);
     outline: 0;
@@ -1637,30 +1639,18 @@
   .assistant-question-frame .field-textarea::placeholder {
     color: var(--muted);
   }
-  .assistant-composer-footer {
-    display: flex;
-    min-height: 32px;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-  .assistant-composer-footer > span {
-    color: var(--muted);
-    font-size: var(--font-size-control);
-  }
-  .assistant-composer-footer .button-base {
-    width: 86px;
+  .assistant-composer-submit {
+    width: 32px;
     height: 32px;
     min-height: 32px;
-    gap: 6px;
-    padding-inline: 10px;
-    font-size: var(--font-size-control-prominent);
+    padding: 0;
+    border-radius: calc(var(--radius-control) * 2);
   }
-  .assistant-composer-footer .button-base svg {
-    width: 14px;
-    height: 14px;
+  .assistant-composer-submit svg {
+    width: 16px;
+    height: 16px;
   }
-  .assistant-composer-footer .button-primary:disabled {
+  .assistant-composer-submit.button-primary:disabled {
     border-color: var(--line);
     background: var(--panel);
     color: var(--muted);
