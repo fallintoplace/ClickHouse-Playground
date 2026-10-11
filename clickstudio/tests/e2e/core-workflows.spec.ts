@@ -919,7 +919,7 @@ for (const theme of ['Dark', 'Light'])
                 results.getByRole('button', { name: 'Close output', exact: true }),
             ).toHaveCount(0);
             await expect(title).toBeVisible();
-            await expect(header.locator('.eyebrow')).toHaveText('WORKSPACE OUTPUT');
+            await expect(header.locator('.eyebrow')).toHaveCount(0);
             await expect(header.locator('.results-mark')).toBeVisible();
             expect(
                 await title.evaluate(element => getComputedStyle(element, '::after').content),

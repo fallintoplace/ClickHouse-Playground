@@ -458,9 +458,7 @@ function renderQueryHeading({
                             <span className="status-light is-error" aria-hidden="true" />
                             {copy.common.lastExecutionFailed}
                         </button>
-                    ) : (
-                        <span className="eyebrow">{copy.common.query}</span>
-                    )}
+                    ) : null}
                     <input
                         aria-label="SQL document name"
                         value={active.name}

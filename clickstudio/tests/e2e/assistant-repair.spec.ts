@@ -179,7 +179,7 @@ for (const theme of ['Dark', 'Light'])
             await expect(
                 header.getByRole('heading', { name: 'Results', exact: true }),
             ).toBeVisible();
-            await expect(header.locator('.eyebrow')).toHaveText('WORKSPACE OUTPUT');
+            await expect(header.locator('.eyebrow')).toHaveCount(0);
             if (width === 900) await expect(header.locator('.results-mark')).toBeVisible();
             else await expect(header.locator('.results-mark')).toBeHidden();
             const bounds = (await header.boundingBox())!;
@@ -217,7 +217,7 @@ test('Fix with AI uses the Results header after viewing an EXPLAIN pipeline', as
     const results = page.getByRole('region', { name: 'Query results', exact: true });
     await expect(results.getByTestId('query-failure')).toBeVisible();
     await expect(header.getByRole('heading', { name: 'Results', exact: true })).toBeVisible();
-    await expect(header.locator('.eyebrow')).toHaveText('WORKSPACE OUTPUT');
+    await expect(header.locator('.eyebrow')).toHaveCount(0);
     await expect(
         header.getByRole('button', { name: 'Collapse Query results', exact: true }),
     ).toBeVisible();

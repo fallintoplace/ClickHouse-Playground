@@ -97,22 +97,22 @@
 
 :root[data-theme="click-light"] {
   color-scheme: light;
-  --page: #f8f8f8;
-  --page-raised: #ffffff;
-  --canvas: #f8f8f8;
+  --page: #e9f0f4;
+  --page-raised: #f3f7f9;
+  --canvas: #e9f0f4;
   --geo-land: #e6e9ee;
   --geo-border: #9ba3af;
   --panel: #ffffff;
-  --panel-raised: #f8f8f8;
-  --panel-hover: #f2f2f2;
-  --line: #e5e5e5;
-  --line-bright: #c4c4c4;
-  --control-border: #858585;
-  --text: #1f1f1f;
-  --text-soft: #3b3b3b;
-  --muted: #616161;
-  --scrollbar-thumb: #a3a3a3;
-  --scrollbar-thumb-hover: #757575;
+  --panel-raised: #edf3f6;
+  --panel-hover: #e2ebf0;
+  --line: #cedbe3;
+  --line-bright: #a8bbc7;
+  --control-border: #7c929f;
+  --text: #1b303d;
+  --text-soft: #3c5361;
+  --muted: #536b79;
+  --scrollbar-thumb: #9bafbc;
+  --scrollbar-thumb-hover: #748d9d;
   --scroll-edge-shadow-color: #20242c14;
   --accent-cyan: #006c83;
   --accent-cyan-strong: #005c70;
@@ -120,7 +120,7 @@
   --accent-cyan-ink: #ffffff;
   --accent-clickhouse-yellow: #6b5d00;
   --accent-clickhouse-yellow-strong: #5c5000;
-  --accent-clickhouse-yellow-action: #faff69;
+  --accent-clickhouse-yellow-action: #edf249;
   --accent-clickhouse-yellow-ink: #15191a;
   --accent: var(--accent-clickhouse-yellow);
   --accent-strong: var(--accent-clickhouse-yellow-strong);
@@ -132,22 +132,22 @@
   --amber: #945000;
   --red: #b33043;
   --violet: #7140a0;
-  --active-surface: color-mix(in srgb, var(--accent-action) 16%, var(--panel));
-  --active-border: var(--control-border);
-  --active-inset: inset 0 0 0 1px var(--active-border);
+  --active-surface: color-mix(in srgb, var(--accent-action) 24%, var(--panel));
+  --active-border: color-mix(in srgb, var(--accent) 36%, var(--line-bright));
+  --active-inset: inset 0 0 0 0 transparent;
   --focus-color: var(--accent);
   --editor-selection: #e2eeff;
-  --editor-keyword: #0000ff;
-  --editor-number: #087645;
-  --editor-literal: #0000ff;
-  --editor-string: #a31515;
+  --editor-keyword: #2458a6;
+  --editor-number: #1b7254;
+  --editor-literal: #6f42a1;
+  --editor-string: #a63f3b;
   --editor-function: #795e26;
-  --editor-alias: #001080;
-  --editor-parameter: #001080;
-  --editor-comment: #007000;
+  --editor-alias: #315a78;
+  --editor-parameter: #315a78;
+  --editor-comment: #536c78;
   --editor-type: #226f85;
-  --editor-active-line: #00000006;
-  --editor-active-gutter: #0000000a;
+  --editor-active-line: #e9f0f466;
+  --editor-active-gutter: #e9f0f4;
   --shadow-popover: 0 2px 6px #20242c0d, 0 8px 20px #20242c1a;
   --shadow-dialog: 0 4px 12px #20242c0d, 0 18px 44px #20242c24;
   --shadow-inset: inset 0 1px color-mix(in srgb, var(--text) 3%, transparent);
@@ -155,8 +155,8 @@
   --graph-node-shadow-color: #20242c14;
   --status-ring-opacity: 12%;
   --overlay-backdrop: #20242c47;
-  --browser-chrome: #ffffff;
-  --brand-logo: #161616;
+  --browser-chrome: #f3f7f9;
+  --brand-logo: #1b303d;
 }
 
 :root[data-accent="cyan"] {
@@ -174,7 +174,11 @@
 }
 
 :root[data-theme="click-light"][data-accent="clickhouse-yellow"] {
-  --editor-selection: color-mix(in srgb, var(--accent-action) 55%, transparent);
+  --editor-selection: color-mix(in srgb, var(--accent-action) 34%, transparent);
+}
+
+:root[data-theme="click-light"][data-accent="cyan"] {
+  --active-surface: color-mix(in srgb, var(--accent-action) 12%, var(--panel));
 }
 
 .object-explorer-section {
@@ -191,12 +195,14 @@
 }
 
 :root[data-theme="click-light"] .object-explorer-section {
-  --explorer-table: #286da8;
-  --explorer-view: #72459e;
-  --explorer-column: #19785d;
-  --explorer-dictionary: #9b5700;
-  --explorer-projection: #a43875;
-  --explorer-index: #a84238;
+  --explorer-table: #135eb3;
+  --explorer-view: #7040b8;
+  --explorer-column: #00765d;
+  --explorer-dictionary: #a04d00;
+  --explorer-projection: #b32979;
+  --explorer-index: #b93235;
+  --explorer-tree-surface: var(--panel-raised);
+  --explorer-tree-border: var(--line);
 }
 
 @layer components {

@@ -281,6 +281,15 @@
   }
 }
 
+@media (min-width: 851px) and (pointer: fine) {
+  .topbar .navbar-mode-option > label {
+    padding-block: 6px;
+  }
+  .topbar .theme-switch {
+    padding: 1px;
+  }
+}
+
 @layer base {
   * {
     box-sizing: border-box;

@@ -395,6 +395,13 @@
   border-color: var(--explorer-signal);
   box-shadow: var(--focus-ring);
 }
+:root[data-theme="click-light"] :is(.object-search, .reference-search) {
+  border-color: var(--control-border);
+  background: var(--panel);
+}
+:root[data-theme="click-light"] :is(.object-search, .reference-search):focus-within {
+  border-color: var(--focus-color);
+}
 .object-search input:focus-visible,
 .reference-search input:focus-visible {
   outline: none;
@@ -1277,6 +1284,46 @@
 }
 .reference-result:focus-visible .history-open {
   color: var(--reference-kind-color);
+}
+:root[data-theme="click-light"] :is(.object-kind-glyph, .reference-result-glyph) {
+  border-color: var(--explorer-row-accent);
+  background: var(--explorer-row-accent);
+  color: var(--panel);
+}
+:root[data-theme="click-light"]
+  :is(.object-tree-row.is-database, .reference-result.is-engine)
+  :is(.object-kind-glyph, .reference-result-glyph) {
+  border-color: color-mix(in srgb, var(--accent-clickhouse-yellow) 36%, var(--line-bright));
+  background: var(--accent-clickhouse-yellow-action);
+  color: var(--accent-clickhouse-yellow);
+}
+:root[data-theme="click-light"] :is(.object-tree-label, .reference-result-copy) small {
+  border-color: color-mix(in srgb, var(--explorer-row-accent) 42%, var(--line));
+  background: color-mix(in srgb, var(--explorer-row-accent) 11%, var(--panel));
+}
+:root[data-theme="click-light"]
+  .object-tree-row.is-group:not(.is-database)
+  .object-tree-label
+  strong {
+  color: var(--tree-kind-color);
+}
+:root[data-theme="click-light"] .object-tree-count {
+  border-color: color-mix(in srgb, var(--tree-kind-color) 48%, var(--line));
+  background: color-mix(in srgb, var(--tree-kind-color) 12%, var(--panel));
+}
+:root[data-theme="click-light"]
+  :is(.object-tree-row:hover, .object-tree-row:focus-within, .reference-result:hover) {
+  border-color: color-mix(in srgb, var(--explorer-row-accent) 60%, var(--line));
+  background-color: color-mix(in srgb, var(--explorer-row-accent) 8%, var(--panel));
+}
+:root[data-theme="click-light"] :is(.object-tree-row.is-selected, .reference-result.is-active) {
+  border-color: var(--explorer-row-accent);
+  background-color: color-mix(in srgb, var(--explorer-row-accent) 16%, var(--panel));
+}
+:root[data-theme="click-light"] .reference-categories button[aria-pressed="true"] {
+  border-color: var(--active-border);
+  background: var(--active-surface);
+  color: var(--accent);
 }
 @media (prefers-reduced-motion: reduce) {
   .reference-categories button,

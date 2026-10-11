@@ -62,13 +62,18 @@ async function expectNeutralWorkspace(page: Page) {
         .evaluate(element => getComputedStyle(element).backgroundColor);
     await expect(page.locator('.results-header')).toHaveCSS('background-color', header);
     await expect(page.locator('.inspector-header')).toHaveCSS('background-color', header);
-    await expect(page.locator('.inspector-pane')).toHaveCSS('background-color', panel);
-    const accent = await runButton(page).evaluate(
-        element => getComputedStyle(element).backgroundImage,
-    );
     const lightTheme = await page
         .locator('html')
         .evaluate(element => element.dataset.theme === 'click-light');
+    const inspectorSurface = lightTheme
+        ? await page
+              .locator('.topbar')
+              .evaluate(element => getComputedStyle(element).backgroundColor)
+        : panel;
+    await expect(page.locator('.inspector-pane')).toHaveCSS('background-color', inspectorSurface);
+    const accent = await runButton(page).evaluate(
+        element => getComputedStyle(element).backgroundImage,
+    );
     if (lightTheme) expect(accent).toBe('none');
     else expect(accent).toContain('linear-gradient');
     const selected = await page
@@ -99,7 +104,7 @@ async function expectCompactToolbar(page: Page) {
     await expect(page.locator('.results-tabs')).toHaveCSS('height', '28px');
     for (const selector of ['.editor-heading', '.results-header']) {
         const header = page.locator(selector);
-        await expect(header).toHaveCSS('height', '48px');
+        await expect(header).toHaveCSS('height', '40px');
         const bounds = await header.boundingBox();
         expect(bounds).not.toBeNull();
         for (const control of await header.locator('.button-base').all()) {
@@ -172,10 +177,7 @@ for (const theme of ['Dark', 'Light'])
                 '2px',
             );
             await expect(page.locator('.data-table th').first()).toHaveCSS('border-radius', '0px');
-            await expect(page.locator('.accent-mode-swatch').first()).toHaveCSS(
-                'border-radius',
-                '50%',
-            );
+            await expect(page.locator('.accent-mode-swatch')).toHaveCount(0);
             await expect(page.locator('.status-light').first()).toHaveCSS('border-radius', '50%');
             const inspector = page.locator('.inspector-pane.is-docked-inspector');
             if (!(await inspector.isVisible()))

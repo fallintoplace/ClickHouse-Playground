@@ -32,6 +32,11 @@ async function expectReadableText(root: Locator, label: string) {
                         : ((channel + 0.055) / 1.055) ** 2.4;
                 })
                 .reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index]!, 0);
+        const markerBeforeText = (style: CSSStyleDeclaration, ancestor: Element, bounds: DOMRect) =>
+            style.backgroundRepeat === 'no-repeat' &&
+            /^\d+(?:\.\d+)?px(?:\s|$)/.test(style.backgroundSize) &&
+            style.backgroundPositionX === '0%' &&
+            bounds.left >= ancestor.getBoundingClientRect().left + parseFloat(style.backgroundSize);
         const violations: { text: string; ratio: number }[] = [];
         let checked = 0;
         for (const element of root.querySelectorAll('*')) {
@@ -72,7 +77,7 @@ async function expectReadableText(root: Locator, label: string) {
                 const stops = ancestorStyle.backgroundImage.match(
                     /(?:rgba?|color|oklab)\([^)]*\)/g,
                 );
-                if (stops) {
+                if (stops && !markerBeforeText(ancestorStyle, ancestor, bounds)) {
                     backgrounds = backgrounds.flatMap(background =>
                         stops.map(stop => blend(rgba(stop), background)),
                     );
@@ -120,7 +125,7 @@ for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
         await expectReadableText(page.locator('.application'), 'Workspace and objects');
         await expect(page.locator('.object-tree-scroll')).toHaveCSS(
             'background-color',
-            'rgb(255, 255, 255)',
+            'rgb(237, 243, 246)',
         );
         await page.screenshot({ path: info.outputPath('light-workspace.png') });
 
@@ -151,6 +156,14 @@ for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
                 .click();
             await expect(page.locator('.inspector-pane')).toBeVisible();
             await expectReadableText(page.locator('.inspector-pane'), panel);
+            if (panel === 'Reference') {
+                const row = page.locator('.reference-result').nth(1);
+                await row.hover();
+                await expectReadableText(page.locator('.inspector-pane'), 'Reference hover');
+                await row.focus();
+                await expect(row).toBeFocused();
+                await expectReadableText(page.locator('.inspector-pane'), 'Reference focus');
+            }
         }
 
         await page.getByRole('button', { name: 'Help', exact: true }).click();
@@ -224,7 +237,7 @@ for (const accent of ['Cyan accent', 'ClickHouse yellow accent']) {
         await expectReadableText(dialog, 'File import');
         await expect(dialog.locator('.import-step-item.is-current .import-step-number')).toHaveCSS(
             'color',
-            accent === 'Cyan accent' ? 'rgb(255, 255, 255)' : 'rgb(21, 25, 26)',
+            accent === 'Cyan accent' ? 'rgb(0, 108, 131)' : 'rgb(107, 93, 0)',
         );
         await page.screenshot({ path: info.outputPath('light-import.png') });
         await dialog.locator('.import-kind-button.is-query').click();
@@ -320,7 +333,7 @@ test('Mounted candlesticks update their marks and labels when theme or accent ch
     await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
     await expect(up).toHaveCSS('fill', 'rgb(20, 108, 67)');
     await expect(down).toHaveCSS('fill', 'rgb(179, 48, 67)');
-    await expect(page.locator('.market-axis text').first()).toHaveCSS('fill', 'rgb(97, 97, 97)');
+    await expect(page.locator('.market-axis text').first()).toHaveCSS('fill', 'rgb(83, 107, 121)');
     await setAccentForStyles(page, 'Cyan accent');
     await expect(page.locator('.market-bid-line')).toHaveCSS('stroke', 'rgb(0, 108, 131)');
     await setAccentForStyles(page, 'ClickHouse yellow accent');

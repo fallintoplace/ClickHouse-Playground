@@ -106,7 +106,7 @@ async function expectThemeTokenColors(page: Page, theme: string) {
     for (const token of ['`FROM`', '`toDate`', '`UInt64`', '"SELECT"']) {
         await expect(page.locator('.cm-content span').filter({ hasText: token }).last()).toHaveCSS(
             'color',
-            theme === 'Light' ? 'rgb(31, 31, 31)' : 'rgb(239, 248, 250)',
+            theme === 'Light' ? 'rgb(27, 48, 61)' : 'rgb(239, 248, 250)',
         );
     }
     await expect(
@@ -114,13 +114,13 @@ async function expectThemeTokenColors(page: Page, theme: string) {
             .locator('.cm-content span')
             .filter({ hasText: /^NULL$/ })
             .last(),
-    ).toHaveCSS('color', theme === 'Light' ? 'rgb(0, 0, 255)' : 'rgb(197, 152, 255)');
+    ).toHaveCSS('color', theme === 'Light' ? 'rgb(111, 66, 161)' : 'rgb(197, 152, 255)');
     if (theme === 'Light') {
         for (const [token, color] of [
-            ['SELECT', 'rgb(0, 0, 255)'],
-            ["'frontend'", 'rgb(163, 21, 21)'],
-            ['0.50', 'rgb(8, 118, 69)'],
-            ['/* aggregate */', 'rgb(0, 112, 0)'],
+            ['SELECT', 'rgb(36, 88, 166)'],
+            ["'frontend'", 'rgb(166, 63, 59)'],
+            ['0.50', 'rgb(27, 114, 84)'],
+            ['/* aggregate */', 'rgb(83, 108, 120)'],
             ['quantile', 'rgb(121, 94, 38)'],
         ] as const) {
             await expect(

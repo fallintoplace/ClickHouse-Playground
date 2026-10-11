@@ -17,14 +17,14 @@ const themes = [
     {
         value: 'click-light',
         dark: false,
-        surface: '#f8f8f8',
+        surface: '#e9f0f4',
         panel: '#ffffff',
         accent: '#6b5d00',
-        action: '#faff69',
+        action: '#edf249',
         cyanAccent: '#006c83',
         cyanAction: '#006c83',
-        chrome: '#ffffff',
-        logoColor: 'rgb(22, 22, 22)',
+        chrome: '#f3f7f9',
+        logoColor: 'rgb(27, 48, 61)',
     },
 ] as const;
 
@@ -168,6 +168,58 @@ test('yellow works when preference storage is unavailable', async ({ page }) => 
 });
 
 for (const mode of ['Standard', 'Experimental'])
+    test(`${mode} light surfaces separate controls from the editor and results`, async ({
+        page,
+    }) => {
+        await trust(page);
+        await page.getByText(mode, { exact: true }).click();
+        await themeOption(page, 'click-light').click();
+        await runButton(page).click();
+        await expect(page.locator('.execution-bar')).toHaveAttribute(
+            'data-run-status',
+            'succeeded',
+        );
+        for (const width of [1740, 900]) {
+            await page.setViewportSize({ width, height: 900 });
+            const editor = page.locator('.cm-editor');
+            await expect(editor).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+            await expect(page.locator('.results-surface')).toHaveCSS(
+                'background-color',
+                'rgb(255, 255, 255)',
+            );
+            const canvas = await editor.evaluate(
+                element => getComputedStyle(element).backgroundColor,
+            );
+            for (const selector of ['.topbar', '.editor-heading', '.results-header']) {
+                const background = await page
+                    .locator(selector)
+                    .evaluate(element => getComputedStyle(element).backgroundColor);
+                expect(background, `${width}: ${selector} separates from the canvas`).not.toBe(
+                    canvas,
+                );
+            }
+        }
+    });
+
+for (const theme of themes)
+    test(`${theme.value} keeps the selected connection marker`, async ({ page }) => {
+        await page.route('**/api/connections', async route => {
+            const response = await route.fetch();
+            const connections = await response.json();
+            await route.fulfill({
+                response,
+                json: [...connections, { ...connections[0], id: 'playground' }],
+            });
+        });
+        await page.goto('/');
+        await themeOption(page, theme.value).click();
+        await page.locator('.connection-trigger').click();
+        const current = page.locator('.connection-switch-list > button[aria-pressed="true"]');
+        await expect(current).toBeVisible();
+        await expect(current).toHaveCSS('box-shadow', /3px 0px 0px 0px inset/);
+    });
+
+for (const mode of ['Standard', 'Experimental'])
     test(`${mode} keeps light yellow Run flat and readable across interaction states`, async ({
         page,
     }) => {
@@ -177,7 +229,7 @@ for (const mode of ['Standard', 'Experimental'])
         await themeOption(page, 'click-light').click();
         const run = runButton(page);
         await expect(run).toHaveCSS('background-image', 'none');
-        await expect(run).toHaveCSS('background-color', 'rgb(250, 255, 105)');
+        await expect(run).toHaveCSS('background-color', 'rgb(237, 242, 73)');
         for (const state of ['normal', 'hover', 'focus']) {
             if (state === 'hover') await run.hover();
             if (state === 'focus') {
@@ -221,7 +273,7 @@ for (const mode of ['Standard', 'Experimental'])
         await expect(run).toHaveCSS('background-image', 'none');
         await page.reload();
         await expect(run).toHaveCSS('background-image', 'none');
-        await expect(run).toHaveCSS('background-color', 'rgb(250, 255, 105)');
+        await expect(run).toHaveCSS('background-color', 'rgb(237, 242, 73)');
     });
 
 test('an unknown saved theme falls back to ClickDark', async ({ page }) => {

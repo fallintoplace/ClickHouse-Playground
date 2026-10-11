@@ -321,10 +321,6 @@ export function useWorkspaceViewState({
             : undefined;
     const analyzeEvidence = useMemo(() => parseExplainAnalyze(analyzeOutput), [analyzeOutput]);
     const resultsTitle = resultsViewTitle(visibleResultsView, copy.common);
-    const resultsEyebrow =
-        visibleResultsView === 'sqlmap'
-            ? copy.common.queryVisualization
-            : copy.common.workspaceOutput;
     const resultsPanelLabel = resultPanelAriaLabel(visibleResultsView, copy.common);
     const snapshotChart = retainedSnapshot
         ? recommendChart(retainedSnapshot.columns, retainedSnapshot.rows)
@@ -358,7 +354,6 @@ export function useWorkspaceViewState({
         pipelineResult,
         analyzeEvidence,
         resultsTitle,
-        resultsEyebrow,
         resultsPanelLabel,
         snapshotChart,
     };

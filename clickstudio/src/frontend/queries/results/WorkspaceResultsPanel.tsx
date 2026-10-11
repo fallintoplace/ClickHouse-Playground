@@ -427,7 +427,6 @@ function renderResultsHeader({
 }) {
     const {
         visibleResultsView,
-        resultsEyebrow,
         resultsTitle,
         snapshotChart,
         resultTabs,
@@ -455,7 +454,6 @@ function renderResultsHeader({
                     />
                 </span>
                 <div>
-                    <span className="eyebrow">{resultsEyebrow}</span>
                     <h2>{showFailure ? copy.common.results : resultsTitle}</h2>
                 </div>
                 {headerView === 'results' && script && (

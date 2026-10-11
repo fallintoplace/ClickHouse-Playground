@@ -3106,6 +3106,10 @@
   }
 } /* Light theme */
 
+:root[data-theme="click-light"] .inspector-pane {
+  background: var(--page-raised);
+}
+
 :root[data-theme="click-light"] :is(.inspector-tabs > button[aria-pressed="true"]) {
   border-color: var(--active-border);
   background: var(--active-surface);
@@ -3163,6 +3167,16 @@
     width: 33px;
     height: 33px;
     padding: 7px;
+  }
+}
+
+@media (min-width: 851px) and (pointer: fine) {
+  .execution-bar {
+    min-height: 32px;
+    padding-block: 2px;
+  }
+  :is(.help-button, .execution-details-button):focus-visible {
+    outline-offset: 0;
   }
 }
 

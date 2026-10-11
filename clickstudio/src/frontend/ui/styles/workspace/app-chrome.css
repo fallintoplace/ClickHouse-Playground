@@ -946,6 +946,11 @@
     height: 16px;
   }
 } /* Light theme */
+:root[data-theme="click-light"] .new-tab-button,
+:root[data-theme="click-light"] .new-tab-button:hover {
+  border-color: var(--active-border);
+}
+
 :root[data-theme="click-light"] :is(.topbar-control-rail, .accent-mode-control) {
   background: var(--panel-raised);
   box-shadow: none;
@@ -1153,5 +1158,27 @@
   .connection-quick-status {
     font-size: 6px;
     letter-spacing: 0.04em;
+  }
+}
+
+@media (min-width: 851px) and (pointer: fine) {
+  .topbar {
+    min-height: 48px;
+  }
+  .topbar-control-rail {
+    padding: 2px;
+  }
+}
+
+@media (min-width: 761px) and (pointer: fine) {
+  .document-tabs {
+    min-height: 32px;
+  }
+  .new-tab-button {
+    width: 28px;
+    height: 28px;
+  }
+  .document-tabs-scroll-button {
+    height: 28px;
   }
 }

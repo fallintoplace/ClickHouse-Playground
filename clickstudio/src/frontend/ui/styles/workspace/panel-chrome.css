@@ -131,8 +131,8 @@
 @media (min-width: 761px) and (pointer: fine) {
   .editor-heading,
   .results-header {
-    min-height: 48px;
-    padding-block: 6px;
+    min-height: 40px;
+    padding-block: 3px;
   }
   .editor-heading-actions {
     gap: 6px;
