@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import type { Proposal } from '../../src/shared/assistant/types.js';
 import { jsonRecord, replaceSql, trust, openStatementResults } from './helpers.js';
+import { expectReferenceStyles } from './style-reference.js';
 
 const originalSql = 'SELECT 1 AS value';
 const proposedSql = 'SELECT 2 AS value';
@@ -80,6 +81,105 @@ async function storedDraft(page: Page) {
         };
         return state.tabs?.find(tab => tab.id === state.activeId);
     });
+}
+
+for (const mode of ['beginner', 'expert']) {
+    for (const theme of ['Dark', 'Light']) {
+        test(`${theme} ${mode} chat uses flat replies and compact SQL change controls`, async ({
+            page,
+        }, info) => {
+            await page.clock.setFixedTime(new Date('2026-10-12T10:00:00Z'));
+            await page.emulateMedia({ reducedMotion: 'reduce' });
+            await page.setViewportSize({ width: 1440, height: 900 });
+            await page.addInitScript(
+                mode => localStorage.setItem('clickstudio:experience', mode),
+                mode,
+            );
+            const firstSummary =
+                'Changed the output value from 1 to 2 while keeping the query structure unchanged.';
+            await installProposal(page, proposedSql, { id: 'flat-first', summary: firstSummary });
+            await trust(page);
+            await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+            await replaceSql(page, originalSql);
+            await askForChanges(page, firstSummary);
+            await review(page)
+                .getByRole('button', { name: 'Accept SQL changes', exact: true })
+                .click();
+            const secondSummary =
+                'Changed the output value from 2 to 3. The column name and the rest of the query are unchanged.';
+            await installProposal(page, 'SELECT 3 AS value', {
+                id: 'flat-second',
+                summary: secondSummary,
+            });
+            await askForChanges(page, secondSummary);
+            await review(page)
+                .getByRole('button', { name: 'Accept SQL changes', exact: true })
+                .click();
+            const transcript = page.getByRole('log', { name: 'Chat messages', exact: true });
+            const cards = transcript.locator('.proposal-card');
+            await expect(cards).toHaveCount(2);
+            for (const card of await cards.all()) {
+                await expect(card).toHaveCSS('border-top-width', '0px');
+                await expect(card).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+                expect((await card.innerText()).match(/\bApplied\b/gi)).toHaveLength(1);
+                await expect(card).not.toContainText('SQL PROPOSAL');
+                await expect(card.getByTestId('assistant-proposal-summary')).toHaveCSS(
+                    'font-size',
+                    '12px',
+                );
+                await expect(card.locator('.sql-proposal-diff-toggle')).toHaveAccessibleName(
+                    'SQL changes Applied 1 line added, 1 line removed',
+                );
+                await expect(card.locator('.sql-proposal-diff-count .is-added')).toHaveText('+1');
+                await expect(card.locator('.sql-proposal-diff-count .is-removed')).toHaveText('−1');
+                await expect(card.locator('.sql-proposal-diff-count .is-added')).toHaveCSS(
+                    'border-top-width',
+                    '0px',
+                );
+            }
+            await expect(transcript.locator('.assistant-user-message p').first()).toHaveCSS(
+                'font-size',
+                '11px',
+            );
+            await expect(transcript.locator('.assistant-response-label')).toHaveText([
+                'Assistant',
+                'Assistant',
+            ]);
+            await expect(transcript.locator('.assistant-user-message').first()).toHaveCSS(
+                'border-top-width',
+                '0px',
+            );
+            for (const width of [1440, 900]) {
+                await page.setViewportSize({ width, height: 900 });
+                for (const card of await cards.all()) {
+                    const toggle = card.locator('.sql-proposal-diff-toggle');
+                    const [title, counts, chevron] = await Promise.all([
+                        toggle.locator('.sql-proposal-diff-title').boundingBox(),
+                        toggle.locator('.sql-proposal-diff-count').boundingBox(),
+                        toggle.locator('.sql-proposal-diff-chevron').boundingBox(),
+                    ]);
+                    if (!title || !counts || !chevron)
+                        throw new Error('SQL change controls should be visible');
+                    expect(title.x + title.width).toBeLessThanOrEqual(counts.x);
+                    expect(counts.x + counts.width).toBeLessThan(chevron.x);
+                }
+                await transcript.screenshot({ path: info.outputPath(`flat-chat-${width}.png`) });
+            }
+            const diff = cards.first().getByTestId('sql-proposal-diff');
+            const toggle = diff.locator('summary');
+            await toggle.click();
+            await expect(diff.locator('.sql-proposal-diff-line.is-added')).toContainText(
+                proposedSql,
+            );
+            await expect(diff.locator('.sql-proposal-diff-line.is-removed')).toContainText(
+                originalSql,
+            );
+            await toggle.press('Enter');
+            await expect(diff).not.toHaveAttribute('open', '');
+            await page.setViewportSize({ width: 1440, height: 900 });
+            await expectReferenceStyles(page, info, 'flat-chat', transcript);
+        });
+    }
 }
 
 for (const count of [5, 6, 11, 61]) {

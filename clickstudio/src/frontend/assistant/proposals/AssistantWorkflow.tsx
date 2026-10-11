@@ -127,7 +127,7 @@ function AssistantSqlProposalDiff({
             >
                 <summary className="sql-proposal-diff-toggle">
                     <span className="sql-proposal-diff-title">
-                        <span className="eyebrow">SQL DIFF</span>
+                        <span className="sql-proposal-diff-label">SQL changes</span>
                         <span
                             className={cx(
                                 'sql-proposal-review-status',
@@ -141,15 +141,16 @@ function AssistantSqlProposalDiff({
                             {review.status}
                         </span>
                     </span>
-                    <span
-                        className="sql-proposal-diff-count"
-                        aria-label={`${added} lines added, ${removed} lines removed`}
-                    >
-                        <span className="is-added">
-                            <i>+{added}</i> added
+                    <span className="sql-proposal-diff-count">
+                        <span className="is-added" aria-hidden="true">
+                            +{added}
                         </span>
-                        <span className="is-removed">
-                            <i>−{removed}</i> removed
+                        <span className="is-removed" aria-hidden="true">
+                            −{removed}
+                        </span>
+                        <span className="sr-only">
+                            {added} {added === 1 ? 'line' : 'lines'} added, {removed}{' '}
+                            {removed === 1 ? 'line' : 'lines'} removed
                         </span>
                     </span>
                     <span className="sql-proposal-diff-chevron" aria-hidden="true">
@@ -531,7 +532,7 @@ function AssistantOutput({
         return 'SQL action';
     };
     return (
-        <div className={cx('proposal-card', beginner && 'beginner-proposal-card')}>
+        <div className="proposal-card">
             <div className="proposal-heading">
                 {!beginner && proposalSql !== null && (
                     <span
@@ -544,11 +545,6 @@ function AssistantOutput({
                     </span>
                 )}
                 <div>
-                    <span className="eyebrow">
-                        {proposalSql === null
-                            ? 'ANSWER'
-                            : `SQL PROPOSAL · ${review.status.toUpperCase()}`}
-                    </span>
                     <AssistantMarkdown
                         text={proposal.summary}
                         sources={sources}
