@@ -337,26 +337,26 @@ function App() {
             <header className="topbar">
                 <Brand />
                 <div className="topbar-divider" />
-                {renderConnectionPicker({
-                    connectionPicker,
-                    setConnectionPicker,
-                    isSampleData,
-                    isPlayground,
-                    isCloudConnection,
-                    connection,
-                    copy,
-                    session,
-                    connectionNeedsTest,
-                    connectionStatus,
-                    hasPreviewSourceSwitcher,
-                    persistCloudInLocalServer,
-                    connectionActionBusy,
-                    runConnectionAction,
-                    sourceChoices,
-                    selectConnection,
-                    hasCloudConnection,
-                    setCloudDialogOpen,
-                })}
+                <ConnectionPicker
+                    connectionPicker={connectionPicker}
+                    setConnectionPicker={setConnectionPicker}
+                    isSampleData={isSampleData}
+                    isPlayground={isPlayground}
+                    isCloudConnection={isCloudConnection}
+                    connection={connection}
+                    copy={copy}
+                    session={session}
+                    connectionNeedsTest={connectionNeedsTest}
+                    connectionStatus={connectionStatus}
+                    hasPreviewSourceSwitcher={hasPreviewSourceSwitcher}
+                    persistCloudInLocalServer={persistCloudInLocalServer}
+                    connectionActionBusy={connectionActionBusy}
+                    runConnectionAction={runConnectionAction}
+                    sourceChoices={sourceChoices}
+                    selectConnection={selectConnection}
+                    hasCloudConnection={hasCloudConnection}
+                    setCloudDialogOpen={setCloudDialogOpen}
+                />
                 {hasCloudConnection ? (
                     <div className="cloud-connection-actions">
                         <Button
@@ -434,7 +434,7 @@ function App() {
     );
 }
 
-function renderConnectionPicker({
+function ConnectionPicker({
     connectionPicker,
     setConnectionPicker,
     isSampleData,
@@ -474,6 +474,30 @@ function renderConnectionPicker({
     hasCloudConnection: boolean;
     setCloudDialogOpen: import('react').Dispatch<import('react').SetStateAction<boolean>>;
 }) {
+    const root = useRef<HTMLDivElement>(null);
+    const trigger = useRef<HTMLButtonElement>(null);
+
+    useEffect(() => {
+        if (!connectionPicker) return;
+        const closeOutside = (event: PointerEvent) => {
+            if (event.target instanceof Node && !root.current?.contains(event.target)) {
+                setConnectionPicker(false);
+            }
+        };
+        const closeOnEscape = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape') return;
+            event.preventDefault();
+            setConnectionPicker(false);
+            trigger.current?.focus();
+        };
+        document.addEventListener('pointerdown', closeOutside, true);
+        document.addEventListener('keydown', closeOnEscape);
+        return () => {
+            document.removeEventListener('pointerdown', closeOutside, true);
+            document.removeEventListener('keydown', closeOnEscape);
+        };
+    }, [connectionPicker, setConnectionPicker]);
+
     const getSourceDescription = () => {
         if (isSampleData) {
             return 'Sample rows are generated in this browser.';
@@ -529,17 +553,6 @@ function renderConnectionPicker({
         }
 
         return `Database: ${connection.database} · Server: ${connection.host}`;
-    };
-    const getConnectionTone = (connection: Connected) => {
-        if (isSampleData) {
-            return 'is-sample';
-        }
-
-        if (isPlayground || (connection.trusted && !connectionNeedsTest)) {
-            return 'is-ready';
-        }
-
-        return 'is-review';
     };
     const getConnectionHelp = (connection: Connected) => {
         if (isSampleData) {
@@ -600,8 +613,9 @@ function renderConnectionPicker({
         return 'Trust connection';
     };
     return (
-        <div className="connection-wrap">
+        <div className="connection-wrap" ref={root}>
             <button
+                ref={trigger}
                 className="connection-trigger"
                 type="button"
                 aria-haspopup="dialog"
@@ -663,10 +677,7 @@ function renderConnectionPicker({
                             <strong>{connectionLabel(connection, session.demo)}</strong>
                             <small>{getConnectionDetails(connection)}</small>
                         </div>
-                        <p
-                            className={cx('connection-menu-note', getConnectionTone(connection))}
-                            role="status"
-                        >
+                        <p className="connection-menu-note" role="status">
                             {getConnectionHelp(connection)}
                         </p>
                         {!isCloudConnection &&
@@ -718,10 +729,10 @@ function renderConnectionPicker({
                                                 <small>{getSourceDetails()}</small>
                                             </span>
                                             <span
-                                                className="connection-choice-arrow"
+                                                className="connection-choice-check"
                                                 aria-hidden="true"
                                             >
-                                                {item.id === connection.id ? '✓' : '›'}
+                                                {item.id === connection.id && <Icon name="check" />}
                                             </span>
                                         </button>
                                     );

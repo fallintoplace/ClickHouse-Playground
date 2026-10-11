@@ -221,7 +221,12 @@ for (const theme of themes)
         await page.locator('.connection-trigger').click();
         const current = page.locator('.connection-switch-list > button[aria-pressed="true"]');
         await expect(current).toBeVisible();
-        await expect(current).toHaveCSS('box-shadow', /3px 0px 0px 0px inset/);
+        await expect(current).toHaveCSS('background-image', 'none');
+        await expect(current.locator('.connection-choice-check svg')).toBeVisible();
+        await expect(current.locator('.connection-choice-check')).toHaveCSS(
+            'color',
+            theme.dark ? 'rgb(250, 255, 105)' : 'rgb(107, 93, 0)',
+        );
     });
 
 for (const mode of ['Standard', 'Experimental'])
