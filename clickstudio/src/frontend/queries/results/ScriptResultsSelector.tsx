@@ -4,14 +4,17 @@ import { Button, cx } from '../../ui/components/ui';
 import { Icon } from '../../ui/components/icons';
 import { statementOutcome } from './statement-outcome';
 
-function statementDetails(statement: Script['statements'][number], run?: Run) {
+type ResultStatement = Pick<Script['statements'][number], 'sql' | 'runId' | 'status' | 'error'>;
+
+function statementDetails(statement: ResultStatement, run?: Run) {
     const error = run?.error ?? statement.error;
     if (error) return `${error.code}: ${error.message}`;
-    if (run) return `${statementOutcome(run)} · ${Math.round(run.elapsedMs)} ms`;
-    if (statement.status === 'pending') return 'Waiting to run';
-    if (statement.status === 'running') return 'Running';
-    if (statement.status === 'skipped') return 'Skipped';
-    return 'Not executed';
+    const status = run?.status ?? statement.status;
+    if (status === 'pending' || status === 'queued') return 'Waiting to run';
+    if (status === 'running') return 'Running';
+    if (run && ['succeeded', 'truncated'].includes(status))
+        return `${statementOutcome(run)} · ${Math.round(run.elapsedMs)} ms`;
+    return `${status.charAt(0).toUpperCase()}${status.slice(1).replace(/_/g, ' ')}`;
 }
 
 function positionMenu(menu: HTMLDivElement, trigger: HTMLButtonElement) {
@@ -61,29 +64,15 @@ function moveMenuFocus(event: KeyboardEvent<HTMLDivElement>) {
     items[next]?.focus();
 }
 
-export function SingleResultCard({ sql }: { sql: string }) {
-    return (
-        <span
-            className="script-results-trigger is-static"
-            role="group"
-            aria-label="Executed SQL"
-            title={sql}
-        >
-            <span className="script-statement-index">01</span>
-            <code>{sql.replace(/\s+/g, ' ').trim()}</code>
-        </span>
-    );
-}
-
 export function ScriptResultsSelector({
-    script,
+    statements,
     runs,
     activeRunId,
     onSelectRun,
     onSelectError,
     errorSelected,
 }: {
-    script: Script;
+    statements: readonly ResultStatement[];
     runs: Run[];
     activeRunId?: string;
     onSelectRun: (runId: string) => void;
@@ -95,14 +84,17 @@ export function ScriptResultsSelector({
     const menu = useRef<HTMLDivElement>(null);
     const [open, setOpen] = useState(false);
     const byId = new Map(runs.map(run => [run.id, run]));
-    const selectedIndex = script.statements.findIndex(statement =>
-        statement.runId
-            ? !errorSelected && statement.runId === activeRunId
-            : Boolean(statement.error && errorSelected),
-    );
-    const selected = script.statements[selectedIndex];
+    const selectedIndex =
+        statements.length === 1
+            ? 0
+            : statements.findIndex(statement =>
+                  statement.runId
+                      ? !errorSelected && statement.runId === activeRunId
+                      : Boolean(statement.error && errorSelected),
+              );
+    const selected = statements[selectedIndex];
     const selectedSql = selected?.sql.replace(/\s+/g, ' ').trim();
-    const failedCount = script.statements.filter(statement => statement.status === 'failed').length;
+    const failedCount = statements.filter(statement => statement.status === 'failed').length;
 
     useEffect(() => {
         const element = menu.current;
@@ -135,10 +127,9 @@ export function ScriptResultsSelector({
             document.removeEventListener('focusin', closeOnFocusOutside);
             document.removeEventListener('scroll', reposition, true);
         };
-    }, []);
+    }, [statements.length]);
 
-    if (script.statements.length < 2)
-        return script.statements[0] ? <SingleResultCard sql={script.statements[0].sql} /> : null;
+    if (!statements.length) return null;
 
     return (
         <span className="script-results-selector">
@@ -164,7 +155,7 @@ export function ScriptResultsSelector({
             >
                 {selected ? (
                     <>
-                        <span className="script-statement-index">
+                        <span className={cx('script-statement-index', `status-${selected.status}`)}>
                             {String(selectedIndex + 1).padStart(2, '0')}
                         </span>
                         <code>{selectedSql}</code>
@@ -174,7 +165,7 @@ export function ScriptResultsSelector({
                 )}
                 <Icon name="chevron" />
             </button>
-            {failedCount > 0 && (
+            {statements.length > 1 && failedCount > 0 && (
                 <span className="script-results-failure" role="status">
                     {failedCount} failed
                 </span>
@@ -204,7 +195,7 @@ export function ScriptResultsSelector({
                     focusedItem?.scrollIntoView({ block: 'nearest' });
                 }}
             >
-                {script.statements.map((statement, index) => {
+                {statements.map((statement, index) => {
                     const active = index === selectedIndex;
                     const run = statement.runId ? byId.get(statement.runId) : undefined;
                     const details = statementDetails(statement, run);
@@ -226,7 +217,12 @@ export function ScriptResultsSelector({
                                 trigger.current?.focus();
                             }}
                         >
-                            <span className="script-statement-index">
+                            <span
+                                className={cx(
+                                    'script-statement-index',
+                                    `status-${statement.status}`,
+                                )}
+                            >
                                 {String(index + 1).padStart(2, '0')}
                             </span>
                             <span className="script-statement-copy">

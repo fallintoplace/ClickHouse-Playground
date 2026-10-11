@@ -266,7 +266,7 @@ export function Workspace({
                     if (active.scriptId)
                         scriptFollowRef.current = { scriptId: active.scriptId, enabled: false };
                     update(active.id, draft => ({ ...draft, activeRunId: runId }));
-                    setView('results');
+                    if (active.activeRunId !== runId) setView('results');
                 },
                 onSelectScriptError: () => {
                     setSelectedScriptResult(active.id, '');

@@ -19,6 +19,7 @@
   }
   .results-title {
     min-width: 0;
+    flex: 1;
   }
   .results-actions {
     min-width: 0;
@@ -599,35 +600,33 @@
   .script-results-selector {
     display: inline-flex;
     min-width: 0;
+    max-width: 100%;
     align-items: center;
     gap: 8px;
   }
   .script-results-trigger {
     display: flex;
     min-width: 0;
-    max-width: min(260px, 45vw);
+    max-width: min(360px, 45vw);
     min-height: 28px;
     align-items: center;
-    gap: 6px;
-    padding: 3px 7px;
+    gap: 8px;
+    padding: 3px 8px;
     border: 1px solid var(--line);
     border-radius: var(--radius-control);
-    background: var(--control-well);
+    background: var(--panel-raised);
     color: var(--text-soft);
     cursor: pointer;
   }
-  .script-results-trigger.is-static {
-    cursor: default;
-  }
-  .script-results-trigger:not(.is-static):hover,
+  .script-results-trigger:hover,
   .script-results-trigger[aria-expanded="true"] {
     border-color: var(--line-bright);
-    background: var(--active-surface);
+    background: var(--control-hover);
   }
   .script-results-trigger code {
     min-width: 0;
     overflow: hidden;
-    font: 10px var(--font-mono);
+    font: 12px var(--font-sans);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -635,6 +634,16 @@
     width: 12px;
     height: 12px;
     flex: none;
+    color: var(--muted);
+    transition: transform 0.18s ease;
+  }
+  .script-results-trigger[aria-expanded="true"] > svg {
+    transform: rotate(180deg);
+  }
+  .script-results-trigger > .script-statement-index {
+    width: 20px;
+    height: 18px;
+    font-size: 10px;
   }
   .script-results-trigger > span:not(.script-statement-index) {
     font-size: 10px;
@@ -691,7 +700,7 @@
   .script-statement:hover:not(:disabled),
   .script-statement.is-active {
     border-color: var(--line-bright);
-    background: var(--active-surface);
+    background: var(--control-hover);
   }
   .script-statement:disabled {
     cursor: default;
@@ -706,7 +715,8 @@
     border-radius: var(--radius-label);
     background: var(--panel-raised);
     color: var(--muted);
-    font: 9px var(--font-mono);
+    font: 9px var(--font-sans);
+    font-variant-numeric: tabular-nums;
   }
   .script-statement-copy {
     display: grid;
@@ -721,7 +731,7 @@
   }
   .script-statement-copy code {
     color: var(--text-soft);
-    font: 10px var(--font-mono);
+    font: 11px var(--font-sans);
   }
   .script-statement-copy small {
     color: var(--muted);
@@ -738,20 +748,28 @@
     letter-spacing: 0.03em;
     text-transform: uppercase;
   }
-  .script-status.status-succeeded {
+  .script-status.status-succeeded,
+  .script-statement-index.status-succeeded {
     background: color-mix(in srgb, var(--green) 10%, transparent);
     color: var(--green);
   }
   .script-status.status-truncated,
   .script-status.status-running,
-  .script-status.status-queued {
+  .script-status.status-queued,
+  .script-statement-index.status-truncated,
+  .script-statement-index.status-running,
+  .script-statement-index.status-queued {
     background: color-mix(in srgb, var(--amber) 11%, transparent);
     color: var(--amber);
   }
   .script-status.status-failed,
   .script-status.status-cancelled,
   .script-status.status-interrupted,
-  .script-status.status-timed_out {
+  .script-status.status-timed_out,
+  .script-statement-index.status-failed,
+  .script-statement-index.status-cancelled,
+  .script-statement-index.status-interrupted,
+  .script-statement-index.status-timed_out {
     background: color-mix(in srgb, var(--red) 9%, transparent);
     color: var(--red);
   }

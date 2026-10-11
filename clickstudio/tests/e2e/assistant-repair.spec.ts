@@ -77,7 +77,7 @@ for (const mode of ['beginner', 'expert'])
             'succeeded',
         );
         const header = page.locator('.results-header');
-        const title = header.getByRole('group', { name: 'Executed SQL', exact: true });
+        const title = header.getByRole('button', { name: /^Select a statement result/ });
         await expect(title).toBeVisible();
         const failedSql = 'SELECT day, event_count FROM demo.events ORDER BY day';
         const repairedSql = failedSql.replace('event_count', 'events');
@@ -180,7 +180,7 @@ for (const theme of ['Dark', 'Light'])
             await fix.scrollIntoViewIfNeeded();
             await expect(fix).toBeVisible();
             await expect(
-                header.getByRole('group', { name: 'Executed SQL', exact: true }),
+                header.getByRole('button', { name: /^Select a statement result/ }),
             ).toBeVisible();
             await expect(header.locator('.eyebrow')).toHaveCount(0);
             if (width === 900) await expect(header.locator('.results-mark')).toBeVisible();
@@ -219,7 +219,7 @@ test('Fix with AI uses the Results header after viewing an EXPLAIN pipeline', as
     await rejectQuery(page);
     const results = page.getByRole('region', { name: 'Query results', exact: true });
     await expect(results.getByTestId('query-failure')).toBeVisible();
-    await expect(header.getByRole('group', { name: 'Executed SQL', exact: true })).toBeVisible();
+    await expect(header.getByRole('button', { name: /^Select a statement result/ })).toBeVisible();
     await expect(header.locator('.eyebrow')).toHaveCount(0);
     await expect(
         header.getByRole('button', { name: 'Collapse Query results', exact: true }),

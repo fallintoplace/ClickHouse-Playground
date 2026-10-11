@@ -477,6 +477,6 @@ test('Opening a background query failure shows Results instead of its previous S
     await expect(
         page
             .getByRole('region', { name: 'Query results', exact: true })
-            .getByRole('group', { name: 'Executed SQL', exact: true }),
+            .getByRole('button', { name: /^Select a statement result/ }),
     ).toBeVisible();
 });

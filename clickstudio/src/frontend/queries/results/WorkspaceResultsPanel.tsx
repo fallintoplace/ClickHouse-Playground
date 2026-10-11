@@ -19,11 +19,7 @@ import { PipelineGraph } from '../inspection/diagrams/PipelineGraph';
 import { SqlFlowView } from '../inspection/diagrams/SqlFlowView';
 import { Button, cx, Spinner } from '../../ui/components/ui';
 import { Icon } from '../../ui/components/icons';
-import {
-    ScriptCancelAction,
-    ScriptResultsSelector,
-    SingleResultCard,
-} from './ScriptResultsSelector';
+import { ScriptCancelAction, ScriptResultsSelector } from './ScriptResultsSelector';
 import { ScrollEdgeFrame } from '../../ui/components/ScrollEdgeShadows';
 import { QueryFailureNotice } from './QueryFailureNotice';
 import { resultsTabLabel } from '../../workspace/workspace-helpers';
@@ -50,7 +46,7 @@ export type WorkspaceResultsPanelState = Readonly<{
     trusted: boolean;
     busy: BusyAction;
     assistantBusy: boolean;
-    execution?: Readonly<{ sql: string }>;
+    execution?: Readonly<{ sql: string; runId?: string; scriptId?: string }>;
     retainedExecutionResult?: Readonly<{ run: Run; page: ResultPage; pageIndex: number }>;
     cancelling: boolean;
     experience: ExperienceLevel;
@@ -453,11 +449,16 @@ function renderResultsHeader({
     const showQueryCard = ['results', 'chart', 'insights'].includes(headerView);
     const querySql = showFailure ? failureSql : (execution?.sql ?? run?.sql);
     let queryCard: ReactNode = null;
-    if (showQueryCard && script && !failedAttempt && (!execution || execution.sql === script.sql)) {
+    if (
+        showQueryCard &&
+        script &&
+        !failedAttempt &&
+        (!execution || execution.scriptId === script.id)
+    ) {
         queryCard = (
             <ScriptResultsSelector
                 key={script.id}
-                script={script}
+                statements={script.statements}
                 runs={history}
                 activeRunId={run?.id}
                 onSelectRun={actions.onSelectScriptRun}
@@ -470,7 +471,28 @@ function renderResultsHeader({
             />
         );
     } else if (showQueryCard && querySql) {
-        queryCard = <SingleResultCard sql={querySql} />;
+        const queryRun =
+            !showFailure && run?.sql === querySql && (!execution || execution.runId === run.id)
+                ? run
+                : undefined;
+        queryCard = (
+            <ScriptResultsSelector
+                key="single-query"
+                statements={[
+                    {
+                        sql: querySql,
+                        runId: queryRun?.id,
+                        status: showFailure ? 'failed' : (queryRun?.status ?? 'running'),
+                        error: showFailure ? viewState.failureError : undefined,
+                    },
+                ]}
+                runs={queryRun ? [queryRun] : []}
+                activeRunId={queryRun?.id}
+                onSelectRun={actions.onSelectScriptRun}
+                onSelectError={actions.onSelectScriptError}
+                errorSelected={showFailure}
+            />
+        );
     }
 
     return (

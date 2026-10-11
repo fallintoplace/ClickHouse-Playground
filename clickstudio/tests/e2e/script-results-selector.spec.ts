@@ -89,6 +89,7 @@ test('Statement results use a compact header dropdown and switch without executi
     await expect(menu.getByRole('menuitemradio', { name: 'Statement 2: succeeded' })).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(menu).toBeHidden();
+    await expect(page.locator('.execution-bar')).toHaveAttribute('data-query-id', /.+/);
     await expect(page.locator('.execution-bar')).not.toHaveAttribute('data-query-id', firstQueryId);
     expect(await currentQueryId(page)).not.toBe(thirdQueryId);
     await expect(results.getByRole('table')).toBeVisible();
@@ -114,7 +115,7 @@ test('Statement results use a compact header dropdown and switch without executi
     expect(executions).toBe(0);
 });
 
-test('A single query shows its SQL card without a dropdown through view and draft changes', async ({
+test('A single query uses the same clickable dropdown through view and draft changes', async ({
     page,
 }, testInfo) => {
     await trust(page);
@@ -122,15 +123,24 @@ test('A single query shows its SQL card without a dropdown through view and draf
     await replaceSql(page, sql);
     await runScript(page);
     const results = page.getByRole('region', { name: 'Query results', exact: true });
-    const card = results.getByRole('group', { name: 'Executed SQL', exact: true });
+    const card = results.getByRole('button', { name: /^Select a statement result/ });
     await expect(results.getByRole('table')).toBeVisible();
     await expect(card).toHaveAttribute('title', sql);
     await expect(card.locator('.script-statement-index')).toHaveText('01');
-    await expect(card.locator('svg')).toHaveCount(0);
+    await expect(card.locator('svg')).toHaveCount(1);
     await expect(results.getByRole('heading', { name: 'Results', exact: true })).toHaveCount(0);
-    await expect(results.getByRole('button', { name: /^Select a statement result/ })).toHaveCount(
-        0,
-    );
+    await expect(card).toHaveAttribute('aria-haspopup', 'menu');
+    await expect(card).toHaveAttribute('aria-expanded', 'false');
+    let executions = 0;
+    page.on('request', request => {
+        if (
+            request.method() === 'POST' &&
+            ['/api/runs', '/api/scripts'].includes(new URL(request.url()).pathname)
+        )
+            executions++;
+    });
+    const queryId = await currentQueryId(page);
+    const menu = results.getByRole('menu', { name: 'Statement results', exact: true });
     for (const mode of ['Standard', 'Experimental']) {
         await page.getByText(mode, { exact: true }).click();
         for (const theme of ['Dark', 'Light']) {
@@ -153,13 +163,51 @@ test('A single query shows its SQL card without a dropdown through view and draf
                         path: testInfo.outputPath(`single-query-${mode}-${theme}.png`),
                     });
             }
+            await card.locator('.script-statement-index').click();
+            await expect(menu).toBeVisible();
+            await expect(menu.getByRole('menuitemradio')).toHaveCount(1);
+            const selected = menu.getByRole('menuitemradio', { name: 'Statement 1: succeeded' });
+            await expect(selected).toBeChecked();
+            await expect(selected).toBeFocused();
+            await expect(card.locator('.script-statement-index')).toHaveClass(/status-succeeded/);
+            await expect(card.locator('.script-statement-index')).toHaveCSS(
+                'color',
+                await selected
+                    .locator('.script-status')
+                    .evaluate(element => getComputedStyle(element).color),
+            );
+            await expect(card).toHaveAttribute('aria-expanded', 'true');
+            await page.screenshot({
+                path: testInfo.outputPath(`single-query-menu-${mode}-${theme}.png`),
+            });
+            await card.click();
+            await expect(menu).toBeHidden();
+            await expect(card).toHaveAttribute('aria-expanded', 'false');
+            await card.press('ArrowDown');
+            await expect(selected).toBeFocused();
+            await page.keyboard.press('Escape');
+            await expect(menu).toBeHidden();
+            await expect(card).toBeFocused();
+            await openStatementResults(results);
+            await results.locator('.results-mark').click();
+            await expect(menu).toBeHidden();
         }
     }
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();
     await expect(card).toHaveAttribute('title', sql);
+    await openStatementResults(results);
+    await menu.getByRole('menuitemradio', { name: 'Statement 1: succeeded' }).click();
+    await expect(menu).toBeHidden();
+    await expect(card).toBeFocused();
+    await expect(results.getByRole('tab', { name: 'Chart', exact: true })).toHaveAttribute(
+        'aria-selected',
+        'true',
+    );
+    expect(await currentQueryId(page)).toBe(queryId);
     await results.getByRole('tab', { name: 'Table', exact: true }).click();
     await replaceSql(page, 'SELECT 2');
     await expect(card).toHaveAttribute('title', sql);
+    expect(executions).toBe(0);
 });
 
 test('A single failed query shows the submitted SQL card and replaces it after a successful Run', async ({
@@ -169,21 +217,67 @@ test('A single failed query shows the submitted SQL card and replaces it after a
     await replaceSql(page, 'SELECT 1');
     await runScript(page);
     const results = page.getByRole('region', { name: 'Query results', exact: true });
-    const card = results.getByRole('group', { name: 'Executed SQL', exact: true });
+    const card = results.getByRole('button', { name: /^Select a statement result/ });
     await expect(card).toHaveAttribute('title', 'SELECT 1');
     await expect(results.getByRole('table')).toBeVisible();
     await replaceSql(page, "SELECT 'unfinished");
     await page.getByTestId('run-button').click();
     await expect(results.getByTestId('query-failure')).toBeVisible();
     await expect(card).toHaveAttribute('title', "SELECT 'unfinished");
-    await expect(results.getByRole('button', { name: /^Select a statement result/ })).toHaveCount(
-        0,
-    );
+    await expect(card.locator('.script-statement-index')).toHaveClass(/status-failed/);
+    await expect(results.locator('.script-results-failure')).toHaveCount(0);
+    const menu = await openStatementResults(results);
+    const failed = menu.getByRole('menuitemradio', { name: 'Statement 1: failed' });
+    await expect(failed).toBeChecked();
+    await expect(failed).toContainText('Unclosed quoted value or identifier');
+    await failed.click();
+    await expect(menu).toBeHidden();
+    await expect(card).toBeFocused();
+    await expect(results.getByTestId('query-failure')).toBeVisible();
     await replaceSql(page, 'SELECT 2');
     await expect(card).toHaveAttribute('title', "SELECT 'unfinished");
     await runScript(page);
     await expect(results.getByTestId('query-failure')).toHaveCount(0);
     await expect(card).toHaveAttribute('title', 'SELECT 2');
+});
+
+test('A repeated query keeps its pending dropdown and enables the new result when it arrives', async ({
+    page,
+}) => {
+    await trust(page);
+    await replaceSql(page, 'SELECT 1');
+    await runScript(page);
+    const results = page.getByRole('region', { name: 'Query results', exact: true });
+    await expect(results.getByRole('table')).toBeVisible();
+    const previousQueryId = await currentQueryId(page);
+    let release!: () => void;
+    const submission = new Promise<void>(resolve => {
+        release = resolve;
+    });
+    await page.route('**/api/runs', async route => {
+        if (route.request().method() === 'POST') await submission;
+        await route.continue();
+    });
+    await runScript(page);
+    const card = results.getByRole('button', { name: /^Select a statement result/ });
+    await expect(card).toContainText('01');
+    await expect(card.locator('.script-statement-index')).toHaveClass(/status-running/);
+    const menu = await openStatementResults(results);
+    await expect(menu.getByRole('menuitemradio', { name: 'Statement 1: running' })).toBeDisabled();
+    await expect(
+        menu.getByRole('menuitemradio', { name: 'Statement 1: running' }).locator('small'),
+    ).toHaveText('Running');
+    await expect(menu).toBeFocused();
+    release();
+    await expect(menu.getByRole('menuitemradio', { name: 'Statement 1: succeeded' })).toBeEnabled();
+    await expect(page.locator('.execution-bar')).toHaveAttribute('data-query-id', /.+/);
+    expect(await currentQueryId(page)).not.toBe(previousQueryId);
+    await expect(card.locator('.script-statement-index')).toHaveClass(/status-succeeded/);
+    await page.keyboard.press('ArrowDown');
+    await expect(menu.getByRole('menuitemradio', { name: 'Statement 1: succeeded' })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+    await expect(card).toBeFocused();
 });
 
 test('Failures stay visible while browsing successful results and skipped statements stay disabled', async ({
@@ -248,7 +342,7 @@ test('Opening a long script menu scrolls the selected statement into view', asyn
     await runScript(page);
     const results = page.getByRole('region', { name: 'Query results', exact: true });
     const trigger = results.getByRole('button', { name: /^Select a statement result/ });
-    await expect(trigger).toContainText('12');
+    await expect(trigger).toHaveAccessibleName(/Statement 12: succeeded, SELECT 12/);
     const menu = await openStatementResults(results);
     const selected = menu.getByRole('menuitemradio', { name: 'Statement 12: succeeded' });
     await expect(selected).toBeFocused();
@@ -268,6 +362,9 @@ test('Pending statements stay disabled and cancellation remains available in the
     await expect(cancel).toBeVisible();
     const menu = await openStatementResults(results);
     await expect(menu.getByRole('menuitemradio', { name: 'Statement 1: running' })).toBeEnabled();
+    await expect(
+        menu.getByRole('menuitemradio', { name: 'Statement 1: running' }).locator('small'),
+    ).toHaveText('Running');
     await expect(menu.getByRole('menuitemradio', { name: 'Statement 2: pending' })).toBeDisabled();
     await expect(menu.getByRole('menuitemradio', { name: 'Statement 3: pending' })).toBeDisabled();
     await page.keyboard.press('End');

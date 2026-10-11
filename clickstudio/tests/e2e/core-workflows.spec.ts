@@ -771,7 +771,7 @@ test('Failed execution replaces visible results and can collapse, reopen and ret
         await expect(failure).toContainText('SYNTAX_ERROR');
         await expect(failure).toContainText('Syntax error at position 15');
         await expect(
-            results.getByRole('group', { name: 'Executed SQL', exact: true }),
+            results.getByRole('button', { name: /^Select a statement result/ }),
         ).toBeVisible();
         await expect(results.getByRole('table')).toHaveCount(0);
         await expect(results.locator('.result-provenance-header')).toHaveCount(0);
@@ -889,7 +889,7 @@ for (const theme of ['Dark', 'Light'])
                 await new Promise(requestAnimationFrame);
             });
             const header = results.locator('.results-header');
-            const title = header.getByRole('group', { name: 'Executed SQL', exact: true });
+            const title = header.getByRole('button', { name: /^Select a statement result/ });
             await expect(title).toBeVisible();
             const headerBefore = (await header.boundingBox())!;
             const titleBefore = (await title.boundingBox())!;
@@ -2906,6 +2906,7 @@ test('Selecting an earlier script statement stops automatic following while late
     await runScript(page);
 
     const results = page.getByRole('region', { name: 'Query results', exact: true });
+    await expect(results.getByRole('button', { name: 'Cancel script', exact: true })).toBeVisible();
     await openStatementResults(results);
     const first = results.getByRole('menuitemradio', {
         name: 'Statement 1: succeeded',
