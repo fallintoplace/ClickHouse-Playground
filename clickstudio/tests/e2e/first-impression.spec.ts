@@ -78,9 +78,9 @@ test('Standard keeps only AI and preserves execution and saving', async ({ page 
     await expect(inspector).toHaveCount(0);
     await expect(page.getByTestId('save-query')).toHaveCount(0);
     await expect(page.locator('.tab-unsaved')).toHaveCount(0);
-    for (const name of ['Objects', 'Reference', 'Query history', 'Saved queries'])
+    for (const name of ['Objects', 'Reference', 'AI', 'Query history', 'Saved queries'])
         await expect(rail.getByRole('button', { name, exact: true })).toHaveCount(0);
-    await rail.getByRole('button', { name: 'AI', exact: true }).click();
+    await page.locator('.editor-heading').getByTestId('open-ai').click();
     await expect(inspector.getByRole('heading', { name: 'AI', exact: true })).toBeVisible();
     await expect(inspector.locator('.inspector-tabs')).toHaveCount(0);
     await expect(
@@ -124,7 +124,8 @@ test('Standard keeps only AI and preserves execution and saving', async ({ page 
     await expect(page.locator('.cm-content')).toHaveText(localSql, { useInnerText: true });
     await expect(page.getByTestId('save-query')).toHaveCount(0);
     await expect(page.locator('.tab-unsaved')).toHaveCount(0);
-    await rail.getByRole('button', { name: 'AI', exact: true }).click();
+    await expect(rail.getByRole('button', { name: 'AI', exact: true })).toHaveCount(0);
+    await page.locator('.editor-heading').getByTestId('open-ai').click();
     await expect(inspector.getByRole('heading', { name: 'AI', exact: true })).toBeVisible();
     await inspector.getByRole('button', { name: 'Close inspector', exact: true }).click();
     await expect(inspector).toHaveCount(0);
@@ -148,7 +149,10 @@ for (const panel of ['Objects', 'Reference', 'Query history', 'Saved queries', '
         const sql = await page.locator('.cm-content').innerText();
         await page.getByText('Standard', { exact: true }).click();
         await expect(inspector).toHaveCount(0);
-        await page.locator('.icon-rail').getByRole('button', { name: 'AI', exact: true }).click();
+        await expect(
+            page.locator('.icon-rail').getByRole('button', { name: 'AI', exact: true }),
+        ).toHaveCount(0);
+        await page.locator('.editor-heading').getByTestId('open-ai').click();
         await expect(inspector.getByRole('heading', { name: 'AI', exact: true })).toBeVisible();
         await expect(inspector.locator('.inspector-tabs')).toHaveCount(0);
         await page.getByText('Experimental', { exact: true }).click();

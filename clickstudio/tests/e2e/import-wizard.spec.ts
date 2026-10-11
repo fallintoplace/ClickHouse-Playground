@@ -124,10 +124,7 @@ for (const mode of ['beginner', 'expert']) {
         const inspector = page.locator('.inspector-pane.is-docked-inspector');
         if (mode === 'beginner') {
             await expect(inspector).toHaveCount(0);
-            await page
-                .locator('.icon-rail')
-                .getByRole('button', { name: 'AI', exact: true })
-                .click();
+            await page.getByTestId('open-ai').click();
             await expect(inspector.getByRole('heading', { name: 'AI', exact: true })).toBeVisible();
             await expect(inspector.locator('.inspector-tabs')).toHaveCount(0);
             await page.getByText('Experimental', { exact: true }).click();

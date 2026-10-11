@@ -20,6 +20,10 @@ async function beginInCompactMode(page: Page) {
     await page.goto('/');
     await expect(page.getByRole('textbox', { name: 'SQL editor', exact: true })).toBeVisible();
     await expect(page.getByTestId('open-ai')).toBeVisible();
+    await expect(page.locator('.icon-rail').getByTestId('open-ai')).toHaveCount(0);
+    await expect(
+        page.locator('.icon-rail').getByRole('button', { name: 'AI', exact: true }),
+    ).toHaveCount(0);
     await expect(page.getByTestId('format-sql')).toBeVisible();
     await expect(page.getByTestId('run-button')).toHaveCount(1);
     await expect(

@@ -106,10 +106,7 @@ for (const theme of ['Light', 'Dark']) {
             await expect(
                 results.getByRole('button', { name: 'Chart details', exact: true }),
             ).toHaveCount(0);
-            await page
-                .locator('.icon-rail')
-                .getByRole('button', { name: 'AI', exact: true })
-                .click();
+            await page.getByTestId('open-ai').click();
             await expect(page.getByRole('textbox', { name: 'Ask AI', exact: true })).toBeVisible();
             await expect(page.locator('.assistant-context-meta')).toHaveCount(0);
             await expectReferenceStyles(page, info, 'assistant-composer');
