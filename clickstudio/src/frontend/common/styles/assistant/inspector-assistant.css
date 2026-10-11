@@ -817,13 +817,13 @@
     width: 5px;
     height: 5px;
     border-radius: 2px;
-    background: #9c8fe7;
+    background: var(--schema-column-violet);
   }
   .schema-column:nth-child(3n) .column-type-dot {
-    background: #73c5a0;
+    background: var(--schema-column-green);
   }
   .schema-column:nth-child(4n) .column-type-dot {
-    background: #e5ad69;
+    background: var(--schema-column-amber);
   }
   .schema-column > span:nth-child(2) {
     overflow: hidden;
@@ -2738,7 +2738,13 @@
     bottom: 0;
     left: 0;
     height: 2px;
-    background: linear-gradient(90deg, transparent, var(--accent), #fff6, var(--accent));
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--accent),
+      var(--assistant-loading-highlight),
+      var(--accent)
+    );
     box-shadow: none;
   }
   .is-running .execution-progress-line {
@@ -2916,7 +2922,7 @@
       linear-gradient(90deg, color-mix(in srgb, var(--text) 5%, transparent) 1px, transparent 1px);
     background-size: 44px 44px;
     content: "";
-    mask-image: radial-gradient(ellipse at center, #000, transparent 73%);
+    mask-image: radial-gradient(ellipse at center, var(--color-black), transparent 73%);
   }
   .auth-card {
     position: relative;

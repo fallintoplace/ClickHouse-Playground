@@ -20,15 +20,12 @@ import {
     experienceOptions,
     getCopy,
     resolveLocale,
-    themeAppearance,
     themeOptions,
     type ExperienceLevel,
     type Locale,
     type Theme,
 } from '../common/translations/i18n';
 import { RadioGroup } from '@clickhouse/click-ui/RadioGroup';
-import clickhouseLogomarkDark from '../common/assets/clickhouse-logomark-dark.svg';
-import clickhouseLogomarkLight from '../common/assets/clickhouse-logomark-light.svg';
 import type { Connected, Session } from '../workspace/workspace-types';
 import { resolveConnectionSelection } from '../database/connections/selection';
 
@@ -152,7 +149,7 @@ function App() {
                   return rank(left.id) - rank(right.id);
               })
         : otherConnections;
-    const dark = themeAppearance[theme].dark;
+    const dark = theme === 'click-dark';
     const selectConnection = useCallback((id: string) => {
         setConnectionId(id);
         writeConnectionToUrl(id);
@@ -191,7 +188,12 @@ function App() {
         document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
         document
             .querySelector('meta[name="theme-color"]')
-            ?.setAttribute('content', themeAppearance[theme].chromeColor);
+            ?.setAttribute(
+                'content',
+                getComputedStyle(document.documentElement)
+                    .getPropertyValue('--browser-chrome')
+                    .trim(),
+            );
         try {
             localStorage.setItem('clickstudio:theme', theme);
             localStorage.setItem('clickstudio:accent', accent);
@@ -267,7 +269,7 @@ function App() {
         return (
             <main className="auth-screen">
                 <section className="auth-card animate-enter">
-                    <Brand theme={theme} />
+                    <Brand />
                     <span className="eyebrow mt-8">{copy.auth.privateWorkspace}</span>
                     <h1>{sessionError ? copy.auth.unavailable : copy.auth.opening}</h1>
                     {sessionError ? (
@@ -304,7 +306,7 @@ function App() {
                         void login();
                     }}
                 >
-                    <Brand theme={theme} />
+                    <Brand />
                     <span className="eyebrow mt-8">{copy.auth.privateWorkspace}</span>
                     <h1>{copy.auth.title}</h1>
                     <p>{copy.auth.description}</p>
@@ -357,7 +359,7 @@ function App() {
     return (
         <div className="application" data-experience={experience}>
             <header className="topbar">
-                <Brand theme={theme} />
+                <Brand />
                 <div className="topbar-divider" />
                 {renderConnectionPicker({
                     connectionPicker,
@@ -885,11 +887,22 @@ function renderAppearanceControls({
     );
 }
 
-function Brand({ theme }: { theme: Theme }) {
-    const logo = themeAppearance[theme].dark ? clickhouseLogomarkDark : clickhouseLogomarkLight;
+function Brand() {
     return (
         <div className="brand-lockup">
-            <img className="brand-symbol" src={logo} alt="ClickHouse" />
+            <svg
+                className="brand-symbol"
+                viewBox="0 0 150 150"
+                role="img"
+                aria-label="ClickHouse"
+                fill="var(--brand-logo)"
+            >
+                <path d="M27,25.7c0-.6.5-1.2,1.2-1.2h8.8c.6,0,1.2.5,1.2,1.2v97.7c0,.6-.5,1.2-1.2,1.2h-8.8c-.6,0-1.2-.5-1.2-1.2V25.7Z" />
+                <path d="M49.2,25.7c0-.6.5-1.2,1.2-1.2h8.8c.6,0,1.2.5,1.2,1.2v97.7c0,.6-.5,1.2-1.2,1.2h-8.8c-.6,0-1.2-.5-1.2-1.2V25.7Z" />
+                <path d="M71.4,25.7c0-.6.5-1.2,1.2-1.2h8.8c.6,0,1.2.5,1.2,1.2v97.7c0,.6-.5,1.2-1.2,1.2h-8.8c-.6,0-1.2-.5-1.2-1.2V25.7Z" />
+                <path d="M93.6,25.7c0-.6.5-1.2,1.2-1.2h8.8c.6,0,1.2.5,1.2,1.2v97.7c0,.6-.5,1.2-1.2,1.2h-8.8c-.6,0-1.2-.5-1.2-1.2V25.7Z" />
+                <path d="M115.9,64.6c0-.6.5-1.2,1.2-1.2h8.8c.6,0,1.2.5,1.2,1.2v19.9c0,.6-.5,1.2-1.2,1.2h-8.8c-.6,0-1.2-.5-1.2-1.2V64.6Z" />
+            </svg>
             <span className="brand-name">
                 Click<span>Studio</span>
                 <small>CLICKHOUSE WORKSPACE</small>

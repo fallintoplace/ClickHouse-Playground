@@ -324,16 +324,6 @@
 
 /* Unified ClickHouse object explorer */
 .object-explorer-section {
-  --explorer-signal: var(--signal-accent);
-  --explorer-database: var(--accent-clickhouse-yellow);
-  --explorer-table: #79baff;
-  --explorer-view: #c39aff;
-  --explorer-column: #69dfbd;
-  --explorer-dictionary: #ffbf68;
-  --explorer-projection: #f28dca;
-  --explorer-index: #ff8d80;
-  --explorer-tree-surface: var(--page);
-  --explorer-tree-border: color-mix(in srgb, var(--explorer-signal) 24%, var(--line));
   position: relative;
   isolation: isolate;
   display: flex;
@@ -345,14 +335,7 @@
   padding: 10px;
   background: var(--panel);
 }
-:root[data-theme="click-light"] .object-explorer-section {
-  --explorer-table: #286da8;
-  --explorer-view: #72459e;
-  --explorer-column: #19785d;
-  --explorer-dictionary: #9b5700;
-  --explorer-projection: #a43875;
-  --explorer-index: #a84238;
-}
+
 .object-explorer-action-bar {
   display: flex;
   flex: none;
@@ -1725,7 +1708,7 @@
   background-size: 25px 25px;
   content: "";
   opacity: 0.45;
-  mask-image: radial-gradient(ellipse at center, #000 5%, transparent 95%);
+  mask-image: radial-gradient(ellipse at center, var(--color-black) 5%, transparent 95%);
   pointer-events: none;
 }
 .parts-graph-viewport svg {
@@ -1878,7 +1861,11 @@
   height: 100%;
   min-width: 2px;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 52%, white));
+  background: linear-gradient(
+    90deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 52%, var(--color-white))
+  );
   box-shadow: none;
 }
 .parts-map-size > strong {

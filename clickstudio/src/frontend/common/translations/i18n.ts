@@ -26,11 +26,6 @@ export type { Copy, Locale } from './i18n-types.js';
 export const supportedLocales = ['en', 'zh'] as const satisfies readonly Locale[];
 export type { Theme, ExperienceLevel } from '../styles/appearance-types.js';
 
-export const themeAppearance: Record<Theme, { dark: boolean; chromeColor: string }> = {
-    'click-dark': { dark: true, chromeColor: '#151515' },
-    'click-light': { dark: false, chromeColor: '#ffffff' },
-};
-
 export function resolveLocale(...candidates: readonly (string | null | undefined)[]): Locale {
     for (const candidate of candidates) {
         const normalized = candidate?.trim().toLowerCase().replaceAll('_', '-');

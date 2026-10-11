@@ -500,7 +500,7 @@
     background-size: 32px 32px;
     content: "";
     opacity: 0.42;
-    mask-image: radial-gradient(ellipse at 50% 45%, #000 18%, transparent 100%);
+    mask-image: radial-gradient(ellipse at 50% 45%, var(--color-black) 18%, transparent 100%);
     pointer-events: none;
   }
   .pipeline-graph-svg {
@@ -1735,7 +1735,7 @@
   }
   .chart-bar {
     fill: var(--series-color, var(--accent));
-    stroke: color-mix(in srgb, var(--series-color, var(--accent)) 65%, white);
+    stroke: color-mix(in srgb, var(--series-color, var(--accent)) 65%, var(--color-white));
     stroke-width: 1;
     opacity: 0.88;
     transform-box: fill-box;
@@ -2057,20 +2057,20 @@
     vector-effect: non-scaling-stroke;
   }
   .geo-feature.is-area {
-    fill: color-mix(in srgb, hsl(var(--geo-hue) 88% 58%) var(--geo-intensity), var(--panel-raised));
-    stroke: color-mix(in srgb, hsl(var(--geo-hue) 88% 64%) 75%, var(--text));
+    fill: color-mix(in srgb, var(--geo-feature-fill) var(--geo-intensity), var(--panel-raised));
+    stroke: color-mix(in srgb, var(--geo-feature-stroke) 75%, var(--text));
     stroke-width: 1;
   }
   .geo-feature.is-line {
     fill: none;
-    stroke: color-mix(in srgb, hsl(var(--geo-hue) 88% 58%) var(--geo-intensity), var(--text-soft));
+    stroke: color-mix(in srgb, var(--geo-feature-fill) var(--geo-intensity), var(--text-soft));
     stroke-width: 2.4;
     stroke-linecap: round;
     stroke-linejoin: round;
   }
   .geo-point {
-    fill: color-mix(in srgb, hsl(var(--geo-hue) 88% 58%) var(--geo-intensity), var(--panel-raised));
-    stroke: hsl(var(--geo-hue) 88% 70%);
+    fill: color-mix(in srgb, var(--geo-feature-fill) var(--geo-intensity), var(--panel-raised));
+    stroke: var(--geo-point-stroke);
     stroke-width: 1.5;
   }
   .geo-feature:hover,
@@ -2088,7 +2088,7 @@
   }
   .geo-point-label rect {
     fill: color-mix(in srgb, var(--panel) 94%, transparent);
-    stroke: color-mix(in srgb, hsl(var(--geo-hue) 88% 60%) 52%, var(--line-bright));
+    stroke: color-mix(in srgb, var(--geo-label-stroke) 52%, var(--line-bright));
     stroke-width: 0.8;
     vector-effect: non-scaling-stroke;
   }
@@ -2097,7 +2097,7 @@
     font: 650 9px var(--font-sans);
   }
   .geo-point-label-measure {
-    fill: hsl(var(--geo-hue) 92% 68%);
+    fill: var(--geo-label-measure);
     font: 720 8px var(--font-mono);
   }
   .geo-map-tools {
@@ -2161,16 +2161,7 @@
     height: 9px;
     flex: none;
     border-radius: var(--radius-control);
-    background: linear-gradient(
-      90deg,
-      hsl(278 88% 60%),
-      hsl(235 90% 62%),
-      hsl(192 90% 54%),
-      hsl(150 78% 45%),
-      hsl(104 85% 50%),
-      hsl(63 92% 54%),
-      hsl(36 94% 58%)
-    );
+    background: var(--geo-gradient);
   }
   .geo-legend div,
   .geo-selection > div:first-child {
@@ -2259,13 +2250,13 @@
 }
 
 :root[data-theme="click-light"] .geo-point {
-  stroke: hsl(var(--geo-hue) 72% 32%);
+  stroke: var(--geo-point-stroke);
 }
 :root[data-theme="click-light"] .geo-point-label-measure {
-  fill: hsl(var(--geo-hue) 72% 26%);
+  fill: var(--geo-label-measure);
 }
 :root[data-theme="click-light"] .geo-demo-marker-label strong {
-  color: hsl(var(--geo-hue) 72% 26%);
+  color: var(--geo-demo-label-measure);
 }
 /* Responsive and motion states */
 

@@ -16,25 +16,6 @@
     --help-space-sm: 8px;
     --help-space-md: 12px;
     --help-space-lg: 16px;
-    --help-surface: color-mix(in srgb, var(--panel) 84%, transparent);
-    --help-code-surface: color-mix(in srgb, var(--page) 78%, var(--panel));
-    --help-border: var(--line);
-    --help-border-strong: var(--line-bright);
-    --help-selected-surface: var(--active-surface);
-    --help-selected-border: var(--active-border);
-    --help-focus-ring: var(--focus-ring);
-    --help-experimental: color-mix(in srgb, var(--accent) 54%, #c79aff);
-    --help-experimental-surface: color-mix(
-      in srgb,
-      var(--help-experimental) 8%,
-      var(--panel-raised)
-    );
-    --help-experimental-border: color-mix(
-      in srgb,
-      var(--help-experimental) 34%,
-      var(--help-border)
-    );
-    --help-experimental-text: color-mix(in srgb, var(--help-experimental) 62%, var(--text));
     --help-radius-control: var(--radius-control);
     --help-radius-card: var(--radius-panel);
     --help-control-height: 36px;
@@ -995,12 +976,12 @@
     top: 0;
     width: var(--geo-demo-size);
     height: var(--geo-demo-size);
-    border: 2px solid color-mix(in srgb, var(--panel-raised) 84%, hsl(var(--geo-hue) 90% 70%));
+    border: 2px solid color-mix(in srgb, var(--panel-raised) 84%, var(--geo-demo-border));
     border-radius: 50%;
-    background: hsl(var(--geo-hue) 92% 58%);
+    background: var(--geo-demo-fill);
     box-shadow: var(--status-ring);
     transform: translate(-50%, -50%);
-    color: hsl(var(--geo-hue) 90% 58%);
+    color: var(--geo-demo-ring);
   }
   .geo-demo-marker.has-label {
     z-index: 2;
@@ -1013,7 +994,7 @@
     min-width: 72px;
     gap: 2px;
     padding: 5px 7px;
-    border: 1px solid color-mix(in srgb, hsl(var(--geo-hue) 92% 60%) 52%, var(--help-border));
+    border: 1px solid color-mix(in srgb, var(--geo-demo-label-border) 52%, var(--help-border));
     border-radius: var(--radius-popover);
     background: color-mix(in srgb, var(--panel-raised) 94%, transparent);
     color: var(--text);
@@ -1024,7 +1005,7 @@
     white-space: nowrap;
   }
   .geo-demo-marker-label strong {
-    color: hsl(var(--geo-hue) 92% 68%);
+    color: var(--geo-demo-label-measure);
     font-family: var(--font-mono);
     font-size: var(--help-text-meta);
   }

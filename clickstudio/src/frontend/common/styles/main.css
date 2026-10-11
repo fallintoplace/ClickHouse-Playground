@@ -7,6 +7,7 @@
 @import "./help/help-dependencies.css";
 @import "./help/help-storage.css";
 @import "tailwindcss" source("../../");
+@import "./colors.css";
 @import "./base/foundation.css";
 @import "./base/spinner.css";
 @import "./workspace/app-chrome.css";

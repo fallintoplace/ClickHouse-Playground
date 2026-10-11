@@ -21,7 +21,7 @@
       linear-gradient(color-mix(in srgb, var(--text) 5%, transparent) 1px, transparent 1px),
       linear-gradient(90deg, color-mix(in srgb, var(--text) 5%, transparent) 1px, transparent 1px);
     background-size: 44px 44px;
-    mask-image: linear-gradient(to bottom, #000 0, transparent 65%);
+    mask-image: linear-gradient(to bottom, var(--color-black) 0, transparent 65%);
   }
   .topbar {
     z-index: var(--z-app-chrome);

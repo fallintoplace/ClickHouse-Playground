@@ -1,0 +1,267 @@
+@theme {
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-white: #fff;
+  --color-black: #000;
+}
+
+:root {
+  color-scheme: dark;
+  --page: #0c151c;
+  --page-raised: #111e27;
+  --canvas: #0b171d;
+  --geo-land: #233942;
+  --geo-border: #47616a;
+  --panel: #14232d;
+  --panel-raised: #1a2d38;
+  --panel-hover: #223b46;
+  --line: #29434e;
+  --line-bright: #3e606d;
+  --text: #eff8fa;
+  --text-soft: #c5d8dd;
+  --muted: #8ca5ad;
+  --accent-cyan: #68e5ff;
+  --accent-cyan-strong: #a5f0ff;
+  --accent-cyan-action: #68e5ff;
+  --accent-cyan-ink: #15191a;
+  --accent-clickhouse-yellow: #faff69;
+  --accent-clickhouse-yellow-strong: #faff69;
+  --accent-clickhouse-yellow-action: #faff69;
+  --accent-clickhouse-yellow-ink: #15191a;
+  --accent-swatch-cyan: #68e5ff;
+  --accent-swatch-clickhouse-yellow: #faff69;
+  --accent: var(--accent-cyan);
+  --accent-strong: var(--accent-cyan-strong);
+  --accent-action: var(--accent-cyan-action);
+  --accent-ink: var(--accent-cyan-ink);
+  --accent-mark: var(--accent);
+  --green: #35e978;
+  --signal-accent: var(--accent);
+  --scrollbar-thumb: color-mix(in srgb, var(--accent) 35%, var(--muted));
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--accent) 55%, var(--muted));
+  --scroll-edge-shadow-color: #00000033;
+  --amber: #ffad52;
+  --red: #ff6b75;
+  --violet: #c598ff;
+  --editor-selection: color-mix(in srgb, var(--accent) 8%, transparent);
+  --editor-keyword: var(--text);
+  --editor-number: var(--violet);
+  --editor-literal: var(--violet);
+  --editor-string: var(--amber);
+  --editor-function: var(--accent);
+  --editor-alias: var(--green);
+  --editor-parameter: var(--violet);
+  --editor-comment: var(--muted);
+  --editor-type: var(--text-soft);
+  --editor-active-line: color-mix(in srgb, var(--accent) 3%, transparent);
+  --editor-active-gutter: color-mix(in srgb, var(--accent) 4%, transparent);
+  --shadow-popover: 0 4px 12px #00000038, 0 12px 28px #0000002e;
+  --shadow-dialog: 0 8px 24px #00000042, 0 24px 56px #0000003d;
+  --shadow-inset: inset 0 1px color-mix(in srgb, var(--text) 4%, transparent);
+  --shadow-svg: 0 2px 5px #0000003d;
+  --graph-node-shadow-color: #00000033;
+  --status-ring-opacity: 18%;
+  --status-ring: 0 0 0 var(--status-ring-width)
+    color-mix(in srgb, currentColor var(--status-ring-opacity), transparent);
+  --status-ring-accent: 0 0 0 var(--status-ring-width)
+    color-mix(in srgb, var(--accent) var(--status-ring-opacity), transparent);
+  --overlay-backdrop: #03080cad;
+  --surface-glass: var(--page-raised);
+  --panel-header: var(--panel-raised);
+  --control-well: color-mix(in srgb, var(--panel-raised) 82%, var(--page));
+  --control-hover: var(--panel-hover);
+  --active-surface: color-mix(in srgb, var(--accent) 10%, var(--panel));
+  --active-border: color-mix(in srgb, var(--accent) 42%, var(--line-bright));
+  --active-inset: inset 0 0 0 1px color-mix(in srgb, var(--accent) 17%, var(--line));
+  --focus-color: color-mix(in srgb, var(--accent) 84%, var(--text));
+  --focus-ring: 0 0 0 2px color-mix(in srgb, var(--focus-color) 28%, transparent);
+  --focus-ring-invalid: 0 0 0 2px color-mix(in srgb, var(--red) 28%, transparent);
+  --browser-chrome: #151515;
+  --brand-logo: #fff;
+  --schema-column-violet: #9c8fe7;
+  --schema-column-green: #73c5a0;
+  --schema-column-amber: #e5ad69;
+  --assistant-loading-highlight: #fff6;
+  --sql-review-shadow: 0 2px 8px #00000024;
+  --geo-gradient: linear-gradient(
+    90deg,
+    hsl(278 88% 60%),
+    hsl(235 90% 62%),
+    hsl(192 90% 54%),
+    hsl(150 78% 45%),
+    hsl(104 85% 50%),
+    hsl(63 92% 54%),
+    hsl(36 94% 58%)
+  );
+}
+
+:root[data-theme="click-light"] {
+  color-scheme: light;
+  --page: #f8f8f8;
+  --page-raised: #ffffff;
+  --canvas: #f8f8f8;
+  --geo-land: #e6e9ee;
+  --geo-border: #9ba3af;
+  --panel: #ffffff;
+  --panel-raised: #f8f8f8;
+  --panel-hover: #f2f2f2;
+  --line: #e5e5e5;
+  --line-bright: #c4c4c4;
+  --control-border: #858585;
+  --text: #1f1f1f;
+  --text-soft: #3b3b3b;
+  --muted: #616161;
+  --scrollbar-thumb: #a3a3a3;
+  --scrollbar-thumb-hover: #757575;
+  --scroll-edge-shadow-color: #20242c14;
+  --accent-cyan: #006c83;
+  --accent-cyan-strong: #005c70;
+  --accent-cyan-action: #006c83;
+  --accent-cyan-ink: #ffffff;
+  --accent-clickhouse-yellow: #6b5d00;
+  --accent-clickhouse-yellow-strong: #5c5000;
+  --accent-clickhouse-yellow-action: #faff69;
+  --accent-clickhouse-yellow-ink: #15191a;
+  --accent: var(--accent-cyan);
+  --accent-strong: var(--accent-cyan-strong);
+  --accent-action: var(--accent-cyan-action);
+  --accent-ink: var(--accent-cyan-ink);
+  --accent-mark: var(--accent-action);
+  --green: #146c43;
+  --signal-accent: var(--accent);
+  --amber: #945000;
+  --red: #b33043;
+  --violet: #7140a0;
+  --active-surface: color-mix(in srgb, var(--accent-action) 16%, var(--panel));
+  --active-border: var(--control-border);
+  --active-inset: inset 0 0 0 1px var(--active-border);
+  --focus-color: var(--accent);
+  --editor-selection: #e2eeff;
+  --editor-keyword: #0000ff;
+  --editor-number: #087645;
+  --editor-literal: #0000ff;
+  --editor-string: #a31515;
+  --editor-function: #795e26;
+  --editor-alias: #001080;
+  --editor-parameter: #001080;
+  --editor-comment: #007000;
+  --editor-type: #226f85;
+  --editor-active-line: #00000006;
+  --editor-active-gutter: #0000000a;
+  --shadow-popover: 0 2px 6px #20242c0d, 0 8px 20px #20242c1a;
+  --shadow-dialog: 0 4px 12px #20242c0d, 0 18px 44px #20242c24;
+  --shadow-inset: inset 0 1px color-mix(in srgb, var(--text) 3%, transparent);
+  --shadow-svg: 0 2px 5px #20242c1a;
+  --graph-node-shadow-color: #20242c14;
+  --status-ring-opacity: 12%;
+  --overlay-backdrop: #20242c47;
+  --browser-chrome: #ffffff;
+  --brand-logo: #161616;
+}
+
+:root[data-accent="cyan"] {
+  --accent: var(--accent-cyan);
+  --accent-strong: var(--accent-cyan-strong);
+  --accent-action: var(--accent-cyan-action);
+  --accent-ink: var(--accent-cyan-ink);
+}
+
+:root[data-accent="clickhouse-yellow"] {
+  --accent: var(--accent-clickhouse-yellow);
+  --accent-strong: var(--accent-clickhouse-yellow-strong);
+  --accent-action: var(--accent-clickhouse-yellow-action);
+  --accent-ink: var(--accent-clickhouse-yellow-ink);
+}
+
+:root[data-theme="click-light"][data-accent="clickhouse-yellow"] {
+  --editor-selection: color-mix(in srgb, var(--accent-action) 55%, transparent);
+}
+
+.object-explorer-section {
+  --explorer-signal: var(--signal-accent);
+  --explorer-database: var(--accent-clickhouse-yellow);
+  --explorer-table: #79baff;
+  --explorer-view: #c39aff;
+  --explorer-column: #69dfbd;
+  --explorer-dictionary: #ffbf68;
+  --explorer-projection: #f28dca;
+  --explorer-index: #ff8d80;
+  --explorer-tree-surface: var(--page);
+  --explorer-tree-border: color-mix(in srgb, var(--explorer-signal) 24%, var(--line));
+}
+
+:root[data-theme="click-light"] .object-explorer-section {
+  --explorer-table: #286da8;
+  --explorer-view: #72459e;
+  --explorer-column: #19785d;
+  --explorer-dictionary: #9b5700;
+  --explorer-projection: #a43875;
+  --explorer-index: #a84238;
+}
+
+@layer components {
+  .sql-proposal-review {
+    --sql-diff-added: #21bf96;
+    --sql-diff-removed: #ff654f;
+    --sql-diff-added-background: #103d35;
+    --sql-diff-removed-background: #4f2722;
+  }
+
+  :root[data-theme="click-light"] .sql-proposal-review {
+    --sql-diff-added-background: #ccfff0;
+    --sql-diff-removed-background: #ffe7e2;
+  }
+
+  .workspace-help-panel {
+    --help-surface: color-mix(in srgb, var(--panel) 84%, transparent);
+    --help-code-surface: color-mix(in srgb, var(--page) 78%, var(--panel));
+    --help-border: var(--line);
+    --help-border-strong: var(--line-bright);
+    --help-selected-surface: var(--active-surface);
+    --help-selected-border: var(--active-border);
+    --help-focus-ring: var(--focus-ring);
+    --help-experimental: color-mix(in srgb, var(--accent) 54%, #c79aff);
+    --help-experimental-surface: color-mix(
+      in srgb,
+      var(--help-experimental) 8%,
+      var(--panel-raised)
+    );
+    --help-experimental-border: color-mix(
+      in srgb,
+      var(--help-experimental) 34%,
+      var(--help-border)
+    );
+    --help-experimental-text: color-mix(in srgb, var(--help-experimental) 62%, var(--text));
+  }
+
+  .geo-feature {
+    --geo-feature-fill: hsl(var(--geo-hue) 88% 58%);
+    --geo-feature-stroke: hsl(var(--geo-hue) 88% 64%);
+    --geo-point-stroke: hsl(var(--geo-hue) 88% 70%);
+  }
+
+  .geo-point-label {
+    --geo-label-stroke: hsl(var(--geo-hue) 88% 60%);
+    --geo-label-measure: hsl(var(--geo-hue) 92% 68%);
+  }
+
+  .geo-demo-marker {
+    --geo-demo-border: hsl(var(--geo-hue) 90% 70%);
+    --geo-demo-fill: hsl(var(--geo-hue) 92% 58%);
+    --geo-demo-ring: hsl(var(--geo-hue) 90% 58%);
+    --geo-demo-label-border: hsl(var(--geo-hue) 92% 60%);
+    --geo-demo-label-measure: hsl(var(--geo-hue) 92% 68%);
+  }
+}
+
+:root[data-theme="click-light"] .geo-point {
+  --geo-point-stroke: hsl(var(--geo-hue) 72% 32%);
+}
+
+:root[data-theme="click-light"] .geo-point-label {
+  --geo-label-measure: hsl(var(--geo-hue) 72% 26%);
+}
+
+:root[data-theme="click-light"] .geo-demo-marker {
+  --geo-demo-label-measure: hsl(var(--geo-hue) 72% 26%);
+}

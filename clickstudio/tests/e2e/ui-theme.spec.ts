@@ -12,7 +12,7 @@ const themes = [
         yellowAccent: '#faff69',
         yellowAction: '#faff69',
         chrome: '#151515',
-        logoColor: '#fff',
+        logoColor: 'rgb(255, 255, 255)',
     },
     {
         value: 'click-light',
@@ -24,7 +24,7 @@ const themes = [
         yellowAccent: '#6b5d00',
         yellowAction: '#faff69',
         chrome: '#ffffff',
-        logoColor: '#161616',
+        logoColor: 'rgb(22, 22, 22)',
     },
 ] as const;
 
@@ -67,10 +67,10 @@ for (const theme of themes)
             'content',
             theme.chrome,
         );
-        const logoSvg = await page
-            .locator('.brand-symbol')
-            .evaluate(image => decodeURIComponent(image.getAttribute('src')?.split(',')[1] ?? ''));
-        expect(logoSvg).toContain(`fill: ${theme.logoColor}`);
+        await expect(page.getByRole('img', { name: 'ClickHouse', exact: true })).toHaveCSS(
+            'fill',
+            theme.logoColor,
+        );
 
         await page.reload();
         await expect(themeOption(page, theme.value)).toBeChecked();
