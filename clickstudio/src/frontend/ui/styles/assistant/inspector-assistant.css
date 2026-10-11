@@ -1624,8 +1624,8 @@
     display: grid;
     min-width: 0;
     gap: 4px;
-    padding: 8px;
-    border: 1px solid var(--line-bright);
+    padding: 10px;
+    border: 1px solid var(--line);
     border-radius: var(--radius-panel);
     background: var(--panel-raised);
     box-shadow: none;
@@ -1637,63 +1637,50 @@
     display: block;
     box-sizing: border-box;
     width: 100%;
-    min-height: 58px;
-    max-height: 150px;
-    resize: vertical;
-    padding: 8px 2px;
+    min-height: 40px;
+    max-height: 100px;
+    overflow-y: auto;
+    resize: none;
+    padding: 4px 2px;
     border: 0;
     border-radius: var(--radius-shell);
     outline: 0;
     background: transparent;
     color: var(--text);
-    font-size: 9px;
+    font-size: 12px;
     line-height: 1.5;
+    transition: none;
   }
   .assistant-question-frame .field-textarea::placeholder {
     color: var(--muted);
   }
   .assistant-composer-footer {
     display: flex;
-    min-height: 30px;
+    min-height: 32px;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding-top: 4px;
-    border-top: 1px solid var(--line);
   }
   .assistant-composer-footer > span {
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-control);
   }
   .assistant-composer-footer .button-base {
-    min-height: 29px;
+    width: 86px;
+    height: 32px;
+    min-height: 32px;
+    gap: 6px;
     padding-inline: 10px;
-    font-size: 8px;
+    font-size: var(--font-size-control-prominent);
   }
   .assistant-composer-footer .button-base svg {
-    width: 12px;
-    height: 12px;
-    margin-right: 5px;
+    width: 14px;
+    height: 14px;
   }
-  .assistant-composer-footer .button-danger {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .assistant-disclosure {
-    min-width: 0;
+  .assistant-composer-footer .button-primary:disabled {
+    border-color: var(--line);
+    background: var(--panel);
     color: var(--muted);
-  }
-  .assistant-disclosure summary {
-    width: fit-content;
-    font-size: 8px;
-    cursor: pointer;
-  }
-  .assistant-disclosure p {
-    max-width: 620px;
-    margin: 5px 0 0;
-    font-size: 8px;
-    line-height: 1.55;
   }
   .beginner-workspace-content {
     grid-template-rows: minmax(390px, 1.25fr) minmax(180px, 0.75fr);

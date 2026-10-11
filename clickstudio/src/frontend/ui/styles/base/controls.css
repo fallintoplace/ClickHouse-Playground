@@ -3,7 +3,7 @@
 :root[data-theme="click-light"]
   :where(
     .field-input,
-    .field-textarea,
+    .field-textarea:not(.assistant-question-input),
     .parameter-field input,
     .create-table-control,
     .result-filter,

@@ -70,6 +70,120 @@ async function deleteChat(page: Page, title: string) {
 }
 
 for (const mode of ['beginner', 'expert']) {
+    for (const theme of ['Dark', 'Light']) {
+        test(`${theme} ${mode} composer grows, restores drafts and sends with the keyboard`, async ({
+            page,
+        }, info) => {
+            const requests = await deferredReplies(page);
+            try {
+                await page.addInitScript(
+                    mode => localStorage.setItem('clickstudio:experience', mode),
+                    mode,
+                );
+                await page.setViewportSize({ width: 1440, height: 900 });
+                await trust(page);
+                await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+                await page.getByTestId('open-ai').click();
+                const input = page.getByRole('textbox', { name: 'Ask AI', exact: true });
+                const composer = page.locator('.assistant-chat-composer');
+                const send = page.getByRole('button', { name: 'Send', exact: true });
+                const height = () => input.evaluate(element => element.clientHeight);
+                const emptyHeight = await height();
+                const idleBorder = await composer.evaluate(
+                    element => getComputedStyle(element).borderColor,
+                );
+                const disabledBackground = await send.evaluate(
+                    element => getComputedStyle(element).backgroundColor,
+                );
+                await expect(send).toBeDisabled();
+                await expect(input).toHaveAttribute('placeholder', 'Ask about your SQL…');
+                await expect(input).toHaveCSS('font-size', '12px');
+                await expect(input).toHaveCSS('resize', 'none');
+                await expect(input).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+                await expect(composer.locator('details')).toHaveCount(0);
+                await composer.screenshot({ path: info.outputPath('composer-empty.png') });
+
+                const draft =
+                    'Explain this query.\nCompare its alternatives.\nKeep the answer concise.';
+                await input.fill(draft);
+                await expect(send).toBeEnabled();
+                await expect(send).not.toHaveCSS('background-color', disabledBackground);
+                await expect(composer).not.toHaveCSS('border-color', idleBorder);
+                await expect(input).toHaveCSS('border-width', '0px');
+                await expect(input).toHaveCSS('outline-style', 'none');
+                await expect.poll(height).toBeGreaterThan(emptyHeight);
+                await composer.screenshot({ path: info.outputPath('composer-focused.png') });
+                await page.getByRole('button', { name: 'New chat', exact: true }).click();
+                await expect(input).toHaveValue('');
+                await expect.poll(height).toBe(emptyHeight);
+                await page.getByRole('button', { name: /^Chat history:/ }).click();
+                await page.locator('.assistant-chat-history-select:not([aria-current])').click();
+                await expect(input).toHaveValue(draft);
+                await expect.poll(height).toBeGreaterThan(emptyHeight);
+                await input.focus();
+                await input.dispatchEvent('keydown', {
+                    key: 'Enter',
+                    code: 'Enter',
+                    isComposing: true,
+                });
+                await expect(input).toHaveValue(draft);
+                expect(requests).toHaveLength(0);
+                await input.press('End');
+                await input.press('Shift+Enter');
+                await expect(input).toHaveValue(`${draft}\n`);
+                await input.press('Enter');
+                await expect.poll(() => requests.length).toBe(1);
+                expect(requests[0]!.body.question).toBe(draft);
+                await expect(input).toHaveValue('');
+                await expect.poll(height).toBe(emptyHeight);
+                const stop = page.getByRole('button', {
+                    name: 'Stop assistant response',
+                    exact: true,
+                });
+                await expect(stop).toHaveCSS('width', '86px');
+                await expect(stop).toHaveCSS('height', '32px');
+                await input.fill('Pending follow-up');
+                await input.press('Enter');
+                await expect(input).toHaveValue('Pending follow-up');
+                expect(requests).toHaveLength(1);
+                await stop.click();
+                await expect(page.locator('.assistant-turn-error')).toHaveText(
+                    'Request cancelled.',
+                );
+                await expect(send).toHaveCSS('width', '86px');
+                await expect(send).toHaveCSS('height', '32px');
+
+                await input.fill(
+                    Array.from({ length: 20 }, (_, index) => `Pasted line ${index}`).join('\n'),
+                );
+                await expect.poll(height).toBe(100);
+                expect(await input.evaluate(element => element.scrollHeight)).toBeGreaterThan(100);
+                await expect(input).toBeInViewport();
+                await input.fill('Explain how these ClickHouse queries work together. '.repeat(2));
+                const wideHeight = await height();
+                await page.setViewportSize({ width: 900, height: 900 });
+                await expect.poll(height).toBeGreaterThan(wideHeight);
+                await page.setViewportSize({ width: 1440, height: 900 });
+                await expect.poll(height).toBe(wideHeight);
+                await input.fill('');
+                await expect.poll(height).toBe(emptyHeight);
+                await expect(send).toBeDisabled();
+                await input.press('Enter');
+                expect(requests).toHaveLength(1);
+
+                await page.getByRole('button', { name: 'Help', exact: true }).click();
+                await page.getByTestId('help-section-assistant').click();
+                const explanation = page.locator('.workspace-help-assistant-data');
+                await expect(explanation).toContainText('sent to OpenAI');
+                await expect(explanation).toContainText('Chats are saved in this browser.');
+            } finally {
+                for (const request of requests) request.reply();
+            }
+        });
+    }
+}
+
+for (const mode of ['beginner', 'expert']) {
     test(`Ask AI keeps its original SQL while editing and running in ${mode} mode`, async ({
         page,
     }) => {

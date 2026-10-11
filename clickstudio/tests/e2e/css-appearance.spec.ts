@@ -116,6 +116,15 @@ for (const theme of ['Light', 'Dark']) {
             await expect(page.getByRole('textbox', { name: 'Ask AI', exact: true })).toBeVisible();
             await expect(page.locator('.assistant-context-meta')).toHaveCount(0);
             await expectReferenceStyles(page, info, 'assistant-composer');
+            const question = page.getByRole('textbox', { name: 'Ask AI', exact: true });
+            const composer = page.locator('.assistant-chat-composer');
+            await question.fill('Explain this query\nKeep the answer concise');
+            await expectReferenceStyles(page, info, 'assistant-composer-focused', composer);
+            await question.fill(
+                Array.from({ length: 20 }, () => 'A long pasted message').join('\n'),
+            );
+            await expectReferenceStyles(page, info, 'assistant-composer-capped', composer);
+            await question.fill('');
             await page.getByRole('button', { name: /^Chat history:/ }).click();
             const chatHistory = page.getByRole('region', { name: 'Chat history', exact: true });
             await expectReferenceStyles(page, info, 'assistant-chat-history', chatHistory);
@@ -174,6 +183,7 @@ for (const theme of ['Light', 'Dark']) {
         const help = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });
         for (const section of [
             'tour',
+            'assistant',
             'monitoring',
             'query',
             'geo',

@@ -83,6 +83,8 @@ export const copy = {
         helpAssistant: 'AI assistant',
         helpAssistantDescription:
             'Get help with ClickHouse SQL using your draft, schema, and relevant reference docs.',
+        helpAssistantDataDescription:
+            'Messages, chat history, relevant SQL, schema and available run results or errors are sent to OpenAI. Chats are saved in this browser. Answers may use web sources. Suggested SQL runs only when you choose Run.',
         helpAssistantTitle: 'Ask. Review. Build from there.',
         helpAssistantExamplePrompt: 'Show daily event counts for the last 30 days',
         helpAssistantExampleContext: 'Current SQL draft · table schema · matched ClickHouse docs',

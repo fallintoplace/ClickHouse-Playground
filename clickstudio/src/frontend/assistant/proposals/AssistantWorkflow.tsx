@@ -695,7 +695,9 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
         onOpenSqlDraft,
     } = props;
     const transcriptViewport = useRef<HTMLDivElement>(null);
+    const [questionInput, setQuestionInput] = useState<HTMLTextAreaElement | null>(null);
     const activeChat = chats.find(chat => chat.id === activeChatId);
+    const canSubmit = !busy && trusted && schemaReady && Boolean(question.trim());
     const latestTurnIds = useMemo(
         () => new Map(turns.map(turn => [turn.draftId, turn.id])),
         [turns],
@@ -706,13 +708,32 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
         if (viewport) viewport.scrollTop = viewport.scrollHeight;
     }, [activeChatId, turns]);
 
+    useLayoutEffect(() => {
+        if (!questionInput) return;
+        const resize = () => {
+            const scrollTop = questionInput.scrollTop;
+            questionInput.style.height = '0px';
+            questionInput.style.height = `${questionInput.scrollHeight}px`;
+            questionInput.scrollTop = scrollTop;
+        };
+        resize();
+        let width = questionInput.clientWidth;
+        const observer = new ResizeObserver(() => {
+            if (width === questionInput.clientWidth) return;
+            width = questionInput.clientWidth;
+            resize();
+        });
+        observer.observe(questionInput);
+        return () => observer.disconnect();
+    }, [question, questionInput]);
+
     const ask = () => {
         void onAskAI();
     };
     const sendOnEnter = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
         if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
             event.preventDefault();
-            if (!busy && question.trim()) ask();
+            if (canSubmit) ask();
         }
     };
     const renderSubmitAction = () => {
@@ -738,11 +759,7 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
         }
 
         return (
-            <Button
-                variant="primary"
-                disabled={!trusted || !schemaReady || !question.trim()}
-                onClick={ask}
-            >
+            <Button variant="primary" disabled={!canSubmit} onClick={ask} title="Send (Enter)">
                 <Icon name="send" />
                 Send
             </Button>
@@ -850,35 +867,29 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
                     </div>
                 )}
                 <div className="assistant-chat-composer">
-                    <ScrollEdgeFrame<HTMLTextAreaElement> className="assistant-question-frame">
+                    <ScrollEdgeFrame<HTMLTextAreaElement>
+                        className="assistant-question-frame"
+                        onViewport={setQuestionInput}
+                    >
                         {ref => (
                             <textarea
                                 ref={ref}
                                 id="assistant-question"
-                                className="field-textarea"
+                                className="field-textarea assistant-question-input"
                                 aria-label="Ask AI"
+                                aria-describedby="assistant-composer-shortcuts"
                                 value={question}
                                 onChange={event => onQuestionChange(event.target.value)}
                                 onKeyDown={sendOnEnter}
-                                placeholder="Message… (Enter to send)"
+                                placeholder="Ask about your SQL…"
                                 rows={2}
                             />
                         )}
                     </ScrollEdgeFrame>
                     <div className="assistant-composer-footer">
-                        <span>Shift+Enter for a new line</span>
+                        <span id="assistant-composer-shortcuts">Shift+Enter for a new line</span>
                         {renderSubmitAction()}
                     </div>
-                    <details className="assistant-disclosure">
-                        <summary>What gets sent and saved?</summary>
-                        <p>
-                            Your message, chat history, current SQL, and schema are sent to OpenAI.
-                            The latest completed run’s SQL, saved rows, and any error are included
-                            when available. The assistant may search the web; sources appear with
-                            its answer. This chat is saved in this browser. SQL suggestions never
-                            run automatically.
-                        </p>
-                    </details>
                 </div>
             </div>
         </section>

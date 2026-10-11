@@ -146,6 +146,7 @@ export function AssistantHelpPreview({
                         </Button>
                     </div>
                 </div>
+                <p className="workspace-help-assistant-data">{copy.helpAssistantDataDescription}</p>
             </div>
         </>
     );

@@ -578,6 +578,13 @@
       var(--help-surface) 58%
     );
   }
+  .workspace-help-assistant-data {
+    max-width: 760px;
+    margin: 12px 0 0;
+    color: var(--text-soft);
+    font-size: var(--help-text-small);
+    line-height: 1.5;
+  }
   .workspace-help-assistant-demo-heading {
     display: flex;
     align-items: center;
