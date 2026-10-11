@@ -187,6 +187,7 @@
   }
 }
 
+.workspace-root.is-beginner .editor-heading-actions,
 .detached-query-placeholder .editor-heading-actions,
 .detached-query-window-root .editor-heading-actions {
   padding-right: 0;

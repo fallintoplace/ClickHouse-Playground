@@ -108,6 +108,20 @@ async function expectNeutralWorkspace(page: Page) {
 async function expectCompactToolbar(page: Page, mode: string) {
     await expect(runButton(page)).toHaveCSS('height', '28px');
     await expect(runButton(page)).toHaveCSS('font-size', '11px');
+    if (mode === 'Standard') {
+        const spacing = await runButton(page).evaluate(button => {
+            const heading = button.closest('.editor-heading')!;
+            const style = getComputedStyle(heading);
+            return {
+                actual:
+                    heading.getBoundingClientRect().right - button.getBoundingClientRect().right,
+                expected:
+                    Number.parseFloat(style.paddingRight) +
+                    Number.parseFloat(style.borderRightWidth),
+            };
+        });
+        expect(spacing.actual).toBeCloseTo(spacing.expected, 0);
+    }
     if (mode === 'Experimental')
         await expect(page.getByTestId('save-query')).toHaveCSS('height', '26px');
     else await expect(page.getByTestId('save-query')).toHaveCount(0);
@@ -155,10 +169,10 @@ async function expectCompactToolbar(page: Page, mode: string) {
 }
 
 for (const theme of ['Dark', 'Light'])
-    for (const mode of [theme === 'Dark' ? 'Standard' : 'Experimental']) {
+    for (const mode of ['Standard', 'Experimental']) {
         test(`${theme} ${mode} keeps workspace panels flat and overlay depth neutral`, async ({
             page,
-        }) => {
+        }, info) => {
             await page.emulateMedia({ reducedMotion: 'reduce' });
             await page.setViewportSize({ width: 1440, height: 900 });
             await trust(page);
@@ -167,6 +181,7 @@ for (const theme of ['Dark', 'Light'])
             await runButton(page).click();
             await expect(page.locator('.data-table')).toBeVisible();
             await expectCompactToolbar(page, mode);
+            await page.screenshot({ path: info.outputPath('toolbar-aligned.png') });
             await page.setViewportSize({ width: 900, height: 900 });
             await expectCompactToolbar(page, mode);
             await page.setViewportSize({ width: 1440, height: 900 });
