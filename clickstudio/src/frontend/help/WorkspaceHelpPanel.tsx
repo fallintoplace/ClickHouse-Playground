@@ -9,12 +9,13 @@ import { HelpSections } from './guides/HelpSections';
 export type { HelpPanelSection } from './workspace-help-model';
 export type { HelpExplainAction } from './workspace-help-types';
 export function WorkspaceHelpPanel(props: WorkspaceHelpPanelProps) {
+    const section = !props.expert && props.section === 'reference' ? 'tour' : props.section;
+    const helpProps = { ...props, section };
     const {
         sourceLabel,
         copy,
         experimentalLabel,
         open,
-        section,
         onSectionChange,
         onClose,
         onStartBlankSql,
@@ -41,7 +42,7 @@ export function WorkspaceHelpPanel(props: WorkspaceHelpPanelProps) {
         standardTourSections,
         experimentalTourSections,
         renderTourCard,
-    } = useWorkspaceHelpPanel(props);
+    } = useWorkspaceHelpPanel(helpProps);
     return (
         <>
             {open && (
@@ -162,7 +163,7 @@ export function WorkspaceHelpPanel(props: WorkspaceHelpPanelProps) {
                                         standardTourSections,
                                         renderTourCard,
                                         experimentalTourSections,
-                                        props,
+                                        props: helpProps,
                                         availableCategories,
                                         category,
                                         setCategory,

@@ -9,6 +9,7 @@ export type PrimaryInspectorDestination = Readonly<{
     id: PrimaryInspector;
     icon: IconName;
     copyKey: InspectorCopyKey;
+    expertOnly?: boolean;
 }>;
 
 export type SecondaryInspectorDestination = Readonly<{
@@ -24,15 +25,29 @@ export type SecondaryInspectorDestination = Readonly<{
 type InspectorNavigationDestination = PrimaryInspectorDestination | SecondaryInspectorDestination;
 
 export const INSPECTOR_NAVIGATION: readonly InspectorNavigationDestination[] = [
-    { group: 'primary', id: 'schema', icon: 'schema', copyKey: 'objects' },
-    { group: 'primary', id: 'reference', icon: 'reference', copyKey: 'reference' },
+    { group: 'primary', id: 'schema', icon: 'schema', copyKey: 'objects', expertOnly: true },
+    {
+        group: 'primary',
+        id: 'reference',
+        icon: 'reference',
+        copyKey: 'reference',
+        expertOnly: true,
+    },
     { group: 'primary', id: 'assistant', icon: 'assistant', copyKey: 'assistant' },
-    { group: 'more', id: 'history', icon: 'history', copyKey: 'history', railSection: 'browse' },
+    {
+        group: 'more',
+        id: 'history',
+        icon: 'history',
+        copyKey: 'history',
+        expertOnly: true,
+        railSection: 'browse',
+    },
     {
         group: 'more',
         id: 'documents',
         icon: 'documents',
         copyKey: 'queries',
+        expertOnly: true,
         railSection: 'browse',
     },
     { group: 'more', id: 'revisions', icon: 'history', expertOnly: true },
@@ -58,6 +73,16 @@ export const INSPECTOR_NAVIGATION: readonly InspectorNavigationDestination[] = [
 export const PRIMARY_INSPECTOR_NAVIGATION = INSPECTOR_NAVIGATION.filter(
     (item): item is PrimaryInspectorDestination => item.group === 'primary',
 );
+
+export function primaryInspectorNavigation(
+    expert: boolean,
+): readonly PrimaryInspectorDestination[] {
+    return PRIMARY_INSPECTOR_NAVIGATION.filter(item => !item.expertOnly || expert);
+}
+
+export function canOpenInspector(inspector: Inspector, expert: boolean): boolean {
+    return expert || inspector === 'assistant';
+}
 
 export const EXPERT_BROWSE_NAVIGATION = INSPECTOR_NAVIGATION.filter(
     (item): item is SecondaryInspectorDestination =>

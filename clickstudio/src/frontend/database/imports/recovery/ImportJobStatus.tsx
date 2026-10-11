@@ -12,6 +12,7 @@ export function ImportJobStatus({
     onConfirm,
     onOpenDestination,
     onForget,
+    inspectWithQuery = false,
 }: {
     job?: ImportJob;
     pendingImport?: PendingImport;
@@ -22,6 +23,7 @@ export function ImportJobStatus({
     onConfirm: () => void;
     onOpenDestination: () => void;
     onForget: () => void;
+    inspectWithQuery?: boolean;
 }) {
     const rowCount = job?.rows ?? pendingImport?.rows ?? 0;
     let statusTone: 'is-success' | 'is-unknown' | 'is-running' | 'is-checking';
@@ -134,7 +136,7 @@ export function ImportJobStatus({
                         return 'Rows are available in this tab. Browser storage was unavailable, so they will not survive a refresh.';
                     }
 
-                    return 'Refreshing the object list and selecting the destination table.';
+                    return 'The import is complete. The destination table is ready to query.';
                 };
                 return (
                     <p className="mt-2 text-xs text-[var(--text-soft)]">
@@ -233,7 +235,7 @@ export function ImportJobStatus({
                             disabled={Boolean(busy)}
                             className="rounded-lg border border-[var(--line)] px-3 py-2 text-xs text-[var(--text-soft)] hover:bg-[var(--panel-hover)] disabled:opacity-50"
                         >
-                            Open table to inspect
+                            {inspectWithQuery ? 'Open query to inspect' : 'Open table to inspect'}
                         </button>
                     ) : (
                         <>

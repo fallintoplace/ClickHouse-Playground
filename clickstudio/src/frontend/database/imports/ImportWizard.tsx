@@ -1,4 +1,5 @@
 import { ImportJobStatus } from './recovery/ImportJobStatus';
+import type { ImportJob } from './state/import-wizard-model';
 import {
     useImportWizardController,
     type ImportWizardControllerOptions,
@@ -20,9 +21,15 @@ import {
 type ImportWizardProps = ImportWizardControllerOptions & {
     onImportQuery: (name: string, sql: string) => boolean;
     importCopy: Copy['imports'];
+    onInspectDestination?: (job: ImportJob) => boolean;
 };
 
-export function ImportWizard({ onImportQuery, importCopy, ...controllerProps }: ImportWizardProps) {
+export function ImportWizard({
+    onImportQuery,
+    importCopy,
+    onInspectDestination,
+    ...controllerProps
+}: ImportWizardProps) {
     const controller = useImportWizardController(controllerProps);
     const {
         dialogRef,
@@ -255,7 +262,20 @@ export function ImportWizard({ onImportQuery, importCopy, ...controllerProps }: 
                                         recoverableJobCount={recoverableJobs.length}
                                         busy={busy}
                                         onConfirm={() => void confirmUnknownImport()}
-                                        onOpenDestination={openImportDestination}
+                                        inspectWithQuery={Boolean(onInspectDestination)}
+                                        onOpenDestination={() => {
+                                            if (
+                                                onInspectDestination &&
+                                                job &&
+                                                !onInspectDestination(job)
+                                            ) {
+                                                setError(
+                                                    'Couldn’t open the inspection query. Switch to Experimental to inspect the table.',
+                                                );
+                                                return;
+                                            }
+                                            openImportDestination();
+                                        }}
                                         onForget={forgetImport}
                                     />
                                 )}

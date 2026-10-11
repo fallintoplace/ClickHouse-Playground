@@ -45,7 +45,7 @@ export function useWorkspaceHelpPanel(props: WorkspaceHelpPanelProps) {
     const sectionRef = useRef(section);
     sectionRef.current = section;
     const optionRefs = useRef(new Map<string, HTMLButtonElement>());
-    const sections = helpSections(copy);
+    const sections = helpSections(copy, props.expert);
     const { explainActions } = createHelpExplainActions({
         copy,
         connection,

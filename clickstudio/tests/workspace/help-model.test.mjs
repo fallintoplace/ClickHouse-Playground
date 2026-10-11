@@ -18,6 +18,7 @@ test('experimental help topics stay grouped after the standard help topics', () 
     const firstExperimentalIndex = sections.findIndex(section => section.experimental);
 
     assert.deepEqual(experimental, [
+        'reference',
         'monitoring',
         'query',
         'geo',
@@ -29,7 +30,15 @@ test('experimental help topics stay grouped after the standard help topics', () 
     assert.ok(firstExperimentalIndex > 0);
     assert.ok(sections.slice(0, firstExperimentalIndex).every(section => !section.experimental));
     assert.ok(sections.slice(firstExperimentalIndex).every(section => section.experimental));
-    assert.ok(sections.findIndex(section => section.id === 'reference') < firstExperimentalIndex);
+    assert.equal(sections[firstExperimentalIndex].id, 'reference');
+});
+
+test('Standard help keeps examples and AI while removing Reference from navigation and tours', () => {
+    const sections = helpSections(copy, false);
+    assert.ok(sections.some(section => section.id === 'examples'));
+    assert.ok(sections.some(section => section.id === 'assistant'));
+    assert.ok(sections.every(section => section.id !== 'reference'));
+    assert.ok(helpSections(copy, true).some(section => section.id === 'reference'));
 });
 
 test('example category labels use English and custom labels', () => {

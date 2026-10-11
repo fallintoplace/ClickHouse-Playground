@@ -112,8 +112,8 @@ export type HelpSectionDefinition = {
     experimental?: boolean;
 };
 
-export function helpSections(copy: Copy['common']): HelpSectionDefinition[] {
-    return [
+export function helpSections(copy: Copy['common'], expert = true): HelpSectionDefinition[] {
+    const sections: HelpSectionDefinition[] = [
         { id: 'tour', label: copy.helpTour, description: copy.helpTourDescription, icon: 'help' },
         {
             id: 'examples',
@@ -138,6 +138,7 @@ export function helpSections(copy: Copy['common']): HelpSectionDefinition[] {
             label: copy.helpReference,
             description: copy.helpReferenceDescription,
             icon: 'reference',
+            experimental: true,
         },
         {
             id: 'monitoring',
@@ -189,4 +190,5 @@ export function helpSections(copy: Copy['common']): HelpSectionDefinition[] {
             experimental: true,
         },
     ];
+    return sections.filter(section => expert || section.id !== 'reference');
 }

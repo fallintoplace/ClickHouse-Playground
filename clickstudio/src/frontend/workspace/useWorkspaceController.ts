@@ -67,6 +67,7 @@ import {
 } from './layout/notifications/useWorkspaceNotifications';
 import { useWorkspaceSqlFormatter } from '../queries/editor/useWorkspaceSqlFormatter';
 import { useWorkspaceViewState } from './layout/useWorkspaceViewState';
+import { canOpenInspector } from './layout/panels/inspector-navigation';
 
 export type WorkspaceProps = Readonly<{
     connection: Connected;
@@ -249,7 +250,7 @@ export function useWorkspaceController({
         setSearch,
         setInspector,
         setDrawerOpen,
-        openInspectorDrawer: true,
+        openInspectorDrawer: experience === 'expert',
     });
     const sqlExamples = useMemo(() => sqlExamplesFor(connection, schema), [connection, schema]);
     useEffect(() => {
@@ -260,9 +261,9 @@ export function useWorkspaceController({
         const media = window.matchMedia('(max-width: 850px)');
         const update = () => {
             setCompactViewport(media.matches);
-            if (experience === 'expert') setDrawerOpen(!media.matches);
-            else if (!media.matches) setDrawerOpen(false);
+            setDrawerOpen(experience === 'expert' && !media.matches);
         };
+        update();
         media.addEventListener('change', update);
         return () => media.removeEventListener('change', update);
     }, [experience, setCompactViewport, setDrawerOpen]);
@@ -463,6 +464,7 @@ export function useWorkspaceController({
     const { loadProfile, loadPipeline } = evidenceActions;
 
     const showInspector = (next: Inspector) => {
+        if (!canOpenInspector(next, experience === 'expert')) return;
         setInspector(next);
         setDrawerOpen(true);
         if (next === 'profile') void perform(loadProfile, 'save');

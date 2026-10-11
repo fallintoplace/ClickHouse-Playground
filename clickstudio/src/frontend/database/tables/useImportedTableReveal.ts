@@ -57,11 +57,14 @@ export function useImportedTableReveal({
     const latestImportIdRef = useRef<string | undefined>(undefined);
     const importedSqlDraftIdsRef = useRef(new Set<string>());
     const importedSqlScriptBaselinesRef = useRef(new Map<string, ReadonlySet<string>>());
+    const openInspectorDrawerRef = useRef(openInspectorDrawer);
+    openInspectorDrawerRef.current = openInspectorDrawer;
 
     const revealInspector = useCallback(() => {
+        if (!openInspectorDrawerRef.current) return;
         setInspector('schema');
-        if (openInspectorDrawer) setDrawerOpen(true);
-    }, [openInspectorDrawer, setDrawerOpen, setInspector]);
+        setDrawerOpen(true);
+    }, [setDrawerOpen, setInspector]);
 
     const onImportedSqlTableCreated = useCallback(
         (id: string, table: string) => {

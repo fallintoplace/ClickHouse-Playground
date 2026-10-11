@@ -43,79 +43,101 @@ test('File import requires an explicit destination before review', async ({ page
     await expect(dialog.getByRole('button', { name: 'Review import', exact: true })).toBeEnabled();
 });
 
-test('File import previews, maps, and reports a successful insert without typed confirmation', async ({
-    page,
-}) => {
-    await mockWritableWorkspace(page);
-    let mappingBody: Record<string, unknown> | undefined;
-    let commitBody: Record<string, unknown> | undefined;
+for (const mode of ['beginner', 'expert']) {
+    test(`${mode} file import reports a successful insert without reopening hidden panels`, async ({
+        page,
+    }) => {
+        await page.addInitScript(
+            value => localStorage.setItem('clickstudio:experience', value),
+            mode,
+        );
+        await mockWritableWorkspace(page);
+        let mappingBody: Record<string, unknown> | undefined;
+        let commitBody: Record<string, unknown> | undefined;
 
-    await page.route('**/api/imports/preview', route =>
-        route.fulfill({
-            status: 201,
-            json: {
-                id: 'input-1',
-                name: 'events.csv',
-                format: 'csv',
-                columns: ['day', 'events'],
-                rows: [
-                    { day: '2026-01-01', events: '10' },
-                    { day: '2026-01-02', events: '20' },
-                ],
-                rowCount: 2,
-            },
-        }),
-    );
-    await page.route('**/api/imports/input-1/mapping', async route => {
-        mappingBody = route.request().postDataJSON() as Record<string, unknown>;
-        await route.fulfill({
-            json: {
-                id: 'mapping-1',
-                inputId: 'input-1',
-                connectionId: 'live',
-                table: 'demo.events',
-                fields: { day: 'day', events: 'events' },
-                rows: [{ day: '2026-01-01', events: '10' }],
-                rowCount: 2,
-            },
+        await page.route('**/api/imports/preview', route =>
+            route.fulfill({
+                status: 201,
+                json: {
+                    id: 'input-1',
+                    name: 'events.csv',
+                    format: 'csv',
+                    columns: ['day', 'events'],
+                    rows: [
+                        { day: '2026-01-01', events: '10' },
+                        { day: '2026-01-02', events: '20' },
+                    ],
+                    rowCount: 2,
+                },
+            }),
+        );
+        await page.route('**/api/imports/input-1/mapping', async route => {
+            mappingBody = route.request().postDataJSON() as Record<string, unknown>;
+            await route.fulfill({
+                json: {
+                    id: 'mapping-1',
+                    inputId: 'input-1',
+                    connectionId: 'live',
+                    table: 'demo.events',
+                    fields: { day: 'day', events: 'events' },
+                    rows: [{ day: '2026-01-01', events: '10' }],
+                    rowCount: 2,
+                },
+            });
         });
-    });
-    await page.route('**/api/imports/mapping-1/commit', async route => {
-        commitBody = route.request().postDataJSON() as Record<string, unknown>;
-        await route.fulfill({
-            json: { id: 'mapping-1', table: 'demo.events', rows: 2, status: 'succeeded' },
+        await page.route('**/api/imports/mapping-1/commit', async route => {
+            commitBody = route.request().postDataJSON() as Record<string, unknown>;
+            await route.fulfill({
+                json: { id: 'mapping-1', table: 'demo.events', rows: 2, status: 'succeeded' },
+            });
         });
+
+        await page.getByRole('button', { name: 'Import', exact: true }).click();
+        const dialog = await previewCsv(page);
+        await chooseExistingTable(dialog);
+        const mappingColumnWidths = await dialog
+            .locator('.import-column-map thead th')
+            .evaluateAll(headers => headers.map(header => header.getBoundingClientRect().width));
+        expect(mappingColumnWidths[1]).toBeGreaterThan(mappingColumnWidths[0]!);
+        expect(mappingColumnWidths[2]).toBeGreaterThan(mappingColumnWidths[0]!);
+        await expect(dialog.getByLabel('Map day to destination')).toHaveValue('day');
+        await dialog.getByRole('button', { name: 'Review import', exact: true }).click();
+        const review = dialog.getByRole('region', { name: 'Review import', exact: true });
+        await expect(
+            review.getByRole('heading', { name: 'Ready to import into demo.events', exact: true }),
+        ).toBeVisible();
+        await expect(review.getByRole('definition').filter({ hasText: /^2 rows$/ })).toBeVisible();
+        expect(commitBody).toBeUndefined();
+
+        const commit = dialog.getByRole('button', { name: 'Import rows', exact: true });
+        await expect(commit).toBeEnabled();
+        await commit.click();
+
+        await expect(dialog).toContainText('2 source rows processed successfully');
+        expect(mappingBody).toMatchObject({
+            connectionId: 'live',
+            table: 'demo.events',
+            fields: { day: 'day', events: 'events' },
+        });
+        expect(commitBody).toEqual({});
+        await dialog.getByRole('button', { name: 'Close import wizard', exact: true }).click();
+        const inspector = page.locator('.inspector-pane.is-docked-inspector');
+        if (mode === 'beginner') {
+            await expect(inspector).toHaveCount(0);
+            await page
+                .locator('.icon-rail')
+                .getByRole('button', { name: 'AI', exact: true })
+                .click();
+            await expect(inspector.getByRole('heading', { name: 'AI', exact: true })).toBeVisible();
+            await expect(inspector.locator('.inspector-tabs')).toHaveCount(0);
+            await page.getByText('Experimental', { exact: true }).click();
+        }
+        await expect(
+            inspector.getByRole('heading', { name: 'Objects', exact: true }),
+        ).toBeVisible();
+        await expect(inspector.getByLabel('Selected object')).toContainText('demo.events');
     });
-
-    await page.getByRole('button', { name: 'Import', exact: true }).click();
-    const dialog = await previewCsv(page);
-    await chooseExistingTable(dialog);
-    const mappingColumnWidths = await dialog
-        .locator('.import-column-map thead th')
-        .evaluateAll(headers => headers.map(header => header.getBoundingClientRect().width));
-    expect(mappingColumnWidths[1]).toBeGreaterThan(mappingColumnWidths[0]!);
-    expect(mappingColumnWidths[2]).toBeGreaterThan(mappingColumnWidths[0]!);
-    await expect(dialog.getByLabel('Map day to destination')).toHaveValue('day');
-    await dialog.getByRole('button', { name: 'Review import', exact: true }).click();
-    const review = dialog.getByRole('region', { name: 'Review import', exact: true });
-    await expect(
-        review.getByRole('heading', { name: 'Ready to import into demo.events', exact: true }),
-    ).toBeVisible();
-    await expect(review.getByRole('definition').filter({ hasText: /^2 rows$/ })).toBeVisible();
-    expect(commitBody).toBeUndefined();
-
-    const commit = dialog.getByRole('button', { name: 'Import rows', exact: true });
-    await expect(commit).toBeEnabled();
-    await commit.click();
-
-    await expect(dialog).toContainText('2 source rows processed successfully');
-    expect(mappingBody).toMatchObject({
-        connectionId: 'live',
-        table: 'demo.events',
-        fields: { day: 'day', events: 'events' },
-    });
-    expect(commitBody).toEqual({});
-});
+}
 
 test('Import mapping shows nullable types and keeps long nested types compact on wide and narrow screens', async ({
     page,
@@ -520,6 +542,78 @@ test('File import reports an unknown insert without retrying automatically', asy
     await expect(dialog.getByRole('button', { name: 'Check status' })).toHaveCount(0);
     await expect(dialog.getByRole('button', { name: 'Import another file' })).toHaveCount(0);
     expect(commitRequests).toBe(1);
+});
+
+test('Standard opens an inspection query for an unconfirmed import without running it', async ({
+    page,
+}) => {
+    await page.addInitScript(() => localStorage.setItem('clickstudio:experience', 'beginner'));
+    await mockWritableWorkspace(page);
+    const originalSql = await page.locator('.cm-content').innerText();
+    let runRequests = 0;
+    page.on('request', request => {
+        if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/runs')
+            runRequests++;
+    });
+    await page.route('**/api/imports/preview', route =>
+        route.fulfill({
+            status: 201,
+            json: {
+                id: 'input-1',
+                name: 'events.csv',
+                format: 'csv',
+                columns: ['day', 'events'],
+                rows: [{ day: '2026-01-01', events: '10' }],
+                rowCount: 1,
+            },
+        }),
+    );
+    await page.route('**/api/imports/input-1/mapping', route =>
+        route.fulfill({
+            json: {
+                id: 'mapping-1',
+                inputId: 'input-1',
+                connectionId: 'live',
+                table: 'demo.events',
+                fields: { day: 'day', events: 'events' },
+                rows: [{ day: '2026-01-01', events: '10' }],
+                rowCount: 1,
+            },
+        }),
+    );
+    await page.route('**/api/imports/mapping-1/commit', route =>
+        route.fulfill({
+            json: {
+                id: 'mapping-1',
+                table: 'demo.events',
+                rows: 1,
+                status: 'unknown',
+                tableExists: true,
+                error: 'The insert outcome is unknown.',
+            },
+        }),
+    );
+    await page.getByRole('button', { name: 'Import', exact: true }).click();
+    const dialog = await previewCsv(page);
+    await chooseExistingTable(dialog);
+    await dialog.getByRole('button', { name: 'Review import', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Import rows', exact: true }).click();
+    await expect(dialog.getByRole('button', { name: 'I checked; the rows are there' })).toHaveCount(
+        0,
+    );
+    await dialog.getByRole('button', { name: 'Open query to inspect', exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByRole('tab', { name: 'Inspect demo.events', exact: true })).toBeVisible();
+    await expect(page.locator('.cm-content')).toHaveText(
+        'SELECT *\nFROM `demo`.`events`\nLIMIT 100;',
+        { useInnerText: true },
+    );
+    await expect(page.locator('.inspector-pane')).toHaveCount(0);
+    expect(runRequests).toBe(0);
+    const tabs = page.getByRole('tablist', { name: 'SQL documents', exact: true }).getByRole('tab');
+    await expect(tabs).toHaveCount(2);
+    await tabs.first().click();
+    await expect(page.locator('.cm-content')).toHaveText(originalSql, { useInnerText: true });
 });
 
 test('File import reloads the destination mapping when the server detects a schema change', async ({

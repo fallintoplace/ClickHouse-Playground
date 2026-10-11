@@ -143,7 +143,9 @@ async function replaceSql(page: Page, sql: string) {
 }
 
 for (const mode of ['beginner', 'expert']) {
-    test(`${mode} hides denied table writes while keeping read actions`, async ({ page }) => {
+    test(`${mode} keeps denied table writes outside its available object actions`, async ({
+        page,
+    }) => {
         await page.addInitScript(
             value => localStorage.setItem('clickstudio:experience', value),
             mode,
@@ -154,11 +156,13 @@ for (const mode of ['beginner', 'expert']) {
             await route.fulfill({ json: { create: false, insert: false, drop: false } });
         });
         await mockLiveWorkspace(page, route => route.fulfill({ json: schema }));
-        if (mode === 'beginner')
-            await page
-                .locator('.icon-rail')
-                .getByRole('button', { name: 'Objects', exact: true })
-                .click();
+        if (mode === 'beginner') {
+            await expect(page.locator('.object-explorer-section')).toHaveCount(0);
+            await expect(
+                page.locator('.icon-rail').getByRole('button', { name: 'Objects', exact: true }),
+            ).toHaveCount(0);
+            await page.getByText('Experimental', { exact: true }).click();
+        }
         await expect.poll(() => permissionRequests).toBeGreaterThan(0);
         await expect(page.getByRole('button', { name: 'New table', exact: true })).toHaveCount(0);
         await page.getByText('events', { exact: true }).first().click();
@@ -429,45 +433,25 @@ test('Object explorer keeps the partial-schema notice beside an empty loaded pag
     ).toBeVisible();
 });
 
-test('Standard hides advanced object actions and keeps the object header balanced', async ({
+test('Standard loads schema without opening Objects and keeps it available in Experimental', async ({
     page,
 }) => {
     await page.addInitScript(() => localStorage.setItem('clickstudio:experience', 'beginner'));
-    await mockLiveWorkspace(page, route => route.fulfill({ json: schema }));
-    await page.locator('.icon-rail').getByRole('button', { name: 'Objects', exact: true }).click();
-
-    const heading = page.locator('.object-heading');
-    await expect(
-        heading.getByRole('button', { name: 'View dependencies', exact: true }),
-    ).toHaveCount(0);
-    const count = heading.locator(':scope > span');
-    const refresh = heading.getByRole('button', { name: 'Refresh', exact: true });
-    await expect(count).toContainText('OBJECTS');
-    await expect(refresh).toBeVisible();
-
-    const [headingBounds, countBounds, refreshBounds] = await Promise.all([
-        heading.boundingBox(),
-        count.boundingBox(),
-        refresh.boundingBox(),
-    ]);
-    expect(headingBounds).not.toBeNull();
-    expect(countBounds).not.toBeNull();
-    expect(refreshBounds).not.toBeNull();
-    expect(countBounds!.x - headingBounds!.x).toBeLessThanOrEqual(4);
-    expect(
-        headingBounds!.x + headingBounds!.width - refreshBounds!.x - refreshBounds!.width,
-    ).toBeLessThanOrEqual(4);
-
-    await page.getByText('events', { exact: true }).first().click();
-    const details = page.getByLabel('Selected object');
-    await expect(details.getByRole('button', { name: 'Preview rows', exact: true })).toBeVisible();
-    await expect(
-        details.getByRole('button', { name: 'Generate SELECT', exact: true }),
-    ).toBeVisible();
-    await expect(details.getByRole('button', { name: 'Visualize parts', exact: true })).toHaveCount(
-        0,
+    const loaded = page.waitForResponse(
+        response => new URL(response.url()).pathname === '/api/connections/live/schema',
     );
-    await expect(page.locator('.object-reference-actions')).toHaveCount(0);
+    await mockLiveWorkspace(page, route => route.fulfill({ json: schema }));
+    expect((await loaded).ok()).toBe(true);
+    const inspector = page.locator('.inspector-pane.is-docked-inspector');
+    await expect(inspector).toHaveCount(0);
+    await expect(
+        page.locator('.icon-rail').getByRole('button', { name: 'Objects', exact: true }),
+    ).toHaveCount(0);
+    await page.getByText('Experimental', { exact: true }).click();
+    await expect(inspector.getByRole('heading', { name: 'Objects', exact: true })).toBeVisible();
+    await page.getByText('events', { exact: true }).first().click();
+    await expect(page.getByLabel('Selected object')).toContainText('analytics.events');
+    await expect(page.getByRole('button', { name: 'Preview rows', exact: true })).toBeVisible();
 });
 
 test('Preview Rows reuses the same draft and keeps the saved query panel preference', async ({

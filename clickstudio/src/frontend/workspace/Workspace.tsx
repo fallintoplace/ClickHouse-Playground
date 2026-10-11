@@ -5,6 +5,7 @@ import { DetachedQueryPlaceholder } from '../queries/editor/components/DetachedQ
 import { ExportDialog } from '../queries/results/ExportDialog';
 import { HelpButton } from '../ui/components/HelpButton';
 import { ImportWizard } from '../database/imports/ImportWizard';
+import { tableQuerySql } from '../database/explorer/objects/model';
 import { InspectorPane } from './layout/panels/InspectorPane';
 import { ObservabilityExplorer } from '../database/explorer/activity/ObservabilityExplorer';
 import { OverlayPortal } from '../ui/components/OverlayPortal';
@@ -21,7 +22,7 @@ import { WorkspaceResultsPanel } from '../queries/results/WorkspaceResultsPanel'
 import {
     EXPERT_BROWSE_NAVIGATION,
     EXPERT_EXECUTION_NAVIGATION,
-    PRIMARY_INSPECTOR_NAVIGATION,
+    primaryInspectorNavigation,
 } from './layout/panels/inspector-navigation';
 import { PLAYGROUND_CONNECTION_ID } from '../database/connections/playground';
 import { closeDraft, newDraft, type Draft } from '../queries/editor/drafts/workspace-state';
@@ -410,7 +411,7 @@ function renderWorkspaceLayout({
             <div className="workspace-layout">
                 <aside className="icon-rail" aria-label="Workspace tools">
                     <span className="rail-separator" />
-                    {PRIMARY_INSPECTOR_NAVIGATION.map(item => (
+                    {primaryInspectorNavigation(experience === 'expert').map(item => (
                         <RailButton
                             key={item.id}
                             icon={item.icon}
@@ -592,6 +593,25 @@ function renderWorkspaceLayout({
                 onClose={() => setImportOpen(false)}
                 onImported={importedReveal.onImported}
                 onTableNeedsInspection={importedReveal.onUnconfirmedDestination}
+                onInspectDestination={
+                    experience === 'beginner'
+                        ? job => {
+                              const table = model.data.schema?.tables.find(
+                                  table => `${table.database}.${table.name}` === job.table,
+                              );
+                              return Boolean(
+                                  table &&
+                                  openNewDraft(
+                                      newDraft(
+                                          `Inspect ${job.table}`,
+                                          tableQuerySql(table, [], 'preview'),
+                                      ),
+                                      true,
+                                  ),
+                              );
+                          }
+                        : undefined
+                }
             />
             <ExportDialog
                 open={exportOpen}
@@ -627,7 +647,7 @@ function renderWorkspaceLayout({
                 )}
                 failureInToolbar={Boolean(viewState.failureError && !pendingExecution.execution)}
                 eventState={eventState}
-                onOpenDetails={() => showInspector('details')}
+                onOpenDetails={experience === 'expert' ? () => showInspector('details') : undefined}
                 scriptRunning={script?.status === 'running'}
                 serverLabel={serverLabel}
                 copy={copy.common}
@@ -746,6 +766,7 @@ function renderDocumentTabs({
                         <Icon name="plus" />
                     </button>
                     <WorkspaceHelpPanel
+                        expert={experience === 'expert'}
                         open={helpPanelOpen}
                         section={helpPanelSection}
                         onSectionChange={setHelpPanelSection}

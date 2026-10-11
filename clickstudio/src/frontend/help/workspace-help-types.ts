@@ -7,6 +7,7 @@ import { type SqlFlowViewProps } from '../queries/inspection/diagrams/SqlFlowVie
 import { type HelpPanelSection } from './workspace-help-model';
 
 export type WorkspaceHelpPanelProps = {
+    expert: boolean;
     examples: SqlExample[];
     sourceLabel: string;
     copy: Copy['common'];

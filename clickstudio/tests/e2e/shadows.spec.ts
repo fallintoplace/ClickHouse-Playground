@@ -205,6 +205,7 @@ for (const theme of ['Dark', 'Light'])
             await expect(page.locator('.data-table th').first()).toHaveCSS('border-radius', '0px');
             await expect(page.locator('.accent-mode-swatch')).toHaveCount(0);
             await expect(page.locator('.status-light').first()).toHaveCSS('border-radius', '50%');
+            await page.getByText('Experimental', { exact: true }).click();
             const inspector = page.locator('.inspector-pane.is-docked-inspector');
             if (!(await inspector.isVisible()))
                 await page

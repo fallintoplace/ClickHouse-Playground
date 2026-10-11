@@ -7,6 +7,7 @@ import { useFailedQueryErrors } from '../../queries/execution/useFailedQueryErro
 import type { BusyAction, Inspector } from '../workspace-types';
 import { useWorkspaceNotifications } from './notifications/useWorkspaceNotifications';
 import { useDraftFeedback } from './notifications/useDraftFeedback';
+import { canOpenInspector } from './panels/inspector-navigation';
 
 function useWorkspaceHelpState() {
     const [helpPanelOpen, setHelpPanelOpen] = useState(false);
@@ -48,13 +49,14 @@ export function useWorkspaceUiState({
     const [inspectorsByExperience, setInspectorsByExperience] = useState<
         Record<ExperienceLevel, Inspector>
     >({
-        beginner: 'schema',
+        beginner: 'assistant',
         expert: 'schema',
     });
     const experienceRef = useRef(experience);
     experienceRef.current = experience;
     const inspector = inspectorsByExperience[experience];
     const setInspector = useCallback((next: Inspector) => {
+        if (!canOpenInspector(next, experienceRef.current === 'expert')) return;
         setInspectorsByExperience(current => ({ ...current, [experienceRef.current]: next }));
     }, []);
     const inspectorRef = useRef(inspector);

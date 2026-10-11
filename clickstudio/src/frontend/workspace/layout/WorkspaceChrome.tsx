@@ -132,7 +132,7 @@ export function ExecutionBar({
     failedAttempt?: boolean;
     failureInToolbar?: boolean;
     eventState: RunEventState;
-    onOpenDetails: () => void;
+    onOpenDetails?: () => void;
     scriptRunning: boolean;
     serverLabel: string;
     helpButton: ReactNode;
@@ -195,16 +195,18 @@ export function ExecutionBar({
                         <>
                             {!failureInToolbar && <span className="execution-separator" />}
                             <strong>{elapsedMs?.toLocaleString()} ms</strong>
-                            <Button
-                                variant="ghost"
-                                className="execution-details-button"
-                                data-testid="execution-details"
-                                aria-label="Execution details"
-                                title="Open execution details"
-                                onClick={onOpenDetails}
-                            >
-                                Details
-                            </Button>
+                            {onOpenDetails && (
+                                <Button
+                                    variant="ghost"
+                                    className="execution-details-button"
+                                    data-testid="execution-details"
+                                    aria-label="Execution details"
+                                    title="Open execution details"
+                                    onClick={onOpenDetails}
+                                >
+                                    Details
+                                </Button>
+                            )}
                         </>
                     )}
                 </div>

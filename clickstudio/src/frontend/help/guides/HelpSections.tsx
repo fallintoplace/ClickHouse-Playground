@@ -274,28 +274,29 @@ export function HelpSections({
                 ) : null,
             )}
 
-            {renderTabPanel(
-                'reference',
-                'workspace-help-feature-view workspace-help-reference',
-                section === 'reference' ? (
-                    <>
-                        <HelpSectionHeading
-                            eyebrow="CLICKHOUSE REFERENCE"
-                            title={copy.helpReference}
-                            description={copy.helpReferenceDescription}
-                        />
-                        <div className="workspace-help-feature-scroll">
-                            <ReferenceExplorer
-                                copy={copy}
-                                connection={connection}
-                                trusted={trusted}
-                                onTargetHandled={() => undefined}
-                                onInsert={onReferenceInsert}
+            {props.expert &&
+                renderTabPanel(
+                    'reference',
+                    'workspace-help-feature-view workspace-help-reference',
+                    section === 'reference' ? (
+                        <>
+                            <HelpSectionHeading
+                                eyebrow="CLICKHOUSE REFERENCE"
+                                title={copy.helpReference}
+                                description={copy.helpReferenceDescription}
                             />
-                        </div>
-                    </>
-                ) : null,
-            )}
+                            <div className="workspace-help-feature-scroll">
+                                <ReferenceExplorer
+                                    copy={copy}
+                                    connection={connection}
+                                    trusted={trusted}
+                                    onTargetHandled={() => undefined}
+                                    onInsert={onReferenceInsert}
+                                />
+                            </div>
+                        </>
+                    ) : null,
+                )}
         </div>
     );
 }

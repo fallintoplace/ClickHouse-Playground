@@ -32,11 +32,18 @@ for (const mode of ['Standard', 'Experimental']) {
         await page.goto('/?connection=playground');
         await page.getByText(mode, { exact: true }).click();
         await expect(page.getByRole('button', { name: 'New table', exact: true })).toHaveCount(0);
-        if (mode === 'Standard')
-            await page
-                .locator('.icon-rail')
-                .getByRole('button', { name: 'Objects', exact: true })
-                .click();
+        if (mode === 'Standard') {
+            await expect(
+                page.locator('.icon-rail').getByRole('button', { name: 'Objects', exact: true }),
+            ).toHaveCount(0);
+            await expect(page.getByRole('button', { name: 'Insert row', exact: true })).toHaveCount(
+                0,
+            );
+            await expect(
+                page.getByRole('button', { name: 'Delete table', exact: true }),
+            ).toHaveCount(0);
+            return;
+        }
         await page.getByText('events', { exact: true }).first().click();
         for (const name of ['New table', 'Insert row', 'Delete table'])
             await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);

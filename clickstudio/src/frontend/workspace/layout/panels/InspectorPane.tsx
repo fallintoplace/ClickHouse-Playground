@@ -252,7 +252,7 @@ export function InspectorPane({
                 <h2>{title}</h2>
                 {closeButton}
             </header>
-            {(!expert || docked) && (
+            {expert && docked && (
                 <nav className="inspector-tabs is-browser-tabs" aria-label={copy.workspaceBrowser}>
                     {PRIMARY_INSPECTOR_NAVIGATION.map(item => (
                         <button
