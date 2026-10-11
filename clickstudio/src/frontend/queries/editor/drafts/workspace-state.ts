@@ -37,7 +37,14 @@ export interface WorkspaceState {
     closedTabs?: Draft[];
     recoveryWarning?: string;
 }
-export const newDraft = (name = 'Query 1', sql = ''): Draft => ({
+function queryTimestamp(now: Date): string {
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+}
+
+export const newDraft = (name = `Query ${queryTimestamp(new Date())}`, sql = ''): Draft => ({
     id: crypto.randomUUID(),
     name,
     sql,
@@ -54,35 +61,27 @@ export const MAX_TABS = 30;
 export const MAX_CLOSED_TABS = 10;
 export function nextBlankQueryName(
     workspace: Pick<WorkspaceState, 'tabs' | 'closedTabs'>,
+    now = new Date(),
 ): string {
-    const highestNumber = [...workspace.tabs, ...(workspace.closedTabs ?? [])].reduce(
-        (highest, draft) => {
-            const match = /^Query (\d+)$/.exec(draft.name);
-            const number = match ? Number(match[1]) : 0;
-            return Number.isSafeInteger(number) ? Math.max(highest, number) : highest;
-        },
-        0,
+    const usedNames = new Set(
+        [...workspace.tabs, ...(workspace.closedTabs ?? [])].map(draft => draft.name),
     );
-    return `Query ${highestNumber + 1}`;
+    const baseName = `Query ${queryTimestamp(now)}`;
+    if (!usedNames.has(baseName)) return baseName;
+    let suffix = 2;
+    while (usedNames.has(`${baseName} (${suffix})`)) suffix++;
+    return `${baseName} (${suffix})`;
 }
 
-function renameLegacyUntitledDrafts(tabs: Draft[], closedTabs: Draft[]) {
+function renameLegacyBlankDrafts(tabs: Draft[], closedTabs: Draft[], now: Date) {
     const drafts = [...tabs, ...closedTabs];
-    const usedNames = new Set(drafts.map(draft => draft.name));
-    let number = drafts.reduce((highest, draft) => {
-        const match = /^Query (\d+)$/.exec(draft.name);
-        const parsed = match ? Number(match[1]) : 0;
-        return Number.isSafeInteger(parsed) ? Math.max(highest, parsed) : highest;
-    }, 0);
-
     for (const draft of drafts) {
-        if (draft.serverId || draft.name !== 'Untitled Query') continue;
-        let name: string;
-        do {
-            name = `Query ${++number}`;
-        } while (usedNames.has(name));
-        draft.name = name;
-        usedNames.add(name);
+        if (
+            draft.serverId ||
+            (draft.name !== 'Untitled Query' && !/^Query \d+$/.test(draft.name))
+        )
+            continue;
+        draft.name = nextBlankQueryName({ tabs, closedTabs }, now);
     }
 }
 
@@ -262,7 +261,7 @@ export function recover(key: string, storage?: Pick<Storage, 'getItem'>): Worksp
             const storedClosed = array(value.closedTabs);
             const tabs = recoverTabs(storedTabs, MAX_TABS);
             const closedTabs = recoverTabs(storedClosed, MAX_CLOSED_TABS);
-            renameLegacyUntitledDrafts(tabs, closedTabs);
+            renameLegacyBlankDrafts(tabs, closedTabs, new Date());
             const incomplete =
                 !Array.isArray(value.tabs) ||
                 tabs.length !== storedTabs.length ||
