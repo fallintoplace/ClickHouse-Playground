@@ -17,12 +17,12 @@ const themes = [
     {
         value: 'click-light',
         dark: false,
-        surface: '#e9f0f4',
+        surface: '#e8eef8',
         panel: '#ffffff',
         accent: '#6b5d00',
-        action: '#edf249',
-        chrome: '#f3f7f9',
-        logoColor: 'rgb(27, 48, 61)',
+        action: '#e9f20b',
+        chrome: '#f7f9fe',
+        logoColor: 'rgb(20, 39, 68)',
     },
 ] as const;
 
@@ -216,7 +216,7 @@ for (const mode of ['Standard', 'Experimental'])
         await themeOption(page, 'click-light').click();
         const run = runButton(page);
         await expect(run).toHaveCSS('background-image', 'none');
-        await expect(run).toHaveCSS('background-color', 'rgb(237, 242, 73)');
+        await expect(run).toHaveCSS('background-color', 'rgb(233, 242, 11)');
         for (const state of ['normal', 'hover', 'focus']) {
             if (state === 'hover') await run.hover();
             if (state === 'focus') {
@@ -259,7 +259,7 @@ for (const mode of ['Standard', 'Experimental'])
         await expect(run).toHaveCSS('background-image', 'none');
         await page.reload();
         await expect(run).toHaveCSS('background-image', 'none');
-        await expect(run).toHaveCSS('background-color', 'rgb(237, 242, 73)');
+        await expect(run).toHaveCSS('background-color', 'rgb(233, 242, 11)');
     });
 
 test('an unknown saved theme falls back to ClickDark', async ({ page }) => {

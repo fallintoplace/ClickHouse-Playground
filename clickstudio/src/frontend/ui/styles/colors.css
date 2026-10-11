@@ -87,40 +87,40 @@
 
 :root[data-theme="click-light"] {
   color-scheme: light;
-  --page: #e9f0f4;
-  --page-raised: #f3f7f9;
-  --canvas: #e9f0f4;
+  --page: #e8eef8;
+  --page-raised: #f7f9fe;
+  --canvas: #e8eef8;
   --geo-land: #e6e9ee;
   --geo-border: #9ba3af;
   --panel: #ffffff;
-  --panel-raised: #edf3f6;
-  --panel-hover: #e2ebf0;
-  --line: #cedbe3;
-  --line-bright: #a8bbc7;
-  --control-border: #7c929f;
-  --text: #1b303d;
-  --text-soft: #3c5361;
-  --muted: #536b79;
+  --panel-raised: #eaf0fa;
+  --panel-hover: #dce6f7;
+  --line: #bccbe0;
+  --line-bright: #8299b8;
+  --control-border: #607999;
+  --text: #142744;
+  --text-soft: #344b6b;
+  --muted: #506582;
   --scrollbar-thumb: #9bafbc;
   --scrollbar-thumb-hover: #748d9d;
   --scroll-edge-shadow-color: #20242c14;
-  --accent-cyan: #006c83;
+  --accent-cyan: #006d99;
   --accent-clickhouse-yellow: #6b5d00;
   --accent-clickhouse-yellow-strong: #5c5000;
-  --accent-clickhouse-yellow-action: #edf249;
+  --accent-clickhouse-yellow-action: #e9f20b;
   --accent-clickhouse-yellow-ink: #15191a;
   --accent: var(--accent-clickhouse-yellow);
   --accent-strong: var(--accent-clickhouse-yellow-strong);
   --accent-action: var(--accent-clickhouse-yellow-action);
   --accent-ink: var(--accent-clickhouse-yellow-ink);
   --accent-mark: var(--accent-action);
-  --green: #146c43;
+  --green: #006b40;
   --signal-accent: var(--accent);
-  --amber: #945000;
-  --red: #b33043;
-  --violet: #7140a0;
-  --active-surface: color-mix(in srgb, var(--accent-action) 24%, var(--panel));
-  --active-border: color-mix(in srgb, var(--accent) 36%, var(--line-bright));
+  --amber: #a34f00;
+  --red: #c52243;
+  --violet: #7c2ed6;
+  --active-surface: color-mix(in srgb, var(--accent-action) 62%, var(--panel));
+  --active-border: color-mix(in srgb, var(--accent) 64%, var(--line-bright));
   --active-inset: inset 0 0 0 0 transparent;
   --focus-color: var(--accent);
   --editor-foreground: var(--text);
@@ -144,8 +144,45 @@
   --graph-node-shadow-color: #20242c14;
   --status-ring-opacity: 12%;
   --overlay-backdrop: #20242c47;
-  --browser-chrome: #f3f7f9;
-  --brand-logo: #1b303d;
+  --browser-chrome: #f7f9fe;
+  --brand-logo: var(--text);
+}
+
+:root[data-theme="click-light"]
+  :is(.cm-editor, .inspector-pane:has(.reference-explorer), .workspace-help-reference) {
+  --page: #e9f0f4;
+  --page-raised: #f3f7f9;
+  --canvas: #e9f0f4;
+  --panel-raised: #edf3f6;
+  --panel-hover: #e2ebf0;
+  --line: #cedbe3;
+  --line-bright: #a8bbc7;
+  --control-border: #7c929f;
+  --text: #1b303d;
+  --text-soft: #3c5361;
+  --muted: #536b79;
+  --accent-cyan: #006c83;
+  --accent-clickhouse-yellow-action: #edf249;
+  --accent-action: var(--accent-clickhouse-yellow-action);
+  --accent-mark: var(--accent-action);
+  --green: #146c43;
+  --amber: #945000;
+  --red: #b33043;
+  --violet: #7140a0;
+  --surface-glass: var(--page-raised);
+  --panel-header: var(--panel-raised);
+  --control-well: color-mix(in srgb, var(--panel-raised) 82%, var(--page));
+  --control-hover: var(--panel-hover);
+  --active-surface: color-mix(in srgb, var(--accent-action) 24%, var(--panel));
+  --active-border: color-mix(in srgb, var(--accent) 36%, var(--line-bright));
+  --editor-foreground: var(--text);
+  --editor-punctuation: var(--text-soft);
+  --editor-selection: color-mix(in srgb, var(--accent-action) 34%, transparent);
+}
+
+:root[data-theme="click-light"] .chart-workspace {
+  --accent: #2563eb;
+  --accent-strong: #1d4ed8;
 }
 
 .object-explorer-section {

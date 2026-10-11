@@ -95,7 +95,7 @@ for (const mode of ['Standard', 'Experimental']) {
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
             await expect(page.getByTestId('new-sql')).toHaveCSS(
                 'background-color',
-                theme === 'Light' ? 'rgb(237, 242, 73)' : 'rgb(250, 255, 105)',
+                theme === 'Light' ? 'rgb(233, 242, 11)' : 'rgb(250, 255, 105)',
             );
             await expect(page.getByTestId('new-sql')).toHaveCSS('color', 'rgb(21, 25, 26)');
         }

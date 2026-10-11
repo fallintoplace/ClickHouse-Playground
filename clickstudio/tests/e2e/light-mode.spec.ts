@@ -121,7 +121,7 @@ test(`Light mode keeps workspace and help text readable with yellow accent`, asy
     await expectReadableText(page.locator('.application'), 'Workspace and objects');
     await expect(page.locator('.object-tree-scroll')).toHaveCSS(
         'background-color',
-        'rgb(237, 243, 246)',
+        'rgb(234, 240, 250)',
     );
     await page.screenshot({ path: info.outputPath('light-workspace.png') });
 
@@ -317,10 +317,10 @@ test('Mounted candlesticks update their marks and labels when the theme changes'
     await expect(up).toHaveCSS('fill', 'rgb(53, 233, 120)');
     await expect(down).toHaveCSS('fill', 'rgb(255, 107, 117)');
     await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
-    await expect(up).toHaveCSS('fill', 'rgb(20, 108, 67)');
-    await expect(down).toHaveCSS('fill', 'rgb(179, 48, 67)');
-    await expect(page.locator('.market-axis text').first()).toHaveCSS('fill', 'rgb(83, 107, 121)');
-    await expect(page.locator('.market-bid-line')).toHaveCSS('stroke', 'rgb(107, 93, 0)');
+    await expect(up).toHaveCSS('fill', 'rgb(0, 107, 64)');
+    await expect(down).toHaveCSS('fill', 'rgb(197, 34, 67)');
+    await expect(page.locator('.market-axis text').first()).toHaveCSS('fill', 'rgb(80, 101, 130)');
+    await expect(page.locator('.market-bid-line')).toHaveCSS('stroke', 'rgb(37, 99, 235)');
     await page.getByRole('radio', { name: 'Dark theme', exact: true }).click();
     await expect(up).toHaveCSS('fill', 'rgb(53, 233, 120)');
     await expect(page.locator('.market-bid-line')).toHaveCSS('stroke', 'rgb(250, 255, 105)');
@@ -339,9 +339,9 @@ test('Light mode preserves invalid field borders before and after focus with the
     await name.fill('bad-name');
     await dialog.getByRole('textbox', { name: 'Column 1 name', exact: true }).focus();
     await expect(name).toHaveAttribute('aria-invalid', 'true');
-    await expect(name).toHaveCSS('border-color', 'rgb(179, 48, 67)');
+    await expect(name).toHaveCSS('border-color', 'rgb(197, 34, 67)');
     await name.focus();
-    await expect(name).toHaveCSS('border-color', 'rgb(179, 48, 67)');
+    await expect(name).toHaveCSS('border-color', 'rgb(197, 34, 67)');
     await expectReadableText(dialog, `Invalid field, yellow accent`);
     await name.fill('events');
     await expect(name).toHaveAttribute('aria-invalid', 'false');
