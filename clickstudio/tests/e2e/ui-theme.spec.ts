@@ -144,11 +144,20 @@ for (const theme of themes) {
 
 test('yellow works when preference storage is unavailable', async ({ page }) => {
     await page.addInitScript(() => {
-        Object.defineProperty(window, 'localStorage', {
-            get() {
-                throw new DOMException('Storage is disabled', 'SecurityError');
-            },
-        });
+        const getItem = Storage.prototype.getItem;
+        const setItem = Storage.prototype.setItem;
+        const unavailable = (key: string) =>
+            key === 'clickstudio:theme' || key === 'clickstudio:accent';
+        Storage.prototype.getItem = function (key) {
+            if (unavailable(key))
+                throw new DOMException('Preference storage is disabled', 'SecurityError');
+            return getItem.call(this, key);
+        };
+        Storage.prototype.setItem = function (key, value) {
+            if (unavailable(key))
+                throw new DOMException('Preference storage is disabled', 'SecurityError');
+            setItem.call(this, key, value);
+        };
     });
     await page.goto('/');
     await expect(themeOption(page, 'click-dark')).toBeChecked();
