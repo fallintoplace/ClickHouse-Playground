@@ -61,7 +61,11 @@ export function createApp(
     const ai = new AssistantService(
         store,
         overrides.assistant ??
-            new OpenAIDriver(config.demo ? undefined : config.openaiKey, config.openaiModel),
+            new OpenAIDriver(
+                config.demo ? undefined : config.openaiKey,
+                config.openaiModel,
+                config.openaiServiceTier,
+            ),
         (p, c) => assistantConnectionAuthorized(authorized, p, c),
     );
     const voice =

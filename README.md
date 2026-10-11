@@ -96,7 +96,11 @@ The AI assistant uses an OpenAI API key. Add your key to the .env file:
 
 Replace `your-openai-api-key` with your key.
 
-Leave `OPENAI_MODEL` empty to use the default model, or set a model supported by your OpenAI account. Restart the workspace after updating the key:
+Leave `OPENAI_MODEL` empty to use the default model, or set a model supported by your OpenAI account.
+
+The assistant uses [OpenAI Fast mode](https://developers.openai.com/api/docs/guides/fast-mode) by default. Luna Fast mode costs twice the Standard token rate and keeps the same reasoning settings. Set `OPENAI_SERVICE_TIER=default` for Standard processing. `fast` and `priority` both enable Fast mode.
+
+Restart the workspace after updating the key or service tier:
 
     npm run dev
 

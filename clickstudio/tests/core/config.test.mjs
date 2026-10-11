@@ -7,6 +7,23 @@ import {
 } from '../../.core-build/src/backend/system/settings/config.js';
 test('Local startup binds loopback by default', () =>
     assert.equal(loadConfig({}).host, '127.0.0.1'));
+test('The assistant defaults to Luna Fast mode and accepts Standard processing', () => {
+    for (const tier of [undefined, '', '  ', 'fast', 'priority', ' fast ', ' priority ']) {
+        const config = loadConfig({ OPENAI_SERVICE_TIER: tier });
+        assert.equal(config.openaiModel, 'gpt-6-luna');
+        assert.equal(config.openaiServiceTier, 'priority');
+    }
+    assert.equal(loadConfig({ OPENAI_SERVICE_TIER: ' default ' }).openaiServiceTier, 'default');
+    const config = loadConfig({ OPENAI_MODEL: 'custom-model', OPENAI_SERVICE_TIER: 'default' });
+    assert.equal(config.openaiModel, 'custom-model');
+    assert.equal(config.openaiServiceTier, 'default');
+});
+test('Unsupported assistant service tiers fail configuration validation', () => {
+    for (const tier of ['standard', 'FAST', 'unknown', 'flex'])
+        assert.throws(() => loadConfig({ OPENAI_SERVICE_TIER: tier }), {
+            code: 'OPENAI_SERVICE_TIER',
+        });
+});
 test('Local startup includes the public ClickHouse Playground with bounded read-only defaults', () => {
     const config = loadConfig({}),
         playground = config.profiles.find(profile => profile.publicPlayground);

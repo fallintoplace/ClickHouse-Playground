@@ -19,6 +19,7 @@ DEMO_MODE=false
 # Optional. Choose an account-supported Responses API model.
 OPENAI_API_KEY=
 OPENAI_MODEL=
+OPENAI_SERVICE_TIER=fast
 AI_SENSITIVE_COLUMNS=password,token,secret,api_key
 `;
 try {

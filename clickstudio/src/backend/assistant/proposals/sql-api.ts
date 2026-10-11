@@ -18,6 +18,7 @@ import {
 } from '../context/input.js';
 import { AppError } from '../../system/requests/errors.js';
 import { OpenAIDriver } from '../openai/client.js';
+import { openaiServiceTier } from '../../system/settings/config.js';
 
 const MAX_BODY_BYTES = 300_000;
 const MAX_REQUESTS_PER_DAY = 20;
@@ -148,6 +149,7 @@ async function post(request: Request): Promise<Response> {
     let timeoutSignal: AbortSignal | undefined;
     try {
         const { connectionId, action, sql, schema, built } = prepareAssistantContext(body);
+        const serviceTier = openaiServiceTier();
         const ip =
             request.headers.get('x-real-ip')?.trim() ||
             request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
@@ -170,7 +172,7 @@ async function post(request: Request): Promise<Response> {
             evaluationSchema: { tables: schema.tables, truncated: schema.truncated },
             state: 'running',
         };
-        const driver = new OpenAIDriver(process.env.OPENAI_API_KEY, MODEL);
+        const driver = new OpenAIDriver(process.env.OPENAI_API_KEY, MODEL, serviceTier);
         timeoutSignal = AbortSignal.timeout(ASSISTANT_REQUEST_TIMEOUT_MS);
         const signal = AbortSignal.any([request.signal, timeoutSignal]);
         const response = await driver.propose(context, signal);

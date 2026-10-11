@@ -12,6 +12,7 @@ import {
 } from '../proposals/assistant.js';
 import { AppError } from '../../system/requests/errors.js';
 import type { AssistantSource } from '../../../shared/assistant/types.js';
+import type { OpenAIServiceTier } from '../../system/settings/config.js';
 const MAX_OUTPUT_TOKENS = 12_000;
 const DEFAULT_MAX_INPUT_TOKENS = 48_000;
 const strings = { type: 'array', items: { type: 'string' } };
@@ -145,7 +146,11 @@ export class OpenAIDriver implements AssistantDriver {
     readonly model: string;
     private readonly maxInputTokens = maxInputTokens();
     private readonly client?: OpenAI;
-    constructor(key?: string, model?: string) {
+    constructor(
+        key?: string,
+        model?: string,
+        private readonly serviceTier: OpenAIServiceTier = 'priority',
+    ) {
         this.available = Boolean(key && model);
         this.model = model ?? 'unconfigured';
         if (this.available)
@@ -247,6 +252,7 @@ export class OpenAIDriver implements AssistantDriver {
                     response = await this.client.responses.create(
                         {
                             model: this.model,
+                            service_tier: this.serviceTier,
                             store: false,
                             instructions: context.payload.instructions,
                             input: requestInput(),

@@ -33,6 +33,17 @@ export interface Profile {
         password: string;
     };
 }
+export type OpenAIServiceTier = 'priority' | 'default';
+export function openaiServiceTier(env: NodeJS.ProcessEnv = process.env): OpenAIServiceTier {
+    const tier = env.OPENAI_SERVICE_TIER?.trim() || 'fast';
+    requireThat(
+        ['fast', 'priority', 'default'].includes(tier),
+        400,
+        'OPENAI_SERVICE_TIER',
+        'OPENAI_SERVICE_TIER must be fast, priority, or default',
+    );
+    return tier === 'default' ? 'default' : 'priority';
+}
 export interface Config {
     host: string;
     port: number;
@@ -43,6 +54,7 @@ export interface Config {
     profiles: Profile[];
     openaiKey?: string;
     openaiModel?: string;
+    openaiServiceTier?: OpenAIServiceTier;
     openaiRealtimeModel?: string;
     sensitiveColumns: string[];
     telemetryUrl?: string;
@@ -185,6 +197,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
         profiles,
         openaiKey: env.OPENAI_API_KEY,
         openaiModel: env.OPENAI_MODEL?.trim() || 'gpt-6-luna',
+        openaiServiceTier: openaiServiceTier(env),
         openaiRealtimeModel: env.OPENAI_REALTIME_MODEL ?? 'gpt-realtime-2.1',
         sensitiveColumns: (env.AI_SENSITIVE_COLUMNS ?? 'password,token,secret,api_key')
             .split(',')

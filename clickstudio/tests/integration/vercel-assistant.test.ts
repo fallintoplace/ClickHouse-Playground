@@ -29,6 +29,82 @@ function assistantBody() {
     };
 }
 
+test('Vercel assistant defaults to Fast processing and honors the server service tier', async t => {
+    const priorKey = process.env.OPENAI_API_KEY;
+    const priorTier = process.env.OPENAI_SERVICE_TIER;
+    const priorFetch = globalThis.fetch;
+    process.env.OPENAI_API_KEY = 'test-key';
+    let requestBody: Record<string, unknown> | undefined;
+    globalThis.fetch = async (input, init) => {
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        if (String(input).endsWith('/responses/input_tokens')) {
+            assert.equal(body.service_tier, undefined);
+            return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
+        }
+        requestBody = body;
+        return Response.json({
+            id: 'response-tier',
+            status: 'completed',
+            output_text: JSON.stringify({
+                sql: null,
+                summary: 'This SQL returns one row.',
+                assumptions: [],
+                tables: [],
+                caveats: [],
+                clarification: null,
+                findings: [],
+            }),
+            output: [],
+        });
+    };
+    t.after(() => {
+        globalThis.fetch = priorFetch;
+        if (priorKey === undefined) delete process.env.OPENAI_API_KEY;
+        else process.env.OPENAI_API_KEY = priorKey;
+        if (priorTier === undefined) delete process.env.OPENAI_SERVICE_TIER;
+        else process.env.OPENAI_SERVICE_TIER = priorTier;
+    });
+    for (const tier of [undefined, '', ' fast ', 'priority', 'default']) {
+        if (tier === undefined) delete process.env.OPENAI_SERVICE_TIER;
+        else process.env.OPENAI_SERVICE_TIER = tier;
+        const response = await handler.fetch(
+            request(assistantBody(), { 'x-real-ip': '192.0.2.21' }),
+        );
+        assert.equal(response.status, 201);
+        assert.equal(requestBody?.service_tier, tier === 'default' ? 'default' : 'priority');
+        assert.equal(requestBody?.reasoning, undefined);
+        assert.equal(requestBody?.store, false);
+        assert.equal(
+            ((await response.json()) as { summary: string }).summary,
+            'This SQL returns one row.',
+        );
+    }
+});
+
+test('Vercel assistant rejects an invalid service tier before contacting OpenAI', async t => {
+    const priorKey = process.env.OPENAI_API_KEY;
+    const priorTier = process.env.OPENAI_SERVICE_TIER;
+    const priorFetch = globalThis.fetch;
+    process.env.OPENAI_API_KEY = 'test-key';
+    process.env.OPENAI_SERVICE_TIER = 'unknown';
+    globalThis.fetch = async () => {
+        throw new Error('Invalid service tiers must not reach the provider.');
+    };
+    t.after(() => {
+        globalThis.fetch = priorFetch;
+        if (priorKey === undefined) delete process.env.OPENAI_API_KEY;
+        else process.env.OPENAI_API_KEY = priorKey;
+        if (priorTier === undefined) delete process.env.OPENAI_SERVICE_TIER;
+        else process.env.OPENAI_SERVICE_TIER = priorTier;
+    });
+    const response = await handler.fetch(request(assistantBody()));
+    assert.equal(response.status, 400);
+    assert.equal(
+        ((await response.json()) as { error: { code: string } }).error.code,
+        'OPENAI_SERVICE_TIER',
+    );
+});
+
 test('Vercel Fix with AI sends failure context without a saved run and returns a repair proposal', async t => {
     const priorKey = process.env.OPENAI_API_KEY;
     const priorFetch = globalThis.fetch;
