@@ -556,7 +556,7 @@ test('A running query shows its submitted SQL and keeps previous rows until it e
         await expect(progress.locator('.loading-orbit')).toBeVisible();
         await expect(progress.locator('.loading-orbit')).toHaveCSS('width', '16px');
         await expect(progress.locator('.loading-orbit')).toHaveAttribute('aria-hidden', 'true');
-        await expect(progress).toContainText('Previous result');
+        await expect(progress).not.toContainText('Previous result');
         await expect(table).toContainText('2026-01-01');
         await expect(results.locator('.table-pagination, .result-pagination')).toHaveCount(0);
 
@@ -597,7 +597,7 @@ test('A running query shows its submitted SQL and keeps previous rows until it e
     }
 });
 
-test('Restoring a version keeps run status aligned and marks its result as previous', async ({
+test('Restoring a version keeps run status aligned and retains its result while running', async ({
     page,
 }) => {
     await trust(page);
@@ -682,7 +682,7 @@ test('Restoring a version keeps run status aligned and marks its result as previ
         await restoreResponse;
         await expect(page.locator('.cm-content')).toContainText('SELECT 1 AS version_value;');
         await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'running');
-        await expect(results.locator('.result-execution-progress')).toContainText(
+        await expect(results.locator('.result-execution-progress')).not.toContainText(
             'Previous result',
         );
         await expect(table).toContainText('2');

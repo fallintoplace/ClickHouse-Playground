@@ -639,17 +639,6 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .result-execution-previous {
-    flex: none;
-    margin-left: auto;
-    padding: 3px 7px;
-    border: 1px solid color-mix(in srgb, var(--amber) 25%, var(--line));
-    border-radius: var(--radius-label);
-    background: color-mix(in srgb, var(--amber) 8%, transparent);
-    color: var(--amber);
-    font-size: 8px;
-    font-weight: 600;
-  }
   .result-execution-sql {
     max-height: min(36vh, 320px);
     margin: 0;

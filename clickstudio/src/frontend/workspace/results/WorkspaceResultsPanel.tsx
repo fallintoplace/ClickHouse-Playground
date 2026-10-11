@@ -226,11 +226,6 @@ export function WorkspaceResultsPanel({
                                     <strong className="result-execution-query" title={active.name}>
                                         {active.name}
                                     </strong>
-                                    {showPreviousResult && (
-                                        <span className="result-execution-previous">
-                                            Previous result
-                                        </span>
-                                    )}
                                 </div>
                                 <pre className="result-execution-sql is-preview">
                                     {executionSqlPreview}
