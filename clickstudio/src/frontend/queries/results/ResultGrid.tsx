@@ -171,7 +171,7 @@ export function ResultGrid({
     );
     const toolbar = showPagination && (
         <div className="result-table-toolbar" inert={obscured || undefined}>
-            {pageCount === 1 && renderInContainer(rowCountLabel, rowCountContainer)}
+            {renderInContainer(rowCountLabel, rowCountContainer)}
             <ResultTableControls
                 filter={filter}
                 onFilter={setFilter}

@@ -79,6 +79,7 @@ for (const theme of ['Light', 'Dark']) {
             );
             await runButton(page).click();
             await expect(page.locator('.result-pages-toggle')).toBeVisible();
+            await expect(page.locator('.results-header .result-row-count')).toHaveText('240 rows');
             await expectReferenceStyles(page, info, 'paged-results');
             await page.locator('.result-pages-toggle').click();
             await expect(

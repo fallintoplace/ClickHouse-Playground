@@ -241,8 +241,10 @@ for (const mode of ['Standard', 'Experimental']) {
         const dock = results.getByRole('dialog', { name: 'Search & pages', exact: true });
         const pagination = dock.getByRole('navigation', { name: 'Result pagination', exact: true });
         const pages = header.locator('.result-pages-toggle');
+        const total = header.locator('.result-row-count');
         await expect(results.locator('tbody tr')).toHaveCount(200);
-        await expect(header.locator('.results-row-summary')).toBeHidden();
+        await expect(header.locator('.results-row-summary')).toBeVisible();
+        await expect(total).toHaveText('450 rows');
         await expect(pages).toHaveText('1/3');
         await expect(dock).toBeHidden();
         await pages.click();
@@ -262,6 +264,7 @@ for (const mode of ['Standard', 'Experimental']) {
             '401–450 of 450 retained rows',
         );
         await expect(pages).toHaveText('3/3');
+        await expect(total).toHaveText('450 rows');
         await expect(
             pagination.getByRole('button', { name: 'Last page', exact: true }),
         ).toBeDisabled();
@@ -276,6 +279,7 @@ for (const mode of ['Standard', 'Experimental']) {
         await filter.fill('ROW-449');
         await expect(dock.locator('.result-match-count')).toHaveText('1 of 50 rows on this page');
         await expect(results.locator('tbody .row-number')).toHaveText('450');
+        await expect(total).toHaveText('450 rows');
         await pagination.getByRole('button', { name: 'First page', exact: true }).click();
         await expect(pagination.getByRole('status')).toHaveText('Page 1 of 3');
         await expect(dock.locator('.result-match-count')).toHaveText('0 of 200 rows on this page');
@@ -303,6 +307,8 @@ for (const mode of ['Standard', 'Experimental']) {
             for (const width of [1440, 900, 761]) {
                 await page.setViewportSize({ width, height: 900 });
                 await expectResultsToolbarFits(header);
+                await expect(total).toBeVisible();
+                await expect(total).toHaveText('450 rows');
                 await expect(header).toHaveCSS('height', '34px');
                 await openResultFilter(header);
                 await filter.fill('row-199'.repeat(60));
@@ -486,7 +492,7 @@ test('Paged truncated results retain compact controls when returning from Chart'
     const pages = header.locator('.result-pages-toggle');
     const dock = results.getByRole('dialog', { name: 'Search & pages', exact: true });
     await expect(pages).toHaveText('1/2');
-    await expect(header.locator('.result-row-count')).toHaveCount(0);
+    await expect(header.locator('.result-row-count')).toHaveText('250 rows');
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'truncated');
     await expect(page.locator('.execution-bar')).toContainText('Truncated');
     await pages.click();
@@ -494,11 +500,13 @@ test('Paged truncated results retain compact controls when returning from Chart'
     await expect(dock.locator('.result-retained-range')).toHaveText('201–250 of 250 retained rows');
     await (await openResultFilter(header)).fill('row-249');
     await expect(dock.locator('.result-match-count')).toHaveText('1 of 50 rows on this page');
+    await expect(header.locator('.result-row-count')).toHaveText('250 rows');
     await expectResultsToolbarFits(header);
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();
     await expect(dock).toHaveCount(0);
     await results.getByRole('tab', { name: 'Table', exact: true }).click();
     await expect(pages).toHaveText('2/2');
+    await expect(header.locator('.result-row-count')).toHaveText('250 rows');
     await expect(dock).toBeHidden();
     await pages.click();
     await expect(dock.locator('.result-retained-range')).toHaveText('201–250 of 250 retained rows');
@@ -599,6 +607,7 @@ test('Paging keeps the dock and search through loading and a retained-page read 
     await dock.getByRole('button', { name: 'Next page', exact: true }).click();
     await expect(dock).toBeVisible();
     await expect(dock).toHaveAttribute('aria-busy', 'true');
+    await expect(results.locator('.result-row-count')).toHaveText('450 rows');
     await expect(dock.getByRole('button', { name: 'Next page', exact: true })).toBeDisabled();
     await expect(filter).toHaveValue('row-249');
     await expect(dock.locator('.result-match-count')).toHaveText('Loading this page…');
@@ -608,6 +617,7 @@ test('Paging keeps the dock and search through loading and a retained-page read 
     await expect(dock).not.toHaveAttribute('aria-busy', 'true');
     await expect(dock.locator('.result-match-count')).toHaveText('1 of 200 rows on this page');
     await expect(results.locator('tbody .row-number')).toHaveText('250');
+    await expect(results.locator('.result-row-count')).toHaveText('450 rows');
     await expect(
         dock.getByRole('button', { name: 'Keep search and pages open', exact: true }),
     ).toHaveAttribute('aria-pressed', 'true');
@@ -662,7 +672,7 @@ test('The largest retained result keeps its range and long search out of a narro
     await expect(header).toHaveCSS('height', '34px');
     await filter.press('Escape');
     await expect(header.locator('.result-search-active')).toBeVisible();
-    await expect(header.locator('.result-row-count')).toHaveCount(0);
+    await expect(header.locator('.result-row-count')).toHaveText('20,000 rows');
     await expectResultsToolbarFits(header);
     await page.screenshot({ path: info.outputPath('compact-100-pages.png') });
     expect(runs()).toBe(1);
