@@ -111,6 +111,27 @@ test('Accepted and rejected history keeps the recorded decision', () => {
     }
 });
 
+test('An accepted proposal that missed its draft is not reported as applied', () => {
+    const turn = sqlTurn({ applied: false });
+    turn.proposal.decision = 'accepted';
+    const state = createAssistantChatState();
+    state.chats[0].turns = [turn];
+    const restored = recoverAssistantChatState(state).chats[0].turns[0];
+    assert.equal(restored.applied, false);
+    assert.deepEqual(assistantSqlReview(restored, reviewContext), {
+        status: 'Not applied',
+        message: 'The original SQL draft changed or closed before this proposal could be applied.',
+        canOpenAlternative: true,
+    });
+    for (const applied of [true, undefined, 'false']) {
+        state.chats[0].turns = [{ ...turn, applied }];
+        const recovered = recoverAssistantChatState(state).chats[0].turns[0];
+        assert.equal(assistantSqlReview(recovered, reviewContext).status, 'Applied');
+        if (applied === true) assert.equal(recovered.applied, true);
+        else assert.equal(Object.hasOwn(recovered, 'applied'), false);
+    }
+});
+
 test('Changing tabs retains the proposal ownership warning without replacing another draft', () => {
     assert.deepEqual(assistantSqlReview(sqlTurn(), { ...reviewContext, draftId: 'other' }), {
         status: 'Another query',
@@ -144,19 +165,34 @@ test('Changed drafts and failed SQL checks retain their review warnings', () => 
 
 test('Editor proposals belong to the originating query and connection', () => {
     const turn = sqlTurn();
-    assert.equal(pendingEditorProposal([turn], 'draft', 'demo').id, 'turn');
-    assert.equal(pendingEditorProposal([turn], 'other-draft', 'demo'), undefined);
-    assert.equal(pendingEditorProposal([turn], 'draft', 'other-connection'), undefined);
+    assert.equal(pendingEditorProposal([turn], 'draft', 'demo', 'SELECT 1').id, 'turn');
+    assert.equal(pendingEditorProposal([turn], 'other-draft', 'demo', 'SELECT 1'), undefined);
+    assert.equal(pendingEditorProposal([turn], 'draft', 'other-connection', 'SELECT 1'), undefined);
     assert.equal(
-        pendingEditorProposal([sqlTurn({ draftId: undefined })], 'draft', 'demo'),
+        pendingEditorProposal([sqlTurn({ draftId: undefined })], 'draft', 'demo', 'SELECT 1'),
         undefined,
     );
+});
+
+test('A background reply cannot replace an edited SQL draft with a review', () => {
+    const turn = sqlTurn();
+    assert.equal(pendingEditorProposal([turn], 'draft', 'demo', 'SELECT 1').id, 'turn');
+    for (const sql of ['SELECT 3', '', 'SELECT 1;'])
+        assert.equal(pendingEditorProposal([turn], 'draft', 'demo', sql), undefined);
+    assert.deepEqual(assistantSqlReview(turn, { ...reviewContext, sql: 'SELECT 3' }), {
+        status: 'Draft changed',
+        message: 'The SQL draft changed. Ask again to review the current draft.',
+        canOpenAlternative: true,
+    });
 });
 
 test('Only complete, undecided SQL changes open an editor review', () => {
     const turn = sqlTurn();
     for (const status of ['pending', 'failed', 'cancelled'])
-        assert.equal(pendingEditorProposal([sqlTurn({ status })], 'draft', 'demo'), undefined);
+        assert.equal(
+            pendingEditorProposal([sqlTurn({ status })], 'draft', 'demo', 'SELECT 1'),
+            undefined,
+        );
     for (const proposal of [
         undefined,
         { ...turn.proposal, decision: 'accepted' },
@@ -166,12 +202,16 @@ test('Only complete, undecided SQL changes open an editor review', () => {
         { ...turn.proposal, action: 'explain' },
         { ...turn.proposal, action: 'review' },
     ])
-        assert.equal(pendingEditorProposal([sqlTurn({ proposal })], 'draft', 'demo'), undefined);
+        assert.equal(
+            pendingEditorProposal([sqlTurn({ proposal })], 'draft', 'demo', 'SELECT 1'),
+            undefined,
+        );
     assert.equal(
         pendingEditorProposal(
             [sqlTurn({ proposal: { ...turn.proposal, sql: '' } })],
             'draft',
             'demo',
+            'SELECT 1',
         ).proposal.sql,
         '',
     );
@@ -181,10 +221,13 @@ test('Older proposals do not reopen after a later answer for the same query', ()
     const turn = sqlTurn();
     const later = sqlTurn({ id: 'later', proposal: { ...turn.proposal, decision: 'accepted' } });
     const otherDraft = sqlTurn({ id: 'other', draftId: 'other-draft' });
-    assert.equal(pendingEditorProposal([turn, later, otherDraft], 'draft', 'demo'), undefined);
-    assert.equal(pendingEditorProposal([turn, otherDraft], 'draft', 'demo').id, 'turn');
     assert.equal(
-        pendingEditorProposal([turn, sqlTurn({ status: 'pending' })], 'draft', 'demo'),
+        pendingEditorProposal([turn, later, otherDraft], 'draft', 'demo', 'SELECT 1'),
+        undefined,
+    );
+    assert.equal(pendingEditorProposal([turn, otherDraft], 'draft', 'demo', 'SELECT 1').id, 'turn');
+    assert.equal(
+        pendingEditorProposal([turn, sqlTurn({ status: 'pending' })], 'draft', 'demo', 'SELECT 1'),
         undefined,
     );
 });
@@ -195,7 +238,7 @@ test('Restored proposals retain query ownership without assigning legacy turns',
     const turns = recoverAssistantChatState(state).chats[0].turns;
     assert.equal(turns[0].draftId, 'draft');
     assert.equal(Object.hasOwn(turns[1], 'draftId'), false);
-    assert.equal(pendingEditorProposal(turns, 'draft', 'demo').id, 'turn');
+    assert.equal(pendingEditorProposal(turns, 'draft', 'demo', 'SELECT 1').id, 'turn');
 });
 
 test('Assistant chats restore the selected thread and keep every conversation', () => {

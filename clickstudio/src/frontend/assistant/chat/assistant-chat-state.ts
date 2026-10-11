@@ -22,6 +22,7 @@ export interface AssistantChatTurn {
     runContext?: AssistantChatRunContext;
     status: AssistantTurnStatus;
     proposal?: Proposal;
+    applied?: boolean;
     error?: string;
 }
 
@@ -43,6 +44,7 @@ export interface AssistantSqlReview {
     status:
         | 'Needs review'
         | 'Applied'
+        | 'Not applied'
         | 'Rejected'
         | 'Review only'
         | 'No SQL changes'
@@ -70,7 +72,16 @@ export function assistantSqlReview(
         !inspectOnly &&
         proposal.quality?.status !== 'fail' &&
         proposal.decision !== 'rejected';
-    if (proposal.decision === 'accepted') return { status: 'Applied', canOpenAlternative };
+    if (proposal.decision === 'accepted') {
+        if (turn.applied === false)
+            return {
+                status: 'Not applied',
+                message:
+                    'The original SQL draft changed or closed before this proposal could be applied.',
+                canOpenAlternative,
+            };
+        return { status: 'Applied', canOpenAlternative };
+    }
     if (proposal.decision === 'rejected') return { status: 'Rejected', canOpenAlternative };
     if (inspectOnly) return { status: 'Review only', canOpenAlternative };
     if (proposal.sql === proposal.baseSql) return { status: 'No SQL changes', canOpenAlternative };
@@ -100,6 +111,7 @@ export function pendingEditorProposal(
     turns: readonly AssistantChatTurn[],
     draftId: string,
     connectionId: string,
+    currentSql: string,
 ): (AssistantChatTurn & { proposal: Proposal & { sql: string } }) | undefined {
     const turn = [...turns].reverse().find(item => item.draftId === draftId);
     const proposal = turn?.proposal;
@@ -108,6 +120,7 @@ export function pendingEditorProposal(
         turn.status !== 'complete' ||
         !proposal ||
         proposal.connectionId !== connectionId ||
+        proposal.baseSql !== currentSql ||
         proposal.decision !== 'pending' ||
         proposal.sql === null ||
         proposal.sql === proposal.baseSql ||
@@ -224,6 +237,7 @@ function recoverTurn(value: unknown): AssistantChatTurn | undefined {
         ...(runContext ? { runContext } : {}),
         status: interrupted ? 'cancelled' : value.status,
         ...(proposal ? { proposal } : {}),
+        ...(typeof value.applied === 'boolean' ? { applied: value.applied } : {}),
         ...getRestoredError(),
     };
 }

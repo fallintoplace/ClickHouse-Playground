@@ -2,7 +2,7 @@ import { useDialogFocus } from '../../ui/focus/useDialogFocus';
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { MAX_ASSISTANT_CHAT_TITLE_LENGTH, type AssistantChat } from './assistant-chat-state';
 import { OverlayPortal } from '../../ui/components/OverlayPortal';
-import { Button } from '../../ui/components/ui';
+import { Button, Spinner } from '../../ui/components/ui';
 import { Icon } from '../../ui/components/icons';
 
 export type AssistantChatHistoryProps = {
@@ -249,6 +249,9 @@ export function AssistantChatHistory({
                                             title={chat.title}
                                         >
                                             <span>{chat.title}</span>
+                                            {chat.turns.some(turn => turn.status === 'pending') && (
+                                                <Spinner label="Generating response" />
+                                            )}
                                             {chat.id === activeChatId && (
                                                 <>
                                                     <span className="sr-only">

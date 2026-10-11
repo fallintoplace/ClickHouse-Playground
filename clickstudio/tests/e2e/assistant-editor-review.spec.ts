@@ -571,7 +571,7 @@ test('A new proposal reveals a collapsed query and still allows manual collapse'
     await expect(review(page)).toBeVisible();
 });
 
-test('A changed draft cannot accept a restored proposal', async ({ page }) => {
+test('A restored proposal cannot replace or apply to a changed draft', async ({ page }) => {
     const { decisions } = await installProposal(page);
     await trust(page);
     await replaceSql(page, originalSql);
@@ -588,17 +588,20 @@ test('A changed draft cannot accept a restored proposal', async ({ page }) => {
         localStorage.setItem(key, JSON.stringify(state));
     });
     await page.reload();
-    await expect(review(page)).toBeVisible();
-    await expect(
-        review(page).getByRole('button', { name: 'Accept SQL changes', exact: true }),
-    ).toBeDisabled();
-    await expect(review(page).getByRole('alert')).toHaveText(
-        'The query changed. Request a new proposal.',
-    );
-    await review(page).getByRole('button', { name: 'Reject SQL changes', exact: true }).click();
+    await expect(review(page)).toHaveCount(0);
     await expect(liveEditor(page)).toBeVisible();
     await expect(liveEditor(page)).toHaveText('SELECT 99 AS changed');
-    expect(decisions.map(item => item.decision)).toEqual(['rejected']);
+    await page.getByTestId('open-ai').click();
+    await expect(page.locator('.assistant-sql-review')).toContainText('Draft changed');
+    await expect(page.locator('.assistant-sql-review')).toContainText(
+        'The SQL draft changed. Ask again to review the current draft.',
+    );
+    await expect(
+        page
+            .locator('.proposal-card')
+            .getByRole('button', { name: /Accept|Reject|Apply to draft/ }),
+    ).toHaveCount(0);
+    expect(decisions).toEqual([]);
 });
 
 test('Detached query review shares the same draft and decision with the workspace', async ({

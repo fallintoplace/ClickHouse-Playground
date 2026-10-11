@@ -1,5 +1,5 @@
 import type {} from '../assistant-cancellation-harness.js';
-import { useState } from 'react';
+import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { useWorkspaceAssistant } from '../../../src/frontend/assistant/proposals/useWorkspaceAssistant.js';
@@ -8,6 +8,7 @@ import {
     type WorkspaceState,
 } from '../../../src/frontend/queries/editor/drafts/workspace-state.js';
 import type { Schema } from '../../../src/shared/database/schema/types.js';
+import { assistantSqlReview } from '../../../src/frontend/assistant/chat/assistant-chat-state.js';
 
 const active = newDraft('Cancellation regression', 'SELECT 1');
 const workspaceRef = {
@@ -23,12 +24,16 @@ const schema: Schema = {
     truncated: false,
 };
 let assistant: ReturnType<typeof useWorkspaceAssistant>;
+let setHarnessWorkspace: (state: WorkspaceState) => void;
+let activeRunId = 'selected-run';
 
 function Harness() {
-    const [, setWorkspace] = useState(workspaceRef.current);
+    const [workspace, setWorkspace] = useState(workspaceRef.current);
+    workspaceRef.current = workspace;
+    setHarnessWorkspace = setWorkspace;
     assistant = useWorkspaceAssistant({
-        active,
-        activeRunId: 'selected-run',
+        active: workspace.tabs.find(draft => draft.id === workspace.activeId)!,
+        activeRunId,
         connectionId: schema.connectionId,
         trusted: true,
         workspaceRef,
@@ -38,7 +43,15 @@ function Harness() {
 }
 
 const root = createRoot(document.getElementById('assistant-harness')!);
-flushSync(() => root.render(<Harness />));
+function renderHarness() {
+    root.render(
+        <StrictMode>
+            <Harness />
+        </StrictMode>,
+    );
+}
+
+flushSync(renderHarness);
 
 function snapshot() {
     return {
@@ -74,8 +87,135 @@ async function cancelRequest(mode: 'ask' | 'repair' | 'run') {
         flushSync(() => assistant.cancelAssistantRequest());
     }
     await request!;
-    flushSync(() => root.render(<Harness />));
+    flushSync(renderHarness);
     return snapshot();
 }
 
-window.assistantCancellationHarness = { cancelRequest };
+async function continueWhilePreparing(mode: 'run' | 'schema' | 'repair') {
+    flushSync(() => {
+        assistant.setIncludeRun(mode === 'run');
+        assistant.changeAssistantQuestion('Explain original SQL');
+    });
+    let release: (() => void) | undefined;
+    const preparation = new Promise<void>(resolve => {
+        release = resolve;
+    });
+    let request: Promise<void>;
+    flushSync(() => {
+        request = assistant.requestAssistantSql(
+            mode === 'run' ? schema : undefined,
+            undefined,
+            undefined,
+            async () => {
+                await preparation;
+                return { evidenceSql: 'SELECT original_run' };
+            },
+            {
+                loadSchema: async () => {
+                    await preparation;
+                    return schema;
+                },
+                ...(mode === 'repair'
+                    ? { repair: { sql: 'SELECT broken()', error: 'Original error' } }
+                    : {}),
+            },
+        );
+        void assistant.requestAssistantSql(schema);
+    });
+    const originalChatId = assistant.activeAssistantChatId;
+    const otherDraft = newDraft('Another draft', 'SELECT 2');
+    activeRunId = 'new-run';
+    flushSync(() => {
+        setHarnessWorkspace({
+            ...workspaceRef.current,
+            activeId: otherDraft.id,
+            tabs: [{ ...active, sql: 'SELECT edited', parameters: { p: '2' } }, otherDraft],
+        });
+        assistant.setIncludeRun(false);
+        assistant.newAssistantChat();
+    });
+    release?.();
+    await request!;
+    flushSync(renderHarness);
+    const otherChatBusy = assistant.assistantBusy;
+    const originalTurns = assistant.assistantChats.find(chat => chat.id === originalChatId)!.turns;
+    flushSync(() => assistant.selectAssistantChat(originalChatId));
+    return { ...snapshot(), otherChatBusy, originalTurns, sql: workspaceRef.current.tabs[1]!.sql };
+}
+
+async function acceptAfterChange(change: 'edit' | 'close' | 'unmount') {
+    flushSync(() => assistant.changeAssistantQuestion('Update original SQL'));
+    await assistant.requestAssistantSql(schema);
+    flushSync(renderHarness);
+    const originalChatId = assistant.activeAssistantChatId;
+    const turn = assistant.assistantTurns[0]!;
+    let decision: Promise<void>;
+    flushSync(() => {
+        decision = assistant.decideAssistantProposal(turn.id, 'accepted');
+    });
+    const otherDraft = newDraft('Another draft', 'SELECT 2');
+    if (change === 'unmount') {
+        flushSync(() => root.unmount());
+    } else {
+        flushSync(() => {
+            setHarnessWorkspace({
+                ...workspaceRef.current,
+                activeId: otherDraft.id,
+                tabs:
+                    change === 'edit'
+                        ? [{ ...active, sql: 'SELECT edited' }, otherDraft]
+                        : [otherDraft],
+            });
+            assistant.newAssistantChat();
+        });
+    }
+    await decision!;
+    if (change !== 'unmount') flushSync(renderHarness);
+    const completed = assistant.assistantChats.find(chat => chat.id === originalChatId)!.turns[0]!;
+    return {
+        sql: workspaceRef.current.tabs.map(draft => draft.sql),
+        applied: completed.applied,
+        review: assistantSqlReview(
+            { ...completed, proposal: completed.proposal! },
+            {
+                sql: workspaceRef.current.tabs[0]!.sql,
+                draftId: workspaceRef.current.tabs[0]!.id,
+                connectionId: schema.connectionId,
+                latestTurnId: turn.id,
+            },
+        ).status,
+    };
+}
+
+async function acceptConcurrently() {
+    flushSync(() => assistant.changeAssistantQuestion('First acceptance'));
+    await assistant.requestAssistantSql(schema);
+    flushSync(renderHarness);
+    const firstChatId = assistant.activeAssistantChatId;
+    const firstTurnId = assistant.assistantTurns[0]!.id;
+    flushSync(() => assistant.newAssistantChat());
+    flushSync(() => assistant.changeAssistantQuestion('Second acceptance'));
+    await assistant.requestAssistantSql(schema);
+    flushSync(renderHarness);
+    const secondTurnId = assistant.assistantTurns[0]!.id;
+    const secondDecision = assistant.decideAssistantProposal(secondTurnId, 'accepted');
+    flushSync(() => assistant.selectAssistantChat(firstChatId));
+    const firstDecision = assistant.decideAssistantProposal(firstTurnId, 'accepted');
+    await Promise.all([firstDecision, secondDecision]);
+    flushSync(renderHarness);
+    return {
+        sql: workspaceRef.current.tabs[0]!.sql,
+        turns: assistant.assistantChats.map(chat => ({
+            applied: chat.turns[0]!.applied,
+            sql: chat.turns[0]!.proposal!.sql,
+            decision: chat.turns[0]!.proposal!.decision,
+        })),
+    };
+}
+
+window.assistantCancellationHarness = {
+    cancelRequest,
+    continueWhilePreparing,
+    acceptAfterChange,
+    acceptConcurrently,
+};

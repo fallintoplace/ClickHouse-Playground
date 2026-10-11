@@ -1,0 +1,425 @@
+import { test, expect, type Page } from '@playwright/test';
+import type { Proposal } from '../../src/shared/assistant/types.js';
+import { jsonRecord, openBlankSql, replaceSql, trust } from './helpers.js';
+
+type PendingReply = {
+    body: Record<string, unknown>;
+    reply: (sql?: string | null, status?: number) => void;
+};
+
+function proposalFor(body: Record<string, unknown>, sql: string | null): Proposal {
+    return {
+        id: String(body.question),
+        owner: 'local-owner',
+        connectionId: 'demo',
+        action: 'ask',
+        createdAt: '2026-10-11T00:00:00.000Z',
+        baseSql: String(body.sql),
+        responseId: 'background-response',
+        model: 'fixture',
+        promptVersion: 'test',
+        contextSummary: [],
+        decision: 'pending',
+        sql,
+        summary: `Reply to ${body.question}`,
+        assumptions: [],
+        tables: [],
+        caveats: [],
+        clarification: null,
+        findings: [],
+    };
+}
+
+async function deferredReplies(page: Page) {
+    const requests: PendingReply[] = [];
+    await page.route('**/api/assistant/sql', async route => {
+        const body = jsonRecord(route.request().postDataJSON());
+        const response = await new Promise<{ sql: string | null; status: number }>(resolve => {
+            requests.push({ body, reply: (sql = null, status = 200) => resolve({ sql, status }) });
+        });
+        const json =
+            response.status === 200
+                ? proposalFor(body, response.sql)
+                : { error: { code: 'AI_UNAVAILABLE', message: 'Try again later.' } };
+        await route.fulfill({ status: response.status, json }).catch(() => undefined);
+    });
+    return requests;
+}
+
+async function ask(page: Page, question: string) {
+    await page.getByRole('textbox', { name: 'Ask AI', exact: true }).fill(question);
+    await page.getByRole('button', { name: 'Send', exact: true }).click();
+}
+
+async function selectChat(page: Page, title: string) {
+    await page.getByRole('button', { name: /^Chat history:/ }).click();
+    await page.locator('.assistant-chat-history-select').filter({ hasText: title }).click();
+}
+
+async function deleteChat(page: Page, title: string) {
+    await page.getByRole('button', { name: /^Chat history:/ }).click();
+    await page.getByRole('button', { name: `Actions for ${title}`, exact: true }).click();
+    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    await page.getByRole('button', { name: 'Delete conversation', exact: true }).click();
+}
+
+for (const mode of ['beginner', 'expert']) {
+    test(`Ask AI keeps its original SQL while editing and running in ${mode} mode`, async ({
+        page,
+    }) => {
+        const requests = await deferredReplies(page);
+        await page.addInitScript(
+            mode => localStorage.setItem('clickstudio:experience', mode),
+            mode,
+        );
+        await trust(page);
+        await replaceSql(page, 'SELECT 1 AS original');
+        await page.getByTestId('open-ai').click();
+        await ask(page, 'Improve original SQL');
+        await expect.poll(() => requests.length).toBe(1);
+        await replaceSql(page, 'SELECT 2 AS edited');
+        await page.getByTestId('run-button').click();
+        await expect(page.locator('.execution-bar')).toHaveAttribute(
+            'data-run-status',
+            'succeeded',
+        );
+        await expect(page.locator('.assistant-pending')).toBeVisible();
+        requests[0]!.reply('SELECT 3 AS suggested');
+        await expect(page.getByTestId('assistant-proposal-summary')).toHaveText(
+            'Reply to Improve original SQL',
+        );
+        expect(requests[0]!.body).toMatchObject({ sql: 'SELECT 1 AS original', includeRun: false });
+        await expect(page.getByRole('textbox', { name: 'SQL editor', exact: true })).toHaveText(
+            'SELECT 2 AS edited',
+        );
+        await expect(page.getByTestId('sql-proposal-review')).toHaveCount(0);
+        await expect(page.locator('.assistant-turn-error')).toHaveCount(0);
+        await expect(page.getByTestId('run-button')).toBeEnabled();
+    });
+}
+
+test('Switching SQL tabs preserves a pending reply and its original proposal ownership', async ({
+    page,
+}) => {
+    const requests = await deferredReplies(page);
+    await trust(page);
+    await replaceSql(page, 'SELECT 1 AS original');
+    const originalTitle = await page
+        .getByRole('tab', { selected: true })
+        .getAttribute('aria-label');
+    await page.getByTestId('open-ai').click();
+    await ask(page, 'Improve first tab');
+    await expect.poll(() => requests.length).toBe(1);
+    await openBlankSql(page);
+    await replaceSql(page, 'SELECT 2 AS other_tab');
+    requests[0]!.reply('SELECT 3 AS suggested');
+    await expect(page.getByTestId('assistant-proposal-summary')).toHaveText(
+        'Reply to Improve first tab',
+    );
+    await expect(page.getByTestId('sql-proposal-review')).toHaveCount(0);
+    await expect(page.getByRole('textbox', { name: 'SQL editor', exact: true })).toHaveText(
+        'SELECT 2 AS other_tab',
+    );
+    await page.getByRole('tab', { name: originalTitle!, exact: true }).click();
+    await expect(page.getByTestId('sql-proposal-review')).toBeVisible();
+    await expect(
+        page.getByRole('button', { name: 'Accept SQL changes', exact: true }),
+    ).toBeEnabled();
+});
+
+test('Chats generate in parallel and finish out of order in their original conversations', async ({
+    page,
+}) => {
+    const requests = await deferredReplies(page);
+    await trust(page);
+    await page.getByTestId('open-ai').click();
+    await ask(page, 'First question');
+    await expect.poll(() => requests.length).toBe(1);
+    await page.getByRole('button', { name: 'New chat', exact: true }).click();
+    await ask(page, 'Second question');
+    await expect.poll(() => requests.length).toBe(2);
+    await page.getByRole('button', { name: /^Chat history:/ }).click();
+    await expect(page.getByRole('status', { name: 'Generating response' })).toHaveCount(2);
+    await page.getByRole('button', { name: /^Chat history:/ }).click();
+    requests[1]!.reply();
+    await expect(page.getByTestId('assistant-answer-markdown')).toHaveText(
+        'Reply to Second question',
+    );
+    await selectChat(page, 'First question');
+    await expect(page.locator('.assistant-pending')).toBeVisible();
+    await expect(
+        page.getByRole('button', { name: 'Stop assistant response', exact: true }),
+    ).toBeVisible();
+    requests[0]!.reply();
+    await expect(page.getByTestId('assistant-answer-markdown')).toHaveText(
+        'Reply to First question',
+    );
+    await selectChat(page, 'Second question');
+    await expect(page.getByTestId('assistant-answer-markdown')).toHaveText(
+        'Reply to Second question',
+    );
+    await expect(page.locator('.assistant-turn-error')).toHaveCount(0);
+    await page.reload();
+    await page.getByTestId('open-ai').click();
+    await selectChat(page, 'First question');
+    await expect(page.getByTestId('assistant-answer-markdown')).toHaveText(
+        'Reply to First question',
+    );
+});
+
+test('Stopping one chat does not cancel another or overwrite a replacement request', async ({
+    page,
+}) => {
+    const requests = await deferredReplies(page);
+    await trust(page);
+    await page.getByTestId('open-ai').click();
+    await ask(page, 'First question');
+    await expect.poll(() => requests.length).toBe(1);
+    await page.getByRole('button', { name: 'New chat', exact: true }).click();
+    await ask(page, 'Second question');
+    await expect.poll(() => requests.length).toBe(2);
+    await page.getByRole('button', { name: 'Stop assistant response', exact: true }).click();
+    await expect(page.locator('.assistant-turn-error')).toHaveText('Request cancelled.');
+    await ask(page, 'Replacement question');
+    await expect.poll(() => requests.length).toBe(3);
+    requests[1]!.reply('SELECT 999');
+    requests[2]!.reply();
+    await expect(page.getByTestId('assistant-answer-markdown')).toHaveText(
+        'Reply to Replacement question',
+    );
+    await expect(page.getByTestId('sql-proposal-review')).toHaveCount(0);
+    await selectChat(page, 'First question');
+    await expect(page.locator('.assistant-pending')).toBeVisible();
+    requests[0]!.reply();
+    await expect(page.getByTestId('assistant-answer-markdown')).toHaveText(
+        'Reply to First question',
+    );
+});
+
+test('Deleting a background chat cancels only its reply and cannot restore the deleted chat', async ({
+    page,
+}) => {
+    const requests = await deferredReplies(page);
+    await trust(page);
+    await page.getByTestId('open-ai').click();
+    await ask(page, 'Deleted question');
+    await expect.poll(() => requests.length).toBe(1);
+    await page.getByRole('button', { name: 'New chat', exact: true }).click();
+    await ask(page, 'Retained question');
+    await expect.poll(() => requests.length).toBe(2);
+    await deleteChat(page, 'Deleted question');
+    requests[0]!.reply('SELECT 999');
+    await expect(page.locator('.assistant-pending')).toBeVisible();
+    requests[1]!.reply();
+    await expect(page.getByTestId('assistant-answer-markdown')).toHaveText(
+        'Reply to Retained question',
+    );
+    await page.getByRole('button', { name: /^Chat history:/ }).click();
+    await expect(page.locator('.assistant-chat-history-select')).toHaveCount(1);
+    await expect(page.locator('.assistant-chat-history-select > span:first-child')).toHaveText(
+        'Retained question',
+    );
+});
+
+test('A failed background reply records its error only in the original chat', async ({ page }) => {
+    const requests = await deferredReplies(page);
+    await trust(page);
+    await page.getByTestId('open-ai').click();
+    await ask(page, 'Failed question');
+    await expect.poll(() => requests.length).toBe(1);
+    await page.getByRole('button', { name: 'New chat', exact: true }).click();
+    await ask(page, 'Successful question');
+    await expect.poll(() => requests.length).toBe(2);
+    requests[0]!.reply(null, 503);
+    requests[1]!.reply();
+    await expect(page.getByTestId('assistant-answer-markdown')).toHaveText(
+        'Reply to Successful question',
+    );
+    await expect(page.locator('.assistant-turn-error')).toHaveCount(0);
+    await selectChat(page, 'Failed question');
+    await expect(page.locator('.assistant-turn-error')).toContainText('Try again later.');
+    await expect(
+        page.getByRole('button', { name: 'Stop assistant response', exact: true }),
+    ).toHaveCount(0);
+});
+
+test('An included run stays attached to the question while another query runs', async ({
+    page,
+}) => {
+    const requests = await deferredReplies(page);
+    await trust(page);
+    await replaceSql(page, 'SELECT 1 AS original');
+    await page.getByTestId('run-button').click();
+    await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'succeeded');
+    await page.getByTestId('open-ai').click();
+    await ask(page, 'Explain original run');
+    await expect.poll(() => requests.length).toBe(1);
+    expect(requests[0]!.body).toMatchObject({
+        includeRun: true,
+        evidenceSql: 'SELECT 1 AS original',
+    });
+    const originalRunId = requests[0]!.body.runId;
+    const originalQueryId = await page.locator('.execution-bar').getAttribute('data-query-id');
+    await replaceSql(page, 'SELECT 2 AS newer');
+    await page.getByTestId('run-button').click();
+    await expect(page.locator('.execution-bar')).not.toHaveAttribute(
+        'data-query-id',
+        originalQueryId!,
+    );
+    await expect(page.locator('.execution-bar')).toHaveAttribute('data-query-id', /\S+/);
+    await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'succeeded');
+    await expect(page.locator('.assistant-pending')).toBeVisible();
+    requests[0]!.reply();
+    await expect(page.getByTestId('assistant-answer-markdown')).toHaveText(
+        'Reply to Explain original run',
+    );
+    await ask(page, 'Explain newer run');
+    await expect.poll(() => requests.length).toBe(2);
+    expect(requests[1]!.body).toMatchObject({ includeRun: true, evidenceSql: 'SELECT 2 AS newer' });
+    expect(requests[1]!.body.runId).not.toBe(originalRunId);
+    requests[1]!.reply();
+    await expect(page.getByTestId('assistant-answer-markdown').last()).toHaveText(
+        'Reply to Explain newer run',
+    );
+});
+
+test('Accepting a proposal does not cancel another chat or clear its generating state', async ({
+    page,
+}) => {
+    const requests = await deferredReplies(page);
+    let releaseDecision: (() => void) | undefined;
+    const decisionGate = new Promise<void>(resolve => {
+        releaseDecision = resolve;
+    });
+    await page.route('**/api/assistant/proposals/*/decision', async route => {
+        await decisionGate;
+        await route.fulfill({
+            json: {
+                ...proposalFor(requests[0]!.body, 'SELECT 3 AS accepted'),
+                decision: 'accepted',
+                decidedAt: '2026-10-11T00:00:01.000Z',
+            },
+        });
+    });
+    await trust(page);
+    await replaceSql(page, 'SELECT 1 AS original');
+    await page.getByTestId('open-ai').click();
+    await ask(page, 'First proposal');
+    await expect.poll(() => requests.length).toBe(1);
+    requests[0]!.reply('SELECT 3 AS accepted');
+    await expect(page.getByTestId('sql-proposal-review')).toBeVisible();
+    await page.getByRole('button', { name: 'New chat', exact: true }).click();
+    await ask(page, 'Background question');
+    await expect.poll(() => requests.length).toBe(2);
+    await selectChat(page, 'First proposal');
+    await page.getByRole('button', { name: 'Accept SQL changes', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Applying…', exact: true })).toBeVisible();
+    await selectChat(page, 'Background question');
+    await expect(
+        page.getByRole('button', { name: 'Stop assistant response', exact: true }),
+    ).toBeVisible();
+    releaseDecision?.();
+    await expect(page.getByRole('textbox', { name: 'SQL editor', exact: true })).toHaveText(
+        'SELECT 3 AS accepted',
+    );
+    await expect(page.locator('.assistant-pending')).toBeVisible();
+    requests[1]!.reply();
+    await expect(page.getByTestId('assistant-answer-markdown')).toHaveText(
+        'Reply to Background question',
+    );
+    await selectChat(page, 'First proposal');
+    await expect(page.getByTestId('assistant-proposal-summary')).toHaveText(
+        'Reply to First proposal',
+    );
+    await expect(page.getByTestId('sql-proposal-review')).toHaveCount(0);
+});
+
+test('An apply error stays in its original chat while another chat is generating', async ({
+    page,
+}) => {
+    const requests = await deferredReplies(page);
+    let releaseDecision: (() => void) | undefined;
+    const decisionGate = new Promise<void>(resolve => {
+        releaseDecision = resolve;
+    });
+    await page.route('**/api/assistant/proposals/*/decision', async route => {
+        await decisionGate;
+        await route.fulfill({
+            status: 503,
+            json: { error: { code: 'AI_UNAVAILABLE', message: 'Could not apply this proposal.' } },
+        });
+    });
+    await trust(page);
+    await replaceSql(page, 'SELECT 1 AS original');
+    await page.getByTestId('open-ai').click();
+    await ask(page, 'First proposal');
+    await expect.poll(() => requests.length).toBe(1);
+    requests[0]!.reply('SELECT 3 AS suggested');
+    await expect(page.getByTestId('sql-proposal-review')).toBeVisible();
+    await page.getByRole('button', { name: 'Accept SQL changes', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Applying…', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'New chat', exact: true }).click();
+    await ask(page, 'Background question');
+    await expect.poll(() => requests.length).toBe(2);
+    releaseDecision?.();
+    await expect(page.locator('.assistant-pending')).toBeVisible();
+    requests[1]!.reply();
+    await expect(page.getByTestId('assistant-answer-markdown')).toHaveText(
+        'Reply to Background question',
+    );
+    await expect(page.locator('.assistant-feedback')).toHaveCount(0);
+    await selectChat(page, 'First proposal');
+    await expect(page.locator('.assistant-feedback')).toContainText(
+        'Could not apply this proposal.',
+    );
+    await expect(
+        page.getByRole('button', { name: 'Accept SQL changes', exact: true }),
+    ).toBeEnabled();
+});
+
+test('Reloading interrupts all pending chats without mixing their history', async ({ page }) => {
+    const requests = await deferredReplies(page);
+    await trust(page);
+    await page.getByTestId('open-ai').click();
+    await ask(page, 'First interrupted question');
+    await expect.poll(() => requests.length).toBe(1);
+    await page.getByRole('button', { name: 'New chat', exact: true }).click();
+    await ask(page, 'Second interrupted question');
+    await expect.poll(() => requests.length).toBe(2);
+    await page.reload();
+    requests.forEach(request => request.reply());
+    await page.getByTestId('open-ai').click();
+    await expect(page.locator('.assistant-turn-error')).toContainText(
+        'This request was interrupted when the page closed.',
+    );
+    await selectChat(page, 'First interrupted question');
+    await expect(page.locator('.assistant-turn-error')).toContainText(
+        'This request was interrupted when the page closed.',
+    );
+    await expect(page.locator('.assistant-pending')).toHaveCount(0);
+    await expect(page.getByTestId('assistant-answer-markdown')).toHaveCount(0);
+});
+
+test('Closing the original SQL tab keeps its reply without applying to another tab', async ({
+    page,
+}) => {
+    const requests = await deferredReplies(page);
+    await trust(page);
+    await replaceSql(page, 'SELECT 1 AS original');
+    const originalTab = page.getByRole('tab', { selected: true });
+    const originalTitle = await originalTab.getAttribute('aria-label');
+    await page.getByTestId('open-ai').click();
+    await ask(page, 'Explain closed tab');
+    await expect.poll(() => requests.length).toBe(1);
+    await openBlankSql(page);
+    await replaceSql(page, 'SELECT 2 AS other_tab');
+    await page.getByRole('button', { name: `Close ${originalTitle}`, exact: true }).click();
+    requests[0]!.reply('SELECT 3');
+    await expect(page.getByTestId('assistant-proposal-summary')).toHaveText(
+        'Reply to Explain closed tab',
+    );
+    await expect(page.getByTestId('sql-proposal-review')).toHaveCount(0);
+    await expect(page.getByRole('textbox', { name: 'SQL editor', exact: true })).toHaveText(
+        'SELECT 2 AS other_tab',
+    );
+});
