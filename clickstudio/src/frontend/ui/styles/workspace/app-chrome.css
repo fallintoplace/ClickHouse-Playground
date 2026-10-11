@@ -1073,17 +1073,32 @@
 
 @media (min-width: 851px) and (pointer: fine) {
   .topbar {
-    min-height: 48px;
+    min-height: 40px;
+    gap: 8px;
+    padding-inline: 10px;
   }
   .topbar-control-rail {
-    padding: 2px;
+    flex: none;
+    padding: 1px;
+  }
+  .topbar-control-rail > .experience-switch {
+    padding-block: 1px;
   }
   .connection-trigger {
-    padding-block: 2px;
+    row-gap: 2px;
+    padding-block: 0;
+    transition-property: border-color, background-color;
+  }
+  .connection-trigger:focus-visible {
+    outline: 2px solid var(--focus-color);
+    outline-offset: 0;
   }
   .cloud-topbar-action {
     min-height: 30px;
     padding-inline: 9px;
+  }
+  .cloud-topbar-action:is(:hover, :active):not(:disabled) {
+    transform: none;
   }
 }
 

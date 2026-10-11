@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { runButton, trust } from './helpers.js';
+import { mockWritableWorkspace } from './import-helpers.js';
+import { connectPreviewCloud, mockCloudEndpoint } from './cloud-import-helpers.js';
 
 const themes = [
     {
@@ -307,8 +309,10 @@ for (const removedTheme of ['monokai', 'catppuccin-latte'])
         await expect(page.locator('html')).toHaveAttribute('data-theme', 'click-dark');
     });
 
-test('desktop header keeps the theme switch in view', async ({ page }) => {
-    await page.setViewportSize({ width: 2048, height: 900 });
+test('desktop header keeps controls and keyboard focus in view', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await mockWritableWorkspace(page);
+    await mockCloudEndpoint(page);
     await page.goto('/');
 
     const topbar = page.locator('.topbar');
@@ -320,20 +324,64 @@ test('desktop header keeps the theme switch in view', async ({ page }) => {
     await expect(themeSwitch).toBeVisible();
     await expect(accentSwitch).toHaveCount(0);
 
-    const headerSize = await topbar.evaluate(element => ({
-        clientWidth: element.clientWidth,
-        scrollWidth: element.scrollWidth,
-    }));
-    expect(headerSize.scrollWidth, `English header overflow`).toBeLessThanOrEqual(
-        headerSize.clientWidth,
-    );
-
-    const themeBounds = await themeSwitch.evaluate(element => {
-        const rect = element.getBoundingClientRect();
-        return { left: rect.left, right: rect.right, viewportWidth: window.innerWidth };
-    });
-    expect(themeBounds.left, `English theme switch left edge`).toBeGreaterThanOrEqual(0);
-    expect(themeBounds.right, `English theme switch right edge`).toBeLessThanOrEqual(
-        themeBounds.viewportWidth,
-    );
+    for (const cloud of [false, true]) {
+        if (cloud) await connectPreviewCloud(page);
+        for (const theme of themes) {
+            await themeOption(page, theme.value).click();
+            for (const width of [2048, 1280, 900, 851]) {
+                await page.setViewportSize({ width, height: 900 });
+                await expect(topbar).toHaveCSS('height', '40px');
+                const headerSize = await topbar.evaluate(element => ({
+                    clientWidth: element.clientWidth,
+                    scrollWidth: element.scrollWidth,
+                }));
+                expect(headerSize.scrollWidth, `${width}: header overflow`).toBeLessThanOrEqual(
+                    headerSize.clientWidth,
+                );
+                await page.keyboard.press('Tab');
+                for (const [control, visual] of [
+                    [page.locator('.connection-trigger'), page.locator('.connection-trigger')],
+                    [page.locator('.cloud-topbar-action'), page.locator('.cloud-topbar-action')],
+                    [
+                        page.locator('.navbar-mode-option > button').first(),
+                        page.locator('.navbar-mode-option > label').first(),
+                    ],
+                    [themeOption(page, theme.value), page.locator('.theme-mode-option.is-active')],
+                ]) {
+                    await control!.focus();
+                    const focus = await visual!.evaluate(element => {
+                        const bounds = element.getBoundingClientRect();
+                        const header = element.closest('.topbar')!.getBoundingClientRect();
+                        const style = getComputedStyle(element);
+                        const ring =
+                            Number.parseFloat(style.outlineWidth) +
+                            Number.parseFloat(style.outlineOffset);
+                        return {
+                            style: style.outlineStyle,
+                            width: bounds.width,
+                            height: bounds.height,
+                            left: bounds.left - ring - header.left,
+                            right: header.right - bounds.right - ring,
+                            top: bounds.top - ring - header.top,
+                            bottom: header.bottom - bounds.bottom - ring,
+                        };
+                    });
+                    expect(focus.style).toBe('solid');
+                    expect(focus.width).toBeGreaterThanOrEqual(24);
+                    expect(focus.height).toBeGreaterThanOrEqual(24);
+                    for (const edge of ['left', 'right', 'top', 'bottom'] as const)
+                        expect(focus[edge], `${width}: ${edge} focus edge`).toBeGreaterThanOrEqual(
+                            0,
+                        );
+                }
+                const trigger = page.locator('.connection-trigger');
+                await trigger.press('Enter');
+                await expect(
+                    page.getByRole('dialog', { name: 'Connection details' }),
+                ).toBeVisible();
+                await trigger.press('Enter');
+                await expect(page.getByRole('dialog', { name: 'Connection details' })).toBeHidden();
+            }
+        }
+    }
 });
