@@ -83,7 +83,7 @@ export const sqlEditorTheme = (dark: boolean) =>
             '&': { height: '100%', backgroundColor: 'var(--panel)', color: 'var(--text)' },
             '.cm-scroller': {
                 fontFamily: 'var(--font-mono)',
-                fontSize: '13px',
+                fontSize: '12px',
                 lineHeight: '1.55',
                 fontVariantLigatures: 'none',
                 fontVariantNumeric: 'tabular-nums',
