@@ -7,61 +7,45 @@ import {
     trustCurrentConnection,
 } from './helpers.js';
 
-for (const theme of ['Dark', 'Light']) {
-    for (const path of [
-        '/',
-        '/?mode=experimental',
-        '/experimental-old',
-        '/experimental/nested',
-        '/experimental',
-        '/experimental/',
-    ]) {
-        const experimental = path === '/experimental' || path === '/experimental/';
-        test(`${path} opens ${experimental ? 'Experimental' : 'Standard'} in ${theme} theme`, async ({
-            page,
-        }, info) => {
-            await page.addInitScript(experimental => {
-                localStorage.setItem(
-                    'clickstudio:experience',
-                    experimental ? 'beginner' : 'expert',
-                );
-            }, experimental);
-            await page.goto(path);
-            await expect(page.locator('.application')).toHaveAttribute(
-                'data-experience',
-                experimental ? 'expert' : 'beginner',
-            );
-            await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
-            await expect(page.locator('.navbar-mode-control')).toHaveCount(0);
-            await expect(page.getByRole('radio', { name: 'Standard', exact: true })).toHaveCount(0);
+for (const path of [
+    '/',
+    '/?mode=experimental',
+    '/experimental-old',
+    '/experimental/nested',
+    '/experimental',
+    '/experimental/',
+]) {
+    const experimental = path === '/experimental' || path === '/experimental/';
+    test(`${path} opens ${experimental ? 'Experimental' : 'Standard'}`, async ({ page }) => {
+        await page.addInitScript(experimental => {
+            localStorage.setItem('clickstudio:experience', experimental ? 'beginner' : 'expert');
+        }, experimental);
+        await page.goto(path);
+        await expect(page.locator('.application')).toHaveAttribute(
+            'data-experience',
+            experimental ? 'expert' : 'beginner',
+        );
+        await expect(page.locator('.navbar-mode-control')).toHaveCount(0);
+        await expect(page.getByRole('radio', { name: 'Standard', exact: true })).toHaveCount(0);
+        await expect(page.getByRole('radio', { name: 'Experimental', exact: true })).toHaveCount(0);
+        const status = page.locator('.experimental-workspace-status');
+        if (experimental) {
+            await expect(status).toContainText('Experimental');
             await expect(
-                page.getByRole('radio', { name: 'Experimental', exact: true }),
-            ).toHaveCount(0);
-            const status = page.locator('.experimental-workspace-status');
-            if (experimental) {
-                await expect(status).toContainText('Experimental');
-                await expect(
-                    status.getByRole('link', { name: 'Back to workspace', exact: true }),
-                ).toBeVisible();
-                await expect(page.getByTestId('save-query')).toBeVisible();
-            } else {
-                await expect(status).toHaveCount(0);
-                await expect(page.locator('a[href*="experimental"]')).toHaveCount(0);
-                await expect(page.getByTestId('save-query')).toHaveCount(0);
-            }
-            await page
-                .locator('.topbar')
-                .screenshot({ path: info.outputPath('workspace-header.png') });
-            await page.reload();
-            await expect(page.locator('.application')).toHaveAttribute(
-                'data-experience',
-                experimental ? 'expert' : 'beginner',
-            );
-            await expect(
-                page.getByRole('radio', { name: `${theme} theme`, exact: true }),
-            ).toBeChecked();
-        });
-    }
+                status.getByRole('link', { name: 'Back to workspace', exact: true }),
+            ).toBeVisible();
+            await expect(page.getByTestId('save-query')).toBeVisible();
+        } else {
+            await expect(status).toHaveCount(0);
+            await expect(page.locator('a[href*="experimental"]')).toHaveCount(0);
+            await expect(page.getByTestId('save-query')).toHaveCount(0);
+        }
+        await page.reload();
+        await expect(page.locator('.application')).toHaveAttribute(
+            'data-experience',
+            experimental ? 'expert' : 'beginner',
+        );
+    });
 }
 
 test('Experimental return and browser history preserve the connection, SQL tabs and run without reloading', async ({

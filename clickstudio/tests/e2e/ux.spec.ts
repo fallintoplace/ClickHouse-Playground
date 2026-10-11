@@ -300,9 +300,8 @@ for (const mode of ['Standard', 'Experimental']) {
         await jump.press('Enter');
         await expect(pages).toHaveText('1/3');
         await expect(jump).toHaveValue('1');
-        await results.getByRole('button', { name: 'Collapse Query results', exact: true }).click();
+        await jump.press('Escape');
         await expect(dock).toBeHidden();
-        await results.getByRole('button', { name: 'Expand Query results', exact: true }).click();
         for (const theme of ['Dark', 'Light']) {
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
             for (const width of [1440, 900, 761]) {

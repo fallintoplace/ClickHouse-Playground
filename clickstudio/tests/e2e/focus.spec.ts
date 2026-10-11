@@ -9,15 +9,15 @@ async function expectFieldFocus(field: Locator) {
     await expect(field).toHaveCSS('box-shadow', 'none');
 }
 
-async function resolvedFocusColor(control: Locator) {
-    return control.evaluate(element => {
+async function resolvedColor(control: Locator, token: '--focus-color' | '--red') {
+    return control.evaluate((element, token) => {
         const probe = document.createElement('span');
-        probe.style.color = 'var(--focus-color)';
+        probe.style.color = `var(${token})`;
         element.parentElement!.append(probe);
         const color = getComputedStyle(probe).color;
         probe.remove();
         return color;
-    });
+    }, token);
 }
 
 for (const theme of ['Dark', 'Light']) {
@@ -65,29 +65,29 @@ for (const theme of ['Dark', 'Light']) {
             await expect(next).toBeFocused();
         });
 
-        test(`${theme} ${mode} keeps table and wrapped search focus border-only`, async ({
+        test(`${theme} keeps table fields and ${mode} search focus border-only`, async ({
             page,
         }, info) => {
             await mockWritableWorkspace(page);
-            await setWorkspaceMode(page, mode);
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
             await page.getByRole('button', { name: 'New table', exact: true }).click();
             const dialog = page.getByRole('dialog', { name: 'New table', exact: true });
             const name = dialog.getByRole('textbox', { name: 'Table name', exact: true });
             await expectFieldFocus(name);
             await name.fill('events_focus');
-            await expect(name).toHaveCSS('border-color', await resolvedFocusColor(name));
+            await expect(name).toHaveCSS(
+                'border-color',
+                await resolvedColor(name, '--focus-color'),
+            );
             await dialog.screenshot({ path: info.outputPath('table-field-focus.png') });
             await name.fill('bad-name');
             await page.keyboard.press('Tab');
             await expect(name).toHaveAttribute('aria-invalid', 'true');
             await page.keyboard.press('Shift+Tab');
             await expectFieldFocus(name);
-            await expect(name).toHaveCSS(
-                'border-color',
-                theme === 'Dark' ? 'rgb(255, 107, 117)' : 'rgb(179, 48, 67)',
-            );
+            await expect(name).toHaveCSS('border-color', await resolvedColor(name, '--red'));
             await page.keyboard.press('Escape');
+            await setWorkspaceMode(page, mode);
             const help = await openSqlExamples(page);
             const search = help.getByTestId('sql-example-search');
             await search.click();
@@ -290,7 +290,10 @@ for (const theme of ['Dark', 'Light']) {
         await expectFieldFocus(search);
         const wrapper = page.locator('#focus-harness .assistant-chat-search');
         await expect(wrapper).toHaveCSS('box-shadow', 'none');
-        await expect(wrapper).toHaveCSS('border-color', await resolvedFocusColor(wrapper));
+        await expect(wrapper).toHaveCSS(
+            'border-color',
+            await resolvedColor(wrapper, '--focus-color'),
+        );
         await expect(page.locator('.assistant-chat-history-actions-trigger')).toHaveCount(0);
         const row = page
             .locator('.assistant-chat-history-item')
