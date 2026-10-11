@@ -21,8 +21,8 @@ defaults:
     working-directory: clickstudio
 
 jobs:
-  static-checks:
-    name: Static checks
+  application-validation:
+    name: Application validation
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -40,38 +40,24 @@ jobs:
         run: npm run typecheck
       - name: ESLint
         run: npm run lint
-
-  coverage:
-    name: Coverage
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: clickstudio/package-lock.json
-      - name: Install dependencies
-        run: npm ci
       - name: Core and workspace coverage gates
         run: npm run coverage
-
-  production-build:
-    name: Production build
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: clickstudio/package-lock.json
-      - name: Install dependencies
-        run: npm ci
       - name: Build application
         run: npm run build:app
+      - name: Install Chromium
+        run: npx playwright install --with-deps --only-shell chromium
+      - name: Production preview parser and export smoke test
+        run: npm run test:e2e:preview
+      - name: Preserve preview diagnostics and timings
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: clickstudio-preview
+          path: |
+            clickstudio/playwright-report
+            clickstudio/test-results
+          if-no-files-found: ignore
+          retention-days: 7
 
   clickhouse-integration:
     name: ClickHouse integration
@@ -179,34 +165,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: clickstudio-appearance-${{ matrix.shard }}
-          path: |
-            clickstudio/playwright-report
-            clickstudio/test-results
-          if-no-files-found: ignore
-          retention-days: 7
-
-  browser-preview:
-    name: Production preview
-    runs-on: ubuntu-latest
-    timeout-minutes: 8
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: clickstudio/package-lock.json
-      - name: Install dependencies
-        run: npm ci
-      - name: Install Chromium
-        run: npx playwright install --with-deps --only-shell chromium
-      - name: Production preview parser and export smoke test
-        run: npm run test:e2e:preview
-      - name: Preserve preview diagnostics and timings
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: clickstudio-preview
           path: |
             clickstudio/playwright-report
             clickstudio/test-results

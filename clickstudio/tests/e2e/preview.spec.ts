@@ -157,6 +157,10 @@ test('Connect Cloud matches neutral secondary controls in both themes', async ({
     const save = page.getByTestId('save-query');
     for (const theme of ['Dark', 'Light']) {
         await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+        await expect(page.locator('html')).toHaveAttribute(
+            'data-theme',
+            `click-${theme.toLowerCase()}`,
+        );
         await expect(connect).toHaveCSS('background-image', 'none');
         for (const property of ['background-color', 'border-color']) {
             await expect(connect).toHaveCSS(
