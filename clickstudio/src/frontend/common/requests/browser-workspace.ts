@@ -1107,11 +1107,6 @@ export class BrowserWorkspaceApi {
             throw new Error(
                 'AI proposals are unavailable in this static sample. Open a connected workspace to use the assistant.',
             );
-        if (pathname === '/voice/status')
-            return {
-                available: false,
-                reason: 'Voice features are unavailable in the static sample preview.',
-            };
         if (
             pathname === '/imports' ||
             pathname === '/monitors' ||

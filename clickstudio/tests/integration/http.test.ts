@@ -9,7 +9,6 @@ import { ClickHouseDriver } from '../../src/backend/database/clickhouse/client.j
 import { MemoryStore } from '../../src/backend/system/storage/store.js';
 import { DemoDriver } from '../../src/backend/database/clickhouse/sample-client.js';
 import type { AssistantDriver } from '../../src/backend/assistant/proposals/assistant.js';
-import type { VoiceService } from '../../src/backend/assistant/voice/voice.js';
 import type { ImportJob } from '../../src/backend/database/imports/imports.js';
 import type { CreateTableColumn } from '../../src/backend/database/tables/create-table.js';
 import type {
@@ -22,7 +21,6 @@ import type { Run } from '../../src/shared/queries/execution/types.js';
 type CloudApiStub = { fetch: (request: Request) => Promise<Response> };
 async function start(
     token?: string,
-    voice?: VoiceService,
     parserWasm?: () => Promise<Uint8Array>,
     driver = new DemoDriver(),
     assistant?: AssistantDriver,
@@ -32,7 +30,6 @@ async function start(
     const service = createApp(config, {
         store: new MemoryStore(),
         driver,
-        voice,
         parserWasm,
         ...(assistant ? { assistant } : {}),
         ...(cloudApi ? { cloudApi } : {}),
@@ -207,7 +204,7 @@ class TableCreationDemoDriver extends DemoDriver {
 
 test('Table creation needs trust and a valid table name', async t => {
     const driver = new TableCreationDemoDriver(),
-        s = await start(undefined, undefined, undefined, driver);
+        s = await start(undefined, undefined, driver);
     t.after(() => s.stop());
     const request = {
         database: 'demo',
@@ -438,7 +435,7 @@ test('Public Playground queries stay within its server result-row limit', async 
 
 test('Reference routes require trust, validate bounded filters, and preserve entry type identity', async t => {
     const driver = new ReferenceDocsDemoDriver(),
-        s = await start(undefined, undefined, undefined, driver);
+        s = await start(undefined, undefined, driver);
     t.after(() => s.stop());
     assert.equal((await s.call('/connections/demo/documentation/search')).status, 403);
     assert.equal(driver.searches.length, 0);
@@ -512,7 +509,7 @@ test('Reference routes report unavailable native documentation instead of return
 
 test('Assistant context includes relevant native ClickHouse documentation before consent', async t => {
     const driver = new ReferenceDocsDemoDriver(),
-        s = await start(undefined, undefined, undefined, driver);
+        s = await start(undefined, undefined, driver);
     t.after(() => s.stop());
     await s.call('/connections/demo/trust', { trusted: true, confirmation: 'demo' });
 
@@ -582,13 +579,7 @@ test('Ask AI uses a validated Playground server version supplied by the browser'
             };
         },
     };
-    const s = await start(
-        undefined,
-        undefined,
-        undefined,
-        new PlaygroundVersionDemoDriver(),
-        assistant,
-    );
+    const s = await start(undefined, undefined, new PlaygroundVersionDemoDriver(), assistant);
     t.after(() => s.stop());
     await s.call('/connections/demo/trust', { trusted: true, confirmation: 'demo' });
 
@@ -635,7 +626,7 @@ test('Ask AI uses browser Cloud schema and run evidence without resolving a loca
         },
     };
     const driver = new AssistantSchemaTrackingDemoDriver();
-    const s = await start(undefined, undefined, undefined, driver, assistant);
+    const s = await start(undefined, undefined, driver, assistant);
     t.after(() => s.stop());
     const runId = randomUUID();
     const response = await s.call('/assistant/sql', {
@@ -720,7 +711,8 @@ for (const connectionId of ['demo', 'clickhouse-cloud'])
                 assert.equal(payload.evidenceSql, 'SELECT event_count FROM demo.events');
                 assert.equal(payload.error, error);
                 assert.equal(payload.result, undefined);
-                assert.match(context.payload.instructions, /minimal repair/);
+                assert.equal(payload.action, 'repair');
+                assert.match(context.payload.question, /Fix this query error/i);
                 return {
                     content: {
                         sql: repairedSql,
@@ -735,7 +727,7 @@ for (const connectionId of ['demo', 'clickhouse-cloud'])
                 };
             },
         };
-        const s = await start(undefined, undefined, undefined, new DemoDriver(), assistant);
+        const s = await start(undefined, undefined, new DemoDriver(), assistant);
         t.after(() => s.stop());
         if (connectionId === 'demo')
             await s.call('/connections/demo/trust', { trusted: true, confirmation: 'demo' });
@@ -765,37 +757,20 @@ for (const connectionId of ['demo', 'clickhouse-cloud'])
         assert.equal(((await accepted.json()) as { decision: string }).decision, 'accepted');
     });
 
-test('Voice sessions require trust and keep the provider behind the server', async t => {
-    const calls: unknown[] = [];
-    const s = await start(undefined, {
-        available: true,
-        model: 'test-voice',
-        createSession: async input => {
-            calls.push(input);
-            return { sdp: 'answer-sdp', model: 'test-voice' };
-        },
-    });
+test('Removed voice endpoints return the API not-found response', async t => {
+    const s = await start();
     t.after(() => s.stop());
-    assert.equal((await s.call('/voice/status')).status, 200);
-    assert.equal(
-        (
-            await s.call('/voice/session', {
-                connectionId: 'demo',
-                sdp: 'offer-sdp',
-                context: 'SELECT 1',
-            })
-        ).status,
-        403,
-    );
-    await s.call('/connections/demo/trust', { trusted: true, confirmation: 'demo' });
-    const response = await s.call('/voice/session', {
-        connectionId: 'demo',
-        sdp: 'offer-sdp',
-        context: 'SELECT 1',
-    });
-    assert.equal(response.status, 201);
-    assert.deepEqual(await response.json(), { sdp: 'answer-sdp', model: 'test-voice' });
-    assert.equal((calls[0] as { safetyIdentifier: string }).safetyIdentifier.length, 64);
+    for (const [path, input] of [
+        ['/voice/status', undefined],
+        ['/voice/session', { connectionId: 'demo', sdp: 'offer-sdp' }],
+    ] as const) {
+        const response = await s.call(path, input);
+        assert.equal(response.status, 404);
+        assert.equal(
+            ((await response.json()) as { error: { code: string } }).error.code,
+            'NOT_FOUND',
+        );
+    }
 });
 test('HTTP query flow requires explicit trust and is idempotent', async t => {
     const s = await start();
@@ -822,7 +797,7 @@ test('HTTP query flow requires explicit trust and is idempotent', async t => {
 });
 test('Pipeline inspection works when query-log evidence is unavailable', async t => {
     const driver = new NoQueryLogDemoDriver(),
-        s = await start(undefined, undefined, undefined, driver);
+        s = await start(undefined, undefined, driver);
     t.after(() => s.stop());
     await s.call('/connections/demo/trust', { trusted: true, confirmation: 'demo' });
     const run = (await (
@@ -867,7 +842,7 @@ test('Observability routes require trust, validate windows, and return scoped fi
 });
 test('Observability routes honor manifest capabilities and keep flamegraphs scoped to completed runs', async t => {
     const driver = new MissingObservabilityDemoDriver(),
-        s = await start(undefined, undefined, undefined, driver);
+        s = await start(undefined, undefined, driver);
     t.after(() => s.stop());
     await s.call('/connections/demo/trust', { trusted: true, confirmation: 'demo' });
     assert.equal((await s.call('/connections/demo/workload')).status, 409);
@@ -905,7 +880,7 @@ test('Completed demo runs expose one bounded flamegraph with CPU and wall-clock 
 });
 test('Native ClickHouse parser bytes are served same-origin behind the session boundary', async t => {
     const fixture = new Uint8Array([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
-    const s = await start(undefined, undefined, async () => fixture);
+    const s = await start(undefined, async () => fixture);
     t.after(() => s.stop());
     const response = await s.call('/editor/clickhouse-parser.wasm');
     assert.equal(response.status, 200);

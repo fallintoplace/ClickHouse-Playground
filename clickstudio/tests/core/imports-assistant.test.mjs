@@ -17,6 +17,7 @@ import {
     evaluateProposal,
     runAssistantBenchmarks,
 } from '../../.core-build/src/backend/assistant/evaluation/evaluation.js';
+import { ASSISTANT_ACTIONS } from '../../.core-build/src/shared/assistant/actions.js';
 import { selectAssistantReferenceDocs } from '../../.core-build/src/shared/database/reference/catalog.js';
 import { MemoryStore, hash } from '../../.core-build/src/backend/system/storage/store.js';
 import {
@@ -709,6 +710,21 @@ test('Accepting proposal records a decision, never creates a run', async () => {
         p = await f.ai.propose(owner, c.id, true);
     f.ai.decide(owner, p.id, 'accepted', 'local', 'SELECT 2');
     assert.equal(f.store.list('runs').length, 0);
+});
+test('Prepared contexts accept supported actions and reject unknown actions', () => {
+    const f = aiFixture();
+    const instructions = buildContext(f.input).payload.instructions;
+    for (const action of ASSISTANT_ACTIONS) {
+        const context = f.ai.prepare(owner, { ...f.input, action });
+        assert.equal(context.action, action);
+        assert.equal(JSON.parse(context.payload.context).action, action);
+        assert.equal(context.payload.instructions, instructions);
+    }
+    for (const action of ['unknown', 'constructor', '__proto__', null, undefined, 1, {}, []])
+        assert.throws(() => f.ai.prepare(owner, { ...f.input, action }), {
+            code: 'ASSISTANT_ACTION',
+        });
+    assert.equal(f.store.count('ai-contexts'), ASSISTANT_ACTIONS.length);
 });
 test('SQL-focused context allows sample data when the user requests examples', () => {
     const f = aiFixture();

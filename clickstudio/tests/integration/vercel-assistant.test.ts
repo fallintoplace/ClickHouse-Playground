@@ -120,13 +120,14 @@ test('Vercel Fix with AI sends failure context without a saved run and returns a
         if (String(input).endsWith('/responses/input_tokens'))
             return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
         const payload = JSON.parse(String(init?.body)) as {
-            instructions: string;
             input: { content: { text: string }[] }[];
         };
-        assert.match(payload.instructions, /minimal repair/);
         const current = JSON.parse(payload.input[0]!.content[0]!.text) as {
+            question: string;
             context: Record<string, unknown>;
         };
+        assert.equal(current.context.action, 'repair');
+        assert.match(current.question, /Fix this query error/i);
         assert.equal(current.context.sql, sql);
         assert.equal(current.context.evidenceSql, 'SELECT event_count FROM demo.events');
         assert.equal(current.context.error, '[47] Unknown column event_count');
@@ -149,6 +150,7 @@ test('Vercel Fix with AI sends failure context without a saved run and returns a
     const response = await handler.fetch(
         request({
             ...assistantBody(),
+            question: 'Fix this query error.',
             sql,
             action: 'repair',
             includeRun: true,

@@ -55,7 +55,6 @@ export interface Config {
     openaiKey?: string;
     openaiModel?: string;
     openaiServiceTier?: OpenAIServiceTier;
-    openaiRealtimeModel?: string;
     sensitiveColumns: string[];
     telemetryUrl?: string;
     traceUrl?: string;
@@ -198,7 +197,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
         openaiKey: env.OPENAI_API_KEY,
         openaiModel: env.OPENAI_MODEL?.trim() || 'gpt-6-luna',
         openaiServiceTier: openaiServiceTier(env),
-        openaiRealtimeModel: env.OPENAI_REALTIME_MODEL ?? 'gpt-realtime-2.1',
         sensitiveColumns: (env.AI_SENSITIVE_COLUMNS ?? 'password,token,secret,api_key')
             .split(',')
             .map(s => s.trim()),

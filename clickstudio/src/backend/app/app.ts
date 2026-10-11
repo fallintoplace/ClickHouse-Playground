@@ -18,7 +18,6 @@ import { redactor, type Config } from '../system/settings/config.js';
 import { ClickHouseDriver } from '../database/clickhouse/client.js';
 import { DemoDriver } from '../database/clickhouse/sample-client.js';
 import { OpenAIDriver } from '../assistant/openai/client.js';
-import { OpenAIVoiceService, type VoiceService } from '../assistant/voice/voice.js';
 import { registerMcpRoutes } from './mcp/mcp.js';
 import type { Driver } from './types.js';
 import { cachedClickHouseParserWasm, configureHttp } from './http/setup.js';
@@ -40,7 +39,6 @@ export function createApp(
         store?: Store;
         driver?: Driver;
         assistant?: AssistantDriver;
-        voice?: VoiceService;
         parserWasm?: () => Promise<Uint8Array>;
         cloudApi?: Pick<typeof cloudApi, 'fetch'>;
     } = {},
@@ -68,12 +66,6 @@ export function createApp(
             ),
         (p, c) => assistantConnectionAuthorized(authorized, p, c),
     );
-    const voice =
-        overrides.voice ??
-        new OpenAIVoiceService(
-            config.demo ? undefined : config.openaiKey,
-            config.openaiRealtimeModel,
-        );
     const imports = new ImportService(store, driver, authorized),
         tableCreation = new TableCreationService(store, driver, authorized),
         tableDeletion = new TableDeletionService(store, driver, authorized),
@@ -95,7 +87,6 @@ export function createApp(
     registerAssistantRoutes({
         app,
         ai,
-        voice,
         authorized,
         secretFree,
         driver,
@@ -151,7 +142,6 @@ export function createApp(
         runs,
         artifacts,
         ai,
-        voice,
         imports,
         monitors,
         driver,

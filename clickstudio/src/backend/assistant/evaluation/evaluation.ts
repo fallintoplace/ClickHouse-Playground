@@ -84,7 +84,7 @@ export function evaluateProposal(
         checks.push({
             id: 'contract',
             status: 'fail',
-            message: 'This playbook must not return replacement SQL.',
+            message: 'This action must not return replacement SQL.',
         });
     else if (!inspectOnly && !flexible && sqlOptions.length === 0)
         checks.push({
@@ -94,21 +94,21 @@ export function evaluateProposal(
                 'No SQL was proposed; the response needs clarification before it can be applied.',
         });
     else {
-        const getPlaybookMessage = () => {
+        const getContractMessage = () => {
             if (inspectOnly) {
-                return 'Inspect-only playbook returned no replacement SQL.';
+                return 'Inspect-only action returned no replacement SQL.';
             }
 
             if (flexible && sqlOptions.length === 0) {
                 return 'The request was answered without replacement SQL.';
             }
 
-            return 'The playbook returned an applicable SQL proposal.';
+            return 'The response contains an applicable SQL proposal.';
         };
         checks.push({
             id: 'contract',
             status: 'pass',
-            message: getPlaybookMessage(),
+            message: getContractMessage(),
         });
     }
 

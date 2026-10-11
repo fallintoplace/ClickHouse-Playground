@@ -19,7 +19,6 @@ import { canWrite } from '../../system/login/permissions.js';
 import { choice, identifier, text } from '../../system/requests/validation.js';
 import { selectAssistantReferenceDocs } from '../../../shared/database/reference/catalog.js';
 import { type Config } from '../../system/settings/config.js';
-import { safetyIdentifier, type VoiceService } from '../voice/voice.js';
 import type { Driver } from '../../app/types.js';
 import { principal, body, id } from '../../system/requests/http.js';
 import { assistantReferenceDocs } from '../context/reference.js';
@@ -192,7 +191,6 @@ function registerAssistantSqlRoute(
 export function registerAssistantRoutes({
     app,
     ai,
-    voice,
     authorized,
     secretFree,
     driver,
@@ -202,7 +200,6 @@ export function registerAssistantRoutes({
 }: {
     app: ReturnType<typeof express>;
     ai: AssistantService;
-    voice: VoiceService;
     authorized: (p: Principal, c: string) => boolean;
     secretFree: ReturnType<typeof createSecretGuards>['secretFree'];
     driver: Driver;
@@ -212,47 +209,6 @@ export function registerAssistantRoutes({
 }) {
     app.get('/api/assistant/status', (_req, res) => res.json(ai.status(principal(res))));
     app.get('/api/assistant/evaluation', (_req, res) => res.json(ai.evaluation(principal(res))));
-    app.get('/api/voice/status', (_req, res) =>
-        res.json({
-            available: voice.available,
-            model: voice.model,
-            reason: voice.available
-                ? undefined
-                : 'Set OPENAI_API_KEY on the server to use voice workflows',
-        }),
-    );
-    app.post('/api/voice/session', async (req, res) => {
-        const p = principal(res),
-            v = body(req),
-            connectionId = identifier(v.connectionId, 'connectionId');
-        canWrite(p);
-        requireThat(
-            authorized(p, connectionId),
-            403,
-            'WORKSPACE_UNTRUSTED',
-            'Trust this connection before starting a voice workflow',
-        );
-        requireThat(
-            voice.available,
-            503,
-            'AI_VOICE_UNAVAILABLE',
-            'Set OPENAI_API_KEY on the server to use voice workflows',
-        );
-        const sdp = text(v.sdp, 'SDP offer', 300000),
-            context =
-                v.context === undefined
-                    ? undefined
-                    : text(v.context, 'voice context', 100000, true);
-        if (!secretFree({ context }))
-            throw new AppError(
-                400,
-                'SECRET_IN_VOICE_CONTEXT',
-                'This voice context contains a configured secret; remove it before starting voice',
-            );
-        res.status(201).json(
-            await voice.createSession({ sdp, context, safetyIdentifier: safetyIdentifier(p.id) }),
-        );
-    });
     app.post('/api/assistant/context', async (req, res) => {
         const p = principal(res),
             v = body(req),
