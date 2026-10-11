@@ -106,6 +106,7 @@ for (const count of [2, 5, 6, 10, 11, 61]) {
         const steps = plan.locator('.assistant-execution-steps > li');
         const pager = plan.getByRole('navigation', { name: 'Script plan pages', exact: true });
         await expect(steps).toHaveCount(Math.min(5, count));
+        await expect(plan.getByRole('button', { name: /Run|Reject|Accept/ })).toHaveCount(0);
         if (count <= 5) {
             await expect(pager).toHaveCount(0);
             return;
@@ -131,29 +132,18 @@ for (const count of [2, 5, 6, 10, 11, 61]) {
         await steps.last().locator('summary').click();
         await expect(steps.last().locator('code')).toContainText(`SELECT ${count} AS value`);
         await review(page).getByRole('button', { name: 'Accept SQL changes', exact: true }).click();
-        await plan
-            .getByRole('button', { name: `Run only statement ${count}: Read`, exact: true })
-            .click();
-        await expect.poll(() => runs.length).toBe(1);
-        expect(runs[0]).toMatchObject({ sql: `SELECT ${count} AS value`, connectionId: 'demo' });
-        const runAll = plan.getByRole('button', {
-            name: `Run all ${count} statements`,
-            exact: true,
-        });
+        await expect(plan.getByRole('button', { name: /Run/ })).toHaveCount(0);
+        expect(runs).toHaveLength(0);
         if (count === 61) {
-            await expect(runAll).toBeDisabled();
             await expect(plan).toContainText(
                 'Scripts with more than 50 statements cannot run as one script.',
             );
             await expect(plan).not.toContainText('Showing the first 50');
             await page.screenshot({ path: testInfo.outputPath('script-plan-last-page.png') });
-        } else {
-            await expect(runAll).toBeEnabled();
-            if (count === 11) {
-                await runAll.click();
-                await expect.poll(() => runs.length).toBe(2);
-                expect(runs[1]).toMatchObject({ sql: script, connectionId: 'demo' });
-            }
+        } else if (count === 11) {
+            await page.getByTestId('run-button').click();
+            await expect.poll(() => runs.length).toBe(1);
+            expect(runs[0]).toMatchObject({ sql: script, connectionId: 'demo' });
         }
         for (let start = Math.floor((count - 1) / 5) * 5; start > 0; start -= 5)
             await previous.click();
@@ -192,6 +182,147 @@ test('Script plan pages are independent and new proposals start on the first pag
 });
 
 for (const mode of ['beginner', 'expert']) {
+    test(`Opening an alternative preserves pending SQL changes without running in ${mode} mode`, async ({
+        page,
+    }, testInfo) => {
+        const alternativeSql = 'SELECT 42 AS alternative; SELECT 43 AS next_value;';
+        await page.addInitScript(
+            mode => localStorage.setItem('clickstudio:experience', mode),
+            mode,
+        );
+        const { decisions } = await installProposal(page, proposedSql, {
+            alternatives: [
+                { title: 'Other query', summary: 'Try another value.', sql: alternativeSql },
+            ],
+        });
+        let runs = 0;
+        page.on('request', request => {
+            if (
+                request.method() === 'POST' &&
+                ['/api/runs', '/api/scripts'].includes(new URL(request.url()).pathname)
+            )
+                runs++;
+        });
+        await trust(page);
+        await replaceSql(page, originalSql);
+        await askForChanges(page);
+        await expect(review(page)).toBeVisible();
+        const alternative = page.getByRole('button', {
+            name: 'Open in SQL tab: Other query',
+            exact: true,
+        });
+        await expect(alternative).toBeEnabled();
+        await alternative.scrollIntoViewIfNeeded();
+        await page.screenshot({ path: testInfo.outputPath('pending-sql-and-alternative.png') });
+        await alternative.click();
+        await expect(liveEditor(page)).toHaveText(alternativeSql);
+        await expect(review(page)).toHaveCount(0);
+        expect(decisions).toHaveLength(0);
+        expect(runs).toBe(0);
+        const tabs = page.getByRole('tablist', { name: 'SQL documents', exact: true });
+        await expect(tabs.getByRole('tab')).toHaveCount(2);
+        await expect(tabs.getByRole('tab').last()).toContainText('Other query.sql');
+        await tabs.getByRole('tab').first().click();
+        await expect(review(page)).toBeVisible();
+        await expect(liveEditor(page)).toHaveText(originalSql);
+        await expect(page.getByTestId('sql-proposal-diff')).toContainText('Needs review');
+        await review(page).getByRole('button', { name: 'Reject SQL changes', exact: true }).click();
+        await expect(liveEditor(page)).toHaveText(originalSql);
+        await tabs.getByRole('tab').last().click();
+        await page.getByTestId('run-button').click();
+        await expect.poll(() => runs).toBe(1);
+        expect(decisions.map(item => item.decision)).toEqual(['rejected']);
+    });
+}
+
+for (const [operation, sql] of [
+    ['Read', 'SELECT 2'],
+    ['Insert', 'INSERT INTO demo.events (id) VALUES (1)'],
+    ['Update', 'ALTER TABLE demo.events UPDATE id = 2 WHERE id = 1'],
+    ['Delete', 'DROP TABLE demo.events'],
+    ['Schema', 'CREATE TABLE new_events (id UInt64) ENGINE = Memory'],
+    ['Unknown', 'SET max_threads = 1'],
+    ['Empty', ''],
+    ['Invalid', "SELECT 'unterminated"],
+] as const) {
+    test(`${operation} SQL proposals have no chat execution or decision actions`, async ({
+        page,
+    }) => {
+        await installProposal(page, sql, {
+            alternatives: [{ title: 'Other read', summary: 'Another value.', sql: 'SELECT 42' }],
+        });
+        let runs = 0;
+        page.on('request', request => {
+            if (
+                request.method() === 'POST' &&
+                ['/api/runs', '/api/scripts'].includes(new URL(request.url()).pathname)
+            )
+                runs++;
+        });
+        await trust(page);
+        await replaceSql(page, originalSql);
+        await askForChanges(page);
+        const card = page.locator('.proposal-card');
+        const actions = card.getByRole('button', {
+            name: /Run|Reject|Accept|Use this query|Apply to draft/,
+        });
+        await expect(actions).toHaveCount(0);
+        const recommended = page.getByTestId('assistant-execution-option').first();
+        if (operation === 'Empty')
+            await expect(recommended).toContainText('There are no SQL statements');
+        else if (operation === 'Invalid')
+            await expect(recommended).toContainText('Could not split this SQL safely');
+        else await expect(recommended.locator('.assistant-operation-badge')).toHaveText(operation);
+        await review(page).getByRole('button', { name: 'Accept SQL changes', exact: true }).click();
+        await expect(review(page)).toHaveCount(0);
+        await expect(actions).toHaveCount(0);
+        expect(runs).toBe(0);
+    });
+}
+
+for (const action of ['explain', 'review'] as const) {
+    test(`${action} replies are informational without an editor review or chat decision`, async ({
+        page,
+    }) => {
+        await installProposal(page, proposedSql, { action });
+        await trust(page);
+        await replaceSql(page, originalSql);
+        await askForChanges(page);
+        await expect(review(page)).toHaveCount(0);
+        await expect(page.getByTestId('sql-proposal-diff')).toContainText('Review only');
+        await expect(page.locator('.proposal-card')).not.toContainText('Needs review');
+        await expect(page.locator('.proposal-card').getByRole('button')).toHaveCount(0);
+        await expect(liveEditor(page)).toHaveText(originalSql);
+    });
+}
+
+test('Failed SQL checks block acceptance and opening alternatives while keeping rejection available', async ({
+    page,
+}) => {
+    await installProposal(page, proposedSql, {
+        alternatives: [{ title: 'Other query', summary: '', sql: 'SELECT 42' }],
+        quality: {
+            status: 'fail',
+            score: 0,
+            evaluatorVersion: 'test',
+            evaluatedAt: '2026-10-11T00:00:00.000Z',
+            checks: [{ id: 'safety', status: 'fail', message: 'A required check failed.' }],
+        },
+    });
+    await trust(page);
+    await replaceSql(page, originalSql);
+    await askForChanges(page);
+    await expect(page.getByTestId('sql-proposal-diff')).toContainText('Checks failed');
+    await expect(page.locator('.sql-proposal-review-message')).toContainText(
+        'A required check failed',
+    );
+    await expect(page.getByRole('button', { name: 'Open in SQL tab: Other query' })).toBeDisabled();
+    await expect(review(page).getByRole('button', { name: 'Accept SQL changes' })).toBeDisabled();
+    await review(page).getByRole('button', { name: 'Reject SQL changes' }).click();
+    await expect(liveEditor(page)).toHaveText(originalSql);
+});
+
+for (const mode of ['beginner', 'expert']) {
     test(`Inline SQL review accepts the whole proposal without running it in ${mode} mode`, async ({
         page,
     }) => {
@@ -213,6 +344,11 @@ for (const mode of ['beginner', 'expert']) {
         await expect.poll(async () => (await storedDraft(page))?.sql).toBe(originalSql);
         await askForChanges(page);
         await expect(review(page)).toBeVisible();
+        await expect(
+            page
+                .locator('.proposal-card')
+                .getByRole('button', { name: /Run|Reject|Accept|Use this query|Apply to draft/ }),
+        ).toHaveCount(0);
         await expect(liveEditor(page)).toBeHidden();
         await expect(liveEditor(page)).toHaveText(originalSql);
         const preview = review(page).getByRole('textbox', {
@@ -253,9 +389,9 @@ for (const mode of ['beginner', 'expert']) {
 }
 
 for (const decision of ['accepted', 'rejected'] as const) {
-    test(`A newer SQL proposal invalidates every older script run action when ${decision}`, async ({
+    test(`Earlier script proposals stay previews after the latest proposal is ${decision}`, async ({
         page,
-    }, testInfo) => {
+    }) => {
         const firstScript = 'SELECT 2 AS value;\nSELECT 3 AS value;';
         const nextScript = 'SELECT 5 AS value;\nSELECT 6 AS value;';
         const runs: Record<string, unknown>[] = [];
@@ -276,29 +412,16 @@ for (const decision of ['accepted', 'rejected'] as const) {
         await askForChanges(page, 'First script.');
         await review(page).getByRole('button', { name: 'Accept SQL changes', exact: true }).click();
         const oldCard = page.locator('.proposal-card').first();
-        const oldRunAll = oldCard.getByRole('button', {
-            name: 'Run all 2 statements',
-            exact: true,
-        });
-        const oldRunOne = oldCard.getByRole('button', {
-            name: 'Run only statement 1: Read',
-            exact: true,
-        });
-        const oldRunTwo = oldCard.getByRole('button', {
-            name: 'Run only statement 2: Read',
-            exact: true,
-        });
         const oldAlternative = oldCard.getByRole('button', {
-            name: 'Run alternative: Another read',
+            name: 'Open in SQL tab: Another read',
             exact: true,
         });
-        for (const button of [oldRunAll, oldRunOne, oldRunTwo, oldAlternative])
-            await expect(button).toBeEnabled();
+        await expect(oldAlternative).toBeEnabled();
+        await expect(oldCard.getByRole('button', { name: /Run/ })).toHaveCount(0);
         await installProposal(page, nextScript, { id: 'next-script', summary: 'Newer script.' });
         await askForChanges(page, 'Newer script.');
         await expect(review(page)).toBeVisible();
-        for (const button of [oldRunAll, oldRunOne, oldRunTwo, oldAlternative])
-            await expect(button).toBeDisabled();
+        await expect(oldAlternative).toBeDisabled();
         await review(page)
             .getByRole('button', {
                 name: decision === 'accepted' ? 'Accept SQL changes' : 'Reject SQL changes',
@@ -306,48 +429,36 @@ for (const decision of ['accepted', 'rejected'] as const) {
             })
             .click();
         await expect(review(page)).toHaveCount(0);
-        for (const button of [oldRunAll, oldRunOne, oldRunTwo, oldAlternative])
-            await expect(button).toBeDisabled();
-        await expect(oldCard.locator('.assistant-stale-proposal')).toHaveCount(0);
         expect(runs).toHaveLength(0);
         await page.reload();
         await page.getByTestId('open-ai').click();
-        for (const button of [oldRunAll, oldRunOne, oldRunTwo, oldAlternative])
-            await expect(button).toBeDisabled();
-        await oldRunAll.scrollIntoViewIfNeeded();
-        await page.screenshot({ path: testInfo.outputPath('superseded-script.png') });
-        const latestCard = page.locator('.proposal-card').last();
+        await expect(oldAlternative).toBeDisabled();
+        await expect(
+            page.locator('.proposal-card').getByRole('button', { name: /Run/ }),
+        ).toHaveCount(0);
         if (decision === 'accepted') {
-            const latestRunAll = latestCard.getByRole('button', {
-                name: 'Run all 2 statements',
-                exact: true,
-            });
-            await expect(latestRunAll).toBeEnabled();
-            await latestRunAll.click();
+            await page.getByTestId('run-button').click();
             await expect.poll(() => runs.length).toBe(1);
             expect(runs[0]).toMatchObject({ sql: nextScript, connectionId: 'demo' });
             await openStatementResults(page);
             await expect(
                 page.getByRole('menuitemradio', { name: 'Statement 2: succeeded', exact: true }),
             ).toBeVisible();
-        } else {
-            await expect(latestCard.getByRole('button', { name: /Run/ })).toHaveCount(0);
         }
     });
 }
 
-test('Only a newer SQL proposal invalidates an older single-query run action', async ({ page }) => {
+test('Accepted query history stays informational through failed and text-only follow-ups', async ({
+    page,
+}) => {
     await page.addInitScript(() => localStorage.setItem('clickstudio:experience', 'beginner'));
     await installProposal(page, proposedSql, { id: 'first-query', summary: 'First query.' });
     await trust(page);
     await replaceSql(page, originalSql);
     await askForChanges(page, 'First query.');
     await review(page).getByRole('button', { name: 'Accept SQL changes', exact: true }).click();
-    const oldRun = page
-        .locator('.proposal-card')
-        .first()
-        .getByRole('button', { name: 'Run this query', exact: true });
-    await expect(oldRun).toBeEnabled();
+    const oldCard = page.locator('.proposal-card').first();
+    await expect(oldCard.getByTestId('sql-proposal-diff')).toContainText('Applied');
     await page.route('**/api/assistant/sql', route =>
         route.fulfill({
             status: 503,
@@ -357,26 +468,20 @@ test('Only a newer SQL proposal invalidates an older single-query run action', a
     await page.getByRole('textbox', { name: 'Ask AI', exact: true }).fill('Try a follow-up');
     await page.getByRole('button', { name: 'Send', exact: true }).click();
     await expect(page.locator('.assistant-turn-error').last()).toContainText('Please try again.');
-    await expect(oldRun).toBeEnabled();
     await installProposal(page, null, { id: 'answer', summary: 'A text-only answer.' });
     await askForChanges(page, 'A text-only answer.');
     await expect(review(page)).toHaveCount(0);
-    await expect(oldRun).toBeEnabled();
     await installProposal(page, proposedSql, { id: 'same-query', summary: 'Latest query.' });
     await askForChanges(page, 'Latest query.');
-    await expect(oldRun).toBeDisabled();
-    await page
-        .locator('.proposal-card')
-        .last()
-        .getByRole('button', { name: 'Use this query', exact: true })
-        .click();
-    await expect(oldRun).toBeDisabled();
+    await expect(review(page)).toHaveCount(0);
+    await expect(page.getByTestId('sql-proposal-diff').last()).toContainText('No SQL changes');
+    await expect(oldCard.getByTestId('sql-proposal-diff')).toContainText('Applied');
     await expect(
-        page.locator('.proposal-card').last().getByRole('button', {
-            name: 'Run this query',
-            exact: true,
-        }),
-    ).toBeEnabled();
+        page
+            .locator('.proposal-card')
+            .getByRole('button', { name: /Run|Reject|Accept|Use this query|Apply to draft/ }),
+    ).toHaveCount(0);
+    await expect(liveEditor(page)).toHaveText(proposedSql);
 });
 
 test('Rejecting SQL changes preserves the live editor and its undo history', async ({ page }) => {
@@ -417,15 +522,19 @@ test('Query ownership survives tab switches and reloads, including identical SQL
     await expect(review(page)).toHaveCount(0);
     await expect(liveEditor(page)).toHaveText(originalSql);
     await page.getByTestId('open-ai').click();
-    await expect(page.getByRole('button', { name: 'Apply to draft', exact: true })).toBeDisabled();
-    await expect(page.locator('.assistant-sql-review')).toContainText('Open the original query');
+    await expect(
+        page
+            .locator('.proposal-card')
+            .getByRole('button', { name: /Accept|Reject|Apply to draft/ }),
+    ).toHaveCount(0);
+    await expect(page.locator('.assistant-sql-review')).toContainText('Open the original SQL tab');
     await tabs.getByRole('tab').first().click();
     await expect(review(page)).toBeVisible();
     await page.reload();
     await expect(review(page)).toBeVisible();
     await expect(liveEditor(page)).toHaveText(originalSql);
     await page.getByTestId('open-ai').click();
-    await page.getByRole('button', { name: 'Apply to draft', exact: true }).click();
+    await review(page).getByRole('button', { name: 'Accept SQL changes', exact: true }).click();
     await expect(review(page)).toHaveCount(0);
     await expect(liveEditor(page)).toHaveText(proposedSql);
 });

@@ -112,7 +112,7 @@ for (const mode of ['beginner', 'expert'])
         expect(requests[0]?.result).toBeUndefined();
         await page
             .getByRole('button', {
-                name: mode === 'beginner' ? 'Use this query' : 'Apply to draft',
+                name: 'Accept SQL changes',
                 exact: true,
             })
             .click();
@@ -149,7 +149,10 @@ test('Fix with AI keeps the full draft when a selected statement fails', async (
     await page.getByRole('button', { name: 'Fix with AI', exact: true }).click();
     await expect(page.getByTestId('assistant-proposal-summary')).toBeVisible();
     expect(requests[0]).toMatchObject({ sql: draft, repair: { sql: failedSql } });
-    await page.getByRole('button', { name: 'Apply to draft', exact: true }).click();
+    await page
+        .getByTestId('sql-proposal-review')
+        .getByRole('button', { name: 'Accept SQL changes', exact: true })
+        .click();
     await expect(page.locator('.cm-line')).toHaveText(repairedDraft.split('\n'));
 });
 

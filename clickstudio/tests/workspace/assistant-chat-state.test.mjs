@@ -2,11 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
     assistantChatsStorageKey,
+    assistantSqlReview,
     createAssistantChatState,
     loadAssistantChatState,
     pendingEditorProposal,
     recoverAssistantChatState,
-    supersededSqlProposalTurns,
 } from '../../.workspace-build/src/frontend/assistant/chat/assistant-chat-state.js';
 
 test('Assistant chat storage is scoped to each connection', () => {
@@ -46,50 +46,100 @@ function sqlTurn(overrides = {}) {
     };
 }
 
-test('A newer SQL proposal supersedes older run actions regardless of its decision or SQL text', () => {
-    const first = sqlTurn();
-    for (const decision of ['pending', 'accepted', 'rejected']) {
-        const later = sqlTurn({
-            id: 'later',
-            proposal: { ...first.proposal, decision },
-        });
-        assert.deepEqual(supersededSqlProposalTurns([first, later]), new Set(['turn']));
+const reviewContext = {
+    sql: 'SELECT 1',
+    draftId: 'draft',
+    connectionId: 'demo',
+    latestTurnId: 'turn',
+};
+
+test('Current SQL changes need editor review and can open alternatives before acceptance', () => {
+    assert.deepEqual(assistantSqlReview(sqlTurn(), reviewContext), {
+        status: 'Needs review',
+        canOpenAlternative: true,
+    });
+});
+
+test('Informational SQL replies do not advertise a missing review action', () => {
+    const turn = sqlTurn();
+    for (const action of ['explain', 'review']) {
+        const state = assistantSqlReview(
+            sqlTurn({ proposal: { ...turn.proposal, action } }),
+            reviewContext,
+        );
+        assert.deepEqual(state, { status: 'Review only', canOpenAlternative: false });
     }
-    const third = sqlTurn({ id: 'third' });
     assert.deepEqual(
-        supersededSqlProposalTurns([first, sqlTurn({ id: 'later' }), third]),
-        new Set(['turn', 'later']),
+        assistantSqlReview(
+            sqlTurn({ proposal: { ...turn.proposal, sql: turn.proposal.baseSql } }),
+            reviewContext,
+        ),
+        { status: 'No SQL changes', canOpenAlternative: true },
     );
 });
 
-test('Answers, inspections and unfinished or failed requests do not supersede SQL proposals', () => {
-    const first = sqlTurn();
-    for (const overrides of [
-        { status: 'pending' },
-        { status: 'failed' },
-        { status: 'cancelled' },
-        { proposal: undefined },
-        { proposal: { ...first.proposal, sql: null } },
-        { proposal: { ...first.proposal, action: 'explain' } },
-        { proposal: { ...first.proposal, action: 'review' } },
-    ])
-        assert.deepEqual(
-            supersededSqlProposalTurns([first, sqlTurn({ ...overrides, id: 'later' })]),
-            new Set(),
-        );
+test('Old, unowned and cross-connection proposals cannot open alternatives', () => {
+    const turn = sqlTurn();
+    const cases = [
+        [turn, { ...reviewContext, latestTurnId: 'later' }],
+        [sqlTurn({ draftId: undefined }), reviewContext],
+        [turn, { ...reviewContext, connectionId: 'other' }],
+        ...['pending', 'failed', 'cancelled'].map(status => [sqlTurn({ status }), reviewContext]),
+    ];
+    for (const [candidate, context] of cases)
+        assert.deepEqual(assistantSqlReview(candidate, context), {
+            status: 'Earlier proposal',
+            canOpenAlternative: false,
+        });
 });
 
-test('Proposal supersession stays scoped to its query and restores from chat history', () => {
-    const state = createAssistantChatState();
-    state.chats[0].turns = [
-        sqlTurn(),
-        sqlTurn({ id: 'other', draftId: 'other-draft' }),
-        sqlTurn({ id: 'legacy', draftId: undefined }),
-        sqlTurn({ id: 'later-legacy', draftId: undefined }),
-        sqlTurn({ id: 'later' }),
-    ];
-    const turns = recoverAssistantChatState(state).chats[0].turns;
-    assert.deepEqual(supersededSqlProposalTurns(turns), new Set(['turn', 'legacy']));
+test('Accepted and rejected history keeps the recorded decision', () => {
+    const turn = sqlTurn();
+    for (const [decision, status] of [
+        ['accepted', 'Applied'],
+        ['rejected', 'Rejected'],
+    ]) {
+        const candidate = sqlTurn({ proposal: { ...turn.proposal, decision } });
+        assert.deepEqual(
+            assistantSqlReview(candidate, { ...reviewContext, latestTurnId: 'later' }),
+            { status, canOpenAlternative: false },
+        );
+        assert.equal(
+            assistantSqlReview(candidate, reviewContext).canOpenAlternative,
+            decision === 'accepted',
+        );
+    }
+});
+
+test('Changing tabs retains the proposal ownership warning without replacing another draft', () => {
+    assert.deepEqual(assistantSqlReview(sqlTurn(), { ...reviewContext, draftId: 'other' }), {
+        status: 'Another query',
+        message: 'Open the original SQL tab to review this proposal.',
+        canOpenAlternative: true,
+    });
+});
+
+test('Changed drafts and failed SQL checks retain their review warnings', () => {
+    assert.deepEqual(assistantSqlReview(sqlTurn(), { ...reviewContext, sql: 'SELECT 99' }), {
+        status: 'Draft changed',
+        message: 'The SQL draft changed. Ask again to review the current draft.',
+        canOpenAlternative: true,
+    });
+    const turn = sqlTurn();
+    const failed = sqlTurn({ proposal: { ...turn.proposal, quality: { status: 'fail' } } });
+    assert.deepEqual(assistantSqlReview(failed, reviewContext), {
+        status: 'Checks failed',
+        message: 'A required check failed. This proposal can’t be applied.',
+        canOpenAlternative: false,
+    });
+    for (const decision of ['pending', 'accepted', 'rejected'])
+        assert.equal(
+            assistantSqlReview(
+                sqlTurn({ proposal: { ...failed.proposal, decision } }),
+                reviewContext,
+            ).canOpenAlternative,
+            false,
+        );
 });
 
 test('Editor proposals belong to the originating query and connection', () => {

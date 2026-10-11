@@ -1,4 +1,3 @@
-import type { ProposalDecisionAction } from '../../../../shared/assistant/actions';
 import { RunComparisonLauncher } from '../../../queries/history/RunComparison';
 import {
     useCallback,
@@ -105,9 +104,6 @@ export type InspectorPaneProps = {
     onRetryParser: () => void;
     onAskAI: (schema?: Schema, serverVersion?: string, database?: string) => void;
     onCancelAssistantRequest: () => void;
-    onDecideProposal: (turnId: string, decision: ProposalDecisionAction) => void;
-    onRunQuery: (sql: string) => void;
-    runDisabled: (sql: string) => boolean;
     expert?: boolean;
     docked?: boolean;
     onClose?: () => void;
@@ -204,9 +200,6 @@ export function InspectorPane({
     onRetryParser,
     onAskAI,
     onCancelAssistantRequest,
-    onDecideProposal,
-    onRunQuery,
-    runDisabled,
     expert = false,
     docked = false,
     onClose,
@@ -499,6 +492,7 @@ export function InspectorPane({
                         mode={expert ? 'expert' : 'beginner'}
                         sql={sql}
                         draftId={draftId}
+                        connectionId={connectionId}
                         question={assistantQuestion}
                         onQuestionChange={onAssistantQuestion}
                         chats={assistantChats}
@@ -521,9 +515,7 @@ export function InspectorPane({
                         schemaLoading={schemaLoading}
                         schemaStatus={schemaError}
                         onRefreshSchema={onRefreshSchema}
-                        onDecideProposal={onDecideProposal}
-                        onRunQuery={onRunQuery}
-                        runDisabled={runDisabled}
+                        onOpenSqlDraft={(name, sql) => onOpenSqlDraft(name, sql, false)}
                     />
                 )}
             </div>

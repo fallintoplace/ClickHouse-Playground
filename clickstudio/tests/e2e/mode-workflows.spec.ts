@@ -434,7 +434,10 @@ test('Switching to Experimental keeps the AI chat, query and run evidence', asyn
     });
     expect(generations[0]?.schema).toBeTruthy();
     expect(runRequests).toHaveLength(0);
-    await page.getByRole('button', { name: 'Apply to draft', exact: true }).click();
+    await page
+        .getByTestId('sql-proposal-review')
+        .getByRole('button', { name: 'Accept SQL changes', exact: true })
+        .click();
     await expect(page.locator('.cm-content')).toContainText(generatedSql);
     expect(runRequests).toHaveLength(0);
     await page.getByTestId('run-button').click();
@@ -473,7 +476,7 @@ test('Switching to Experimental keeps the AI chat, query and run evidence', asyn
     );
 });
 
-test('An older accepted proposal says which SQL will run', async ({ page }) => {
+test('Accepted proposal history cannot run older SQL from chat', async ({ page }) => {
     const runRequests: Record<string, unknown>[] = [];
     let proposalBaseSql = '';
     page.on('request', request => {
@@ -573,18 +576,24 @@ test('An older accepted proposal says which SQL will run', async ({ page }) => {
     await expectDiffChevronLayout();
     await diffToggle.click();
     await expect(sqlDiff).toHaveAttribute('open', '');
-    await page.getByRole('button', { name: 'Use this query', exact: true }).click();
+    await page
+        .getByTestId('sql-proposal-review')
+        .getByRole('button', { name: 'Accept SQL changes', exact: true })
+        .click();
     await replaceSql(page, 'SELECT 999 AS newer_draft');
 
-    const oldProposal = page.locator('.beginner-run-ready');
-    await expect(oldProposal).toContainText('Accepted from an earlier draft');
-    const runOldSql = oldProposal.getByRole('button', { name: 'Run older query', exact: true });
-    await expect(runOldSql).toBeVisible();
-    await expect(runOldSql).toHaveClass(/button-secondary/);
-    await runOldSql.click();
-
+    await expect(sqlDiff).toContainText('Applied');
+    await expect(page.locator('.beginner-run-ready')).toHaveCount(0);
+    await expect(page.locator('.proposal-card').getByRole('button', { name: /Run/ })).toHaveCount(
+        0,
+    );
+    expect(runRequests).toHaveLength(0);
+    await page.getByTestId('run-button').click();
     await expect.poll(() => runRequests.length).toBe(1);
-    expect(runRequests[0]).toMatchObject({ sql: generatedSql, connectionId: 'demo' });
+    expect(runRequests[0]).toMatchObject({
+        sql: 'SELECT 999 AS newer_draft',
+        connectionId: 'demo',
+    });
 });
 
 test('Ask AI previews mixed writes and keeps UPDATE and DELETE alternatives separate', async ({
@@ -704,7 +713,10 @@ test('Ask AI previews mixed writes and keeps UPDATE and DELETE alternatives sepa
         'delete',
     );
 
-    await page.getByRole('button', { name: 'Use this query', exact: true }).click();
+    await page
+        .getByTestId('sql-proposal-review')
+        .getByRole('button', { name: 'Accept SQL changes', exact: true })
+        .click();
     await expect(
         recommended.getByText('UPDATE runs before DELETE, which may remove the changed rows.', {
             exact: false,
@@ -714,40 +726,24 @@ test('Ask AI previews mixed writes and keeps UPDATE and DELETE alternatives sepa
         recommended.getByText(/ClickHouse mutations may finish asynchronously\./),
     ).toBeVisible();
     await expect(
-        recommended.getByRole('button', { name: 'Run all 3 statements', exact: true }),
-    ).toBeVisible();
-    await expect(
-        recommended.getByRole('button', { name: /Review run|Confirm and run all/ }),
+        page.locator('.proposal-card').getByRole('button', { name: /Run|Reject|Accept/ }),
     ).toHaveCount(0);
     await expect(
         alternative.getByRole('button', {
-            name: 'Run alternative: Update matching row',
+            name: 'Open in SQL tab: Update matching row',
             exact: true,
         }),
-    ).toBeVisible();
+    ).toBeEnabled();
     await expect(
         deleteAlternative.getByRole('button', {
-            name: 'Run alternative: Delete matching row',
+            name: 'Open in SQL tab: Delete matching row',
             exact: true,
         }),
-    ).toBeVisible();
-    await expect(
-        recommended.getByRole('button', { name: 'Run only statement 2: Update', exact: true }),
-    ).toBeVisible();
-    await expect(
-        recommended.getByRole('button', { name: 'Run only statement 3: Delete', exact: true }),
-    ).toBeVisible();
-    const readStep = recommended.locator('li').nth(0);
-    await expect(
-        readStep.getByRole('button', { name: 'Run only statement 1: Read', exact: true }),
-    ).toBeVisible();
-    await expect(
-        readStep.getByRole('button', { name: 'Run only statement 1: Read', exact: true }),
     ).toBeEnabled();
+    const readStep = recommended.locator('li').nth(0);
     await readStep.locator('summary').click();
     await expect(readStep.locator('pre')).toBeVisible();
-
-    await recommended.getByRole('button', { name: 'Run all 3 statements', exact: true }).click();
+    await page.getByTestId('run-button').click();
     await expect(page.getByTestId('query-failure')).toContainText('READ_ONLY_SQL');
 });
 

@@ -1522,7 +1522,8 @@
     background: color-mix(in srgb, var(--green) 7%, transparent);
     color: var(--green);
   }
-  .sql-proposal-review-status.is-rejected {
+  .sql-proposal-review-status.is-rejected,
+  .sql-proposal-review-status.is-informational {
     border-color: var(--line);
     background: var(--panel);
     color: var(--muted);
@@ -1616,30 +1617,11 @@
   .sql-proposal-diff-line > span:last-child {
     padding-right: 10px;
   }
-  .sql-proposal-diff-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    color: var(--muted);
+  .sql-proposal-review-message {
+    margin: 0;
+    color: var(--amber);
     font-size: 7px;
     line-height: 1.45;
-  }
-  .sql-proposal-diff-footer > span {
-    min-width: 0;
-  }
-  .sql-proposal-diff-footer > span.is-blocked {
-    color: var(--amber);
-  }
-  .sql-proposal-diff-footer > div {
-    display: flex;
-    flex: none;
-    gap: 5px;
-  }
-  .sql-proposal-diff-footer .button-base {
-    min-height: 27px;
-    padding-inline: 8px;
-    font-size: 8px;
   }
   .assistant-pending {
     display: flex;
@@ -1662,12 +1644,6 @@
     border-color: var(--line);
     background: var(--panel-raised);
     color: var(--muted);
-  }
-  .assistant-stale-proposal {
-    margin: 0;
-    color: var(--amber);
-    font-size: 9px;
-    line-height: 1.5;
   }
   .assistant-composer-area {
     display: grid;
@@ -1784,32 +1760,6 @@
   }
   .beginner-proposal-card {
     border-color: color-mix(in srgb, var(--violet) 24%, var(--line-bright));
-  }
-  .beginner-run-ready {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-top: 4px;
-    padding-top: 10px;
-    border-top: 1px solid var(--line);
-  }
-  .beginner-run-ready > span {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--green);
-    font-size: 9px;
-  }
-  .beginner-run-ready .button-base {
-    min-height: 33px;
-    padding: 0 11px;
-    font-size: 9px;
-  }
-  .beginner-run-ready .button-base svg {
-    width: 13px;
-    height: 13px;
-    margin-right: 6px;
   }
   .assistant-execution-options {
     display: grid;
@@ -1975,12 +1925,6 @@
     display: block;
     min-width: max-content;
   }
-  .assistant-execution-steps .button-base {
-    min-height: 25px;
-    justify-self: start;
-    padding-inline: 7px;
-    font-size: 7px;
-  }
   .assistant-execution-pagination {
     display: flex;
     min-width: 0;
@@ -1999,14 +1943,14 @@
     padding-inline: 9px;
     font-size: 8px;
   }
-  .assistant-execution-actions {
+  .assistant-alternative-actions {
     display: flex;
     min-width: 0;
     flex-wrap: wrap;
     justify-content: flex-end;
     gap: 5px;
   }
-  .assistant-execution-actions > .button-base {
+  .assistant-alternative-actions > .button-base {
     min-height: 29px;
     padding-inline: 9px;
     font-size: 8px;

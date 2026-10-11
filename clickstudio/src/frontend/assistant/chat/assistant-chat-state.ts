@@ -39,23 +39,61 @@ export interface AssistantChatState {
     chats: AssistantChat[];
 }
 
-export function supersededSqlProposalTurns(turns: readonly AssistantChatTurn[]): Set<string> {
-    const latestDrafts = new Set<string | undefined>();
-    const superseded = new Set<string>();
-    for (const turn of [...turns].reverse()) {
-        const proposal = turn.proposal;
-        if (
-            turn.status !== 'complete' ||
-            !proposal ||
-            proposal.sql === null ||
-            proposal.action === 'explain' ||
-            proposal.action === 'review'
-        )
-            continue;
-        if (latestDrafts.has(turn.draftId)) superseded.add(turn.id);
-        latestDrafts.add(turn.draftId);
-    }
-    return superseded;
+export interface AssistantSqlReview {
+    status:
+        | 'Needs review'
+        | 'Applied'
+        | 'Rejected'
+        | 'Review only'
+        | 'No SQL changes'
+        | 'Earlier proposal'
+        | 'Another query'
+        | 'Draft changed'
+        | 'Checks failed';
+    message?: string;
+    canOpenAlternative: boolean;
+}
+
+export function assistantSqlReview(
+    turn: AssistantChatTurn & { proposal: Proposal },
+    context: { sql: string; draftId: string; connectionId: string; latestTurnId?: string },
+): AssistantSqlReview {
+    const proposal = turn.proposal;
+    const inspectOnly = proposal.action === 'explain' || proposal.action === 'review';
+    const current =
+        turn.status === 'complete' &&
+        turn.draftId !== undefined &&
+        turn.id === context.latestTurnId &&
+        proposal.connectionId === context.connectionId;
+    const canOpenAlternative =
+        current &&
+        !inspectOnly &&
+        proposal.quality?.status !== 'fail' &&
+        proposal.decision !== 'rejected';
+    if (proposal.decision === 'accepted') return { status: 'Applied', canOpenAlternative };
+    if (proposal.decision === 'rejected') return { status: 'Rejected', canOpenAlternative };
+    if (inspectOnly) return { status: 'Review only', canOpenAlternative };
+    if (proposal.sql === proposal.baseSql) return { status: 'No SQL changes', canOpenAlternative };
+    if (!current) return { status: 'Earlier proposal', canOpenAlternative };
+    if (turn.draftId !== context.draftId)
+        return {
+            status: 'Another query',
+            message: 'Open the original SQL tab to review this proposal.',
+            canOpenAlternative,
+        };
+    if (proposal.baseSql !== context.sql)
+        return {
+            status: 'Draft changed',
+            message: 'The SQL draft changed. Ask again to review the current draft.',
+            canOpenAlternative,
+        };
+    if (proposal.quality?.status === 'fail')
+        return {
+            status: 'Checks failed',
+            message: 'A required check failed. This proposal can’t be applied.',
+            canOpenAlternative,
+        };
+    return { status: 'Needs review', canOpenAlternative };
 }
 
 export function pendingEditorProposal(

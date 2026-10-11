@@ -1,15 +1,12 @@
-import type { ProposalDecisionAction } from '../../../../shared/assistant/actions';
 import type { Run } from '../../../../shared/queries/execution/types';
 import type { Result } from '../../../../shared/queries/results/types';
 import type { Schema, SchemaTable } from '../../../../shared/database/schema/types';
 import { sqlReferencesQualifiedTable } from '../../../../shared/database/tables/delete-table';
-import { parameterNames } from '../../../../shared/sql/sql';
 import { api } from '../../../api/client';
 import { PLAYGROUND_CONNECTION_ID } from '../../../database/connections/playground';
 import type { Draft, WorkspaceState } from '../../../queries/editor/drafts/workspace-state';
 import { terminal } from '../../../queries/execution/status';
 import type { useWorkspaceController, WorkspaceProps } from '../../useWorkspaceController';
-import { safeStatementCount } from '../../workspace-helpers';
 import type { InspectorPaneProps } from './InspectorPane';
 
 async function loadAssistantRunContext(
@@ -109,7 +106,6 @@ export function createInspectorProps({
         requestAssistantSql,
         includeRun,
         cancelAssistantRequest,
-        decideAssistantProposal,
     } = model.assistant;
 
     const {
@@ -135,8 +131,6 @@ export function createInspectorProps({
         selectableRunId,
         nativeParserStatus,
         nativeParseSnapshot,
-        execute,
-        busy,
     } = model;
 
     return {
@@ -235,25 +229,6 @@ export function createInspectorProps({
                 includeRun ? signal => loadAssistantRunContext(run, snapshot, signal) : undefined,
             ),
         onCancelAssistantRequest: cancelAssistantRequest,
-        onDecideProposal: (turnId: string, decision: ProposalDecisionAction) =>
-            void decideAssistantProposal(turnId, decision),
-        onRunQuery: sql => void execute('query', sql),
-        runDisabled: sql => {
-            if (!trusted || busy || model.assistant.editorProposal) return true;
-            const statementCount = safeStatementCount(sql);
-            if (
-                statementCount !== undefined &&
-                statementCount > 1 &&
-                connection.manifest?.scripts.available !== true
-            )
-                return true;
-            if (connection.manifest?.parameters.available !== false) return false;
-            try {
-                return parameterNames(sql).length > 0;
-            } catch {
-                return true;
-            }
-        },
         expert: experience === 'expert',
     } satisfies InspectorPaneProps;
 }
