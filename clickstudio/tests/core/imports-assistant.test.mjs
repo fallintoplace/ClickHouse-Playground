@@ -710,7 +710,7 @@ test('Accepting proposal records a decision, never creates a run', async () => {
     f.ai.decide(owner, p.id, 'accepted', 'local', 'SELECT 2');
     assert.equal(f.store.list('runs').length, 0);
 });
-test('SQL-focused context allows a starter dataset when its source is absent', () => {
+test('SQL-focused context allows sample data when the user requests examples', () => {
     const f = aiFixture();
     const built = buildContext({
         ...f.input,
@@ -734,6 +734,63 @@ test('SQL-focused context allows a starter dataset when its source is absent', (
         /Never infer that a table is absent because its columns are missing/i,
     );
     assert.match(built.payload.instructions, /label them as examples/i);
+    assert.match(
+        built.payload.instructions,
+        /Queries may reference tables created earlier in the same proposed script/i,
+    );
+    assert.match(
+        built.payload.instructions,
+        /sample rows only when the user requests examples, sample data, or a demonstration/i,
+    );
+});
+test('Assistant completion instructions preserve the full request across subjects', () => {
+    const f = aiFixture();
+    for (const question of [
+        'Create a table with all NHL winners from 2000 and write a query.',
+        "Rank all capital cities by today's weather.",
+        'List every release since 2020 with its release date.',
+        'Copy all rows and columns into a new table.',
+        'Create a table and write three queries to compare the results.',
+    ]) {
+        const built = buildContext({ ...f.input, action: 'ask', question });
+        assert.equal(built.payload.question, question);
+        assert.match(
+            built.payload.instructions,
+            /date ranges, entities, steps.*coverage requirements/i,
+        );
+        assert.match(built.payload.instructions, /continue searching.*requested scope/i);
+        assert.match(
+            built.payload.instructions,
+            /compare the answer and any SQL with the full request/i,
+        );
+        assert.match(built.payload.instructions, /Label partial results as partial/i);
+        assert.doesNotMatch(built.payload.instructions, /draft a useful starter table/i);
+        assert.doesNotMatch(built.payload.instructions, /answer briefly and steer/i);
+    }
+});
+test('External facts can be researched without a matching database table', () => {
+    const f = aiFixture();
+    const built = buildContext({
+        ...f.input,
+        action: 'ask',
+        question: 'List championship winners since 2000.',
+        schema: { ...schema, tables: [], columns: [], truncated: false },
+    });
+    const context = JSON.parse(built.payload.context);
+    assert.deepEqual(context.tables, []);
+    assert.match(
+        built.payload.instructions,
+        /External factual questions do not require matching tables/i,
+    );
+    assert.match(built.payload.instructions, /Use web search to verify current or external facts/i);
+    assert.match(
+        built.payload.instructions,
+        /Do not substitute fictional rows for requested real facts/i,
+    );
+    assert.match(
+        built.payload.instructions,
+        /do not claim completeness or invent missing entries/i,
+    );
 });
 test('Assistant prioritizes tables named in the question, current SQL, or selected run SQL', () => {
     const f = aiFixture();
@@ -928,6 +985,14 @@ test('Plain-language assistant answers request concise Markdown list formatting'
     assert.match(
         built.payload.instructions,
         /put each ordered or bulleted list item on its own line/i,
+    );
+    assert.match(
+        built.payload.instructions,
+        /Put the complete requested answer, including lists or tables, in summary/i,
+    );
+    assert.match(
+        built.payload.instructions,
+        /do not return only an introduction or hide the main answer/i,
     );
 });
 test('SQL context preserves all columns and rows when copying a known source table', () => {
