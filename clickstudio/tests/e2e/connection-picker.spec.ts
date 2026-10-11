@@ -143,7 +143,7 @@ for (const theme of ['Dark', 'Light']) {
         await expect(current.locator('.connection-choice-check svg')).toBeVisible();
         await expect(current.locator('.connection-choice-check')).toHaveCSS(
             'color',
-            theme === 'Dark' ? 'rgb(250, 255, 105)' : 'rgb(107, 93, 0)',
+            theme === 'Dark' ? 'rgb(250, 255, 105)' : 'rgb(98, 55, 25)',
         );
         await expect(current).toHaveCSS('box-shadow', 'none');
         await page.keyboard.press('Tab');

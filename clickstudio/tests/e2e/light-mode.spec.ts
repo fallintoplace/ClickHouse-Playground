@@ -110,7 +110,7 @@ async function expectReadableText(root: Locator, label: string) {
     expect.soft(result.violations, label).toEqual([]);
 }
 
-test(`Light mode keeps workspace and help text readable with yellow accent`, async ({
+test(`Light mode keeps workspace and help text readable with brown accent`, async ({
     page,
 }, info) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
@@ -217,7 +217,7 @@ test(`Light mode keeps workspace and help text readable with yellow accent`, asy
     await expectReadableText(page.locator('.auth-screen'), 'Login');
 });
 
-test(`Light mode keeps import steps and query-file controls readable with yellow accent`, async ({
+test(`Light mode keeps import steps and query-file controls readable with brown accent`, async ({
     page,
 }, info) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
@@ -229,7 +229,7 @@ test(`Light mode keeps import steps and query-file controls readable with yellow
     await expectReadableText(dialog, 'File import');
     await expect(dialog.locator('.import-step-item.is-current .import-step-number')).toHaveCSS(
         'color',
-        'rgb(107, 93, 0)',
+        'rgb(98, 55, 25)',
     );
     await page.screenshot({ path: info.outputPath('light-import.png') });
     await dialog.locator('.import-kind-button.is-query').click();
@@ -237,7 +237,7 @@ test(`Light mode keeps import steps and query-file controls readable with yellow
     await expectReadableText(dialog, 'SQL file');
 });
 
-test('Light heatmaps keep zero, null, missing, and saturated values readable with the yellow accent', async ({
+test('Light heatmaps keep zero, null, missing, and saturated values readable with the brown accent', async ({
     page,
 }) => {
     await page.route('**/api/runs/*/snapshot', async route => {
@@ -271,7 +271,7 @@ test('Light heatmaps keep zero, null, missing, and saturated values readable wit
     await expect(results.locator('.heatmap-cell')).toHaveCount(6);
     await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
 
-    await expectReadableText(results, `Heatmap, yellow accent`);
+    await expectReadableText(results, `Heatmap, brown accent`);
     const fills = await results
         .locator('.heatmap-cell')
         .evaluateAll(cells => cells.map(cell => getComputedStyle(cell).backgroundColor));
@@ -322,7 +322,7 @@ test('Mounted candlesticks update their marks and labels when the theme changes'
     await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
     await expect(up).toHaveCSS('fill', 'rgb(0, 107, 64)');
     await expect(down).toHaveCSS('fill', 'rgb(197, 34, 67)');
-    await expect(page.locator('.market-axis text').first()).toHaveCSS('fill', 'rgb(80, 101, 130)');
+    await expect(page.locator('.market-axis text').first()).toHaveCSS('fill', 'rgb(69, 89, 116)');
     await expect(page.locator('.market-bid-line')).toHaveCSS('stroke', 'rgb(37, 99, 235)');
     await page.getByRole('radio', { name: 'Dark theme', exact: true }).click();
     await expect(up).toHaveCSS('fill', 'rgb(53, 233, 120)');
@@ -330,7 +330,7 @@ test('Mounted candlesticks update their marks and labels when the theme changes'
     await expect(page.locator('.market-candle')).toHaveCount(2);
 });
 
-test('Light mode preserves invalid field borders before and after focus with the yellow accent', async ({
+test('Light mode preserves invalid field borders before and after focus with the brown accent', async ({
     page,
 }) => {
     await mockWritableWorkspace(page);
@@ -345,9 +345,9 @@ test('Light mode preserves invalid field borders before and after focus with the
     await expect(name).toHaveCSS('border-color', 'rgb(197, 34, 67)');
     await name.focus();
     await expect(name).toHaveCSS('border-color', 'rgb(197, 34, 67)');
-    await expectReadableText(dialog, `Invalid field, yellow accent`);
+    await expectReadableText(dialog, `Invalid field, brown accent`);
     await name.fill('events');
     await expect(name).toHaveAttribute('aria-invalid', 'false');
-    await expect(name).toHaveCSS('border-color', 'rgb(107, 93, 0)');
+    await expect(name).toHaveCSS('border-color', 'rgb(98, 55, 25)');
     await page.keyboard.press('Escape');
 });

@@ -992,7 +992,7 @@
   --reference-aggregate: var(--explorer-table);
   --reference-function: var(--explorer-index);
   --reference-type: var(--explorer-view);
-  --reference-engine: var(--accent-clickhouse-yellow);
+  --reference-engine: var(--accent);
   --reference-setting: var(--explorer-dictionary);
   --reference-system: var(--explorer-column);
   --reference-format: var(--explorer-projection);
@@ -1232,9 +1232,9 @@
 :root[data-theme="click-light"]
   :is(.object-tree-row.is-database, .reference-result.is-engine)
   :is(.object-kind-glyph, .reference-result-glyph) {
-  border-color: color-mix(in srgb, var(--accent-clickhouse-yellow) 36%, var(--line-bright));
-  background: var(--accent-clickhouse-yellow-action);
-  color: var(--accent-clickhouse-yellow);
+  border-color: color-mix(in srgb, var(--accent) 36%, var(--line-bright));
+  background: var(--accent-action);
+  color: var(--accent);
 }
 :root[data-theme="click-light"] :is(.object-tree-label, .reference-result-copy) small {
   border-color: color-mix(in srgb, var(--explorer-row-accent) 42%, var(--line));

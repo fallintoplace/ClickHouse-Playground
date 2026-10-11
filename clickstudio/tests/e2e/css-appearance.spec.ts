@@ -17,7 +17,7 @@ test.beforeEach(async ({ page }) => {
 
 for (const theme of ['Light', 'Dark']) {
     for (const mode of [theme === 'Light' ? 'Standard' : 'Experimental']) {
-        test(`CSS preserves ${theme}, yellow accent, ${mode} workspace layouts`, async ({
+        test(`CSS preserves ${theme}, theme accent, ${mode} workspace layouts`, async ({
             page,
         }, info) => {
             await page.setViewportSize({ width: 1600, height: 1000 });
@@ -48,7 +48,7 @@ for (const theme of ['Light', 'Dark']) {
                 .click();
             await expect(
                 inspector.locator('.object-tree-row.is-database .object-kind-glyph').first(),
-            ).toHaveCSS('color', theme === 'Dark' ? 'rgb(250, 255, 105)' : 'rgb(107, 93, 0)');
+            ).toHaveCSS('color', theme === 'Dark' ? 'rgb(250, 255, 105)' : 'rgb(98, 55, 25)');
             await inspector.getByText('events', { exact: true }).first().click();
             await expect(inspector.getByLabel('Selected object')).toBeVisible();
             await expectReferenceStyles(page, info, 'object-details');
@@ -157,7 +157,7 @@ for (const theme of ['Light', 'Dark']) {
         }
     });
 
-    test(`CSS preserves ${theme}, yellow accent help and native explorers`, async ({
+    test(`CSS preserves ${theme}, theme accent help and native explorers`, async ({
         page,
     }, info) => {
         await page.setViewportSize({ width: 1440, height: 1000 });
@@ -214,7 +214,7 @@ for (const theme of ['Light', 'Dark']) {
         await storage.getByRole('button', { name: 'Close', exact: true }).click();
     });
 
-    test(`CSS preserves ${theme}, yellow accent Cloud import destinations`, async ({
+    test(`CSS preserves ${theme}, theme accent Cloud import destinations`, async ({
         page,
     }, info) => {
         await page.setViewportSize({ width: 1440, height: 1000 });
@@ -246,7 +246,7 @@ for (const theme of ['Light', 'Dark']) {
         await compareStyles('cloud-success');
     });
 
-    test(`CSS preserves ${theme}, yellow accent import states on desktop`, async ({
+    test(`CSS preserves ${theme}, theme accent import states on desktop`, async ({
         page,
     }, info) => {
         await page.setViewportSize({ width: 1440, height: 1000 });

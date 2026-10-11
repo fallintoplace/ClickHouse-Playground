@@ -95,9 +95,12 @@ for (const mode of ['Standard', 'Experimental']) {
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
             await expect(page.getByTestId('new-sql')).toHaveCSS(
                 'background-color',
-                theme === 'Light' ? 'rgb(233, 242, 11)' : 'rgb(250, 255, 105)',
+                theme === 'Light' ? 'rgb(224, 182, 142)' : 'rgb(250, 255, 105)',
             );
-            await expect(page.getByTestId('new-sql')).toHaveCSS('color', 'rgb(21, 25, 26)');
+            await expect(page.getByTestId('new-sql')).toHaveCSS(
+                'color',
+                theme === 'Light' ? 'rgb(45, 25, 14)' : 'rgb(21, 25, 26)',
+            );
         }
         const sql = 'SELECT 42 AS keep_my_draft';
         await replaceSql(page, sql);

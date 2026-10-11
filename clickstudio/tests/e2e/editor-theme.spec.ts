@@ -176,7 +176,7 @@ for (const parser of ['ready', 'unavailable']) {
                 for (const { token, ratio } of await tokenContrast(page, state === 'selected')) {
                     expect(
                         ratio,
-                        `${parser}, ${theme}, yellow accent, ${state}: ${token}`,
+                        `${parser}, ${theme}, theme accent, ${state}: ${token}`,
                     ).toBeGreaterThanOrEqual(4.5);
                 }
                 await expect(editor).toHaveText(sql);
@@ -187,7 +187,7 @@ for (const parser of ['ready', 'unavailable']) {
     });
 }
 
-test('Light editor selections stay visible over the active line with the yellow accent', async ({
+test('Light editor selections stay visible over the active line with the brown accent', async ({
     page,
 }, info) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -206,7 +206,7 @@ test('Light editor selections stay visible over the active line with the yellow 
     const after = PNG.sync.read(
         await page.screenshot({
             caret: 'hide',
-            path: info.outputPath(`yellow accent-selection.png`),
+            path: info.outputPath(`brown accent-selection.png`),
         }),
     );
     const x = Math.floor(bounds.x + bounds.width / 2),
@@ -219,7 +219,7 @@ test('Light editor selections stay visible over the active line with the yellow 
     );
     expect(
         change,
-        `yellow accent: selected whitespace must visibly differ from the active line`,
+        `brown accent: selected whitespace must visibly differ from the active line`,
     ).toBeGreaterThan(30);
     await page.keyboard.press('ArrowRight');
 });

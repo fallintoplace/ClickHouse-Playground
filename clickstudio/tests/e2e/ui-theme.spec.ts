@@ -13,16 +13,18 @@ const themes = [
         action: '#faff69',
         chrome: '#151515',
         logoColor: 'rgb(255, 255, 255)',
+        brandAccent: 'rgb(250, 255, 105)',
     },
     {
         value: 'click-light',
         dark: false,
         surface: '#e8eef8',
         panel: '#ffffff',
-        accent: '#6b5d00',
-        action: '#e9f20b',
+        accent: '#623719',
+        action: '#e0b68e',
         chrome: '#f7f9fe',
         logoColor: 'rgb(20, 39, 68)',
+        brandAccent: 'rgb(107, 93, 0)',
     },
 ] as const;
 
@@ -94,6 +96,7 @@ for (const theme of themes)
             'fill',
             theme.logoColor,
         );
+        await expect(page.locator('.brand-name > span')).toHaveCSS('color', theme.brandAccent);
 
         await page.reload();
         await expect(themeOption(page, theme.value)).toBeChecked();
@@ -103,7 +106,7 @@ for (const theme of themes)
 
 for (const theme of themes) {
     for (const savedAccent of ['cyan', 'future-accent'])
-        test(`${theme.value} uses yellow with a saved ${savedAccent || 'empty'} accent`, async ({
+        test(`${theme.value} uses its theme accent with a saved ${savedAccent || 'empty'} accent`, async ({
             page,
         }) => {
             await page.addInitScript(
@@ -131,7 +134,9 @@ for (const theme of themes) {
             );
         });
 
-    test(`${theme.value} uses yellow when the accent attribute is absent`, async ({ page }) => {
+    test(`${theme.value} uses its theme accent when the accent attribute is absent`, async ({
+        page,
+    }) => {
         await page.goto('/');
         await themeOption(page, theme.value).click();
         const palette = await page.locator('html').evaluate(element => {
@@ -147,7 +152,7 @@ for (const theme of themes) {
     });
 }
 
-test('yellow works when preference storage is unavailable', async ({ page }) => {
+test('theme accents work when preference storage is unavailable', async ({ page }) => {
     await page.addInitScript(() => {
         const getItem = Storage.prototype.getItem;
         const setItem = Storage.prototype.setItem;
@@ -207,7 +212,7 @@ for (const mode of ['Standard', 'Experimental'])
     });
 
 for (const mode of ['Standard', 'Experimental'])
-    test(`${mode} keeps light yellow Run flat and readable across interaction states`, async ({
+    test(`${mode} keeps light brown Run flat and readable across interaction states`, async ({
         page,
     }) => {
         await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -216,7 +221,7 @@ for (const mode of ['Standard', 'Experimental'])
         await themeOption(page, 'click-light').click();
         const run = runButton(page);
         await expect(run).toHaveCSS('background-image', 'none');
-        await expect(run).toHaveCSS('background-color', 'rgb(233, 242, 11)');
+        await expect(run).toHaveCSS('background-color', 'rgb(224, 182, 142)');
         for (const state of ['normal', 'hover', 'focus']) {
             if (state === 'hover') await run.hover();
             if (state === 'focus') {
@@ -259,7 +264,7 @@ for (const mode of ['Standard', 'Experimental'])
         await expect(run).toHaveCSS('background-image', 'none');
         await page.reload();
         await expect(run).toHaveCSS('background-image', 'none');
-        await expect(run).toHaveCSS('background-color', 'rgb(233, 242, 11)');
+        await expect(run).toHaveCSS('background-color', 'rgb(224, 182, 142)');
     });
 
 test('an unknown saved theme falls back to ClickDark', async ({ page }) => {

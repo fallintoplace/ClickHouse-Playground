@@ -69,7 +69,7 @@
     line-height: 1;
   }
   .brand-name > span {
-    color: var(--accent);
+    color: var(--brand-accent);
   }
   .brand-name small {
     display: block;
@@ -834,17 +834,17 @@
     flex: none;
     align-self: center;
     place-items: center;
-    border: 1px solid var(--accent-clickhouse-yellow-action);
+    border: 1px solid var(--accent-action);
     border-radius: var(--radius-control);
-    background: var(--accent-clickhouse-yellow-action);
-    color: var(--accent-clickhouse-yellow-ink);
+    background: var(--accent-action);
+    color: var(--accent-ink);
     cursor: pointer;
     transition: 0.18s ease;
   }
   .new-tab-button:hover {
-    border-color: var(--accent-clickhouse-yellow-action);
-    background: color-mix(in srgb, var(--accent-clickhouse-yellow-action) 86%, var(--panel));
-    color: var(--accent-clickhouse-yellow-ink);
+    border-color: var(--accent-action);
+    background: color-mix(in srgb, var(--accent-action) 86%, var(--panel));
+    color: var(--accent-ink);
   }
   .new-tab-button svg {
     width: 16px;

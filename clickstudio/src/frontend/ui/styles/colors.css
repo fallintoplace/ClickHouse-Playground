@@ -71,6 +71,7 @@
   --focus-color: color-mix(in srgb, var(--accent) 84%, var(--text));
   --browser-chrome: #151515;
   --brand-logo: #fff;
+  --brand-accent: var(--accent-clickhouse-yellow);
   --assistant-loading-highlight: #fff6;
   --sql-review-shadow: 0 2px 8px #00000024;
   --geo-gradient: linear-gradient(
@@ -100,19 +101,15 @@
   --control-border: #607999;
   --text: #142744;
   --text-soft: #344b6b;
-  --muted: #506582;
+  --muted: #455974;
   --scrollbar-thumb: #9bafbc;
   --scrollbar-thumb-hover: #748d9d;
   --scroll-edge-shadow-color: #20242c14;
   --accent-cyan: #006d99;
-  --accent-clickhouse-yellow: #6b5d00;
-  --accent-clickhouse-yellow-strong: #5c5000;
-  --accent-clickhouse-yellow-action: #e9f20b;
-  --accent-clickhouse-yellow-ink: #15191a;
-  --accent: var(--accent-clickhouse-yellow);
-  --accent-strong: var(--accent-clickhouse-yellow-strong);
-  --accent-action: var(--accent-clickhouse-yellow-action);
-  --accent-ink: var(--accent-clickhouse-yellow-ink);
+  --accent: #623719;
+  --accent-strong: #4a2815;
+  --accent-action: #e0b68e;
+  --accent-ink: #2d190e;
   --accent-mark: var(--accent-action);
   --green: #006b40;
   --signal-accent: var(--accent);
@@ -149,6 +146,7 @@
   --overlay-backdrop: #20242c47;
   --browser-chrome: #f7f9fe;
   --brand-logo: var(--text);
+  --brand-accent: #6b5d00;
 }
 
 :root[data-theme="click-light"]
@@ -165,8 +163,6 @@
   --text-soft: #3c5361;
   --muted: #536b79;
   --accent-cyan: #006c83;
-  --accent-clickhouse-yellow-action: #edf249;
-  --accent-action: var(--accent-clickhouse-yellow-action);
   --accent-mark: var(--accent-action);
   --green: #146c43;
   --amber: #945000;
@@ -190,7 +186,7 @@
 
 .object-explorer-section {
   --explorer-signal: var(--signal-accent);
-  --explorer-database: var(--accent-clickhouse-yellow);
+  --explorer-database: var(--accent);
   --explorer-table: #79baff;
   --explorer-view: #c39aff;
   --explorer-column: #69dfbd;
