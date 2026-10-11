@@ -28,9 +28,9 @@ export const PROMPT_VERSION = 'clickstudio-assistant-v15';
 export const MAX_ASSISTANT_CONVERSATION_MESSAGES = 40;
 export const MAX_ASSISTANT_CONVERSATION_BYTES = 80_000;
 export const MAX_ASSISTANT_PROPOSAL_TABLES = 500;
-export const ASSISTANT_REQUEST_TIMEOUT_MS = 45_000;
+export const ASSISTANT_REQUEST_TIMEOUT_MS = 180_000;
 export const ASSISTANT_TIMEOUT_MESSAGE =
-    'The assistant took too long to respond. Try splitting the request into shorter questions. No SQL was applied or run.';
+    'The assistant did not finish within 3 minutes. Please try again. No SQL was applied or run.';
 
 export function isAssistantTimeoutSignal(signal: AbortSignal): boolean {
     return (

@@ -242,7 +242,7 @@ test('Vercel assistant reports OpenAI request timeouts with a distinct 504 error
         error: {
             code: 'AI_TIMEOUT',
             message:
-                'The assistant took too long to respond. Try splitting the request into shorter questions. No SQL was applied or run.',
+                'The assistant did not finish within 3 minutes. Please try again. No SQL was applied or run.',
         },
     });
 });

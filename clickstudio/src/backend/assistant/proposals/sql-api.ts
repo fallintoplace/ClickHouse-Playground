@@ -166,7 +166,7 @@ async function post(request: Request): Promise<Response> {
             connectionId,
             action,
             createdAt: new Date().toISOString(),
-            expiresAt: new Date(Date.now() + 60_000).toISOString(),
+            expiresAt: new Date(Date.now() + ASSISTANT_REQUEST_TIMEOUT_MS + 60_000).toISOString(),
             baseSql: sql,
             ...built,
             evaluationSchema: { tables: schema.tables, truncated: schema.truncated },

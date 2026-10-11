@@ -2,7 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { APIConnectionTimeoutError } from 'openai';
 import { OpenAIDriver } from '../../src/backend/assistant/openai/client.js';
-import type { PreparedContext } from '../../src/backend/assistant/proposals/assistant.js';
+import {
+    ASSISTANT_REQUEST_TIMEOUT_MS,
+    type PreparedContext,
+} from '../../src/backend/assistant/proposals/assistant.js';
 import { AppError } from '../../src/backend/system/requests/errors.js';
 import { createApp } from '../../src/backend/app/app.js';
 import { loadConfig } from '../../src/backend/system/settings/config.js';
@@ -22,6 +25,44 @@ function assistantContext(): PreparedContext {
 function isAssistantTimeout(error: unknown): boolean {
     return error instanceof AppError && error.status === 504 && error.code === 'AI_TIMEOUT';
 }
+
+test('OpenAI counting and generation both allow work beyond the old deadline', async t => {
+    const originalFetch = globalThis.fetch;
+    t.after(() => {
+        globalThis.fetch = originalFetch;
+    });
+    for (const phase of ['input_tokens', 'responses'])
+        await t.test(phase, async step => {
+            step.mock.timers.enable({ apis: ['setTimeout'] });
+            let receivedSignal: AbortSignal | undefined;
+            let markStarted: () => void = () => {};
+            const started = new Promise<void>(resolve => {
+                markStarted = resolve;
+            });
+            globalThis.fetch = async (input, init) => {
+                if (String(input).endsWith('/responses/input_tokens') && phase === 'responses')
+                    return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
+                const signal = init?.signal;
+                assert.ok(signal);
+                receivedSignal = signal;
+                markStarted();
+                return await new Promise<Response>((_resolve, reject) =>
+                    signal.addEventListener('abort', () => reject(signal.reason), { once: true }),
+                );
+            };
+            const driver = new OpenAIDriver('test-key', 'test-model');
+            const rejected = assert.rejects(
+                driver.propose(assistantContext(), new AbortController().signal),
+                isAssistantTimeout,
+            );
+            await started;
+            step.mock.timers.tick(45_000);
+            assert.equal(receivedSignal?.aborted, false);
+            step.mock.timers.tick(ASSISTANT_REQUEST_TIMEOUT_MS - 45_000);
+            await rejected;
+            assert.equal(receivedSignal?.aborted, true);
+        });
+});
 
 test('OpenAI receives prior chat messages before the fresh SQL context', async t => {
     const originalFetch = globalThis.fetch;

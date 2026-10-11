@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
     parseCsv,
     parseInput,
@@ -7,6 +8,7 @@ import {
 } from '../../.core-build/src/backend/database/imports/imports.js';
 import {
     AssistantService,
+    ASSISTANT_REQUEST_TIMEOUT_MS,
     buildContext,
     MAX_ASSISTANT_CONVERSATION_MESSAGES,
     validateAssistantConversation,
@@ -574,6 +576,52 @@ test('Cancelling an in-flight model request aborts it and records the cancelled 
     assert.equal(receivedSignal.aborted, true);
     assert.equal(store.get('ai-contexts', c.id).state, 'cancelled');
     assert.equal(store.count('proposals'), 0);
+});
+test('Assistant generation continues beyond 45 seconds and stops at the extended deadline', async t => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    t.mock.method(AbortSignal, 'timeout', milliseconds => {
+        const controller = new AbortController();
+        setTimeout(
+            () => controller.abort(new DOMException('Deadline reached.', 'TimeoutError')),
+            milliseconds,
+        );
+        return controller.signal;
+    });
+    const store = new MemoryStore();
+    let receivedSignal;
+    const ai = new AssistantService(
+        store,
+        {
+            available: true,
+            model: 'fixture',
+            propose(_context, signal) {
+                receivedSignal = signal;
+                return new Promise((_resolve, reject) =>
+                    signal.addEventListener('abort', () => reject(signal.reason), { once: true }),
+                );
+            },
+        },
+        () => true,
+    );
+    const context = ai.prepare(owner, aiFixture().input);
+    const rejected = assert.rejects(ai.propose(owner, context.id, true), { code: 'AI_TIMEOUT' });
+    t.mock.timers.tick(45_000);
+    assert.equal(receivedSignal.aborted, false);
+    assert.equal(store.get('ai-contexts', context.id).state, 'running');
+    t.mock.timers.tick(134_999);
+    assert.equal(receivedSignal.aborted, false);
+    t.mock.timers.tick(1);
+    await rejected;
+    assert.equal(receivedSignal.aborted, true);
+    assert.equal(store.get('ai-contexts', context.id).state, 'failed');
+    assert.equal(store.count('proposals'), 0);
+});
+test('Assistant deadline leaves headroom within the hosted function duration', () => {
+    const hosting = JSON.parse(readFileSync(new URL('../../vercel.json', import.meta.url), 'utf8'));
+    assert.equal(hosting.fluid, true);
+    assert.ok(
+        hosting.functions['api/assistant/sql.ts'].maxDuration * 1000 > ASSISTANT_REQUEST_TIMEOUT_MS,
+    );
 });
 test('A late model response after cancellation cannot create a proposal', async () => {
     const store = new MemoryStore();
