@@ -76,10 +76,7 @@ export function nextBlankQueryName(
 function renameLegacyBlankDrafts(tabs: Draft[], closedTabs: Draft[], now: Date) {
     const drafts = [...tabs, ...closedTabs];
     for (const draft of drafts) {
-        if (
-            draft.serverId ||
-            (draft.name !== 'Untitled Query' && !/^Query \d+$/.test(draft.name))
-        )
+        if (draft.serverId || (draft.name !== 'Untitled Query' && !/^Query \d+$/.test(draft.name)))
             continue;
         draft.name = nextBlankQueryName({ tabs, closedTabs }, now);
     }
@@ -296,9 +293,7 @@ export function closeDraft(state: WorkspaceState, draftId: string): WorkspaceSta
         0,
         MAX_CLOSED_TABS,
     );
-    const openTabs = tabs.length
-        ? tabs
-        : [newDraft(nextBlankQueryName({ tabs, closedTabs }))];
+    const openTabs = tabs.length ? tabs : [newDraft(nextBlankQueryName({ tabs, closedTabs }))];
     return {
         ...state,
         tabs: openTabs,
