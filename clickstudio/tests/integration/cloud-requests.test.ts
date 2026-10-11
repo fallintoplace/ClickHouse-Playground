@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import cloudApi from '../../api/cloud.js';
 import * as cloud from '../../src/frontend/database/connections/cloud-connection.js';
+import { BrowserWorkspaceApi } from '../../src/frontend/api/browser-workspace.js';
 
 const credentials = {
     host: 'service.clickhouse.cloud:8443',
@@ -15,6 +16,32 @@ const tested = {
     queryLogSource: 'query_log',
     traceLogSource: 'symbolized',
 };
+
+test('Browser Cloud workspace forwards table permission targets and returns individual rights', async t => {
+    const requests: Record<string, unknown>[] = [];
+    const permissions = { create: false, insert: true, drop: false };
+    t.mock.method(globalThis, 'fetch', async (_url: unknown, options?: RequestInit) => {
+        const body = JSON.parse(String(options?.body)) as Record<string, unknown>;
+        requests.push(body);
+        return Response.json(body.action === 'test' ? tested : permissions);
+    });
+    t.after(() => cloud.disconnectClickHouseCloud());
+    await cloud.connectClickHouseCloud(credentials);
+    const api = new BrowserWorkspaceApi();
+    assert.deepEqual(
+        await api.request('/connections/clickhouse-cloud/table-permissions', {
+            method: 'POST',
+            body: { database: 'analytics', table: 'events' },
+        }),
+        permissions,
+    );
+    assert.deepEqual(requests[1], {
+        action: 'table-permissions',
+        credentials,
+        database: 'analytics',
+        table: 'events',
+    });
+});
 
 test('Cloud wrappers preserve action spellings and their JSON request fields', async t => {
     const requests: unknown[] = [];
@@ -52,6 +79,7 @@ test('Cloud wrappers preserve action spellings and their JSON request fields', a
         new AbortController().signal,
     );
     await cloud.loadClickHouseCloudTableParts('default', 'events', new AbortController().signal);
+    await cloud.loadClickHouseCloudTablePermissions('default', 'events');
     await cloud.createClickHouseCloudTable({
         database: 'default',
         name: 'events',
@@ -90,6 +118,7 @@ test('Cloud wrappers preserve action spellings and their JSON request fields', a
         { action: 'native-explorer', kind: 'lineage', database: 'default' },
         { action: 'native-explorer', kind: 'mutations', database: 'default', table: 'events' },
         { action: 'table-parts', database: 'default', table: 'events' },
+        { action: 'table-permissions', database: 'default', table: 'events' },
         {
             action: 'create-table',
             database: 'default',
@@ -123,6 +152,7 @@ test('Local Cloud sessions continue to omit credentials from JSON and multipart 
     t.after(() => cloud.disconnectClickHouseCloud());
     await cloud.connectClickHouseCloud(credentials, true);
     await cloud.runClickHouseCloudSql('SELECT 1');
+    await cloud.loadClickHouseCloudTablePermissions('default');
     await cloud.importClickHouseCloudFile({
         file: new File(['value\nx'], 'rows.csv'),
         format: 'csv',
@@ -135,7 +165,11 @@ test('Local Cloud sessions continue to omit credentials from JSON and multipart 
         action: 'run',
         sql: 'SELECT 1',
     });
-    const form = requests[2]?.options?.body;
+    assert.deepEqual(JSON.parse(String(requests[2]?.options?.body)), {
+        action: 'table-permissions',
+        database: 'default',
+    });
+    const form = requests[3]?.options?.body;
     assert.ok(form instanceof FormData);
     assert.equal(form.get('action'), 'import-commit');
     assert.equal(form.has('credentials'), false);

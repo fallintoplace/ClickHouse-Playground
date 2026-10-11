@@ -37,6 +37,7 @@ import {
     loadClickHouseCloudProgress,
     loadClickHouseCloudQueryTree,
     loadClickHouseCloudSchema,
+    loadClickHouseCloudTablePermissions,
     runClickHouseCloudSql,
     searchClickHouseCloudDocumentation,
     CloudRequestError,
@@ -1062,6 +1063,14 @@ export class BrowserWorkspaceApi {
         options: RequestOptions,
     ): Promise<unknown> {
         switch (parts[2]) {
+            case 'table-permissions':
+                if (parts[1] === CLICKHOUSE_CLOUD_CONNECTION_ID && method === 'POST')
+                    return loadClickHouseCloudTablePermissions(
+                        typeof body.database === 'string' ? body.database : '',
+                        typeof body.table === 'string' ? body.table : undefined,
+                        options.signal,
+                    );
+                break;
             case 'schema':
                 switch (parts[1]) {
                     case 'demo':

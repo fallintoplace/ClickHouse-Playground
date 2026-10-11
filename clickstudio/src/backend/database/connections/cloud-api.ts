@@ -65,6 +65,7 @@ import {
     type CreateTableColumnType,
 } from '../../../shared/database/tables/create-table.js';
 import { createTableSql } from '../tables/create-table.js';
+import { queryTablePermissions } from '../tables/permissions.js';
 import {
     canDropTableTarget,
     dropTableSql,
@@ -1857,6 +1858,22 @@ async function post(request: Request): Promise<Response> {
                 return await handleCloudNativeExplorer(body, credentials, url);
             case CLOUD_ACTIONS.tableParts:
                 return await handleCloudTableParts(body, credentials, url);
+            case CLOUD_ACTIONS.tablePermissions: {
+                if (body.table !== undefined && typeof body.table !== 'string')
+                    return fail('TABLE_PERMISSION_TARGET', 'Choose a valid database and table.');
+                const client = makeClient(credentials, url);
+                try {
+                    return json(
+                        await queryTablePermissions(
+                            client,
+                            typeof body.database === 'string' ? body.database : '',
+                            body.table as string | undefined,
+                        ),
+                    );
+                } finally {
+                    await client.close();
+                }
+            }
             case CLOUD_ACTIONS.run:
                 return await handleCloudRun(body, credentials, url);
             case CLOUD_ACTIONS.workload:

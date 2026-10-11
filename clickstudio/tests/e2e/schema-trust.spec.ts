@@ -142,6 +142,121 @@ async function replaceSql(page: Page, sql: string) {
     await expect(editor).toContainText(sql);
 }
 
+for (const mode of ['beginner', 'expert']) {
+    test(`${mode} hides denied table writes while keeping read actions`, async ({ page }) => {
+        await page.addInitScript(
+            value => localStorage.setItem('clickstudio:experience', value),
+            mode,
+        );
+        let permissionRequests = 0;
+        await page.route('**/api/connections/live/table-permissions', async route => {
+            permissionRequests++;
+            await route.fulfill({ json: { create: false, insert: false, drop: false } });
+        });
+        await mockLiveWorkspace(page, route => route.fulfill({ json: schema }));
+        if (mode === 'beginner')
+            await page
+                .locator('.icon-rail')
+                .getByRole('button', { name: 'Objects', exact: true })
+                .click();
+        await expect.poll(() => permissionRequests).toBeGreaterThan(0);
+        await expect(page.getByRole('button', { name: 'New table', exact: true })).toHaveCount(0);
+        await page.getByText('events', { exact: true }).first().click();
+        await expect(page.getByRole('button', { name: 'Insert row', exact: true })).toHaveCount(0);
+        await expect(page.getByRole('button', { name: 'Delete table', exact: true })).toHaveCount(
+            0,
+        );
+        await expect(page.getByRole('button', { name: 'Preview rows', exact: true })).toBeVisible();
+        await expect(page.locator('.object-action-context')).toContainText('analytics.events');
+    });
+}
+
+test('Insert-only permissions hide create and drop while preserving the insert dialog', async ({
+    page,
+}) => {
+    await page.route('**/api/connections/live/table-permissions', route =>
+        route.fulfill({ json: { create: false, insert: true, drop: false } }),
+    );
+    await mockLiveWorkspace(page, route => route.fulfill({ json: schema }));
+    await page.getByText('events', { exact: true }).first().click();
+    await expect(page.getByRole('button', { name: 'New table', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Delete table', exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Insert row', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Insert row', exact: true })).toBeVisible();
+});
+
+test('Unavailable permission checks retain the existing table actions', async ({ page }) => {
+    let permissionRequests = 0;
+    await page.route('**/api/connections/live/table-permissions', async route => {
+        permissionRequests++;
+        await route.fulfill({
+            status: 502,
+            json: { error: { code: 'UNAVAILABLE', message: 'Unavailable' } },
+        });
+    });
+    await mockLiveWorkspace(page, route => route.fulfill({ json: schema }));
+    await page.getByText('events', { exact: true }).first().click();
+    await expect.poll(() => permissionRequests).toBeGreaterThan(1);
+    for (const name of ['New table', 'Insert row', 'Delete table'])
+        await expect(page.getByRole('button', { name, exact: true })).toBeEnabled();
+});
+
+test('A late denial closes an open write dialog and cannot reopen it', async ({ page }) => {
+    let deny: (() => void) | undefined;
+    await page.route('**/api/connections/live/table-permissions', async route => {
+        await new Promise<void>(resolve => {
+            deny = resolve;
+        });
+        await route.fulfill({ json: { create: false, insert: false, drop: false } });
+    });
+    await mockLiveWorkspace(page, route => route.fulfill({ json: schema }));
+    await page.getByRole('button', { name: 'New table', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'New table', exact: true });
+    await expect(dialog).toBeVisible();
+    await expect.poll(() => Boolean(deny)).toBe(true);
+    deny!();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'New table', exact: true })).toHaveCount(0);
+});
+
+test('A late denial for a previous table does not hide the current table actions', async ({
+    page,
+}) => {
+    let denyPrevious: (() => void) | undefined;
+    let previousResolved = false;
+    let currentResolved = false;
+    await page.route('**/api/connections/live/table-permissions', async route => {
+        const { table } = route.request().postDataJSON() as { table?: string };
+        if (table === 'events') {
+            await new Promise<void>(resolve => {
+                denyPrevious = resolve;
+            });
+            await route.fulfill({ json: { create: false, insert: false, drop: false } });
+            previousResolved = true;
+        } else {
+            await route.fulfill({ json: { create: true, insert: true, drop: true } });
+            if (table === 'new_events') currentResolved = true;
+        }
+    });
+    await mockLiveWorkspace(page, route =>
+        route.fulfill({
+            json: {
+                ...schema,
+                tables: [...schema.tables, { ...schema.tables[0], name: 'new_events' }],
+            },
+        }),
+    );
+    await page.getByText('events', { exact: true }).first().click();
+    await expect.poll(() => Boolean(denyPrevious)).toBe(true);
+    await page.getByRole('button', { name: '‹ Objects', exact: true }).click();
+    await page.getByText('new_events', { exact: true }).first().click();
+    denyPrevious!();
+    await expect.poll(() => previousResolved && currentResolved).toBe(true);
+    await expect(page.locator('.object-action-context')).toContainText('analytics.new_events');
+    for (const name of ['New table', 'Insert row', 'Delete table'])
+        await expect(page.getByRole('button', { name, exact: true })).toBeEnabled();
+});
+
 async function hoverToken(page: Page, token: string) {
     const point = await page.locator('.cm-content').evaluate((root, value) => {
         const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);

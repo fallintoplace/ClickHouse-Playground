@@ -34,6 +34,7 @@ import type {
     NativeExplorerSnapshot,
 } from '../../../shared/database/explorer/explorers.js';
 import type { MergeTreePartsSnapshot } from '../../../shared/database/explorer/storage/parts.js';
+import type { TablePermissions } from '../../../shared/database/tables/permissions.js';
 
 export { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../../shared/database/connections/cloud-policy.js';
 
@@ -589,6 +590,24 @@ export async function dropClickHouseCloudTable(
         table,
         confirmation,
     });
+}
+
+export async function loadClickHouseCloudTablePermissions(
+    database: string,
+    table?: string,
+    signal?: AbortSignal,
+) {
+    if (!activeCloud)
+        throw new CloudRequestError('CLOUD_DISCONNECTED', 'Reconnect to ClickHouse Cloud.', 401);
+    return requestCloud<TablePermissions>(
+        {
+            action: CLOUD_ACTIONS.tablePermissions,
+            credentials: activeCloud.credentials,
+            database,
+            ...(table === undefined ? {} : { table }),
+        },
+        signal,
+    );
 }
 
 export async function importClickHouseCloudFile(input: CloudImportInput): Promise<CloudImportJob> {

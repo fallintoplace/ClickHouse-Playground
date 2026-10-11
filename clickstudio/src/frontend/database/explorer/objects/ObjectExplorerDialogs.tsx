@@ -16,6 +16,8 @@ export function ObjectExplorerDialogs({
     schema,
     setLineageOpen,
     createTableOpen,
+    actionDatabase,
+    tablePermissions,
     setCreateTableOpen,
     setSearch,
     setCreatedTableTarget,
@@ -38,6 +40,8 @@ export function ObjectExplorerDialogs({
     | 'schema'
     | 'setLineageOpen'
     | 'createTableOpen'
+    | 'actionDatabase'
+    | 'tablePermissions'
     | 'setCreateTableOpen'
     | 'setSearch'
     | 'setCreatedTableTarget'
@@ -72,10 +76,10 @@ export function ObjectExplorerDialogs({
                     />
                 </OverlayPortal>
             )}
-            {trusted && createTableOpen && (
+            {trusted && tablePermissions.create !== false && createTableOpen && (
                 <OverlayPortal>
                     <CreateTableDialog
-                        connection={connection}
+                        connection={{ ...connection, database: actionDatabase }}
                         databases={schema?.databases ?? []}
                         onClose={() => setCreateTableOpen(false)}
                         onCreated={target => {
@@ -86,7 +90,7 @@ export function ObjectExplorerDialogs({
                     />
                 </OverlayPortal>
             )}
-            {trusted && insertRowTarget && (
+            {trusted && tablePermissions.insert !== false && insertRowTarget && (
                 <OverlayPortal>
                     <InsertRowDialog
                         key={`${insertRowTarget.table.database}.${insertRowTarget.table.name}`}
@@ -98,7 +102,7 @@ export function ObjectExplorerDialogs({
                     />
                 </OverlayPortal>
             )}
-            {trusted && deleteTableTarget && (
+            {trusted && tablePermissions.drop !== false && deleteTableTarget && (
                 <OverlayPortal>
                     <DeleteTableDialog
                         connectionId={connection.id}

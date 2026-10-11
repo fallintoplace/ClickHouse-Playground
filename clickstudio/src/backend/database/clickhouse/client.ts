@@ -74,6 +74,8 @@ import {
 import { sourcePositionFromUtf8ByteOffset } from '../../../shared/sql/parser.js';
 import { quotedTable } from '../imports/imports.js';
 import { publicProfile, redactor, type Config, type Profile } from '../../system/config.js';
+import { queryTablePermissions } from '../tables/permissions.js';
+import { NO_TABLE_PERMISSIONS } from '../../../shared/database/tables/permissions.js';
 /** All database addresses and credentials are operator-owned; the API accepts only profile IDs. */
 export class ClickHouseDriver implements QueryDriver, ImportDriver, CreateTableDriver {
     private readers = new Map<string, ClickHouseClient>();
@@ -941,6 +943,10 @@ export class ClickHouseDriver implements QueryDriver, ImportDriver, CreateTableD
     }
     database(id: string) {
         return this.profile(id).database;
+    }
+    async tablePermissions(id: string, database: string, table?: string) {
+        if (this.profile(id).publicPlayground) return { ...NO_TABLE_PERMISSIONS };
+        return queryTablePermissions(this.client(id, true), database, table);
     }
     async createTable(
         id: string,

@@ -20,6 +20,7 @@ import type { WorkloadWindow } from '../../../shared/database/explorer/activity/
 import { DEMO_EXPLAIN_ANALYZE, demoMergeTreePartRows } from '../../../shared/samples/database.js';
 import { AppError } from '../../system/requests/errors.js';
 import type { CreateTableColumn } from '../tables/create-table.js';
+import { NO_TABLE_PERMISSIONS } from '../../../shared/database/tables/permissions.js';
 
 const demoIndexAnalysis = [
     'ReadFromMergeTree (demo.events)',
@@ -55,6 +56,9 @@ const demoIndexAnalysis = [
  * database.
  */
 export class DemoDriver {
+    async tablePermissions(_id: string, _database: string, _table?: string) {
+        return { ...NO_TABLE_PERMISSIONS };
+    }
     connection(_p: Principal, id: string): Connection {
         if (!['demo', 'demo-second'].includes(id))
             throw new AppError(404, 'CONNECTION_NOT_FOUND', 'Fixture connection not found');

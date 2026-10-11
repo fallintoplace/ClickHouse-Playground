@@ -11,6 +11,7 @@ export type Driver = QueryDriver &
         | 'test'
         | 'targets'
         | 'database'
+        | 'tablePermissions'
         | 'createTable'
         | 'dropTable'
         | 'profileEvidence'

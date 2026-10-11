@@ -81,7 +81,7 @@ export function createApp(
     registerConnectionRoutes({ app, driver, runs, authorized });
     registerExplorerRoutes({ app, authorized, driver });
     registerDocumentationRoutes({ authorized, driver, app });
-    registerTableRoutes({ app, tableCreation, tableDeletion, driver });
+    registerTableRoutes({ app, tableCreation, tableDeletion, driver, authorized });
     registerRunRoutes({ app, runs, store, sessions, safeExport, authorized, driver, config });
     registerDocumentRoutes({ app, driver, artifacts, safeExport });
     registerAssistantRoutes({

@@ -14,6 +14,7 @@ import {
 } from '../../../../../shared/database/tables/delete-table';
 import type { ObjectExplorerProps } from './object-explorer-types';
 import { createRelationRenderer } from './object-relation-renderer';
+import { useTablePermissions } from '../../../tables/useTablePermissions';
 
 export type ObjectExplorerView = ReturnType<typeof useObjectExplorerState>;
 
@@ -236,6 +237,23 @@ export function useObjectExplorerState(props: ObjectExplorerProps) {
     const selected = selectedId ? model.selectionById.get(selectedId) : undefined;
     const selectedTable =
         selected?.kind === 'relation' && selected.relationKind === 'table' ? selected : undefined;
+    const actionDatabase = selectedTable?.table.database ?? connection.database;
+    const tablePermissions = useTablePermissions(
+        connection,
+        trusted,
+        actionDatabase,
+        selectedTable?.table.name,
+    );
+    useEffect(() => {
+        if (tablePermissions.create === false) setCreateTableOpen(false);
+        if (tablePermissions.insert === false) setInsertRowTarget(undefined);
+        if (tablePermissions.drop === false) setDeleteTableTarget(undefined);
+    }, [tablePermissions.create, tablePermissions.insert, tablePermissions.drop]);
+    useEffect(() => {
+        setCreateTableOpen(false);
+        setInsertRowTarget(undefined);
+        setDeleteTableTarget(undefined);
+    }, [storageKey, connection.host, connection.username, connection.manifest?.testedAt]);
     const insertableTable =
         selectedTable && !isSystemDatabaseName(selectedTable.table.database)
             ? selectedTable
@@ -291,6 +309,8 @@ export function useObjectExplorerState(props: ObjectExplorerProps) {
         compact,
         showCompactDetails,
         selectedTable,
+        actionDatabase,
+        tablePermissions,
         connection,
         trusted,
         copy,

@@ -15,6 +15,32 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const mode of ['Standard', 'Experimental']) {
+    test(`${mode} hides table write actions on the public Playground`, async ({ page }) => {
+        await page.route('**/api/connections/playground/schema*', route =>
+            route.fulfill({
+                json: {
+                    connectionId: 'playground',
+                    fetchedAt: new Date().toISOString(),
+                    tables: [{ database: 'github', name: 'events', engine: 'MergeTree' }],
+                    columns: [],
+                    dictionaries: [],
+                    warnings: [],
+                    truncated: false,
+                },
+            }),
+        );
+        await page.goto('/?connection=playground');
+        await page.getByText(mode, { exact: true }).click();
+        await expect(page.getByRole('button', { name: 'New table', exact: true })).toHaveCount(0);
+        if (mode === 'Standard')
+            await page
+                .locator('.icon-rail')
+                .getByRole('button', { name: 'Objects', exact: true })
+                .click();
+        await page.getByText('events', { exact: true }).first().click();
+        for (const name of ['New table', 'Insert row', 'Delete table'])
+            await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
+    });
     test(`${mode} closes the source picker on an outside editor click`, async ({ page }) => {
         await page.getByText(mode, { exact: true }).click();
         const trigger = page.locator('.connection-trigger');

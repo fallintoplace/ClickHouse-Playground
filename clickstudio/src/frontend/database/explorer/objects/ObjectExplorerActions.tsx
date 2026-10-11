@@ -5,6 +5,7 @@ import type { ObjectExplorerView } from './tree/useObjectExplorerState';
 
 export function ObjectExplorerActions({
     selectedTable,
+    tablePermissions,
     connection,
     trusted,
     copy,
@@ -15,6 +16,7 @@ export function ObjectExplorerActions({
     setDeleteTableTarget,
 }: {
     selectedTable: ObjectExplorerView['selectedTable'];
+    tablePermissions: ObjectExplorerView['tablePermissions'];
     connection: ObjectExplorerProps['connection'];
     trusted: ObjectExplorerProps['trusted'];
     copy: ObjectExplorerProps['copy'];
@@ -24,6 +26,7 @@ export function ObjectExplorerActions({
     deletableTable: ObjectExplorerView['deletableTable'];
     setDeleteTableTarget: ObjectExplorerView['setDeleteTableTarget'];
 }) {
+    if (!selectedTable && tablePermissions.create === false) return null;
     return (
         <div
             className="object-explorer-action-bar"
@@ -34,7 +37,7 @@ export function ObjectExplorerActions({
                     : 'Table actions'
             }
         >
-            {connection.dataSource !== 'fixture' && (
+            {connection.dataSource !== 'fixture' && tablePermissions.create !== false && (
                 <Button
                     variant="secondary"
                     className="toolbar-small object-create-table-action"
@@ -46,35 +49,39 @@ export function ObjectExplorerActions({
                     {copy.newTable}
                 </Button>
             )}
-            {connection.dataSource !== 'fixture' && insertableTable && (
-                <Button
-                    variant="secondary"
-                    className="toolbar-small"
-                    disabled={!trusted}
-                    title={!trusted ? copy.runActionTrustRequired : undefined}
-                    onClick={() =>
-                        setInsertRowTarget({
-                            table: insertableTable.table,
-                            columns: insertableTable.columns,
-                        })
-                    }
-                >
-                    <Icon name="plus" />
-                    {copy.insertRow}
-                </Button>
-            )}
-            {connection.dataSource !== 'fixture' && deletableTable && (
-                <Button
-                    variant="danger"
-                    className="toolbar-small object-delete-table-action"
-                    disabled={!trusted}
-                    title={!trusted ? copy.runActionTrustRequired : undefined}
-                    onClick={() => setDeleteTableTarget(deletableTable)}
-                >
-                    <Icon name="trash" />
-                    {copy.deleteTable}
-                </Button>
-            )}
+            {connection.dataSource !== 'fixture' &&
+                tablePermissions.insert !== false &&
+                insertableTable && (
+                    <Button
+                        variant="secondary"
+                        className="toolbar-small"
+                        disabled={!trusted}
+                        title={!trusted ? copy.runActionTrustRequired : undefined}
+                        onClick={() =>
+                            setInsertRowTarget({
+                                table: insertableTable.table,
+                                columns: insertableTable.columns,
+                            })
+                        }
+                    >
+                        <Icon name="plus" />
+                        {copy.insertRow}
+                    </Button>
+                )}
+            {connection.dataSource !== 'fixture' &&
+                tablePermissions.drop !== false &&
+                deletableTable && (
+                    <Button
+                        variant="danger"
+                        className="toolbar-small object-delete-table-action"
+                        disabled={!trusted}
+                        title={!trusted ? copy.runActionTrustRequired : undefined}
+                        onClick={() => setDeleteTableTarget(deletableTable)}
+                    >
+                        <Icon name="trash" />
+                        {copy.deleteTable}
+                    </Button>
+                )}
             {selectedTable && (
                 <span
                     className="object-action-context"

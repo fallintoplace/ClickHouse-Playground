@@ -16,6 +16,7 @@ export const CLOUD_ACTIONS = {
     documentationEntry: 'documentation-entry',
     nativeExplorer: 'native-explorer',
     tableParts: 'table-parts',
+    tablePermissions: 'table-permissions',
     run: 'run',
     workload: 'workload',
     replication: 'replication',
@@ -55,6 +56,7 @@ type CloudRequestPayloads = {
     [CLOUD_ACTIONS.documentationEntry]: { name: string; type: string; serverVersion?: string };
     [CLOUD_ACTIONS.nativeExplorer]: NativeExplorerRequest;
     [CLOUD_ACTIONS.tableParts]: { database: string; table: string };
+    [CLOUD_ACTIONS.tablePermissions]: { database: string; table?: string };
     [CLOUD_ACTIONS.run]: QueryInput & { sessionId?: string; queryId?: string };
     [CLOUD_ACTIONS.workload]: { minutes: WorkloadWindow; source: QueryLogSource };
     [CLOUD_ACTIONS.replication]: object;

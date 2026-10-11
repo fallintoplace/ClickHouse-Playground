@@ -13,6 +13,8 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
         compact,
         showCompactDetails,
         selectedTable,
+        actionDatabase,
+        tablePermissions,
         connection,
         trusted,
         copy,
@@ -69,6 +71,7 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
             <ObjectExplorerActions
                 {...{
                     selectedTable,
+                    tablePermissions,
                     connection,
                     trusted,
                     copy,
@@ -243,6 +246,8 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                     schema,
                     setLineageOpen,
                     createTableOpen,
+                    actionDatabase,
+                    tablePermissions,
                     setCreateTableOpen,
                     setSearch,
                     setCreatedTableTarget,

@@ -39,6 +39,7 @@
     "src/backend/system/store.ts",
     "src/backend/database/tables/create-table.ts",
     "src/backend/database/tables/delete-table.ts",
+    "src/backend/database/tables/permissions.ts",
     "src/backend/system/requests/validation.ts",
     "src/frontend/assistant/proposals/assistant-proposal.ts",
     "src/frontend/database/connections/selection.ts",

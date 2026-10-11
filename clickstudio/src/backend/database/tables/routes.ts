@@ -9,18 +9,43 @@ import { requireThat } from '../../system/requests/errors.js';
 import { choice, record, text } from '../../system/requests/validation.js';
 import type { Driver } from '../../app/types.js';
 import { body, principal, id } from '../../system/requests/http.js';
+import type { Principal } from '../../../shared/common/identity.js';
+import { NO_TABLE_PERMISSIONS } from '../../../shared/database/tables/permissions.js';
 
 export function registerTableRoutes({
     app,
     tableCreation,
     tableDeletion,
     driver,
+    authorized,
 }: {
     app: ReturnType<typeof express>;
     tableCreation: TableCreationService;
     tableDeletion: TableDeletionService;
     driver: Driver;
+    authorized: (p: Principal, c: string) => boolean;
 }) {
+    app.post('/api/connections/:id/table-permissions', async (req, res) => {
+        const p = principal(res),
+            connectionId = id(req),
+            v = body(req);
+        requireThat(
+            authorized(p, connectionId),
+            403,
+            'WORKSPACE_UNTRUSTED',
+            'Trust this connection before checking table permissions',
+        );
+        res.setHeader('Cache-Control', 'no-store');
+        res.json(
+            p.role === 'viewer'
+                ? NO_TABLE_PERMISSIONS
+                : await driver.tablePermissions(
+                      connectionId,
+                      text(v.database, 'database', 128),
+                      v.table === undefined ? undefined : text(v.table, 'table', 128),
+                  ),
+        );
+    });
     app.post('/api/connections/:id/tables', async (req, res) => {
         const v = body(req),
             columnsValue = v.columns;
