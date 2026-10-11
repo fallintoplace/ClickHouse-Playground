@@ -135,27 +135,28 @@
     padding-block: 3px;
   }
   .editor-heading-actions {
-    gap: 6px;
-    padding-right: 34px;
+    flex: none;
+    gap: 4px;
+    padding-right: 30px;
   }
   .results-actions,
   .results-header .result-table-toolbar {
-    gap: 6px;
+    gap: 4px;
   }
   .editor-heading-actions > .button-base,
   .results-header .button-base {
-    min-height: 28px;
-    gap: 6px;
-    padding-inline: 8px;
+    min-height: 26px;
+    gap: 4px;
+    padding-inline: 7px;
   }
   .editor-heading-actions > .run-query-button {
-    min-height: 32px;
-    padding-inline: 12px;
+    min-height: 30px;
+    padding-inline: 10px;
   }
   :is(.editor-heading, .results-header)
     :is(.panel-window-button, .panel-collapse-button, .result-pagination .button-base) {
-    width: 28px;
-    min-width: 28px;
+    width: 26px;
+    min-width: 26px;
     padding: 0;
   }
   :is(.editor-heading, .results-header)
@@ -170,18 +171,18 @@
     transform: none;
   }
   .results-tabs {
-    height: 28px;
-    padding: 2px;
+    height: 26px;
+    padding: 0;
   }
   .results-tabs button {
     display: flex;
     align-items: center;
-    padding: 0 8px;
+    padding: 0 7px;
   }
   .results-header .result-filter {
-    height: 28px;
-    min-height: 28px;
-    padding-block: 4px;
+    height: 26px;
+    min-height: 26px;
+    padding-block: 3px;
   }
 }
 

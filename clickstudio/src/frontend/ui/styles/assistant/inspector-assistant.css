@@ -3175,6 +3175,16 @@
     min-height: 32px;
     padding-block: 2px;
   }
+  .help-button,
+  .execution-details-button {
+    min-height: 24px;
+    gap: 4px;
+    padding-inline: 7px;
+  }
+  .help-button svg {
+    width: 14px;
+    height: 14px;
+  }
   :is(.help-button, .execution-details-button):focus-visible {
     outline-offset: 0;
   }

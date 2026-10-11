@@ -116,6 +116,16 @@ for (const mode of ['Standard', 'Experimental']) {
         await expect(page.getByRole('dialog', { name: 'Explore ClickStudio' })).toHaveCount(0);
         await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'ready');
         expect(originalName).not.toBeNull();
+        const closeOriginal = originalTab.getByRole('button', { name: /^Close / });
+        for (const theme of ['Light', 'Dark']) {
+            await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+            await expect(closeOriginal).toHaveCSS('opacity', '0');
+            await page.keyboard.press('Tab');
+            await closeOriginal.focus();
+            await expect(closeOriginal).toBeFocused();
+            await expect(closeOriginal).toHaveCSS('opacity', '1');
+            await expect(tabs.getByRole('tab').last()).toHaveAttribute('aria-selected', 'true');
+        }
         await page.getByRole('tab', { name: originalName!, exact: true }).click();
         await page.getByRole('button', { name: 'Expand SQL query', exact: true }).click();
         await expect(page.locator('.cm-content')).toHaveText(sql);

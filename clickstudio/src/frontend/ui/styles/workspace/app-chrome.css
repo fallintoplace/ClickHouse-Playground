@@ -915,6 +915,7 @@
     opacity: 0;
   }
   .document-tab:hover > button,
+  .document-tab:focus-within > button,
   .document-tab.is-active > button {
     opacity: 1;
   }
@@ -1168,6 +1169,13 @@
   .topbar-control-rail {
     padding: 2px;
   }
+  .connection-trigger {
+    padding-block: 2px;
+  }
+  .cloud-topbar-action {
+    min-height: 30px;
+    padding-inline: 9px;
+  }
 }
 
 @media (min-width: 761px) and (pointer: fine) {
@@ -1175,10 +1183,19 @@
     min-height: 32px;
   }
   .new-tab-button {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
+  }
+  .new-tab-button svg {
+    width: 14px;
+    height: 14px;
   }
   .document-tabs-scroll-button {
-    height: 28px;
+    width: 26px;
+    height: 26px;
+  }
+  .document-tab > button {
+    width: 24px;
+    height: 24px;
   }
 }
