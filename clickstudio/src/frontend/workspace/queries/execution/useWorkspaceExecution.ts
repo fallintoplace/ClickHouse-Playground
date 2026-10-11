@@ -475,6 +475,7 @@ function createDraftExecutor({
             parseFailed = true;
             parseError = caught;
         }
+        if (!parseFailed && statements.length === 0) return Promise.resolve();
         const isScript = kind === 'query' && statements.length > 1;
         const statement = isScript ? undefined : statements[0];
         const draftSql = options.draftSql ?? draft.sql;
@@ -518,8 +519,6 @@ function createDraftExecutor({
                             explainAnalyze.reason ??
                                 'EXPLAIN ANALYZE is unavailable on this connection.',
                         );
-                    if (statements.length === 0)
-                        throw new Error('Write or select a SQL statement before running it.');
                     if (!isScript && statements.length > 1)
                         throw new Error('This action accepts exactly one SQL statement.');
                     if (

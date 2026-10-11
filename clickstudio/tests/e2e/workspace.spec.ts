@@ -19,6 +19,71 @@ function countRunRequests(page: Page) {
 }
 
 for (const mode of ['Standard', 'Experimental']) {
+    test(`${mode} ignores empty SQL without leaving a warning`, async ({ page }) => {
+        await page.addInitScript(
+            experience => localStorage.setItem('clickstudio:experience', experience),
+            mode === 'Standard' ? 'beginner' : 'expert',
+        );
+        let submissions = 0;
+        page.on('request', request => {
+            if (
+                request.method() === 'POST' &&
+                ['/api/runs', '/api/scripts'].includes(new URL(request.url()).pathname)
+            )
+                submissions++;
+        });
+        await trust(page);
+        await openBlankSql(page);
+        const footer = page.locator('.execution-bar');
+        const notice = page.locator('.editor-surface .workspace-inline-notice');
+        const clickRun = async () => {
+            await runButton(page).click();
+            await page.evaluate(
+                () =>
+                    new Promise<void>(resolve =>
+                        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+                    ),
+            );
+            await expect(notice).toHaveCount(0);
+            await expect(runButton(page)).toBeEnabled();
+        };
+
+        await clickRun();
+        for (const sql of [
+            ' \t\n ',
+            '-- Only a line comment',
+            '# Only a hash comment',
+            '/* Only a block comment */',
+            '; ; -- No statements\n /* Still no statements */ ;',
+        ]) {
+            await replaceSql(page, sql);
+            await clickRun();
+            await expect(footer).toHaveAttribute('data-run-status', 'ready');
+            expect(submissions).toBe(0);
+        }
+
+        const sql = '-- Select only this comment\nSELECT 1;';
+        await replaceSql(page, sql);
+        await clickRun();
+        await expect(footer).toHaveAttribute('data-run-status', 'succeeded');
+        const queryId = await currentQueryId(page);
+        expect(submissions).toBe(1);
+
+        await page.locator('.cm-content').focus();
+        await page.keyboard.press('ControlOrMeta+Home');
+        await page.keyboard.press('Shift+End');
+        await clickRun();
+        await expect(footer).toHaveAttribute('data-query-id', queryId);
+        await expect(footer).toHaveAttribute('data-run-status', 'succeeded');
+        expect(submissions).toBe(1);
+
+        await replaceSql(page, 'SELECT 2;');
+        await clickRun();
+        await expect(footer).toHaveAttribute('data-run-status', 'succeeded');
+        await expect(footer).not.toHaveAttribute('data-query-id', queryId);
+        expect(submissions).toBe(2);
+    });
+
     test(`${mode} plus opens a blank SQL tab and preserves the current draft`, async ({ page }) => {
         await page.addInitScript(
             experience => localStorage.setItem('clickstudio:experience', experience),
