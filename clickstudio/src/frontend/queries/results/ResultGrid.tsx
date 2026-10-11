@@ -283,7 +283,7 @@ export function ResultGrid({
     } else {
         rowCount = `${page.totalRows.toLocaleString()} ${page.totalRows === 1 ? 'row' : 'rows'}`;
     }
-    const toolbar = (showPagination || page.completeness === 'truncated') && (
+    const toolbar = showPagination && (
         <div className="result-table-toolbar" inert={obscured || undefined}>
             {showPagination && (
                 <span
@@ -343,15 +343,6 @@ export function ResultGrid({
                         <Icon name="lastPage" />
                     </Button>
                 </nav>
-            )}
-            {page.completeness === 'truncated' && (
-                <span
-                    className="result-completeness"
-                    title="Only the retained prefix is available. The query may have matched more rows."
-                >
-                    <span className="status-light is-warning" />
-                    Retained prefix · truncated
-                </span>
             )}
             {showPagination && (
                 <div className="result-filter-controls">

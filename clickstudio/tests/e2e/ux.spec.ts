@@ -10,6 +10,7 @@ function countRuns(page: Page) {
 }
 
 async function mockPaginatedResult(page: Page, totalRows = 450, completeness = 'complete') {
+    if (completeness === 'truncated') await mockTruncatedRun(page);
     await page.route(
         url => /\/(result|snapshot)$/.test(url.pathname),
         async route => {
@@ -32,6 +33,19 @@ async function mockPaginatedResult(page: Page, totalRows = 450, completeness = '
                     completeness,
                     nextOffset: offset + rows.length < totalRows ? offset + rows.length : null,
                 },
+            });
+        },
+    );
+}
+
+async function mockTruncatedRun(page: Page) {
+    await page.route(
+        url => url.pathname === '/api/runs',
+        async route => {
+            if (route.request().method() !== 'POST') return route.continue();
+            const input = route.request().postDataJSON();
+            await route.continue({
+                postData: JSON.stringify({ ...input, limits: { ...input.limits, rows: 1 } }),
             });
         },
     );
@@ -319,6 +333,7 @@ for (const { rows, completeness } of [
     test(`Results toolbar reports ${rows} rows with ${completeness} retention without a pagination footer`, async ({
         page,
     }) => {
+        if (completeness === 'truncated') await mockTruncatedRun(page);
         await page.route(
             url => url.pathname.endsWith('/result'),
             async route => {
@@ -345,14 +360,16 @@ for (const { rows, completeness } of [
             `${rows} ${rows === 1 ? 'row' : 'rows'}`,
         );
         await expect(results.locator('.table-pagination, .result-pagination')).toHaveCount(0);
+        await expect(results.locator('.result-completeness')).toHaveCount(0);
         if (completeness === 'truncated') {
-            await expect(results.locator('.results-header .result-completeness')).toContainText(
-                'Retained prefix · truncated',
+            await expect(page.locator('.execution-bar')).toHaveAttribute(
+                'data-run-status',
+                'truncated',
             );
+            await expect(page.locator('.execution-bar')).toContainText('Truncated');
             if (rows === 0)
                 await expect(results.getByText(/No rows fit in the retained result/)).toBeVisible();
         } else {
-            await expect(results.locator('.result-completeness')).toHaveCount(0);
             if (rows === 0)
                 await expect(results.getByText('This query returned zero rows.')).toBeVisible();
         }
@@ -414,9 +431,9 @@ test('Paged truncated results keep header navigation when returning from Chart',
     const results = page.getByRole('region', { name: 'Query results', exact: true });
     const header = results.locator('.results-header');
     await expect(header.locator('.result-row-count')).toHaveText('1–200 / 250 rows');
-    await expect(header.locator('.result-completeness')).toContainText(
-        'Retained prefix · truncated',
-    );
+    await expect(header.locator('.result-completeness')).toHaveCount(0);
+    await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'truncated');
+    await expect(page.locator('.execution-bar')).toContainText('Truncated');
     const pagination = header.getByRole('navigation', { name: 'Result pagination', exact: true });
     await pagination.getByRole('button', { name: 'Last page', exact: true }).click();
     await expect(header.locator('.result-row-count')).toHaveText('201–250 / 250 rows');
@@ -436,8 +453,7 @@ test('Paged truncated results keep header navigation when returning from Chart',
     await expect(
         header.getByRole('navigation', { name: 'Result pagination', exact: true }),
     ).toHaveCount(1);
-    await expect(header.locator('.result-completeness')).toContainText(
-        'Retained prefix · truncated',
-    );
+    await expect(header.locator('.result-completeness')).toHaveCount(0);
+    await expect(page.locator('.execution-bar')).toContainText('Truncated');
     expect(runs()).toBe(1);
 });

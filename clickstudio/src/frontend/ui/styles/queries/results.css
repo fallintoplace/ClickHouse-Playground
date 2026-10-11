@@ -213,12 +213,6 @@
     border-color: var(--active-border);
     box-shadow: var(--focus-ring);
   }
-  .result-completeness {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    color: var(--amber);
-  }
   .data-table-scroll {
     min-height: 0;
     flex: 1;
