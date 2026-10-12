@@ -159,7 +159,7 @@ export function WorkspaceQueryPanel({
                 (!executionCanCancel && runDisabled)
             }
         >
-            <Icon name={cancelButtonActive ? 'stop' : 'play'} />
+            <Icon name={cancelButtonActive ? 'close' : 'play'} />
             {runButtonLabel}
         </Button>
     );
