@@ -6,6 +6,7 @@ import { prepareChartView } from '../../.workspace-build/src/frontend/queries/re
 import {
     categoryAxisLayout,
     chartLabelWidth,
+    chartTickLabelWidth,
     fitCategoryTicks,
     fitChartTicks,
 } from '../../.workspace-build/src/frontend/queries/results/charts/chart-helpers.js';
@@ -36,6 +37,16 @@ function prepare(data, overrides = {}, width = 652, plotViewportWidth = 760) {
     });
 }
 
+function tickBounds(ticks) {
+    return ticks.map((tick, index) => {
+        const width = chartTickLabelWidth(tick.label);
+        let left = tick.position;
+        if (index === ticks.length - 1 && ticks.length > 1) left -= width;
+        else if (index > 0 || ticks.length === 1) left -= width / 2;
+        return { left, right: left + width };
+    });
+}
+
 test('Timestamp ticks reduce to endpoints or a middle tick when their labels cannot fit', () => {
     for (const [width, count] of [
         [500, 3],
@@ -57,6 +68,54 @@ test('Timestamp ticks reduce to endpoints or a middle tick when their labels can
     const crowded = [80, 100, 732].map(position => ({ ...tick, position }));
     assert.deepEqual(fitChartTicks(crowded), [crowded[0], crowded[2]]);
 });
+
+test('Chart ticks keep the most labels that fit between the endpoints', () => {
+    const spacious = ['0', '1', '2', '3', '4'].map((label, index) => ({
+        label,
+        position: 80 + index * 100,
+    }));
+    assert.deepEqual(fitChartTicks(spacious), spacious);
+
+    const crowded = Array.from({ length: 61 }, (_value, index) => ({
+        label: String(index),
+        position: 80 + index * 12,
+    }));
+    const fitted = fitChartTicks(crowded);
+    assert.ok(fitted.length > 3);
+    assert.ok(fitted.length < crowded.length);
+    assert.equal(fitted.length, 31);
+    assert.equal(fitted[0]?.label, crowded[0]?.label);
+    assert.equal(fitted.at(-1)?.label, crowded.at(-1)?.label);
+    const bounds = tickBounds(fitted);
+    assert.ok(
+        bounds.every((tick, index) => index === 0 || tick.left >= bounds[index - 1].right + 8),
+    );
+});
+
+for (const xType of ['DateTime', 'Float64']) {
+    test(`${xType} charts show every point label when the plot has room`, () => {
+        const rows = Array.from({ length: 5 }, (_value, index) => [
+            xType === 'DateTime' ? `2026-10-12 0${index}:00:00` : index,
+            index * index,
+        ]);
+        const view = prepare(
+            result(
+                [
+                    ['x', xType],
+                    ['value', 'Float64'],
+                ],
+                rows,
+            ),
+            { kind: 'line' },
+            652,
+            900,
+        );
+        assert.deepEqual(
+            view.svg.chartXTicks.map(tick => tick.label),
+            rows.map(row => String(row[0])),
+        );
+    });
+}
 
 for (const [rowCount, width, tickCount] of [
     [2, 408, 1],
@@ -84,7 +143,7 @@ for (const [rowCount, width, tickCount] of [
 
 for (const xType of ['DateTime', 'Float64']) {
     for (const kind of ['line', 'bar']) {
-        test(`${xType} ${kind} charts use the viewport width with readable sparse ticks`, () => {
+        test(`${xType} ${kind} charts show as many ticks as the viewport can fit`, () => {
             const rows = Array.from({ length: 600 }, (_value, index) => [
                 xType === 'DateTime'
                     ? new Date(Date.UTC(2026, 9, 11, 1, index)).toISOString()
@@ -98,15 +157,30 @@ for (const xType of ['DateTime', 'Float64']) {
                 ],
                 rows,
             );
+            const tickCounts = [];
             for (const width of [320, 760, 1800]) {
                 const view = prepare(data, { kind }, 652, width);
                 assert.equal(view.categoricalAxis, false);
                 assert.equal(view.svg.viewportWidth, width);
                 assert.equal(view.svg.plotLeft, 80);
                 assert.equal(view.svg.plotRight, width - 28);
-                assert.equal(
-                    view.svg.chartXTicks.length,
-                    width === 320 && xType === 'DateTime' ? 1 : 3,
+                const ticks = view.svg.chartXTicks;
+                assert.ok(ticks.length > 0);
+                tickCounts.push(ticks.length);
+                if (ticks.length === 1) {
+                    assert.ok(
+                        Math.abs(ticks[0].position - (view.svg.plotLeft + view.svg.plotRight) / 2) <
+                            2,
+                    );
+                } else {
+                    assert.equal(ticks[0]?.label, String(view.chartRows[0]?.[0]));
+                    assert.equal(ticks.at(-1)?.label, String(view.chartRows.at(-1)?.[0]));
+                }
+                const bounds = tickBounds(ticks);
+                assert.ok(
+                    bounds.every(
+                        (tick, index) => index === 0 || tick.left >= bounds[index - 1].right + 8,
+                    ),
                 );
                 assert.deepEqual(view.chartRows[0], rows[0]);
                 assert.deepEqual(view.chartRows.at(-1), rows.at(-1));
@@ -123,6 +197,8 @@ for (const xType of ['DateTime', 'Float64']) {
                     assert.equal(view.svg.x(view.chartRows.length - 1), view.svg.plotRight);
                 }
             }
+            assert.ok(tickCounts[0] <= tickCounts[1]);
+            assert.ok(tickCounts[1] <= tickCounts[2]);
         });
     }
 }

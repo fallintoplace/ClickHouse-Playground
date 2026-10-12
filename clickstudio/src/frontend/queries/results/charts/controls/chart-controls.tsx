@@ -43,8 +43,8 @@ export function renderChartControls({
 }) {
     return (
         <ChartToolbar title={chartTitle}>
-            <label>
-                {chartCopy.type}
+            <label className="chart-control-field">
+                <span className="chart-control-label">{chartCopy.type}</span>
                 <select
                     value={chartKind}
                     onChange={event => {
@@ -96,8 +96,10 @@ export function renderChartControls({
                 </select>
             </label>
             {chartKind !== 'number' && (
-                <label>
-                    {chartKind === 'scatter' ? chartCopy.xAxisMeasure : chartCopy.xAxis}
+                <label className="chart-control-field">
+                    <span className="chart-control-label">
+                        {chartKind === 'scatter' ? chartCopy.xAxisMeasure : chartCopy.xAxis}
+                    </span>
                     <select
                         value={xIndex}
                         onChange={event => {
@@ -139,8 +141,8 @@ export function renderChartControls({
                 </label>
             )}
             {chartKind === 'heatmap' && (
-                <label>
-                    {chartCopy.yAxis}
+                <label className="chart-control-field">
+                    <span className="chart-control-label">{chartCopy.yAxis}</span>
                     <select
                         value={groupByIndex ?? -1}
                         onChange={event =>
@@ -163,9 +165,9 @@ export function renderChartControls({
                 <ChartPopover
                     label={chartCopy.measures}
                     closeLabel={chartCopy.closeControls}
+                    controlLabel={chartCopy.measures}
                     trigger={
                         <>
-                            <span>{chartCopy.measures}</span>
                             <span
                                 className="chart-legend-dot"
                                 style={{
@@ -223,8 +225,8 @@ export function renderChartControls({
                     <p>{chartText(chartCopy.measureLimit, { count: MAX_CHART_SERIES })}</p>
                 </ChartPopover>
             ) : (
-                <label>
-                    {chartCopy.measure}
+                <label className="chart-control-field">
+                    <span className="chart-control-label">{chartCopy.measure}</span>
                     <select
                         value={yIndex}
                         onChange={event => onChart({ ...chart, ys: [Number(event.target.value)] })}

@@ -85,6 +85,10 @@ export function chartLabelWidth(label: string) {
     );
 }
 
+export function chartTickLabelWidth(label: string) {
+    return Array.from(label).length * 5;
+}
+
 function wrapChartLabel(label: string) {
     const text = label.trim().replace(/\s+/g, ' ');
     const width = chartLabelWidth(text);
@@ -117,22 +121,55 @@ export function fitCategoryTicks(ticks: ChartAxisTick[]): ChartAxisTick[] {
 
 export function fitChartTicks(ticks: { label: string; position: number }[]) {
     if (ticks.length <= 1) return ticks;
+    const bounds = (tick: (typeof ticks)[number], anchor: 'start' | 'middle' | 'end') => {
+        const width = chartTickLabelWidth(tick.label);
+        let left = tick.position;
+        if (anchor === 'end') left -= width;
+        else if (anchor === 'middle') left -= width / 2;
+        return { left, right: left + width };
+    };
+    const anchorAt = (index: number, length: number) => {
+        if (length === 1) return 'middle';
+        if (index === 0) return 'start';
+        if (index === length - 1) return 'end';
+        return 'middle';
+    };
     const labelsFit = (candidates: typeof ticks) => {
         let previousRight = Number.NEGATIVE_INFINITY;
         return candidates.every((tick, index) => {
-            const width = Array.from(tick.label).length * 6;
-            let left = tick.position;
-            if (index === candidates.length - 1) left -= width;
-            else if (index > 0) left -= width / 2;
+            const { left, right } = bounds(tick, anchorAt(index, candidates.length));
             const fits = left >= previousRight + 8;
-            previousRight = left + width;
+            previousRight = right;
             return fits;
         });
     };
     if (labelsFit(ticks)) return ticks;
-    const endpoints = [ticks[0]!, ticks.at(-1)!];
-    if (ticks.length > 2 && labelsFit(endpoints)) return endpoints;
-    return [ticks[Math.floor((ticks.length - 1) / 2)]!];
+
+    const first = ticks[0]!;
+    const last = ticks.at(-1)!;
+    const endpoints = [first, last];
+    if (ticks.length <= 2 || !labelsFit(endpoints))
+        return [ticks[Math.floor((ticks.length - 1) / 2)]!];
+
+    const firstBounds = bounds(first, 'start');
+    const lastBounds = bounds(last, 'end');
+    const interior = ticks
+        .slice(1, -1)
+        .map((tick, index) => {
+            const labelBounds = bounds(tick, 'middle');
+            return { tick, index: index + 1, ...labelBounds };
+        })
+        .filter(tick => tick.left >= firstBounds.right + 8 && tick.right <= lastBounds.left - 8)
+        .sort((left, right) => left.right - right.right || left.index - right.index);
+    const selected: typeof interior = [];
+    let previousRight = firstBounds.right;
+    for (const tick of interior) {
+        if (tick.left < previousRight + 8) continue;
+        selected.push(tick);
+        previousRight = tick.right;
+    }
+    selected.sort((left, right) => left.index - right.index);
+    return [first, ...selected.map(tick => tick.tick), last];
 }
 
 export function splitChartSegments(points: ChartPoint[]) {

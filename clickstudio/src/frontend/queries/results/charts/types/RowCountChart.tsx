@@ -98,22 +98,12 @@ export function RowCountChart({
     const xCategory = (index: number, length: number) =>
         categoryLayout?.positions[index] ??
         plotLeft + (length <= 1 ? 0.5 : index / (length - 1)) * plotWidth;
-    const axisValueCount = timeAxis ? timeTicks.length : bars.length;
-    let labelIndexes;
-
-    if (axisValueCount <= 3) {
-        labelIndexes = Array.from({ length: axisValueCount }, (_value, index) => index);
-    } else if (timeAxis) {
-        labelIndexes = [0, Math.floor((axisValueCount - 1) / 2), axisValueCount - 1];
-    } else {
-        labelIndexes = Array.from({ length: axisValueCount }, (_value, index) => index);
-    }
-    const ticks = labelIndexes.map(index => ({
-        label: timeAxis ? (timeTicks[index]?.label ?? '') : (categoryData?.[index]?.label ?? ''),
-        position: timeAxis
-            ? xTime(timeTicks[index]?.timestamp ?? timeMin)
-            : xCategory(index, bars.length),
-    }));
+    const ticks = timeAxis
+        ? timeTicks.map(point => ({ label: point.label, position: xTime(point.timestamp) }))
+        : bars.map((group, index) => ({
+              label: group.label,
+              position: xCategory(index, bars.length),
+          }));
     const fittedTicks = timeAxis ? fitChartTicks(ticks) : fitCategoryTicks(ticks);
     const valueFormatter = new Intl.NumberFormat('en', {
         notation: 'compact',
@@ -357,8 +347,8 @@ function RowCountChartToolbar({
 }) {
     return (
         <ChartToolbar title={title}>
-            <label>
-                {copy.xAxis}
+            <label className="chart-control-field">
+                <span className="chart-control-label">{copy.xAxis}</span>
                 <select
                     aria-label={copy.xAxis}
                     value={xIndex}
@@ -402,8 +392,8 @@ function RowCountChartToolbar({
                 </select>
             </label>
             {timeAxis && breakdowns.length > 0 && (
-                <label>
-                    {copy.breakdownBy}
+                <label className="chart-control-field">
+                    <span className="chart-control-label">{copy.breakdownBy}</span>
                     <select
                         aria-label={copy.breakdownBy}
                         value={groupByIndex ?? ''}

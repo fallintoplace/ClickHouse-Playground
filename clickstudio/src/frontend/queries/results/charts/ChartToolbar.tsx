@@ -21,11 +21,13 @@ export function ChartPopover({
     closeLabel,
     trigger,
     children,
+    controlLabel,
 }: {
     label: string;
     closeLabel: string;
     trigger: ReactNode;
     children: ReactNode;
+    controlLabel?: string;
 }) {
     const id = useId();
     const button = useRef<HTMLButtonElement>(null);
@@ -66,6 +68,11 @@ export function ChartPopover({
 
     return (
         <span className="chart-popover-control">
+            {controlLabel && (
+                <span className="chart-control-label" aria-hidden="true">
+                    {controlLabel}
+                </span>
+            )}
             <button
                 ref={button}
                 type="button"

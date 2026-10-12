@@ -131,10 +131,8 @@ export function prepareScatterAxes({
                 position: x(index),
             })) ?? [];
     } else {
-        chartXTicks = [
-            ...new Set([0, Math.floor((chartRows.length - 1) / 2), chartRows.length - 1]),
-        ].map(index => ({
-            label: plotSeries[0]?.points[index]?.label ?? '',
+        chartXTicks = chartRows.map((row, index) => ({
+            label: displayValue(row[xIndex]),
             position: x(index),
         }));
     }

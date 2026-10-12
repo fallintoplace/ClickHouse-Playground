@@ -222,6 +222,28 @@ test('Many long measure names stay scrollable in the dropdown without growing th
     await expect(popup).toBeHidden();
 });
 
+test('Short numeric line charts show every X-axis label that fits', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const rows = Array.from({ length: 5 }, (_value, index) => [index, index * index]);
+    await mockSnapshot(page, {
+        columns: [
+            { name: 'number', type: 'UInt64' },
+            { name: 'square', type: 'UInt64' },
+        ],
+        rows,
+    });
+    const results = await openChart(page);
+    const toolbar = results.locator('.chart-toolbar');
+    await expect(toolbar.locator('.chart-control-label')).toHaveText([
+        'Type',
+        'X axis',
+        'Measures',
+    ]);
+    await toolbar.getByRole('combobox', { name: 'Type', exact: true }).selectOption('line');
+    await expect(results.locator('.chart-x-labels tspan')).toHaveText(['0', '1', '2', '3', '4']);
+    await expectToolbarFits(toolbar);
+});
+
 test('Candlestick mappings open under Setup and keep their selections', async ({ page }) => {
     await mockSnapshot(page, {
         columns: [
