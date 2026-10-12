@@ -706,6 +706,7 @@ test('The execution indicator clears when run submission fails', async ({ page }
         await route.fulfill({
             status: 503,
             contentType: 'application/json',
+            headers: { 'X-Request-Id': 'request-from-header' },
             body: JSON.stringify({ error: 'Temporary run failure' }),
         });
     });
@@ -720,7 +721,13 @@ test('The execution indicator clears when run submission fails', async ({ page }
 
         releaseFailure();
         await expect(progress).toHaveCount(0);
-        await expect(page.getByTestId('query-failure')).toContainText('NETWORK_RESPONSE');
+        const failure = page.getByTestId('query-failure');
+        await expect(failure).toContainText('NETWORK_RESPONSE');
+        await failure.locator('.result-failure-diagnostics > summary').click();
+        await expect(failure.locator('.result-failure-diagnostic-meta')).toContainText(
+            'Request ID: request-from-header',
+        );
+        await expect(failure.locator('.result-failure-source')).toHaveCount(0);
     } finally {
         releaseFailure();
         await page.unroute(runRoute);
@@ -1110,10 +1117,15 @@ for (const theme of ['Dark', 'Light'])
         await expect(failure.locator('.is-full')).toBeHidden();
         await expect(failure.locator('summary')).toBeInViewport();
         await page.screenshot({ path: testInfo.outputPath('long-error-output.png') });
-        await failure.locator('summary').click();
-        await expect(failure.locator('.result-failure-detail')).toHaveText(
-            `[CLICKHOUSE_62] ${message}`,
+        await failure.locator('.result-failure-diagnostics > summary').click();
+        await expect(failure.locator('.result-failure-source')).toHaveText('Source: ClickHouse');
+        await expect(failure.locator('.result-failure-diagnostic-meta')).toContainText(
+            'Error type: SQL syntax error',
         );
+        await expect(failure.locator('.result-failure-diagnostic-meta')).toContainText(
+            'Error code: CLICKHOUSE_62',
+        );
+        await expect(failure.locator('.result-failure-detail')).toHaveText(message);
         await expect(failure.locator('.is-full')).toHaveText(sql);
         await replaceSql(page, sql.replace('HAVIsNG', 'HAVING'));
         await expect(failure.locator('.is-context')).toContainText('HAVIsNG');
@@ -2811,15 +2823,56 @@ test('Script errors without a statement run ID show the ClickHouse error and fai
         ).toBeVisible();
         await expect(failure.locator('.result-failure-detail')).toBeHidden();
         await expect(failure.locator('.result-failure-marker')).toHaveCount(0);
-        await failure.locator('summary').click();
-        await expect(failure.locator('.result-failure-detail')).toHaveText(
-            `[CLICKHOUSE_ERROR] ${message}`,
+        await page.keyboard.press('Escape');
+        await failure.locator('.result-failure-diagnostics > summary').click();
+        await expect(failure.locator('.result-failure-source')).toHaveText('Source: ClickHouse');
+        await expect(failure.locator('.result-failure-diagnostic-meta')).toContainText(
+            'Error type: Query error',
         );
+        await expect(failure.locator('.result-failure-diagnostic-meta')).toContainText(
+            'Error code: CLICKHOUSE_ERROR',
+        );
+        await expect(failure.locator('.result-failure-detail')).toHaveText(message);
         await expect(failure.locator('.result-execution-sql.is-full')).toHaveText(
             'SELECT 1 AS value FORMAT JSONEachRow',
         );
     } finally {
         await cleanup();
+    }
+});
+
+test('Unknown error codes use readable labels without guessing a source', async ({ page }) => {
+    await trust(page);
+    const runRoute = (url: URL) => url.pathname === '/api/runs';
+    await page.route(runRoute, route =>
+        route.request().method() === 'POST'
+            ? route.fulfill({
+                  status: 502,
+                  json: {
+                      error: {
+                          code: 'UPSTREAM_HTTP_FAILURE',
+                          message: 'The query service did not respond',
+                      },
+                  },
+              })
+            : route.continue(),
+    );
+
+    try {
+        await replaceSql(page, 'SELECT 1');
+        await runButton(page).click();
+        const failure = page.getByTestId('query-failure');
+        await expect(failure).toContainText('The query service did not respond');
+        await failure.locator('.result-failure-diagnostics > summary').click();
+        await expect(failure.locator('.result-failure-diagnostic-meta')).toContainText(
+            'Error type: Upstream HTTP failure',
+        );
+        await expect(failure.locator('.result-failure-diagnostic-meta')).toContainText(
+            'Error code: UPSTREAM_HTTP_FAILURE',
+        );
+        await expect(failure.locator('.result-failure-source')).toHaveCount(0);
+    } finally {
+        await page.unroute(runRoute);
     }
 });
 

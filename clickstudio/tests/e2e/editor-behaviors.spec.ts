@@ -327,6 +327,11 @@ test('selected repeated SQL submits exact source offsets and highlights the sele
     await runButton(page).click();
     await expect(page.locator('.cm-server-error-line')).toHaveText('  SELECT missing();');
     await expect(page.locator('.cm-server-error-line')).toHaveCount(1);
+    const failure = page.getByTestId('query-failure');
+    await failure.locator('.result-failure-diagnostics > summary').click();
+    await expect(failure.locator('.result-failure-diagnostic-meta')).toContainText(
+        'Error type: Unknown function',
+    );
 });
 
 test('server errors at end of input highlight the final line and clear after edits', async ({

@@ -7,20 +7,78 @@ import {
     type SqlErrorRange,
 } from '../editor/sql-error';
 
+const readableErrorTypes: Record<string, string> = {
+    CANCELLED: 'Query cancelled',
+    CLICKHOUSE_ERROR: 'Query error',
+    CLICKHOUSE_PERMISSION: 'Permission denied',
+    CLICKHOUSE_46: 'Unknown function',
+    CLICKHOUSE_47: 'Unknown identifier',
+    CLICKHOUSE_60: 'Unknown table',
+    CLICKHOUSE_62: 'SQL syntax error',
+    CLICKHOUSE_215: 'Invalid aggregation',
+    DEADLINE_EXCEEDED: 'Query timed out',
+    NETWORK_RESPONSE: 'Request failed',
+    READ_ONLY_SQL: 'Read-only mode blocked this query',
+    SERVER_RESOURCE_LIMIT: 'Resource limit exceeded',
+    SQL_SYNTAX: 'SQL syntax error',
+    SYNTAX_ERROR: 'SQL syntax error',
+};
+const readableErrorWords: Record<string, string> = {
+    api: 'API',
+    clickhouse: 'ClickHouse',
+    http: 'HTTP',
+    id: 'ID',
+    sql: 'SQL',
+    uuid: 'UUID',
+};
+
+function readableErrorType(code: string) {
+    const label = Object.hasOwn(readableErrorTypes, code) ? readableErrorTypes[code] : undefined;
+    if (label) return label;
+    const clickHouseNumber = /^CLICKHOUSE_(\d+)$/.exec(code)?.[1];
+    if (clickHouseNumber) return `ClickHouse error (${clickHouseNumber})`;
+    const words = code
+        .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+        .split(/[^a-zA-Z0-9]+/)
+        .filter(Boolean);
+    return words.length
+        ? words
+              .map(
+                  (word, index) =>
+                      readableErrorWords[word.toLowerCase()] ??
+                      (index === 0
+                          ? word[0]!.toUpperCase() + word.slice(1).toLowerCase()
+                          : word.toLowerCase()),
+              )
+              .join(' ')
+        : 'Query error';
+}
+
+function errorSource(code: string) {
+    if (code.startsWith('CLICKHOUSE_') || code === 'SERVER_RESOURCE_LIMIT') return 'ClickHouse';
+    return undefined;
+}
+
 export function QueryFailureNotice({
     error,
     sql,
     copy,
     errorRange,
     location,
+    runId,
+    requestId,
 }: {
     error: ApiError;
     sql?: string;
     copy: Copy['common'];
     errorRange?: SqlErrorRange;
     location?: { line: number; column: number };
+    runId?: string;
+    requestId?: string;
 }) {
     const diagnostic = queryFailureSummary(error);
+    const source = errorSource(error.code);
+    const type = readableErrorType(error.code);
     let title: string;
 
     if (diagnostic.syntax) {
@@ -54,6 +112,14 @@ export function QueryFailureNotice({
                 <summary>{copy.errorDetails}</summary>
                 <div className="result-failure-diagnostic-container">
                     <div className="result-failure-diagnostic-meta">
+                        {source && (
+                            <span className="result-failure-source">
+                                {copy.errorSource}: {source}
+                            </span>
+                        )}
+                        <span className="result-failure-diagnostic-field">
+                            {copy.errorType}: {type}
+                        </span>
                         {location && (
                             <span className="result-failure-location">
                                 {copy.errorLocation
@@ -61,7 +127,22 @@ export function QueryFailureNotice({
                                     .replace('{column}', String(location.column))}
                             </span>
                         )}
-                        <code className="result-failure-code">{error.code}</code>
+                        <span className="result-failure-diagnostic-field">
+                            {copy.errorCode}:{' '}
+                            <code className="result-failure-code">{error.code}</code>
+                        </span>
+                        {runId && (
+                            <span className="result-failure-diagnostic-field">
+                                {copy.errorRunId}:{' '}
+                                <code className="result-failure-code">{runId}</code>
+                            </span>
+                        )}
+                        {requestId && (
+                            <span className="result-failure-diagnostic-field">
+                                {copy.errorRequestId}:{' '}
+                                <code className="result-failure-code">{requestId}</code>
+                            </span>
+                        )}
                     </div>
                     <pre className="result-failure-detail">{error.message}</pre>
                     {sql && (

@@ -29,6 +29,7 @@ export class RequestError extends Error {
     constructor(
         public readonly status: number,
         public readonly detail: ApiError,
+        public readonly requestId?: string,
     ) {
         super(detail.message);
     }
@@ -96,7 +97,15 @@ export async function api<T>(
                       code: 'NETWORK_RESPONSE',
                       message: `The server returned HTTP ${response.status}`,
                   };
-        throw new RequestError(response.status, detail);
+        const bodyRequestId =
+            isRecord(content) && typeof content.requestId === 'string'
+                ? content.requestId.trim()
+                : '';
+        const headerRequestId = response.headers.get('X-Request-Id')?.trim() ?? '';
+        const requestId = [bodyRequestId, headerRequestId].find(
+            value => value.length > 0 && value.length <= 128,
+        );
+        throw new RequestError(response.status, detail, requestId);
     }
     return decodeResponse(content, guard);
 }

@@ -239,7 +239,16 @@ function WorkspaceResultsBody({
     tableToolbar,
     tableRowCount,
 }: WorkspaceResultsBodyProps) {
-    const { active, connection, copy, execution, nativeParserStatus, nativeParseSnapshot } = state;
+    const {
+        active,
+        connection,
+        copy,
+        execution,
+        failedAttempt,
+        nativeParserStatus,
+        nativeParseSnapshot,
+        run,
+    } = state;
     const {
         visibleResultsView,
         failureError,
@@ -309,6 +318,8 @@ function WorkspaceResultsBody({
                     copy={copy.common}
                     errorRange={viewState.failureRange}
                     location={viewState.failureLocation}
+                    runId={run?.error === failureError ? run.id : undefined}
+                    requestId={failedAttempt?.requestId}
                 />
             ) : (
                 <>

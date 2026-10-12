@@ -68,6 +68,7 @@ export type FailedQueryError = {
     statementSql: string;
     sourceFrom: number;
     error: ApiError;
+    requestId?: string;
 };
 
 export function resultsViews(
@@ -144,4 +145,8 @@ export function apiErrorDetail(error: unknown): ApiError {
         code: typeof candidate?.code === 'string' ? candidate.code : 'EXECUTION_FAILED',
         message: typeof candidate?.message === 'string' ? candidate.message : message(error),
     };
+}
+
+export function apiRequestId(error: unknown): string | undefined {
+    return error instanceof RequestError ? error.requestId : undefined;
 }

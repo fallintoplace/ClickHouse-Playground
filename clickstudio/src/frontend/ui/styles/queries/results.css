@@ -635,6 +635,19 @@
     flex-wrap: wrap;
     gap: 8px 12px;
     margin-top: 8px;
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .result-failure-source {
+    color: var(--text-soft);
+    font-weight: 600;
+  }
+  .result-failure-diagnostic-field {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: baseline;
+    overflow-wrap: anywhere;
   }
   .result-failure-diagnostics summary:hover {
     color: var(--text);

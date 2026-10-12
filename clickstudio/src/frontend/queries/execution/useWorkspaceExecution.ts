@@ -24,7 +24,11 @@ import type { useScopedValue } from '../../browser/useScopedValue';
 import type { useScriptExecution } from './useScriptExecution';
 import type { useWorkspaceNotifications } from '../../workspace/layout/notifications/useWorkspaceNotifications';
 import type { WorkspacePanelController } from '../../workspace/layout/panels/useWorkspacePanels';
-import { apiErrorDetail, type FailedQueryError } from '../../workspace/workspace-helpers';
+import {
+    apiErrorDetail,
+    apiRequestId,
+    type FailedQueryError,
+} from '../../workspace/workspace-helpers';
 import {
     MAX_TABS,
     newDraft,
@@ -673,12 +677,14 @@ function createDraftExecutor({
                 void loadHistory().catch(() => undefined);
             },
             isScript ? 'script' : 'run',
-            caught =>
+            caught => {
+                const requestId = apiRequestId(caught);
                 recordFailedQueryError({
                     draftId: draft.id,
                     draftSql,
                     statementSql: statement?.sql ?? sql,
                     sourceFrom: sourceRange?.from ?? 0,
+                    ...(requestId ? { requestId } : {}),
                     error:
                         caught instanceof SqlSyntaxError
                             ? {
@@ -687,7 +693,8 @@ function createDraftExecutor({
                                   position: caught.position,
                               }
                             : apiErrorDetail(caught),
-                }),
+                });
+            },
         );
     };
 }
