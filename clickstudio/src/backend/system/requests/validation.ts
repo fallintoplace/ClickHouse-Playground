@@ -6,6 +6,7 @@ import {
     type Limits,
 } from '../../../shared/queries/execution/settings.js';
 import { type RunRequest } from '../../../shared/queries/execution/types.js';
+import { isRecord } from '../../../shared/common/values.js';
 import { requireThat } from './errors.js';
 
 const LIMIT_KEYS = [
@@ -16,9 +17,6 @@ const LIMIT_KEYS = [
     'threads',
 ] satisfies readonly (keyof Limits)[];
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
 export function record(value: unknown, name = 'request'): Record<string, unknown> {
     requireThat(isRecord(value), 400, 'INVALID_REQUEST', `${name} must be an object`);
     return value;

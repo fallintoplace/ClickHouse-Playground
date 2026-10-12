@@ -3,16 +3,12 @@ import {
     IMPORT_ROW_LIMIT_LABEL,
     type ImportFormat,
 } from '../../../shared/database/imports/limits.js';
-import { isJson, isRecord, type Json } from '../../../shared/common/values.js';
+import { isJsonRecord as isDemoImportRow, type Json } from '../../../shared/common/values.js';
 
 export type DemoImportFormat = ImportFormat;
 export type DemoImportRow = Record<string, Json>;
 export type DemoImportColumn = { name: string; type: string };
 export type DemoImportQueryResult = { columns: DemoImportColumn[]; rows: Json[][] };
-
-function isDemoImportRow(value: unknown): value is DemoImportRow {
-    return isRecord(value) && Object.values(value).every(isJson);
-}
 
 export const DEMO_IMPORT_TARGET = 'demo.interview_imports';
 export const DEMO_IMPORT_SAMPLE_CSV = `day,region,channel,events,revenue

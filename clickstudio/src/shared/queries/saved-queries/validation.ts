@@ -1,10 +1,6 @@
 import { CHART_KINDS } from '../results/chart-types.js';
-import { isRecord } from '../../common/values.js';
+import { isRecord, isStringArray } from '../../common/values.js';
 import type { MetricContract, QueryDocument } from './types.js';
-
-function isStringArray(value: unknown): value is string[] {
-    return Array.isArray(value) && value.every(item => typeof item === 'string');
-}
 
 function isMetricContract(value: unknown): value is MetricContract {
     return (

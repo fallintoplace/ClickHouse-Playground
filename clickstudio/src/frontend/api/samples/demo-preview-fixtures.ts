@@ -7,12 +7,11 @@ import { type Schema, type SchemaColumn } from '../../../shared/database/schema/
 import { DEMO_EXPLAIN_ANALYZE } from '../../../shared/samples/database.js';
 import { CHART_KINDS } from '../../../shared/queries/results/chart-types.js';
 import { DEMO_PREVIEW_STARTERS, demoIndexAnalysis } from './demo-preview-data.js';
+import { isRecord } from '../../../shared/common/values.js';
 
 export const owner = 'preview-user';
 export const previewStorageKey = 'clickstudio:vercel-preview-database:v1';
 export const now = () => new Date().toISOString();
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-    value !== null && typeof value === 'object' && !Array.isArray(value);
 export const record = (value: unknown): Record<string, unknown> => (isRecord(value) ? value : {});
 
 const schemaColumns = (table: string, values: Array<[string, string, string]>): SchemaColumn[] =>

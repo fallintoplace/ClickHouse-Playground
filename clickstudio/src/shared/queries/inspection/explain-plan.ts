@@ -1,4 +1,4 @@
-import { isJson, type Json } from '../../common/values.js';
+import { isJson, isRecord, type Json } from '../../common/values.js';
 import type { RunKind } from '../execution/status.js';
 
 export type ExplainPlanProperty = { name: string; value: Json };
@@ -15,9 +15,6 @@ const MAX_PLAN_JSON_CHARS = 2_000_000;
 const MAX_PLAN_NODES = 500;
 const MAX_PLAN_DEPTH = 64;
 const PLAN_NODE_KEYS = new Set(['Node Type', 'Node Id', 'Description', 'Plans']);
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-    value !== null && typeof value === 'object' && !Array.isArray(value);
 
 export function sqlForRunKind(statement: string, kind: RunKind): string {
     if (kind === 'explain') return `EXPLAIN indexes = 1\n${statement}`;

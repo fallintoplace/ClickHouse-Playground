@@ -9,6 +9,7 @@ import {
     loadClickHouseCloudTableParts,
 } from '../../connections/cloud-connection';
 import { loadPlaygroundTableParts, PLAYGROUND_CONNECTION_ID } from '../../connections/playground';
+import { isRecord } from '../../../../shared/common/values';
 
 const PART_TEXT_FIELDS = [
     'partition',
@@ -23,10 +24,6 @@ const PART_TEXT_FIELDS = [
     'diskName',
 ];
 const TOTAL_TEXT_FIELDS = ['rows', 'marks', 'compressedBytes', 'uncompressedBytes'];
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function isMergeTreePart(value: unknown): value is MergeTreePart {
     if (!isRecord(value)) return false;

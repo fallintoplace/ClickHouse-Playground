@@ -12,7 +12,13 @@ import {
 import { DEFAULT_LIMITS } from '../../../shared/queries/execution/settings.js';
 import { type Capability, type Connection } from '../../../shared/database/connections/types.js';
 import type { ClickHouseDocumentationEntry } from '../../../shared/database/reference/types.js';
-import { isJson, isRecord, type Column, type Row } from '../../../shared/common/values.js';
+import {
+    isJson,
+    isOptionalString,
+    isRecord,
+    type Column,
+    type Row,
+} from '../../../shared/common/values.js';
 import { type Schema, type SchemaColumn } from '../../../shared/database/schema/types.js';
 import type { ReplicationSnapshot } from '../../../shared/database/explorer/activity/replication.js';
 import { isQueryLogSource } from '../../../shared/database/explorer/activity/workload.js';
@@ -190,10 +196,6 @@ function isCapability(value: unknown): value is Capability {
         typeof value.available === 'boolean' &&
         (value.reason === undefined || typeof value.reason === 'string')
     );
-}
-
-function isOptionalString(value: unknown): value is string | undefined {
-    return value === undefined || typeof value === 'string';
 }
 
 function isCloudConnectionTest(value: unknown): value is CloudConnectionTest {

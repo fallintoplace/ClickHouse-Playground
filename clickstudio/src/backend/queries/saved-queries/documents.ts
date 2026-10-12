@@ -9,7 +9,7 @@ import type {
     QueryDocument,
 } from '../../../shared/queries/saved-queries/types.js';
 import type { Principal } from '../../../shared/common/identity.js';
-import { isRecord } from '../../../shared/common/values.js';
+import { isRecord, isStringArray } from '../../../shared/common/values.js';
 import { isQueryDocument } from '../../../shared/queries/saved-queries/validation.js';
 import { isResult, isRun } from '../../../shared/queries/execution/validation.js';
 import { DEFAULT_LIMITS } from '../../../shared/queries/execution/settings.js';
@@ -31,10 +31,6 @@ const DOCUMENT_KINDS = [
     'metric',
 ] as const satisfies readonly QueryDocument['kind'][];
 const LEGACY_CHART_KINDS = ['area', 'stacked', 'pie'] as const;
-function isStringArray(value: unknown): value is string[] {
-    return Array.isArray(value) && value.every(item => typeof item === 'string');
-}
-
 function isShare(value: unknown): value is Share {
     return (
         isRecord(value) &&

@@ -15,14 +15,7 @@ import type {
     ProposalQuality,
     ProposalQualityCheck,
 } from '../../../shared/assistant/types.js';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-function isStringArray(value: unknown): value is string[] {
-    return Array.isArray(value) && value.every(item => typeof item === 'string');
-}
+import { isRecord, isStringArray } from '../../../shared/common/values.js';
 
 function isAssistantAction(value: unknown): value is AssistantAction {
     return typeof value === 'string' && ASSISTANT_ACTIONS.some(action => action === value);

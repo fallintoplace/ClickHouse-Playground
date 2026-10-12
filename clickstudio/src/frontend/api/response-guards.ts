@@ -1,4 +1,12 @@
-import { isJson, isRecord } from '../../shared/common/values.js';
+import {
+    isFiniteNumber,
+    isJson,
+    isJsonRecord,
+    isRecord,
+    isSafeInteger,
+    isStringArray,
+    isStringRecord,
+} from '../../shared/common/values.js';
 import type { Principal } from '../../shared/common/identity.js';
 import type { Capability, Connection, Manifest } from '../../shared/database/connections/types.js';
 import type {
@@ -66,6 +74,8 @@ import type {
 } from '../database/imports/state/import-wizard-model.js';
 import type { Connected, Session } from '../workspace/workspace-types.js';
 
+export { isStringArray };
+
 export type ResponseGuard<T> = (value: unknown) => value is T;
 
 export const isUnknown: ResponseGuard<unknown> = (_value): _value is unknown => true;
@@ -84,28 +94,6 @@ export function isRecordResponse(value: unknown): value is Record<string, unknow
 
 export function isRecordArrayResponse(value: unknown): value is Record<string, unknown>[] {
     return Array.isArray(value) && value.every(isRecord);
-}
-
-export function isStringArray(value: unknown): value is string[] {
-    return Array.isArray(value) && value.every(item => typeof item === 'string');
-}
-
-function isFiniteNumber(value: unknown): value is number {
-    return typeof value === 'number' && Number.isFinite(value);
-}
-
-function isSafeInteger(value: unknown): value is number {
-    return typeof value === 'number' && Number.isSafeInteger(value);
-}
-
-function isStringRecord(value: unknown): value is Record<string, string> {
-    return isRecord(value) && Object.values(value).every(item => typeof item === 'string');
-}
-
-function isJsonRecord(
-    value: unknown,
-): value is Record<string, import('../../shared/common/values.js').Json> {
-    return isRecord(value) && Object.values(value).every(isJson);
 }
 
 function isImportFormat(value: unknown): value is ImportFormat {

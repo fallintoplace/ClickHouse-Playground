@@ -1,4 +1,5 @@
 import type { ApiError } from '../../shared/common/errors.js';
+import { isRecord } from '../../shared/common/values.js';
 import {
     CLICKHOUSE_CLOUD_CONNECTION_ID,
     getClickHouseCloudConnection,
@@ -13,10 +14,6 @@ export type ApiOptions = {
     body?: unknown;
     signal?: AbortSignal;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function isApiError(value: unknown): value is ApiError {
     return (

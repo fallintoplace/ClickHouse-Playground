@@ -8,27 +8,19 @@ import {
     type RunEventType,
 } from './status.js';
 import type { ApiError } from '../../common/errors.js';
-import { isJson, isRecord, type Column } from '../../common/values.js';
+import {
+    isFiniteNumber,
+    isJson,
+    isOptionalString,
+    isRecord,
+    isSafeInteger,
+    isStringRecord,
+    type Column,
+} from '../../common/values.js';
 import type { Limits } from './settings.js';
 import type { Progress, Run, RunEvent, Script } from './types.js';
 import type { Result } from '../results/types.js';
 import type { RunStatus } from './status.js';
-
-function isFiniteNumber(value: unknown): value is number {
-    return typeof value === 'number' && Number.isFinite(value);
-}
-
-function isSafeInteger(value: unknown): value is number {
-    return typeof value === 'number' && Number.isSafeInteger(value);
-}
-
-function isOptionalString(value: unknown): value is string | undefined {
-    return value === undefined || typeof value === 'string';
-}
-
-function isStringRecord(value: unknown): value is Record<string, string> {
-    return isRecord(value) && Object.values(value).every(item => typeof item === 'string');
-}
 
 function isColumn(value: unknown): value is Column {
     return isRecord(value) && typeof value.name === 'string' && typeof value.type === 'string';

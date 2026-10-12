@@ -1,3 +1,5 @@
+import { isRecord } from '../common/values.js';
+
 export type NativeParserStatus = 'loading' | 'ready' | 'unavailable';
 
 export interface NativeParseError {
@@ -95,10 +97,6 @@ function isNativeHighlightType(value: unknown): value is NativeHighlightType {
 }
 function isOffset(value: unknown): value is number {
     return typeof value === 'number' && Number.isInteger(value) && value >= 0;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function parseNativeError(value: unknown): NativeParseError | undefined {

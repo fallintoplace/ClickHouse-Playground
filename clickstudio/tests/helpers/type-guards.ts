@@ -1,8 +1,7 @@
+import { isRecord } from '../../src/shared/common/values.js';
 import type { Server } from 'node:http';
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+export { isRecord };
 
 export function jsonRecord(value: unknown, label = 'JSON value'): Record<string, unknown> {
     if (!isRecord(value)) throw new Error(`${label} was not an object`);

@@ -19,15 +19,12 @@ import {
 import { AppError } from '../../system/requests/errors.js';
 import { OpenAIDriver } from '../openai-client.js';
 import { openaiServiceTier } from '../../system/config.js';
+import { isRecord } from '../../../shared/common/values.js';
 
 const MAX_BODY_BYTES = 300_000;
 const MAX_REQUESTS_PER_DAY = 20;
 const MODEL = process.env.OPENAI_MODEL?.trim() || 'gpt-6-luna';
 const requestsByIp = new Map<string, { day: string; count: number }>();
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function json(body: unknown, status = 200): Response {
     return Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });

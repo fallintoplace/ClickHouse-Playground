@@ -1,3 +1,4 @@
+import { isOptionalString, isRecord, isStringArray } from '../../common/values.js';
 import type {
     Schema,
     SchemaColumn,
@@ -126,20 +127,8 @@ export function enrichSchemaTables(
     });
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-function isOptionalString(value: unknown): value is string | undefined {
-    return value === undefined || typeof value === 'string';
-}
-
 function isOptionalNullableString(value: unknown): value is string | null | undefined {
     return value === undefined || value === null || typeof value === 'string';
-}
-
-function isStringArray(value: unknown): value is string[] {
-    return Array.isArray(value) && value.every(item => typeof item === 'string');
 }
 
 function isSchemaProjection(value: unknown): value is SchemaProjection {

@@ -3,7 +3,12 @@ import type { ImportJobStatus } from '../../../shared/database/imports/status.js
 import type { ImportFormat } from '../../../shared/database/imports/limits.js';
 import { randomUUID } from 'node:crypto';
 import type { Json } from '../../../shared/common/values.js';
-import { isJson, isRecord } from '../../../shared/common/values.js';
+import {
+    isJsonRecord,
+    isRecord,
+    isStringArray,
+    isStringRecord,
+} from '../../../shared/common/values.js';
 import type { Principal } from '../../../shared/common/identity.js';
 import type { Schema, SchemaColumn } from '../../../shared/database/schema/types.js';
 import { quoteIdentifier } from '../../../shared/sql/sql.js';
@@ -77,18 +82,6 @@ interface Mapping {
     rows: Record<string, Json>[];
     missingFields: Record<string, number>;
     expiresAt: string;
-}
-
-function isJsonRecord(value: unknown): value is Record<string, Json> {
-    return isRecord(value) && Object.values(value).every(isJson);
-}
-
-function isStringArray(value: unknown): value is string[] {
-    return Array.isArray(value) && value.every(item => typeof item === 'string');
-}
-
-function isStringRecord(value: unknown): value is Record<string, string> {
-    return isRecord(value) && Object.values(value).every(item => typeof item === 'string');
 }
 
 function isInputPreview(value: unknown): value is InputPreview {

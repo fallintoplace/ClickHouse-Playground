@@ -1,12 +1,9 @@
 import { StringDecoder } from 'node:string_decoder';
-import { isJson, type Column, type Row } from '../../../shared/common/values.js';
+import { isJson, isStringArray, type Column, type Row } from '../../../shared/common/values.js';
 import type { Limits } from '../../../shared/queries/execution/settings.js';
 import { AppError, requireThat } from '../../system/requests/errors.js';
 import type { DriverResult } from '../../queries/execution/runs.js';
 
-function isStringArray(value: unknown): value is string[] {
-    return Array.isArray(value) && value.every(item => typeof item === 'string');
-}
 function isRow(value: unknown): value is Row {
     return Array.isArray(value) && value.every(isJson);
 }

@@ -1,13 +1,9 @@
-import { isJson } from '../../../shared/common/values.js';
+import { isJson, isRecord } from '../../../shared/common/values.js';
 import type { Result } from '../../../shared/queries/results/types.js';
 import type { Schema, SchemaColumn, SchemaTable } from '../../../shared/database/schema/types.js';
 import type { AssistantRepairContext } from '../../../shared/assistant/actions.js';
 import { MAX_SQL_CHARS } from '../../../shared/queries/execution/limits.js';
 import { AppError } from '../../system/requests/errors.js';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function field(value: unknown, name: string, max: number, allowEmpty = false): string {
     if (typeof value !== 'string' || value.length > max || (!allowEmpty && !value.trim()))

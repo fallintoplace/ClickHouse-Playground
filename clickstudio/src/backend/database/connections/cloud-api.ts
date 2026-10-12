@@ -37,6 +37,7 @@ import type {
     ClickHouseDocumentationSummary,
 } from '../../../shared/database/reference/types.js';
 import type { Column, Json, Row } from '../../../shared/common/values.js';
+import { isRecord, isStringRecord } from '../../../shared/common/values.js';
 import type { Schema, SchemaColumn, SchemaTable } from '../../../shared/database/schema/types.js';
 import {
     EXPLORATION_FORMAT_ERROR,
@@ -150,14 +151,6 @@ function validImportDeduplicationToken(value: unknown): value is string {
     return (
         typeof value === 'string' && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(value)
     );
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isStringRecord(value: unknown): value is Record<string, string> {
-    return isRecord(value) && Object.values(value).every(item => typeof item === 'string');
 }
 
 function isCreateTableColumnType(value: unknown): value is CreateTableColumnType {

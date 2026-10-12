@@ -1,4 +1,5 @@
-import { type Column, type Json, type Row } from '../../../shared/common/values.js';
+import { isRecord } from '../../../shared/common/values.js';
+import type { Column, Json, Row } from '../../../shared/common/values.js';
 import { type Schema } from '../../../shared/database/schema/types.js';
 import {
     EXPLORATION_FORMAT_ERROR,
@@ -43,9 +44,6 @@ const SCHEMA_MAX_COLUMNS = 1_000;
 const SCHEMA_CACHE_KEY = 'clickstudio:playground-schema:v1';
 const SCHEMA_CACHE_AGE_MS = 60 * 60 * 1_000;
 const NULL_MARKER = 'ᴺᵁᴸᴸ';
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-    value !== null && typeof value === 'object' && !Array.isArray(value);
-
 const playgroundClient = createClient({
     url: PLAYGROUND_URL,
     username: PLAYGROUND_USER,

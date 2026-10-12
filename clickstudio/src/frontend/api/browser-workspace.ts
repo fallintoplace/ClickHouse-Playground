@@ -78,11 +78,7 @@ import {
     resultFor,
     schema,
 } from './samples/demo-preview-fixtures.js';
-import { isRecord } from '../../shared/common/values.js';
-
-function isStringRecord(value: unknown): value is Record<string, string> {
-    return isRecord(value) && Object.values(value).every(item => typeof item === 'string');
-}
+import { isStringRecord } from '../../shared/common/values.js';
 
 function stringRecord(value: unknown): Record<string, string> {
     if (!isStringRecord(value)) throw new Error('Expected string values.');
