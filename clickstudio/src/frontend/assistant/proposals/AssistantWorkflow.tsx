@@ -562,7 +562,8 @@ function AssistantOutput({
                 </div>
             </div>
             {proposal.clarification && (
-                <div className="callout">
+                <div className="assistant-clarification">
+                    <span className="assistant-clarification-label">Next step</span>
                     <AssistantMarkdown
                         text={proposal.clarification}
                         sources={sources}
