@@ -48,6 +48,7 @@ export function renderChartControls({
                     className="chart-select"
                     label={chartCopy.type}
                     value={chartKind}
+                    hideDisabledOptions
                     onChange={value => {
                         const option = chartKindOptions.find(
                             candidate => candidate.value === value,
@@ -100,6 +101,7 @@ export function renderChartControls({
                         className="chart-select"
                         label={chartKind === 'scatter' ? chartCopy.xAxisMeasure : chartCopy.xAxis}
                         value={String(xIndex)}
+                        hideDisabledOptions
                         searchable={result.columns.length >= 8}
                         onChange={value => {
                             const nextX = Number(value);

@@ -121,6 +121,7 @@ function renderCandlestickControls({
                                 className="chart-select"
                                 label={chartCopy.type}
                                 value="candlestick"
+                                hideDisabledOptions
                                 onChange={updateKind}
                                 options={chartKindOptions.map(option => ({
                                     value: option.value,
@@ -136,6 +137,7 @@ function renderCandlestickControls({
                                 className="chart-select"
                                 label={chartCopy.xAxis}
                                 value={String(candleX)}
+                                hideDisabledOptions
                                 searchable={result.columns.length >= 8}
                                 onChange={value =>
                                     onChart({

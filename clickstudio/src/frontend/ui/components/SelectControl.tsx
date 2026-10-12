@@ -12,6 +12,7 @@ export function SelectControl({
     options,
     onChange,
     searchable = false,
+    hideDisabledOptions = false,
     className = '',
 }: {
     label: string;
@@ -19,6 +20,7 @@ export function SelectControl({
     options: SelectControlOption[];
     onChange: (value: string) => void;
     searchable?: boolean;
+    hideDisabledOptions?: boolean;
     className?: string;
 }) {
     const id = useId();
@@ -30,7 +32,10 @@ export function SelectControl({
     const [search, setSearch] = useState('');
     const [activeIndex, setActiveIndex] = useState(0);
     const selected = options.find(option => option.value === value);
-    const visibleOptions = options.filter(option =>
+    const availableOptions = hideDisabledOptions
+        ? options.filter(option => !option.disabled)
+        : options;
+    const visibleOptions = availableOptions.filter(option =>
         option.label.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()),
     );
     const enabledIndexes = visibleOptions.flatMap((option, index) =>
@@ -59,10 +64,10 @@ export function SelectControl({
         const element = menu.current;
         if (!element || element.matches(':popover-open')) return;
         setSearch('');
-        const selectedIndex = options.findIndex(
+        const selectedIndex = availableOptions.findIndex(
             option => option.value === value && !option.disabled,
         );
-        const firstEnabledIndex = options.findIndex(option => !option.disabled);
+        const firstEnabledIndex = availableOptions.findIndex(option => !option.disabled);
         setActiveIndex(Math.max(0, selectedIndex >= 0 ? selectedIndex : firstEnabledIndex));
         element.showPopover();
     };
@@ -197,7 +202,7 @@ export function SelectControl({
                         onChange={event => {
                             const nextSearch = event.target.value;
                             setSearch(nextSearch);
-                            const nextVisibleOptions = options.filter(option =>
+                            const nextVisibleOptions = availableOptions.filter(option =>
                                 option.label
                                     .toLocaleLowerCase()
                                     .includes(nextSearch.trim().toLocaleLowerCase()),
