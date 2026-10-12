@@ -61,6 +61,7 @@ export default defineConfig([
                 {
                     argsIgnorePattern: '^_',
                     caughtErrorsIgnorePattern: '^_',
+                    enableAutofixRemoval: { imports: true },
                     varsIgnorePattern: '^_',
                 },
             ],
