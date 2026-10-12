@@ -728,10 +728,10 @@
   display: grid;
   max-height: min(46%, 410px);
   flex: none;
-  gap: 10px;
+  gap: 8px;
   overflow: auto;
-  padding: 12px;
-  border: 1px solid color-mix(in srgb, var(--object-detail-accent) 28%, var(--line));
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--object-detail-accent) 20%, var(--line));
   border-radius: var(--radius-panel);
   background: var(--panel-raised);
   box-shadow: none;
@@ -787,17 +787,11 @@
   width: 100%;
   max-height: calc(100% - 46px);
   flex: 0 1 auto;
-  gap: 10px;
-  padding: 11px;
-  border: 1px solid color-mix(in srgb, var(--explorer-signal) 20%, var(--line));
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--explorer-signal) 16%, var(--line));
   border-radius: var(--radius-panel);
-  background:
-    radial-gradient(
-      ellipse at 100% 0%,
-      color-mix(in srgb, var(--explorer-signal) 7%, transparent),
-      transparent 50%
-    ),
-    var(--panel-raised);
+  background: var(--panel-raised);
   box-shadow: none;
 }
 .object-details-hero {
@@ -805,65 +799,61 @@
   min-width: 0;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 7px 10px;
-  padding: 12px;
-  border: 1px solid color-mix(in srgb, var(--object-detail-accent) 24%, var(--line));
-  border-radius: var(--radius-panel);
-  background: var(--panel);
+  gap: 5px 9px;
+  padding: 4px 2px 9px;
+  border-bottom: 1px solid var(--line);
 }
 .object-kind-badge {
   width: max-content;
-  padding: 5px 8px;
-  border: 1px solid color-mix(in srgb, var(--object-detail-accent) 42%, var(--line));
+  padding: 4px 7px;
+  border: 1px solid color-mix(in srgb, var(--object-detail-accent) 34%, var(--line));
   border-radius: var(--radius-label);
-  background: color-mix(in srgb, var(--object-detail-accent) 10%, var(--panel));
+  background: color-mix(in srgb, var(--object-detail-accent) 7%, var(--panel));
   color: var(--object-detail-accent);
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.055em;
 }
 .object-details-hero > strong {
   min-width: 0;
   overflow-wrap: anywhere;
   color: var(--text);
-  font-family: var(--font-display);
-  font-size: clamp(14px, 1.5vw, 19px);
-  font-weight: 720;
-  letter-spacing: -0.025em;
-  line-height: 1.25;
+  font-family: var(--font-sans);
+  font-size: clamp(15px, 1.35vw, 18px);
+  font-weight: 620;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
 }
 .object-details-hero > code,
 .object-details-hero > small {
   grid-column: 1 / -1;
   min-width: 0;
   overflow: hidden;
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 9px;
-  line-height: 1.5;
+  color: var(--text-soft);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .object-details-hero > code {
-  color: var(--text-soft);
+  font-weight: 560;
 }
 .object-details-hero > small {
   width: max-content;
   max-width: 100%;
-  padding: 5px 8px;
-  border: 1px solid color-mix(in srgb, var(--object-detail-accent) 30%, var(--line));
-  border-radius: var(--radius-label);
-  background: var(--panel-raised);
-  color: var(--text-soft);
+  padding: 0;
+  color: var(--muted);
   font-family: var(--font-sans);
-  font-size: 9px;
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
-  line-height: 1.35;
+  font-weight: 500;
 }
 .object-action-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 5px;
+  gap: 6px;
 }
 .object-action-grid.compact {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -879,14 +869,15 @@
 .object-relation-actions {
   display: grid;
   min-width: 0;
-  gap: 8px;
+  gap: 6px;
 }
 .object-relation-actions > .object-action-grid .toolbar-small {
-  min-height: 40px;
+  min-height: 36px;
   border-radius: var(--radius-panel);
-  font-size: 9px;
-  font-weight: 690;
-  letter-spacing: 0.015em;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 .object-relation-actions > .object-action-grid svg {
   width: 12px;
@@ -897,21 +888,21 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
-  padding-top: 8px;
-  border-top: 1px solid color-mix(in srgb, var(--object-detail-accent) 20%, var(--line));
 }
 .object-utility-actions .toolbar-small {
   min-width: 0;
-  min-height: 34px;
+  min-height: 32px;
   justify-content: center;
   gap: 5px;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--object-detail-accent) 20%, var(--line));
+  border: 1px solid var(--line);
   border-radius: var(--radius-panel);
   background: var(--panel);
   color: var(--text-soft);
-  font-size: 9px;
-  letter-spacing: 0.015em;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 550;
+  letter-spacing: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
   transition:
@@ -932,29 +923,30 @@
 }
 .object-fact-list {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 .object-fact {
   display: grid;
-  gap: 6px;
-  padding: 10px 11px;
-  border: 1px solid color-mix(in srgb, var(--object-detail-accent) 18%, var(--line));
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
   border-radius: var(--radius-panel);
   background: var(--panel);
 }
 .object-fact > span {
-  color: var(--object-detail-accent);
-  font-size: 8px;
-  font-weight: 780;
-  letter-spacing: 0.09em;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 620;
+  letter-spacing: 0.055em;
   text-transform: uppercase;
 }
 .object-fact > code {
   overflow-wrap: anywhere;
-  color: var(--text-soft);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  line-height: 1.5;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  line-height: 1.4;
 }
 .object-reference-actions {
   display: flex;

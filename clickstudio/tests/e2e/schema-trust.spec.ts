@@ -372,6 +372,22 @@ test('Object explorer keeps selection while browsing and restores expansion afte
     await expect(page.getByText('day', { exact: true }).first()).toBeVisible();
 });
 
+test('Column details show the type once and keep comments readable', async ({ page }) => {
+    await mockLiveWorkspace(page, route => route.fulfill({ json: schema }));
+
+    const table = page.locator(
+        '[role="treeitem"][data-database="analytics"][data-table-name="events"]',
+    );
+    await table.locator('.object-tree-toggle').click();
+    await page.locator('.object-tree-row.is-group.is-column .object-tree-toggle').click();
+    await page.locator('.object-tree-row.is-leaf.is-column .object-tree-main').click();
+
+    const details = page.getByRole('region', { name: 'Selected object', exact: true });
+    await expect(details.locator('.object-details-hero > small')).toHaveText('Type · Date');
+    await expect(details.locator('.object-fact > span')).toHaveText(['COMMENT']);
+    await expect(details.locator('.object-fact > code')).toHaveText(['Event date']);
+});
+
 test('Object explorer explains when the loaded schema has no visible objects', async ({ page }) => {
     await mockLiveWorkspace(page, route =>
         route.fulfill({ json: { ...schema, tables: [], columns: [], dictionaries: [] } }),

@@ -168,7 +168,7 @@ export function ObjectDetails({
                     <code>
                         {selection.table.database}.{selection.table.name}
                     </code>
-                    <small>{selection.column.type}</small>
+                    <small>Type · {selection.column.type}</small>
                 </div>
                 <div className="object-action-grid compact">
                     <Button
@@ -187,7 +187,6 @@ export function ObjectDetails({
                     </Button>
                 </div>
                 <div className="object-fact-list">
-                    <ObjectFact label="TYPE" value={selection.column.type} />
                     {selection.column.defaultKind && (
                         <ObjectFact label="DEFAULT" value={selection.column.defaultKind} />
                     )}
