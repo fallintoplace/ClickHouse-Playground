@@ -122,7 +122,16 @@ for (const mode of ['beginner', 'expert']) {
         if (mode === 'beginner') {
             await expect(inspector).toHaveCount(0);
             await page.getByTestId('open-ai').click();
-            await expect(inspector.getByRole('heading', { name: 'AI', exact: true })).toBeVisible();
+            const browser = inspector.getByRole('navigation', {
+                name: 'Workspace browser',
+                exact: true,
+            });
+            await expect(browser.getByRole('button')).toHaveText(['Objects', 'AI']);
+            await expect(browser.getByRole('button', { name: 'AI', exact: true })).toHaveAttribute(
+                'aria-pressed',
+                'true',
+            );
+            await expect(inspector.locator('.assistant-panel')).toBeVisible();
             await expect(inspector.locator('.inspector-tabs')).toHaveCount(0);
             await setWorkspaceMode(page, 'Experimental');
         }

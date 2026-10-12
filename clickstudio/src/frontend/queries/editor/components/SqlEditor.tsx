@@ -263,28 +263,6 @@ export interface SqlEditorProps {
     onNativeParseSnapshot?: (snapshot?: NativeParseSnapshot) => void;
 }
 
-function useDiagnosticsRevealed(props: SqlEditorProps) {
-    const session = props.sessions.get(props.documentId);
-    const revealed = useRef(
-        Boolean(
-            session &&
-            session.state.doc.toString() === props.value &&
-            session.showDiagnostics === true,
-        ),
-    );
-    const documentId = useRef(props.documentId);
-    if (documentId.current !== props.documentId) {
-        documentId.current = props.documentId;
-        const nextSession = props.sessions.get(props.documentId);
-        revealed.current = Boolean(
-            nextSession &&
-            nextSession.state.doc.toString() === props.value &&
-            nextSession.showDiagnostics === true,
-        );
-    }
-    return revealed;
-}
-
 function applyEditorDiagnostics(
     editor: EditorView,
     props: SqlEditorProps,
@@ -405,6 +383,10 @@ function useSqlEditorMount({
         if (!element.current) return;
         const p = current.current;
         const session = p.sessions.get(p.documentId);
+        // The departing editor captures its session during layout cleanup, after render.
+        diagnosticsRevealed.current = Boolean(
+            session && session.state.doc.toString() === p.value && session.showDiagnostics,
+        );
         const appendedExtensions = [...(session?.appendedExtensions ?? [])];
         const restoredScroll =
             session?.state.doc.toString() === p.value ? session.scroll : undefined;
@@ -547,7 +529,7 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
     const setScrollViewport = useRef<RefCallback<HTMLElement> | null>(null);
     const nativeDiagnostics = useRef<NativeDiagnostic[]>([]),
         validationRevision = useRef(0);
-    const diagnosticsRevealed = useDiagnosticsRevealed(props);
+    const diagnosticsRevealed = useRef(false);
     current.current = props;
     const schemaIndex = useMemo(
             () => indexSchema(props.schema, props.database),

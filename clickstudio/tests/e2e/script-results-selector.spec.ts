@@ -358,7 +358,7 @@ test('Opening a long script menu scrolls the selected statement into view', asyn
     expect(await menu.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
 });
 
-test('Pending statements stay disabled and cancellation remains available in the header', async ({
+test('Pending statements stay disabled and cancellation remains available in the editor', async ({
     page,
 }) => {
     await trust(page);
@@ -366,7 +366,8 @@ test('Pending statements stay disabled and cancellation remains available in the
     await replaceSql(page, 'SELECT fixture_slow; SELECT 2; SELECT 3;');
     await runScript(page);
     const results = page.getByRole('region', { name: 'Query results', exact: true });
-    const cancel = results.getByRole('button', { name: 'Cancel script', exact: true });
+    const cancel = page.getByTestId('run-button');
+    await expect(cancel).toHaveAccessibleName('Cancel');
     await expect(cancel).toBeVisible();
     const cards = results.getByRole('group', { name: 'Select a statement result', exact: true });
     await expect(cards.getByRole('button')).toHaveCount(3);
@@ -383,7 +384,8 @@ test('Pending statements stay disabled and cancellation remains available in the
     await page.keyboard.press('End');
     await expect(menu.getByRole('menuitemradio', { name: 'Statement 1: running' })).toBeFocused();
     await cancel.click();
-    await expect(cancel).toHaveCount(0);
+    await expect(cancel).toHaveAccessibleName('Run');
+    await expect(cancel).toBeEnabled();
     await expect(results.locator('.script-running-results')).toHaveCount(0);
     await expect(results.getByRole('button', { name: /^Select a statement result/ })).toContainText(
         '01',

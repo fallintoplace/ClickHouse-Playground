@@ -1045,9 +1045,10 @@ for (const theme of ['Dark', 'Light'])
             await details.locator('summary').focus();
             await page.keyboard.press('Enter');
             await expect(failure.locator('.result-failure-detail')).toBeVisible();
-            await expect(failure.locator('.result-failure-detail')).toHaveText(
-                `[CLICKHOUSE_62] ${message}`,
+            await expect(failure.locator('.result-failure-diagnostic-meta')).toContainText(
+                'Error code: CLICKHOUSE_62',
             );
+            await expect(failure.locator('.result-failure-detail')).toHaveText(message);
             await expect(failure.locator('.is-full')).toHaveText('SELECT 1\nGROUP BY');
             const expanded = (await results.boundingBox())!;
             expect(expanded.y).toBeCloseTo(before.y, 0);
@@ -1229,6 +1230,7 @@ test('Failed output stays docked while editor markers open in a separate window'
     await replaceSql(page, 'SELECT 1\nGROUP BY');
     await runButton(page).click();
     await expect(page.getByTestId('query-failure')).toBeVisible();
+    await expect(page.locator('.cm-server-error-line')).toContainText('GROUP BY');
     const editorOpened = page.waitForEvent('popup');
     await page
         .getByRole('button', { name: 'Open editor in a separate window', exact: true })
@@ -1239,6 +1241,7 @@ test('Failed output stays docked while editor markers open in a separate window'
     await expect(editor.getByTestId('query-failure')).toHaveCount(0);
     await editor.close();
     await expect(page.getByTestId('query-failure')).toBeVisible();
+    await expect(page.locator('.cm-server-error-line')).toContainText('GROUP BY');
     await expect(page.locator('.is-context .result-failure-line > span:last-child')).toHaveText([
         'SELECT 1',
         'GROUP BY\n^',
@@ -1251,6 +1254,9 @@ test('Failed output stays docked while editor markers open in a separate window'
     await expect(page.getByTestId('query-failure')).toBeHidden();
     await expect(page.locator('.results-surface')).toHaveClass(/is-collapsed/);
     await page.getByRole('button', { name: 'Expand Query results', exact: true }).click();
+    await expect(page.getByTestId('query-failure')).toBeVisible();
+    await replaceSql(page, 'SELECT 2');
+    await expect(page.locator('.cm-server-error-line')).toHaveCount(0);
     await expect(page.getByTestId('query-failure')).toBeVisible();
 });
 
@@ -3086,16 +3092,15 @@ test('Selecting an earlier script statement stops automatic following while late
     await runScript(page);
 
     const results = page.getByRole('region', { name: 'Query results', exact: true });
-    await expect(results.getByRole('button', { name: 'Cancel script', exact: true })).toBeVisible();
+    await expect(runButton(page)).toHaveAttribute('aria-label', 'Cancel');
+    await expect(runButton(page)).toBeEnabled();
     await openStatementResults(results);
     const first = results.getByRole('menuitemradio', {
         name: 'Statement 1: succeeded',
         exact: true,
     });
-    const second = results.getByRole('menuitemradio', {
-        name: 'Statement 2: running',
-        exact: true,
-    });
+    const second = results.getByRole('menuitemradio', { name: /^Statement 2:/ });
+    await expect(second).toHaveAccessibleName('Statement 2: running');
     await expect(second).toHaveAttribute('aria-checked', 'true');
     const nextPoll = page.waitForResponse(
         response =>
@@ -3106,6 +3111,9 @@ test('Selecting an earlier script statement stops automatic following while late
     await openStatementResults(results);
     await expect(first).toHaveAttribute('aria-checked', 'true');
     await nextPoll;
+    await expect(first).toHaveAttribute('aria-checked', 'true');
+    await expect(second).toHaveAttribute('aria-checked', 'false');
+    await expect(second).toHaveAccessibleName('Statement 2: succeeded');
     await expect(first).toHaveAttribute('aria-checked', 'true');
     await expect(second).toHaveAttribute('aria-checked', 'false');
 });
@@ -3140,7 +3148,7 @@ test('Cancelling a long-running query reaches a terminal cancelled state', async
         );
         await runButton(page).click();
         await cancelRequest;
-        await expect(runButton(page)).toHaveAttribute('aria-label', 'Cancelling…');
+        await expect(runButton(page)).toHaveAttribute('aria-label', 'Stopping…');
         await expect(runButton(page)).toBeDisabled();
         releaseCancel?.();
         await cancelResponse;

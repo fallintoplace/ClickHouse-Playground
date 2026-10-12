@@ -19,10 +19,7 @@ import { PipelineGraph } from '../inspection/diagrams/PipelineGraph';
 import { SqlFlowView } from '../inspection/diagrams/SqlFlowView';
 import { Button, cx, Spinner } from '../../ui/components/primitives';
 import { Icon } from '../../ui/components/icons';
-import {
-    ScriptResultsSelector,
-    ScriptRunningResults,
-} from './ScriptResultsSelector';
+import { ScriptResultsSelector, ScriptRunningResults } from './ScriptResultsSelector';
 import { ScrollEdgeFrame } from '../../ui/components/ScrollEdgeShadows';
 import { QueryFailureNotice } from './QueryFailureNotice';
 import { resultsTabLabel } from '../../workspace/workspace-helpers';
@@ -603,17 +600,7 @@ function renderResultsHeader({
         resultsPanelLabel,
         failureSql,
     } = viewState;
-    const {
-        copy,
-        run,
-        script,
-        history,
-        connection,
-        assistantBusy,
-        busy,
-        execution,
-        failedAttempt,
-    } = state;
+    const { copy, run, script, history, assistantBusy, busy, execution, failedAttempt } = state;
     const headerView = showFailure ? 'results' : visibleResultsView;
     const headerPanelLabel = showFailure ? copy.common.queryResults : resultsPanelLabel;
     const showQueryCard = ['results', 'chart', 'insights'].includes(headerView);

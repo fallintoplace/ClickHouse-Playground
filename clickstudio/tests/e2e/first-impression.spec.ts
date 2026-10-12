@@ -70,17 +70,22 @@ test('Experimental mode uses the Standard right inspector layout', async ({ page
     await expect(page.getByRole('button', { name: 'Run', exact: true })).toBeVisible();
 });
 
-test('Standard keeps only AI and preserves execution and saving', async ({ page }) => {
+test('Standard keeps Objects and AI while preserving execution and saving', async ({ page }) => {
     await trust(page, 'beginner');
     const rail = page.locator('.icon-rail');
     const inspector = page.locator('.inspector-pane.is-docked-inspector');
+    const browser = inspector.getByRole('navigation', { name: 'Workspace browser', exact: true });
+    const aiTab = browser.getByRole('button', { name: 'AI', exact: true });
     await expect(inspector).toHaveCount(0);
     await expect(page.getByTestId('save-query')).toHaveCount(0);
     await expect(page.locator('.tab-unsaved')).toHaveCount(0);
-    for (const name of ['Objects', 'Reference', 'AI', 'Query history', 'Saved queries'])
+    await expect(rail.getByRole('button', { name: 'Objects', exact: true })).toBeVisible();
+    for (const name of ['Reference', 'AI', 'Query history', 'Saved queries'])
         await expect(rail.getByRole('button', { name, exact: true })).toHaveCount(0);
     await page.locator('.editor-heading').getByTestId('open-ai').click();
-    await expect(inspector.getByRole('heading', { name: 'AI', exact: true })).toBeVisible();
+    await expect(browser.getByRole('button')).toHaveText(['Objects', 'AI']);
+    await expect(aiTab).toHaveAttribute('aria-pressed', 'true');
+    await expect(inspector.locator('.assistant-panel')).toBeVisible();
     await expect(inspector.locator('.inspector-tabs')).toHaveCount(0);
     await expect(
         page.getByRole('button', { name: 'More workspace panels', exact: true }),
@@ -90,7 +95,8 @@ test('Standard keeps only AI and preserves execution and saving', async ({ page 
     await expect(
         page.getByRole('table', { name: 'Retained query rows', exact: true }),
     ).toBeVisible();
-    await expect(inspector.getByRole('heading', { name: 'AI', exact: true })).toBeVisible();
+    await expect(aiTab).toHaveAttribute('aria-pressed', 'true');
+    await expect(inspector.locator('.assistant-panel')).toBeVisible();
     const saved = page.waitForResponse(
         response =>
             response.request().method() === 'POST' &&
@@ -125,15 +131,14 @@ test('Standard keeps only AI and preserves execution and saving', async ({ page 
     await expect(page.locator('.tab-unsaved')).toHaveCount(0);
     await expect(rail.getByRole('button', { name: 'AI', exact: true })).toHaveCount(0);
     await page.locator('.editor-heading').getByTestId('open-ai').click();
-    await expect(inspector.getByRole('heading', { name: 'AI', exact: true })).toBeVisible();
+    await expect(aiTab).toHaveAttribute('aria-pressed', 'true');
+    await expect(inspector.locator('.assistant-panel')).toBeVisible();
     await inspector.getByRole('button', { name: 'Close inspector', exact: true }).click();
     await expect(inspector).toHaveCount(0);
 });
 
 for (const panel of ['Objects', 'Reference', 'Query history', 'Saved queries', 'Version history']) {
-    test(`Standard hides ${panel} and restores it when returning to Experimental`, async ({
-        page,
-    }) => {
+    test(`Standard preserves the Experimental ${panel} selection`, async ({ page }) => {
         await trust(page);
         const inspector = page.locator('.inspector-pane.is-docked-inspector');
         if (panel === 'Objects' || panel === 'Reference')
@@ -152,7 +157,16 @@ for (const panel of ['Objects', 'Reference', 'Query history', 'Saved queries', '
             page.locator('.icon-rail').getByRole('button', { name: 'AI', exact: true }),
         ).toHaveCount(0);
         await page.locator('.editor-heading').getByTestId('open-ai').click();
-        await expect(inspector.getByRole('heading', { name: 'AI', exact: true })).toBeVisible();
+        const browser = inspector.getByRole('navigation', {
+            name: 'Workspace browser',
+            exact: true,
+        });
+        await expect(browser.getByRole('button')).toHaveText(['Objects', 'AI']);
+        await expect(browser.getByRole('button', { name: 'AI', exact: true })).toHaveAttribute(
+            'aria-pressed',
+            'true',
+        );
+        await expect(inspector.locator('.assistant-panel')).toBeVisible();
         await expect(inspector.locator('.inspector-tabs')).toHaveCount(0);
         await setWorkspaceMode(page, 'Experimental');
         await expect(inspector.getByRole('heading', { name: panel, exact: true })).toBeVisible();

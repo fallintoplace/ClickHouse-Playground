@@ -69,6 +69,13 @@ export type WorkspaceQueryPanelActions = Readonly<{
     onDockDetached: () => void;
 }>;
 
+function getRunButtonLabel(state: WorkspaceQueryPanelState, executionCanCancel: boolean) {
+    if (state.cancelling || state.executionStopRequested) return 'Stopping…';
+    if (executionCanCancel) return state.copy.common.cancel;
+    if (state.busy === 'run' || state.busy === 'script') return state.copy.common.running;
+    return state.copy.common.run;
+}
+
 export function WorkspaceQueryPanel({
     state,
     actions,
@@ -133,17 +140,7 @@ export function WorkspaceQueryPanel({
         ? actions.runActionTitle(connection.manifest?.scripts, 'script')
         : undefined;
     const standardFormatter = nativeParserStatus === 'ready' ? 'wasm' : 'builtin';
-    let runButtonLabel: string;
-
-    if (state.cancelling || state.executionStopRequested) {
-        runButtonLabel = 'Stopping…';
-    } else if (executionCanCancel) {
-        runButtonLabel = copy.common.cancel;
-    } else if (busy === 'run' || busy === 'script') {
-        runButtonLabel = copy.common.running;
-    } else {
-        runButtonLabel = copy.common.run;
-    }
+    const runButtonLabel = getRunButtonLabel(state, executionCanCancel);
     const runSql = () => actions.onRun('query');
     const runButton = (
         <Button
