@@ -161,6 +161,7 @@ export function renderChartControls({
                         className="chart-select"
                         label={chartCopy.yAxis}
                         value={String(groupByIndex ?? -1)}
+                        hideDisabledOptions
                         searchable={result.columns.length >= 8}
                         onChange={value => onChart({ ...chart, groupBy: Number(value) })}
                         options={result.columns.map((column, index) => ({
