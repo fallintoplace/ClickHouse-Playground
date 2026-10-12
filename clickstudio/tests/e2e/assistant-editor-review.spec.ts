@@ -857,7 +857,7 @@ for (const theme of ['Dark', 'Light']) {
             });
             const surface = review(page).locator('.sql-review-surface');
             const actions = review(page).locator('.sql-review-actions');
-            await expect(actions.getByText('1 pending change', { exact: true })).toBeVisible();
+            await expect(actions.getByText('Pending change', { exact: true })).toBeVisible();
             await expect(accept).toBeInViewport({ ratio: 1 });
             await expect(actions).toBeInViewport({ ratio: 1 });
             const surfaceBox = await surface.boundingBox();
