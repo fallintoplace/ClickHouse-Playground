@@ -80,6 +80,14 @@ export default defineConfig([
             },
         },
         rules: {
+            '@typescript-eslint/consistent-type-imports': [
+                'error',
+                {
+                    disallowTypeAnnotations: false,
+                    fixStyle: 'separate-type-imports',
+                    prefer: 'type-imports',
+                },
+            ],
             '@typescript-eslint/no-unsafe-type-assertion': 'error',
             '@typescript-eslint/no-floating-promises': [
                 'error',

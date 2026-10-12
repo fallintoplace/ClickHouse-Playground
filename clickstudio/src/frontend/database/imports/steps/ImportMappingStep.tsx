@@ -1,11 +1,12 @@
-import { cloudImportDatabases, CREATE_CLOUD_TABLE_TARGET } from '../state/cloud-import';
+import type { cloudImportDatabases } from '../state/cloud-import';
+import { CREATE_CLOUD_TABLE_TARGET } from '../state/cloud-import';
 import { ImportPreviewTable } from '../preview/ImportPreviewTable';
 import {
     formatImportColumnCount,
     formatImportRowCount,
     type ImportPreview,
 } from '../state/import-wizard-model';
-import { useImportWizardController } from '../useImportWizardController';
+import type { useImportWizardController } from '../useImportWizardController';
 import { Icon } from '../../../ui/components/icons';
 import { ImportNewTableForm } from '../preview/ImportNewTableForm';
 import { ImportColumnMapping } from '../preview/ImportColumnMapping';

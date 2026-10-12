@@ -1,6 +1,6 @@
 import { NATIVE_EXPLORER_KINDS } from '../../../shared/database/explorer/explorers.js';
 import { MAX_SQL_CHARS } from '../../../shared/queries/execution/limits.js';
-import express from 'express';
+import type express from 'express';
 import type { Principal } from '../../../shared/common/identity.js';
 import { requireThat } from '../../system/requests/errors.js';
 import { canWrite } from '../../system/login/permissions.js';

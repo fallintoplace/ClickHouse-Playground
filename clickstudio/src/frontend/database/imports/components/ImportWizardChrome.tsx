@@ -1,5 +1,5 @@
 import { importSteps } from '../state/import-wizard-model';
-import { useImportWizardController } from '../useImportWizardController';
+import type { useImportWizardController } from '../useImportWizardController';
 import { Button } from '../../../ui/components/ui';
 import { Icon } from '../../../ui/components/icons';
 

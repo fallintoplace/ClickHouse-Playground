@@ -1,6 +1,6 @@
 import type { QueryDriver } from '../queries/execution/runs.js';
 import { type ImportDriver } from '../database/imports/imports.js';
-import { ClickHouseDriver } from '../database/clickhouse/client.js';
+import type { ClickHouseDriver } from '../database/clickhouse/client.js';
 
 export type Driver = QueryDriver &
     ImportDriver &

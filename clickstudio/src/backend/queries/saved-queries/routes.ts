@@ -1,5 +1,5 @@
-import express from 'express';
-import { ArtifactService } from './documents.js';
+import type express from 'express';
+import type { ArtifactService } from './documents.js';
 import { requireThat } from '../../system/requests/errors.js';
 import { integer, text } from '../../system/requests/validation.js';
 import type { Driver } from '../../app/types.js';

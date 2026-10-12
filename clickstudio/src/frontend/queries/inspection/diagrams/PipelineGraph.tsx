@@ -13,12 +13,12 @@ import type {
     ProfilePipelineNode,
 } from '../../../../shared/queries/inspection/types';
 import { Icon } from '../../../ui/components/icons';
+import type { GraphLayout } from './pipeline-graph-model';
 import {
     autoFocusGraphKinds,
     centerGraphNode,
     focusPipeline,
     graphLabels,
-    GraphLayout,
     graphNodeKindLabel,
     labelLines,
     layoutPipeline,

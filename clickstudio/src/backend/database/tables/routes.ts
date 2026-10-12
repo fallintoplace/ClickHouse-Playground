@@ -1,10 +1,7 @@
-import express from 'express';
-import {
-    CREATE_TABLE_COLUMN_TYPES,
-    TableCreationService,
-    type CreateTableColumn,
-} from './create-table.js';
-import { TableDeletionService } from './delete-table.js';
+import type express from 'express';
+import type { TableCreationService } from './create-table.js';
+import { CREATE_TABLE_COLUMN_TYPES, type CreateTableColumn } from './create-table.js';
+import type { TableDeletionService } from './delete-table.js';
 import { requireThat } from '../../system/requests/errors.js';
 import { choice, record, text } from '../../system/requests/validation.js';
 import type { Driver } from '../../app/types.js';

@@ -1,7 +1,8 @@
 import type { ChartKind } from '../../../../../shared/queries/results/chart-types.js';
 import type { Result } from '../../../../../shared/queries/results/types.js';
 import type { Row } from '../../../../../shared/common/values.js';
-import { chartText, type ChartAxisTick } from '../chart-helpers.js';
+import type { chartText } from '../chart-helpers.js';
+import { type ChartAxisTick } from '../chart-helpers.js';
 
 export type ChartSvgModel = {
     viewportWidth: number;

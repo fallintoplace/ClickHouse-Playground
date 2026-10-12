@@ -1,11 +1,11 @@
 import type { RefCallback } from 'react';
+import type { recommendChart } from '../../../../../shared/queries/results/results';
 import {
     type RowCountSeries,
     countRowsByCategory,
     countRowsOverTime,
     MAX_CHART_RENDER_POINTS,
     numericType,
-    recommendChart,
     temporalType,
 } from '../../../../../shared/queries/results/results';
 import type { Result } from '../../../../../shared/queries/results/types';

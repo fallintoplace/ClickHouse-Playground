@@ -61,10 +61,8 @@ import type {
 import { useDetachedQueryEditor } from './layout/windows/useDetachedQueryEditor';
 import { useWorkspaceDocumentSave } from '../queries/saved-queries/useWorkspaceDocumentSave';
 import { useWorkspaceExecution } from '../queries/execution/useWorkspaceExecution';
-import {
-    useWorkspaceNotifications,
-    type WorkspaceFeedback,
-} from './layout/notifications/useWorkspaceNotifications';
+import type { useWorkspaceNotifications } from './layout/notifications/useWorkspaceNotifications';
+import { type WorkspaceFeedback } from './layout/notifications/useWorkspaceNotifications';
 import { useWorkspaceSqlFormatter } from '../queries/editor/useWorkspaceSqlFormatter';
 import { useWorkspaceViewState } from './layout/useWorkspaceViewState';
 import { canOpenInspector } from './layout/panels/inspector-navigation';

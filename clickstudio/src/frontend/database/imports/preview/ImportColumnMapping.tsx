@@ -1,6 +1,6 @@
 import { NativeTable } from '../../../ui/components/NativeTable';
 import { type ImportPreview } from '../state/import-wizard-model';
-import { useImportWizardController } from '../useImportWizardController';
+import type { useImportWizardController } from '../useImportWizardController';
 
 export function ImportColumnMapping({
     preview,

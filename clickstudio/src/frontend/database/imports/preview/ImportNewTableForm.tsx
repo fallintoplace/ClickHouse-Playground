@@ -1,5 +1,5 @@
-import { cloudImportDatabases } from '../state/cloud-import';
-import { useImportWizardController } from '../useImportWizardController';
+import type { cloudImportDatabases } from '../state/cloud-import';
+import type { useImportWizardController } from '../useImportWizardController';
 
 export function ImportNewTableForm({
     createTableDatabase,

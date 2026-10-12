@@ -1,4 +1,4 @@
-import { useImportWizardController } from '../useImportWizardController';
+import type { useImportWizardController } from '../useImportWizardController';
 import { Spinner } from '../../../ui/components/ui';
 
 export function ImportWizardNotice({

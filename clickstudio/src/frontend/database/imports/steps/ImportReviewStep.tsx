@@ -6,7 +6,7 @@ import {
     type ImportMapping,
     type ImportPreview,
 } from '../state/import-wizard-model';
-import { useImportWizardController } from '../useImportWizardController';
+import type { useImportWizardController } from '../useImportWizardController';
 import type { Copy } from '../../../ui/copy';
 import type { SchemaColumn } from '../../../../shared/database/schema/types';
 

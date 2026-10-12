@@ -1,8 +1,8 @@
 import { MONITOR_CONDITIONS } from './conditions.js';
-import express from 'express';
+import type express from 'express';
 import type { AuditEvent } from '../../../shared/common/identity.js';
 import { isRecord } from '../../../shared/common/values.js';
-import { MonitorService } from './monitors.js';
+import type { MonitorService } from './monitors.js';
 import { type Store } from '../../system/store.js';
 import { choice, identifier, integer } from '../../system/requests/validation.js';
 import { principal, body, id, boolean } from '../../system/requests/http.js';

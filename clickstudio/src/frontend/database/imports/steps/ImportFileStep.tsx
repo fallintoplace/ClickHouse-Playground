@@ -2,7 +2,7 @@ import { IMPORT_FILE_SIZE_LABEL } from '../../../../shared/database/imports/limi
 import { api, apiResponses } from '../../../api/client';
 import { ImportPreviewTable } from '../preview/ImportPreviewTable';
 import { formatImportColumnCount, formatImportRowCount } from '../state/import-wizard-model';
-import { useImportWizardController } from '../useImportWizardController';
+import type { useImportWizardController } from '../useImportWizardController';
 import { Icon } from '../../../ui/components/icons';
 
 export function ImportFileStep({

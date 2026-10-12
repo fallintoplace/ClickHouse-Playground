@@ -3,8 +3,8 @@ import {
     MAX_IMPORT_SOURCE_CHARS,
     IMPORT_PREVIEW_ROWS,
 } from '../../../shared/database/imports/limits.js';
-import express from 'express';
-import { ImportService } from './imports.js';
+import type express from 'express';
+import type { ImportService } from './imports.js';
 import { requireThat } from '../../system/requests/errors.js';
 import { choice, identifier, text } from '../../system/requests/validation.js';
 import type { Driver } from '../../app/types.js';

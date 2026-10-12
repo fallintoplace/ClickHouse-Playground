@@ -1,13 +1,15 @@
 import { ASSISTANT_ACTIONS, PROPOSAL_DECISION_ACTIONS } from '../../../shared/assistant/actions.js';
 import { MAX_SQL_CHARS } from '../../../shared/queries/execution/limits.js';
 import { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../../shared/database/connections/cloud-policy.js';
-import express, { type Express } from 'express';
+import type express from 'express';
+import { type Express } from 'express';
 import type { Principal } from '../../../shared/common/identity.js';
 import type { Result } from '../../../shared/queries/results/types.js';
 import type { Run } from '../../../shared/queries/execution/types.js';
 import type { Schema } from '../../../shared/database/schema/types.js';
-import { RunService } from '../../queries/execution/runs.js';
-import { AssistantService, validateAssistantConversation } from './assistant.js';
+import type { RunService } from '../../queries/execution/runs.js';
+import type { AssistantService } from './assistant.js';
+import { validateAssistantConversation } from './assistant.js';
 import {
     assistantRequestFrom,
     assistantResultFrom,

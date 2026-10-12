@@ -5,7 +5,7 @@ import {
 } from '../../../../shared/database/imports/limits';
 import { Button } from '../../../ui/components/ui';
 import { formatImportColumnCount } from '../state/import-wizard-model';
-import { useImportWizardController } from '../useImportWizardController';
+import type { useImportWizardController } from '../useImportWizardController';
 
 export function ImportWizardFooter({
     importKind,

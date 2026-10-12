@@ -10,10 +10,8 @@ import {
     mapImportRows,
     type ImportMappingColumn,
 } from '../../../../shared/database/imports/mapping';
-import {
-    useImportWizardController,
-    type ImportWizardControllerOptions,
-} from '../useImportWizardController';
+import type { useImportWizardController } from '../useImportWizardController';
+import { type ImportWizardControllerOptions } from '../useImportWizardController';
 import type { Json } from '../../../../shared/common/values';
 
 function findLiveMappingIssue(
