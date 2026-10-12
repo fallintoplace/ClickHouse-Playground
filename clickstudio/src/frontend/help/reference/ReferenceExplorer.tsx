@@ -15,7 +15,7 @@ import {
 } from './reference-provider';
 import type { Connected } from '../../workspace/workspace-types';
 import type { Copy } from '../../ui/copy';
-import { Button, cx, Spinner } from '../../ui/components/ui';
+import { Button, cx, Spinner } from '../../ui/components/primitives';
 import { Icon } from '../../ui/components/icons';
 
 type ReferenceTarget = { name: string; type: string };

@@ -6,9 +6,9 @@ import {
     type MergeActivity,
     type MutationActivity,
 } from '../../../../shared/database/explorer/storage/activity';
-import { nativeBytes, nativeCount, nativeTime } from '../format';
+import { nativeBytes, nativeCount, nativeTime } from '../native-value-formatters';
 import { useNativeExplorer } from '../useNativeExplorer';
-import { Button } from '../../../ui/components/ui';
+import { Button } from '../../../ui/components/primitives';
 
 function MergeCard({ item }: { item: MergeActivity }) {
     const percent = item.progress === undefined ? undefined : Math.round(item.progress * 100);

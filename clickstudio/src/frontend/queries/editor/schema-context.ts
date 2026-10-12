@@ -1,6 +1,6 @@
 import type { Schema, SchemaTable } from '../../../shared/database/schema/types.js';
 import type { SqlScan } from '../../../shared/sql/lexer-types.js';
-import { identifierText, tableAlias, tableAliases } from './tools.js';
+import { identifierText, tableAlias, tableAliases } from './sql-editor-helpers.js';
 
 export type SchemaIndex = {
     columns: Schema['columns'];

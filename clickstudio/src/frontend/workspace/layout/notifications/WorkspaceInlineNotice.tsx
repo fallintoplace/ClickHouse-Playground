@@ -1,5 +1,5 @@
 import type { WorkspaceFeedback } from './useWorkspaceNotifications';
-import { Button, cx } from '../../../ui/components/ui';
+import { Button, cx } from '../../../ui/components/primitives';
 
 export function WorkspaceInlineNotice({
     feedback,

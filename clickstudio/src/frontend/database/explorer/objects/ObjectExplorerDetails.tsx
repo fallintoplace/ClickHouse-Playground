@@ -1,9 +1,9 @@
 import type { SchemaTable } from '../../../../shared/database/schema/types';
-import { tableQuerySql, type ExplorerSelection } from './model';
+import { tableQuerySql, type ExplorerSelection } from './object-explorer-model';
 import { quoteIdentifier } from '../../../../shared/sql/sql';
 import type { Copy } from '../../../ui/copy';
-import { Button, cx } from '../../../ui/components/ui';
-import { formatBytes, formatCount } from '../../../browser/format';
+import { Button, cx } from '../../../ui/components/primitives';
+import { formatBytes, formatCount } from '../../../browser/metric-formatters';
 import { Icon } from '../../../ui/components/icons';
 
 type ObjectDetailsProps = {

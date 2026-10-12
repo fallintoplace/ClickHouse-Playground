@@ -8,7 +8,10 @@ import {
     CLICKHOUSE_CLOUD_CONNECTION_ID,
     loadClickHouseCloudNativeExplorer,
 } from '../connections/cloud-connection';
-import { PLAYGROUND_CONNECTION_ID, queryPlaygroundWithParams } from '../connections/playground';
+import {
+    PLAYGROUND_CONNECTION_ID,
+    queryPlaygroundWithParams,
+} from '../connections/playground-client';
 
 export function requestNativeExplorer(
     connectionId: string,

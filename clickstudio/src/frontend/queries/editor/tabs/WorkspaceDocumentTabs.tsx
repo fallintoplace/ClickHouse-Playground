@@ -1,8 +1,8 @@
 import type { ExperienceLevel } from '../../../ui/styles/appearance-types';
 import type { QueryDocument } from '../../../../shared/queries/saved-queries/types';
-import { draftSaveStatus } from '../../saved-queries/draft-save';
+import { draftSaveStatus } from '../../saved-queries/draft-save-state';
 import type { Draft, WorkspaceState } from '../drafts/workspace-state';
-import { cx } from '../../../ui/components/ui';
+import { cx } from '../../../ui/components/primitives';
 import { Icon } from '../../../ui/components/icons';
 import { useRef, type ReactNode, type RefObject } from 'react';
 

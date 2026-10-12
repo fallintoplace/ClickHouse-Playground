@@ -58,14 +58,14 @@ import {
     matchingNames,
     tableAliases as aliasesFor,
     tableAlias,
-} from '../tools';
+} from '../sql-editor-helpers';
 import {
     appendSqlSnippet,
     clickhouseSnippetCompletions,
     sqlEditorTools,
     sqlStatementOutline,
     sqlLexicalContext,
-} from './editor-tools';
+} from './codemirror-sql-extensions';
 import {
     clickhouse,
     clickhouseFunctions,

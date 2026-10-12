@@ -6,10 +6,10 @@ import {
     type KeyboardEvent as ReactKeyboardEvent,
     type ReactNode,
 } from 'react';
-import { PLAYGROUND_CONNECTION_ID } from '../database/connections/playground';
+import { PLAYGROUND_CONNECTION_ID } from '../database/connections/playground-client';
 import { safeStatementCount } from '../workspace/workspace-helpers';
 import { Icon } from '../ui/components/icons';
-import { cx } from '../ui/components/ui';
+import { cx } from '../ui/components/primitives';
 import {
     exampleText,
     helpCategories,

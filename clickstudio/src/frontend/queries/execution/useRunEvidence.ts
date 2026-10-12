@@ -4,9 +4,9 @@ import type { ProfilePipeline, QueryProfile } from '../../../shared/queries/insp
 import type { Result, ResultPage } from '../../../shared/queries/results/types';
 import type { Run } from '../../../shared/queries/execution/types';
 import type { FlamegraphSnapshot } from '../../../shared/queries/inspection/flamegraph';
-import { parseRunEvent } from './events';
+import { parseRunEvent } from './execution-validation';
 import { api, apiResponses, isFrontendDemoPreview, message } from '../../api/client';
-import { RetainedRunUnavailableError } from '../../api/browser-workspace';
+import { RetainedRunUnavailableError } from '../../api/browser-workspace-api';
 import { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../database/connections/cloud-connection';
 import { terminal } from './status';
 import { useScopedValue } from '../../browser/useScopedValue';

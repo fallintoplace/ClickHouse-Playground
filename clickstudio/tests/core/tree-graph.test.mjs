@@ -5,8 +5,8 @@ import {
     indexTree,
     visibleTree,
 } from '../../.core-build/src/frontend/ui/components/tree-model.js';
-import { buildNativeAstTree } from '../../.core-build/src/frontend/queries/editor/parser/ast.js';
-import { parseQueryTree } from '../../.core-build/src/frontend/queries/inspection/diagrams/query-tree.js';
+import { buildNativeAstTree } from '../../.core-build/src/frontend/queries/editor/parser/native-ast.js';
+import { parseQueryTree } from '../../.core-build/src/frontend/queries/inspection/diagrams/query-tree-parser.js';
 
 function node(id, children = []) {
     return {

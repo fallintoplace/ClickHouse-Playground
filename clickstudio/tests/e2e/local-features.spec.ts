@@ -4,7 +4,7 @@ import { PLAYGROUND_CONNECTION } from '../../src/shared/database/connections/pla
 import type { CloudConnectionTest } from '../../src/frontend/database/connections/cloud-connection.js';
 import { trust } from './helpers.js';
 import { arrayValue, decodeValue, jsonRecord, stringValue } from '../helpers/type-guards.js';
-import { isResult } from '../../src/frontend/queries/execution/events.js';
+import { isResult } from '../../src/frontend/queries/execution/execution-validation.js';
 import { cloudSchema } from '../helpers/cloud-fixtures.js';
 
 const cloudConnectionTest: CloudConnectionTest = {

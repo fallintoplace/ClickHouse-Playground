@@ -5,7 +5,7 @@ import { isRecord } from '../../../shared/common/values.js';
 import type { MonitorService } from './monitors.js';
 import { type Store } from '../../system/store.js';
 import { choice, identifier, integer } from '../../system/requests/validation.js';
-import { principal, body, id, boolean } from '../../system/requests/http.js';
+import { principal, body, id, boolean } from '../../system/requests/request-accessors.js';
 
 function isAuditEvent(value: unknown): value is AuditEvent {
     return (

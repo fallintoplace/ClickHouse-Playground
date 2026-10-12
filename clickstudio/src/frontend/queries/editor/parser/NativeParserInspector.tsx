@@ -1,7 +1,7 @@
 import type { NativeParseSnapshot, NativeParserStatus } from '../../../../shared/sql/parser';
 import { nativeHighlightRanges } from '../../../../shared/sql/parser';
-import { asNativeAstObject } from './ast';
-import { Button, cx, Spinner } from '../../../ui/components/ui';
+import { asNativeAstObject } from './native-ast';
+import { Button, cx, Spinner } from '../../../ui/components/primitives';
 import { Icon } from '../../../ui/components/icons';
 
 type Props = {

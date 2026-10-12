@@ -8,7 +8,13 @@ import type { ImportService } from './imports.js';
 import { requireThat } from '../../system/requests/errors.js';
 import { choice, identifier, text } from '../../system/requests/validation.js';
 import type { Driver } from '../../app/types.js';
-import { principal, body, id, mappingFields, boolean } from '../../system/requests/http.js';
+import {
+    principal,
+    body,
+    id,
+    mappingFields,
+    boolean,
+} from '../../system/requests/request-accessors.js';
 
 export function registerImportRoutes({
     app,

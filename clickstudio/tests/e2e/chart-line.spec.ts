@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
 import type { Result } from '../../src/shared/queries/results/types.js';
-import { GEO_HELP_CITIES } from '../../src/frontend/help/previews/help-demos.js';
+import { GEO_HELP_CITIES } from '../../src/frontend/help/previews/geo-help-examples.js';
 import { chooseChartOption } from './chart-control-helpers.js';
 
 const cityOrder = [

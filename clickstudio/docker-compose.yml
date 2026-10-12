@@ -23,7 +23,7 @@ services:
   setup:
     build: .
     profiles: [app]
-    command: ["node", "--import", "tsx", "scripts/seed.ts"]
+    command: ["node", "--import", "tsx", "scripts/setup-local-clickhouse.ts"]
     environment:
       CLICKHOUSE_URL: http://clickhouse:8123
       CLICKHOUSE_ADMIN_USER: ${CLICKHOUSE_ADMIN_USER:-clickstudio_admin}

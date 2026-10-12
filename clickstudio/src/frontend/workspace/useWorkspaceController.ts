@@ -24,7 +24,7 @@ import { apiResponses, message, post } from '../api/client';
 import type { EditorHandle } from '../queries/editor/components/SqlEditor';
 import { terminal } from '../queries/execution/status';
 import type { Copy, ExperienceLevel } from '../ui/copy';
-import { PLAYGROUND_CONNECTION_ID } from '../database/connections/playground';
+import { PLAYGROUND_CONNECTION_ID } from '../database/connections/playground-client';
 import { sqlExamplesFor } from '../help/examples/sql-examples';
 import {
     isSchemaChangingSql,

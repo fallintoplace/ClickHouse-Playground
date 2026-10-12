@@ -15,10 +15,10 @@ import type {
     AssistantChatTurn,
 } from '../../../assistant/chat/assistant-chat-state';
 import { AssistantWorkflow } from '../../../assistant/proposals/AssistantWorkflow';
-import { Button, cx, Spinner } from '../../../ui/components/ui';
-import { formatBytes } from '../../../browser/format';
+import { Button, cx, Spinner } from '../../../ui/components/primitives';
+import { formatBytes } from '../../../browser/metric-formatters';
 import { Icon } from '../../../ui/components/icons';
-import { inspectorLabel } from './labels';
+import { inspectorLabel } from './inspector-labels';
 import { Status } from '../../../queries/execution/status';
 import type { Connected, ImportedTableTarget, Inspector } from '../../workspace-types';
 import type { NativeParseSnapshot, NativeParserStatus } from '../../../../shared/sql/parser';

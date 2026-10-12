@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PLAYGROUND_STARTER_SQL } from '../../.workspace-build/src/frontend/database/connections/playground.js';
+import { PLAYGROUND_STARTER_SQL } from '../../.workspace-build/src/frontend/database/connections/playground-client.js';
 import { sqlExamplesFor } from '../../.workspace-build/src/frontend/help/examples/sql-examples.js';
 
 test('SQL example catalogs match the selected Playground or fixture source', () => {

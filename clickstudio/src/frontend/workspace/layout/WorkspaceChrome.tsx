@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Run } from '../../../shared/queries/execution/types';
-import { Button, cx } from '../../ui/components/ui';
-import { formatBytes, formatCount } from '../../browser/format';
+import { Button, cx } from '../../ui/components/primitives';
+import { formatBytes, formatCount } from '../../browser/metric-formatters';
 import { Icon } from '../../ui/components/icons';
 import { Status, terminal } from '../../queries/execution/status';
 import type { IconName } from '../../ui/components/icons';

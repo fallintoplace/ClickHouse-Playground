@@ -1,4 +1,4 @@
-import { Button } from '../../../ui/components/ui';
+import { Button } from '../../../ui/components/primitives';
 import { Icon } from '../../../ui/components/icons';
 import type { ObjectExplorerProps } from './tree/object-explorer-types';
 import type { ObjectExplorerView } from './tree/useObjectExplorerState';

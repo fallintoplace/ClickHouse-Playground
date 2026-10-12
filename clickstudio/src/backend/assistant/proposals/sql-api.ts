@@ -16,7 +16,7 @@ import {
     assistantRequestFrom,
     assistantResultFrom as resultFrom,
     assistantSchemaFrom as schemaFrom,
-} from '../context/input.js';
+} from '../context/input-validation.js';
 import { AppError } from '../../system/requests/errors.js';
 import { fail, json } from '../../system/requests/responses.js';
 import { OpenAIDriver } from '../openai-client.js';

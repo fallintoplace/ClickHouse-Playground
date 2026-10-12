@@ -8,7 +8,10 @@ import {
     CLICKHOUSE_CLOUD_CONNECTION_ID,
     loadClickHouseCloudTableParts,
 } from '../../connections/cloud-connection';
-import { loadPlaygroundTableParts, PLAYGROUND_CONNECTION_ID } from '../../connections/playground';
+import {
+    loadPlaygroundTableParts,
+    PLAYGROUND_CONNECTION_ID,
+} from '../../connections/playground-client';
 import { isRecord } from '../../../../shared/common/values';
 
 const PART_TEXT_FIELDS = [

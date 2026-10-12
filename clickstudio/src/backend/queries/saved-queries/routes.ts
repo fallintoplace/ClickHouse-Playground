@@ -4,7 +4,7 @@ import { requireThat } from '../../system/requests/errors.js';
 import { integer, text } from '../../system/requests/validation.js';
 import type { Driver } from '../../app/types.js';
 import type { createSecretGuards } from '../../system/requests/secrets.js';
-import { principal, id, body } from '../../system/requests/http.js';
+import { principal, id, body } from '../../system/requests/request-accessors.js';
 
 export function registerDocumentRoutes({
     app,

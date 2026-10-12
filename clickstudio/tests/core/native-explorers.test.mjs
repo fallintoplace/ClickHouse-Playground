@@ -28,7 +28,7 @@ import {
 import {
     nativeCount,
     nativeBytes,
-} from '../../.core-build/src/frontend/database/explorer/format.js';
+} from '../../.core-build/src/frontend/database/explorer/native-value-formatters.js';
 
 for (const value of [undefined, null, '', -1, '1.2', 'bad', Number.MAX_SAFE_INTEGER + 1])
     test(`Metadata does not invent a counter from ${String(value)}`, () =>

@@ -5,7 +5,7 @@ import {
     explorerDictionaryId,
     type ExplorerRelation,
     type ObjectExplorerModel,
-} from '../model';
+} from '../object-explorer-model';
 import type { ObjectExplorerProps } from './object-explorer-types';
 import { ExplorerGroupRow } from './ObjectTreeRows';
 import { ObjectLeafRow } from './ObjectTreeRows';

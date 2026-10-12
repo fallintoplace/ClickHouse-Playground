@@ -2,7 +2,7 @@ import { EditorView } from '@codemirror/view';
 import { HighlightStyle } from '@codemirror/language';
 import { SQLDialect } from '@codemirror/lang-sql';
 import { tags } from '@lezer/highlight';
-import { CLICKHOUSE_KEYWORDS } from '../tools';
+import { CLICKHOUSE_KEYWORDS } from '../sql-editor-helpers';
 
 export const sqlHighlightStyle = HighlightStyle.define([
     { tag: tags.keyword, color: 'var(--editor-keyword)', fontWeight: '600' },

@@ -1,7 +1,7 @@
 import { THEMES, DEFAULT_ACCENT } from '../ui/styles/appearance-types';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, apiResponses, message, post } from '../api/client';
-import { Button, cx, Spinner } from '../ui/components/ui';
+import { Button, cx, Spinner } from '../ui/components/primitives';
 import { Icon } from '../ui/components/icons';
 import { CloudConnectionDialog } from '../database/connections/CloudConnectionDialog';
 import {

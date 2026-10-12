@@ -1,6 +1,6 @@
 import { importSteps } from '../state/import-wizard-model';
 import type { useImportWizardController } from '../useImportWizardController';
-import { Button } from '../../../ui/components/ui';
+import { Button } from '../../../ui/components/primitives';
 import { Icon } from '../../../ui/components/icons';
 
 export function ImportWizardHeader({

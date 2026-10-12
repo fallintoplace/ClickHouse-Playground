@@ -1,7 +1,7 @@
 import type { ClickHouseDocumentationEntry } from '../../../shared/database/reference/types.js';
 import type { Principal } from '../../../shared/common/identity.js';
 import type { Schema } from '../../../shared/database/schema/types.js';
-import { selectAssistantReferenceDocs } from '../../../shared/database/reference/catalog.js';
+import { selectAssistantReferenceDocs } from '../../../shared/database/reference/bundled-catalog.js';
 import type { Driver } from '../../app/types.js';
 
 export async function assistantReferenceDocs(

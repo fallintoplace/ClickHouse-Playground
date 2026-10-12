@@ -7,7 +7,7 @@ import { prepareChartSelection } from './controls/chart-selection';
 import { prepareChartView } from './rendering/chart-view-model';
 import { renderCandlestickChart } from './types/candlestick-chart-view';
 import { createChartSvgRenderer } from './rendering/chart-svg-renderer';
-import { Spinner } from '../../../ui/components/ui';
+import { Spinner } from '../../../ui/components/primitives';
 import { renderChartWorkspace } from './controls/chart-workspace';
 
 export function ChartView({

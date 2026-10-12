@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import type { ExperienceLevel } from '../../../ui/copy';
 import type { EditorHandle } from '../../../queries/editor/components/SqlEditor';
 import type { WorkspacePanelController } from '../panels/useWorkspacePanels';
-import { useDetachedEditorWindow } from './useDetachedWorkspaceWindow';
+import { useDetachedEditorWindow } from './useDetachedEditorWindow';
 
 export function useDetachedQueryEditor({
     activeDraftId,

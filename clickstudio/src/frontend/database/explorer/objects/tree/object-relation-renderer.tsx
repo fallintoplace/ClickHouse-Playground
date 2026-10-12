@@ -7,9 +7,9 @@ import {
     explorerSkipIndexesId,
     type ExplorerRelation,
     type ObjectExplorerModel,
-} from '../model';
+} from '../object-explorer-model';
 import { quoteIdentifier } from '../../../../../shared/sql/sql';
-import { cx } from '../../../../ui/components/ui';
+import { cx } from '../../../../ui/components/primitives';
 import { Icon } from '../../../../ui/components/icons';
 import type { ObjectExplorerProps } from './object-explorer-types';
 import { ExplorerGroupRow } from './ObjectTreeRows';

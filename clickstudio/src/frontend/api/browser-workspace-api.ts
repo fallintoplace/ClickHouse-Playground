@@ -19,7 +19,7 @@ import {
 } from '../../shared/queries/inspection/explain-plan.js';
 import { buildQueryProfile, parsePipelineResult } from '../../shared/queries/inspection/profile.js';
 import { sqlErrorRange } from '../queries/editor/sql-error.js';
-import { isResult, isRun, isScript } from '../queries/execution/events.js';
+import { isResult, isRun, isScript } from '../queries/execution/execution-validation.js';
 import { isQueryDocument } from '../../shared/queries/saved-queries/validation.js';
 import {
     loadPlaygroundSchema,
@@ -27,7 +27,7 @@ import {
     PLAYGROUND_CONNECTION_ID,
     queryPlayground,
     queryPlaygroundQueryTree,
-} from '../database/connections/playground.js';
+} from '../database/connections/playground-client.js';
 import {
     cancelClickHouseCloudQuery,
     CLICKHOUSE_CLOUD_CONNECTION_ID,

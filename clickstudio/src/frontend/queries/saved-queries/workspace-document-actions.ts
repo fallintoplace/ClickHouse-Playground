@@ -3,7 +3,7 @@ import type { QueryDocument } from '../../../shared/queries/saved-queries/types'
 import { apiResponses, message, post, RequestError } from '../../api/client';
 import { checkpoint, type Draft, type WorkspaceState } from '../editor/drafts/workspace-state';
 import type { useWorkspaceExecution } from '../execution/useWorkspaceExecution';
-import { sameSavedContent } from './draft-save';
+import { sameSavedContent } from './draft-save-state';
 import { documentFailureNotice } from '../../workspace/layout/notifications/workspace-notification-policy';
 import type { useWorkspaceNotifications } from '../../workspace/layout/notifications/useWorkspaceNotifications';
 import type {

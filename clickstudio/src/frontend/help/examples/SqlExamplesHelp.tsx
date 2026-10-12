@@ -1,5 +1,5 @@
 import type { SqlExample } from './sql-examples';
-import { Button, cx } from '../../ui/components/ui';
+import { Button, cx } from '../../ui/components/primitives';
 import { Icon } from '../../ui/components/icons';
 import {
     categoryLabel,

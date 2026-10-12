@@ -4,7 +4,7 @@ import {
     CLICKHOUSE_CLOUD_CONNECTION_ID,
     getClickHouseCloudConnection,
 } from '../database/connections/cloud-connection.js';
-import { BrowserWorkspaceApi } from './browser-workspace.js';
+import { BrowserWorkspaceApi } from './browser-workspace-api.js';
 import type { ResponseGuard } from './response-guards.js';
 export * as apiResponses from './response-guards.js';
 

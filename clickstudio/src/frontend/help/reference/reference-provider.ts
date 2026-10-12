@@ -15,7 +15,7 @@ import {
     PlaygroundError,
     queryPlaygroundWithParams,
     type PlaygroundQueryResult,
-} from '../../database/connections/playground.js';
+} from '../../database/connections/playground-client.js';
 import type { Connected } from '../../workspace/workspace-types.js';
 
 export type ReferenceProvider = {
@@ -65,11 +65,11 @@ export function isReferenceUnavailable(error: unknown) {
 const bundledProvider: ReferenceProvider = {
     kind: 'bundled',
     async search(query, category) {
-        const referenceData = await import('./reference-data.js');
+        const referenceData = await import('./bundled-reference.js');
         return referenceData.searchBundledReference(query, category);
     },
     async get(name, type) {
-        const referenceData = await import('./reference-data.js');
+        const referenceData = await import('./bundled-reference.js');
         return referenceData.findBundledReference(name, type);
     },
 };

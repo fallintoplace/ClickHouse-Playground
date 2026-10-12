@@ -9,8 +9,8 @@ import {
 } from '../../../../shared/queries/inspection/flamegraph';
 import { PipelineGraph } from '../diagrams/PipelineGraph';
 import { FlamegraphView } from './FlamegraphView';
-import { Button } from '../../../ui/components/ui';
-import { formatBytes } from '../../../browser/format';
+import { Button } from '../../../ui/components/primitives';
+import { formatBytes } from '../../../browser/metric-formatters';
 import { Icon } from '../../../ui/components/icons';
 import { terminal } from '../../execution/status';
 import type { IconName } from '../../../ui/components/icons';

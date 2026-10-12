@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setTimeout as sleep } from 'node:timers/promises';
 import * as cloud from '../../src/frontend/database/connections/cloud-connection.js';
-import { BrowserWorkspaceApi } from '../../src/frontend/api/browser-workspace.js';
-import { isRun, isScript } from '../../src/frontend/queries/execution/events.js';
+import { BrowserWorkspaceApi } from '../../src/frontend/api/browser-workspace-api.js';
+import { isRun, isScript } from '../../src/frontend/queries/execution/execution-validation.js';
 import { decodeValue, jsonRecord, jsonValue } from '../helpers/type-guards.js';
 import { cloudConnectionTest } from '../helpers/cloud-fixtures.js';
 

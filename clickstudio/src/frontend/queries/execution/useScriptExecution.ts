@@ -1,6 +1,6 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import type { Script } from '../../../shared/queries/execution/types';
-import { rememberRunIds } from '../saved-queries/draft-save';
+import { rememberRunIds } from '../saved-queries/draft-save-state';
 import { api, apiResponses, message } from '../../api/client';
 import type { Draft } from '../editor/drafts/workspace-state';
 

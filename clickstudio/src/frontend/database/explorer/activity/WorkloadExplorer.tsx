@@ -9,8 +9,8 @@ import type { Capability } from '../../../../shared/database/connections/types';
 import { loadWorkload } from './observability-provider';
 import { message } from '../../../api/client';
 import { ScrollEdgeFrame } from '../../../ui/components/ScrollEdgeShadows';
-import { Button } from '../../../ui/components/ui';
-import { formatBytes } from '../../../browser/format';
+import { Button } from '../../../ui/components/primitives';
+import { formatBytes } from '../../../browser/metric-formatters';
 import { Icon } from '../../../ui/components/icons';
 
 const windows: Array<{ value: WorkloadWindow; label: string }> = [

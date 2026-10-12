@@ -11,7 +11,7 @@ import { buildQueryProfile } from '../../../shared/queries/inspection/profile.js
 import { type Config } from '../../system/config.js';
 import { recordRun } from '../../system/telemetry.js';
 import type { Driver } from '../../app/types.js';
-import { principal, id, number, body, boolean } from '../../system/requests/http.js';
+import { principal, id, number, body, boolean } from '../../system/requests/request-accessors.js';
 
 export function registerRunRoutes({
     app,

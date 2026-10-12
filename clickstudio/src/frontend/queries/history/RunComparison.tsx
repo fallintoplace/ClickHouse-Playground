@@ -8,13 +8,17 @@ import {
     compareRuns,
     comparisonDelta,
     type ComparisonMetric,
-} from './comparison';
-import { nativeBytes, nativeCount, nativeTime } from '../../database/explorer/format';
+} from './run-comparison';
+import {
+    nativeBytes,
+    nativeCount,
+    nativeTime,
+} from '../../database/explorer/native-value-formatters';
 import { api, apiResponses, message } from '../../api/client';
 import { NativeExplorerDialog } from '../../database/explorer/NativeExplorerDialog';
 import { OverlayPortal } from '../../ui/components/OverlayPortal';
 import { PipelineGraph } from '../inspection/diagrams/PipelineGraph';
-import { Button } from '../../ui/components/ui';
+import { Button } from '../../ui/components/primitives';
 
 export interface RunComparisonProps {
     connectionId: string;

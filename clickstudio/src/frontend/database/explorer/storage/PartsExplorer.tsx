@@ -17,8 +17,8 @@ import type { SchemaTable } from '../../../../shared/database/schema/types';
 import type { Copy } from '../../../ui/copy';
 import { loadTableParts } from './table-parts-provider';
 import { message } from '../../../api/client';
-import { Button } from '../../../ui/components/ui';
-import { formatBytes } from '../../../browser/format';
+import { Button } from '../../../ui/components/primitives';
+import { formatBytes } from '../../../browser/metric-formatters';
 
 type Cell = {
     id: string;

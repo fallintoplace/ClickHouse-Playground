@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { Run, Script } from '../../../shared/queries/execution/types';
-import { Button, cx } from '../../ui/components/ui';
+import { Button, cx } from '../../ui/components/primitives';
 import { Icon } from '../../ui/components/icons';
 import { statementOutcome } from './statement-outcome';
 

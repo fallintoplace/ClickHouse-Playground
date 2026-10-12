@@ -3,7 +3,7 @@ import {
     PLAYGROUND_STARTER_ID,
     PLAYGROUND_STARTER_NAME,
     PLAYGROUND_STARTER_SQL,
-} from '../../database/connections/playground.js';
+} from '../../database/connections/playground-client.js';
 
 export const DEMO_PREVIEW_RUN_ID = 'preview-sample-run';
 export const DEMO_PREVIEW_STARTER_DOCUMENT_ID = 'preview-starter-getting-started';

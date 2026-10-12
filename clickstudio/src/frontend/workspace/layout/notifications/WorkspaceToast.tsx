@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { WorkspaceToastMessage } from './useWorkspaceNotifications';
-import { cx } from '../../../ui/components/ui';
+import { cx } from '../../../ui/components/primitives';
 import { Icon } from '../../../ui/components/icons';
 
 export function WorkspaceToast({

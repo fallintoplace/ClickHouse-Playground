@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 const { parseQueryTree } =
-    await import('../../.core-build/src/frontend/queries/inspection/diagrams/query-tree.js');
+    await import('../../.core-build/src/frontend/queries/inspection/diagrams/query-tree-parser.js');
 
 test('query tree parser preserves ClickHouse semantic nodes and resolved fields', () => {
     const tree = parseQueryTree([

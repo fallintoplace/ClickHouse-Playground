@@ -9,7 +9,7 @@ import {
     explorerSkipIndexId,
     relationKind,
     tableQuerySql,
-} from '../../.workspace-build/src/frontend/database/explorer/objects/model.js';
+} from '../../.workspace-build/src/frontend/database/explorer/objects/object-explorer-model.js';
 import { sqlReferencesQualifiedTable } from '../../.workspace-build/src/shared/database/tables/delete-table.js';
 
 const schema = {

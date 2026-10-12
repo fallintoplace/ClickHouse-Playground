@@ -8,7 +8,7 @@ import { guardSql } from '../../queries/execution/guards.js';
 import { choice, stringMap, text } from '../../system/requests/validation.js';
 import { WORKLOAD_WINDOWS } from '../../../shared/database/explorer/activity/workload.js';
 import type { Driver } from '../../app/types.js';
-import { id, body, principal } from '../../system/requests/http.js';
+import { id, body, principal } from '../../system/requests/request-accessors.js';
 
 export function registerExplorerRoutes({
     app,

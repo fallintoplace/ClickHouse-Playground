@@ -4,7 +4,7 @@ import type { Run } from '../../../shared/queries/execution/types';
 
 import type { Copy } from '../../ui/copy';
 
-import { cx } from '../../ui/components/ui.js';
+import { cx } from '../../ui/components/primitives.js';
 
 export const terminal = (run?: Run) => Boolean(run && isTerminalRunStatus(run.status));
 

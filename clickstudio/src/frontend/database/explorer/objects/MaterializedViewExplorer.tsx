@@ -7,10 +7,10 @@ import {
     type LineageNode,
     type LineageSnapshot,
 } from '../../../../shared/database/explorer/objects/view-lineage';
-import { nativeCount, nativeTime } from '../format';
+import { nativeCount, nativeTime } from '../native-value-formatters';
 import { useNativeExplorer } from '../useNativeExplorer';
 import { NativeExplorerDialog } from '../NativeExplorerDialog';
-import { Button } from '../../../ui/components/ui';
+import { Button } from '../../../ui/components/primitives';
 import { Icon } from '../../../ui/components/icons';
 
 const modeLabels = {

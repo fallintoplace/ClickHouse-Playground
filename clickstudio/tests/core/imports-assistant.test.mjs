@@ -21,7 +21,7 @@ import {
     runAssistantBenchmarks,
 } from '../../.core-build/src/backend/assistant/evaluation.js';
 import { ASSISTANT_ACTIONS } from '../../.core-build/src/shared/assistant/actions.js';
-import { selectAssistantReferenceDocs } from '../../.core-build/src/shared/database/reference/catalog.js';
+import { selectAssistantReferenceDocs } from '../../.core-build/src/shared/database/reference/bundled-catalog.js';
 import { MemoryStore, hash } from '../../.core-build/src/backend/system/store.js';
 import { isRecord } from '../../.core-build/src/shared/common/values.js';
 import {

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import cloudApi from '../../api/cloud.js';
 import * as cloud from '../../src/frontend/database/connections/cloud-connection.js';
-import { BrowserWorkspaceApi } from '../../src/frontend/api/browser-workspace.js';
+import { BrowserWorkspaceApi } from '../../src/frontend/api/browser-workspace-api.js';
 import { jsonRecord, jsonValue, responseErrorCode, stringValue } from '../helpers/type-guards.js';
 import { cloudConnectionTest } from '../helpers/cloud-fixtures.js';
 

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sameParameters } from '../../.workspace-build/src/frontend/queries/history/evidence.js';
+import { sameParameters } from '../../.workspace-build/src/frontend/queries/history/query-parameter-comparison.js';
 
 for (const [title, left, right, expected] of [
     ['Empty parameters match', {}, {}, true],

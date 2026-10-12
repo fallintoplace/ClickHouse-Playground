@@ -1,12 +1,12 @@
 import type { ChartConfig } from '../../../shared/queries/results/chart-settings.js';
 import type { Connection } from '../../../shared/database/connections/types.js';
 import type { Schema } from '../../../shared/database/schema/types.js';
-import { DEMO_PREVIEW_STARTERS } from '../../api/browser-workspace.js';
-import { GEO_HELP_EXAMPLES } from '../previews/help-demos.js';
+import { DEMO_PREVIEW_STARTERS } from '../../api/browser-workspace-api.js';
+import { GEO_HELP_EXAMPLES } from '../previews/geo-help-examples.js';
 import {
     PLAYGROUND_CONNECTION_ID,
     PLAYGROUND_STARTER_SQL,
-} from '../../database/connections/playground.js';
+} from '../../database/connections/playground-client.js';
 
 export type SqlExampleCategory =
     | 'basics'

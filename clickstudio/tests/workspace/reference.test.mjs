@@ -14,7 +14,7 @@ import {
     BUNDLED_REFERENCE,
     findBundledReference,
     searchBundledReference,
-} from '../../.workspace-build/src/frontend/help/reference/reference-data.js';
+} from '../../.workspace-build/src/frontend/help/reference/bundled-reference.js';
 
 test('Reference categories stay explicit and reject unknown URL values', () => {
     assert.deepEqual(REFERENCE_CATEGORIES, [

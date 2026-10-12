@@ -11,7 +11,7 @@ import { AppError } from '../system/requests/errors.js';
 import { text } from '../system/requests/validation.js';
 import { type Config } from '../system/config.js';
 import { telemetry } from '../system/telemetry.js';
-import { body } from '../system/requests/http.js';
+import { body } from '../system/requests/request-accessors.js';
 import { cloudSessionCookieOptions } from '../database/connections/cookies.js';
 
 const MAX_WASM_PARSER_BYTES = 64 * 1024 * 1024;

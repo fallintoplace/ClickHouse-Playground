@@ -1,5 +1,5 @@
 import type { Copy } from '../../../ui/copy';
-import { Button } from '../../../ui/components/ui';
+import { Button } from '../../../ui/components/primitives';
 import { Icon } from '../../../ui/components/icons';
 
 export function DetachedQueryPlaceholder({

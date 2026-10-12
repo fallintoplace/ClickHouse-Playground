@@ -18,7 +18,7 @@ import { ExplainIndexesView } from '../inspection/plans/ExplainIndexesView';
 import { ExplainPlanView } from '../inspection/plans/ExplainPlanView';
 import { PipelineGraph } from '../inspection/diagrams/PipelineGraph';
 import { SqlFlowView } from '../inspection/diagrams/SqlFlowView';
-import { Button, cx, Spinner } from '../../ui/components/ui';
+import { Button, cx, Spinner } from '../../ui/components/primitives';
 import { Icon } from '../../ui/components/icons';
 import {
     ScriptCancelAction,

@@ -8,7 +8,7 @@ import {
 import type { Run, Script } from '../../../shared/queries/execution/types';
 import type { RunKind } from '../../../shared/queries/execution/status';
 import { DEFAULT_LIMITS } from '../../../shared/queries/execution/settings';
-import { rememberRunIds } from '../saved-queries/draft-save';
+import { rememberRunIds } from '../saved-queries/draft-save-state';
 import { apiResponses, message, post } from '../../api/client';
 import type { EditorHandle } from '../editor/components/SqlEditor';
 import { terminal } from './status';

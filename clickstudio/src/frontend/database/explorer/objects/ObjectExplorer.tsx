@@ -1,4 +1,4 @@
-import { Button, cx, Spinner } from '../../../ui/components/ui';
+import { Button, cx, Spinner } from '../../../ui/components/primitives';
 import { Icon } from '../../../ui/components/icons';
 import { ObjectDetails } from './ObjectExplorerDetails';
 import type { ObjectExplorerProps } from './tree/object-explorer-types';

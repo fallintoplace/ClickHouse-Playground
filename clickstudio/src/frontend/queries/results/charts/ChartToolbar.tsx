@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
-import { Button } from '../../../ui/components/ui';
+import { Button } from '../../../ui/components/primitives';
 import { Icon } from '../../../ui/components/icons';
 
 function positionPopover(element: HTMLDivElement, button: HTMLButtonElement) {

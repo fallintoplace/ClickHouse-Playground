@@ -14,15 +14,15 @@ import {
     assistantRequestFrom,
     assistantResultFrom,
     assistantSchemaFrom,
-} from '../context/input.js';
+} from '../context/input-validation.js';
 import { type Store } from '../../system/store.js';
 import { AppError, requireThat } from '../../system/requests/errors.js';
 import { canWrite } from '../../system/login/permissions.js';
 import { choice, identifier, text } from '../../system/requests/validation.js';
-import { selectAssistantReferenceDocs } from '../../../shared/database/reference/catalog.js';
+import { selectAssistantReferenceDocs } from '../../../shared/database/reference/bundled-catalog.js';
 import { type Config } from '../../system/config.js';
 import type { Driver } from '../../app/types.js';
-import { principal, body, id } from '../../system/requests/http.js';
+import { principal, body, id } from '../../system/requests/request-accessors.js';
 import { assistantReferenceDocs } from '../context/reference.js';
 import type { createSecretGuards } from '../../system/requests/secrets.js';
 import { assistantConnectionAuthorized } from '../context/authorization.js';

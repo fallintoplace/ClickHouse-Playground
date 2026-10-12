@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { decodeClickHouseStringValue } from '../../.core-build/src/frontend/database/connections/playground-values.js';
+import { decodeClickHouseStringValue } from '../../.core-build/src/frontend/database/connections/playground-value-decoder.js';
 import {
     prepareGeoFeatures,
     recommendGeo,

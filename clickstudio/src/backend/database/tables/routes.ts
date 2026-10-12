@@ -5,7 +5,7 @@ import type { TableDeletionService } from './delete-table.js';
 import { requireThat } from '../../system/requests/errors.js';
 import { choice, record, text } from '../../system/requests/validation.js';
 import type { Driver } from '../../app/types.js';
-import { body, principal, id } from '../../system/requests/http.js';
+import { body, principal, id } from '../../system/requests/request-accessors.js';
 import type { Principal } from '../../../shared/common/identity.js';
 import { NO_TABLE_PERMISSIONS } from '../../../shared/database/tables/permissions.js';
 

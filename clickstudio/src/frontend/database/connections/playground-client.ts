@@ -13,7 +13,7 @@ import {
     parseMergeTreeParts,
     type MergeTreePartsSnapshot,
 } from '../../../shared/database/explorer/storage/parts.js';
-import { decodeClickHouseStringValue } from './playground-values.js';
+import { decodeClickHouseStringValue } from './playground-value-decoder.js';
 import { ClickHouseError, createClient } from '@clickhouse/client-web';
 import {
     PLAYGROUND_CONNECTION_ID,

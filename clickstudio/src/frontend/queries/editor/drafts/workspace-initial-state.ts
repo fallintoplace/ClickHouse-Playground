@@ -5,7 +5,7 @@ import {
     DEMO_PREVIEW_STARTER_DOCUMENT_ID,
     PLAYGROUND_PREVIEW_STARTER,
     demoPreviewStarterRunId,
-} from '../../../api/browser-workspace';
+} from '../../../api/browser-workspace-api';
 import { newDraft, recover, SAMPLE_SQL, type WorkspaceState } from './workspace-state';
 
 export const workspaceStateKey = (connectionId: string) =>

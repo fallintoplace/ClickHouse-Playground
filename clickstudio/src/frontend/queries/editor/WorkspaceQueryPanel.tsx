@@ -17,7 +17,7 @@ import { safeStatementCount } from '../../workspace/workspace-helpers';
 import type { WorkspacePanelController } from '../../workspace/layout/panels/useWorkspacePanels';
 import type { WorkspaceViewState } from '../../workspace/layout/useWorkspaceViewState';
 import { SqlEditor, type EditorHandle } from './components/SqlEditor';
-import { Button, cx } from '../../ui/components/ui';
+import { Button, cx } from '../../ui/components/primitives';
 import { Icon } from '../../ui/components/icons';
 import { RunActionGroup } from '../../workspace/layout/WorkspaceChrome';
 import type { DraftFeedback } from '../../workspace/layout/notifications/useDraftFeedback';

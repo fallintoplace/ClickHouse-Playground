@@ -10,12 +10,12 @@ import {
 import type { QueryDocument } from '../../shared/queries/saved-queries/types';
 import type { Run } from '../../shared/queries/execution/types';
 import type { Schema } from '../../shared/database/schema/types';
-import { sameSavedContent } from '../queries/saved-queries/draft-save';
+import { sameSavedContent } from '../queries/saved-queries/draft-save-state';
 import { api, apiResponses, message } from '../api/client';
 import {
     loadPlaygroundServerVersion,
     PLAYGROUND_CONNECTION_ID,
-} from '../database/connections/playground';
+} from '../database/connections/playground-client';
 import type { WorkspaceState } from '../queries/editor/drafts/workspace-state';
 import { startVisiblePolling } from '../browser/visible-polling';
 

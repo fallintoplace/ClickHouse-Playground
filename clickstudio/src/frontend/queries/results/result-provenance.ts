@@ -1,4 +1,4 @@
-import { sameParameters } from '../history/evidence.js';
+import { sameParameters } from '../history/query-parameter-comparison.js';
 import { splitSql } from '../../../shared/sql/sql.js';
 import type { Run } from '../../../shared/queries/execution/types.js';
 

@@ -8,7 +8,7 @@ import { parseExplainIndexAnalysis } from '../../queries/inspection/plans/explai
 import { parsePipelineResult } from '../../../shared/queries/inspection/profile';
 import { retainedResultChange } from '../../queries/results/result-provenance';
 import { recommendChart } from '../../../shared/queries/results/results';
-import { draftSaveStatus } from '../../queries/saved-queries/draft-save';
+import { draftSaveStatus } from '../../queries/saved-queries/draft-save-state';
 import type { NativeParseSnapshot } from '../../../shared/sql/parser';
 import type { Copy, ExperienceLevel } from '../../ui/copy';
 import {

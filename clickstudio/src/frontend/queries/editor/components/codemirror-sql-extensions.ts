@@ -8,7 +8,7 @@ import {
     CLICKHOUSE_SNIPPETS,
     statementOutline,
     type StatementOutline,
-} from '../tools';
+} from '../sql-editor-helpers';
 
 // Cursor movement reuses the outline; only document edits invoke the boundary lexer.
 export const sqlStatementOutline = StateField.define<StatementOutline>({

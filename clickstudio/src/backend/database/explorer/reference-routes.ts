@@ -8,7 +8,7 @@ import { requireThat } from '../../system/requests/errors.js';
 import { text } from '../../system/requests/validation.js';
 import { isReferenceCategory } from '../../../shared/database/reference/reference.js';
 import type { Driver } from '../../app/types.js';
-import { principal, id } from '../../system/requests/http.js';
+import { principal, id } from '../../system/requests/request-accessors.js';
 
 export function registerDocumentationRoutes({
     authorized,

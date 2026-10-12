@@ -10,7 +10,7 @@ import {
 import { diffLines } from 'diff';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { statementOutline, type SqlOperation } from '../../queries/editor/tools';
+import { statementOutline, type SqlOperation } from '../../queries/editor/sql-editor-helpers';
 import type { Proposal, ProposalAlternative } from '../../../shared/assistant/types';
 import {
     assistantSqlReview,
@@ -20,7 +20,7 @@ import {
 } from '../chat/assistant-chat-state';
 import { AssistantChatHistory } from '../chat/AssistantChatHistory';
 import { ScrollEdgeFrame } from '../../ui/components/ScrollEdgeShadows';
-import { Button, cx, Spinner } from '../../ui/components/ui';
+import { Button, cx, Spinner } from '../../ui/components/primitives';
 import { Icon } from '../../ui/components/icons';
 
 export type AssistantWorkflowProps = {

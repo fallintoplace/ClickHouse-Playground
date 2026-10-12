@@ -8,7 +8,7 @@ import {
     type SavedCloudConnectionProfile,
 } from './cloud-connection';
 import type { Connected } from '../../workspace/workspace-types';
-import { Button, Spinner } from '../../ui/components/ui';
+import { Button, Spinner } from '../../ui/components/primitives';
 import { Icon } from '../../ui/components/icons';
 import { OverlayPortal } from '../../ui/components/OverlayPortal';
 import { useDialogFocus } from '../../ui/focus/useDialogFocus';

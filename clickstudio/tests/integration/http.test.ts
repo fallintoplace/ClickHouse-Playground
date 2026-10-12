@@ -16,7 +16,7 @@ import type {
 } from '../../src/shared/database/reference/types.js';
 import { isQueryDocument } from '../../src/shared/queries/saved-queries/validation.js';
 import type { ReferenceCategory } from '../../src/shared/database/reference/reference.js';
-import { isRun } from '../../src/frontend/queries/execution/events.js';
+import { isRun } from '../../src/frontend/queries/execution/execution-validation.js';
 import * as apiResponses from '../../src/frontend/api/response-guards.js';
 import {
     arrayValue,

@@ -4,7 +4,7 @@ import type {
 } from '../../../shared/assistant/actions';
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { flushSync } from 'react-dom';
-import { parseAssistantProposal } from './assistant-proposal';
+import { parseAssistantProposal } from './assistant-proposal-parser';
 import type { AssistantConversationMessage } from '../../../shared/assistant/types';
 import type { Result } from '../../../shared/queries/results/types';
 import type { Schema } from '../../../shared/database/schema/types';

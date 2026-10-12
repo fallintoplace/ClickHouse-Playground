@@ -9,7 +9,7 @@ import {
     nativeAstChildren as children,
     walkNativeAst,
     type NativeAstObject,
-} from '../../editor/parser/ast.js';
+} from '../../editor/parser/native-ast.js';
 import type { NativeParseResult } from '../../../../shared/sql/parser.js';
 
 type AstObject = NativeAstObject;

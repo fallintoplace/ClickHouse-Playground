@@ -3,7 +3,7 @@ import type {
     ChartConfig,
 } from '../../../shared/queries/results/chart-settings.js';
 import type { MetricContract, QueryDocument } from '../../../shared/queries/saved-queries/types.js';
-import { sameParameters } from '../history/evidence.js';
+import { sameParameters } from '../history/query-parameter-comparison.js';
 
 type EditableDocument = Pick<
     QueryDocument,

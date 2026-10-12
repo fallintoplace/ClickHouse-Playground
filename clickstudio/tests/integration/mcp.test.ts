@@ -28,7 +28,7 @@ import {
     RUN_STATUSES,
 } from '../../src/shared/queries/execution/status.js';
 import { isConnected, isResultPage } from '../../src/frontend/api/response-guards.js';
-import { isRun } from '../../src/frontend/queries/execution/events.js';
+import { isRun } from '../../src/frontend/queries/execution/execution-validation.js';
 import {
     decodeArray,
     decodeValue,

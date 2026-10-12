@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { buildNativeAstTree } from './ast';
+import { buildNativeAstTree } from './native-ast';
 import type { Copy } from '../../../ui/copy';
 import { TreeGraph } from '../../../ui/components/TreeGraph';
 

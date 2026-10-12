@@ -28,7 +28,7 @@ import type { Column } from '../../../../shared/common/values';
 import type { Result } from '../../../../shared/queries/results/types';
 import { isRecord } from '../../../../shared/common/values';
 import { ScrollEdgeFrame } from '../../../ui/components/ScrollEdgeShadows';
-import { Spinner } from '../../../ui/components/ui';
+import { Spinner } from '../../../ui/components/primitives';
 
 const WIDTH = 960;
 const HEIGHT = 470;

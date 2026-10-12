@@ -13,7 +13,7 @@ COPY --from=build --chown=node:node /app/package*.json ./
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
 # Setup is an explicit one-shot command, not a startup migration with administrator access.
-COPY --from=build --chown=node:node /app/scripts/seed.ts ./scripts/seed.ts
+COPY --from=build --chown=node:node /app/scripts/setup-local-clickhouse.ts ./scripts/setup-local-clickhouse.ts
 RUN mkdir -p /app/.data && chown node:node /app/.data
 USER node
 EXPOSE 8080

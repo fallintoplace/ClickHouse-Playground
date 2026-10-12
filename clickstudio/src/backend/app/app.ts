@@ -20,7 +20,7 @@ import { DemoDriver } from '../database/clickhouse/sample-client.js';
 import { OpenAIDriver } from '../assistant/openai-client.js';
 import { registerMcpRoutes } from './mcp.js';
 import type { Driver } from './types.js';
-import { cachedClickHouseParserWasm, configureHttp } from './http.js';
+import { cachedClickHouseParserWasm, configureHttp } from './http-setup.js';
 import { registerCloudApi, registerConnectionRoutes } from '../database/connections/routes.js';
 import { registerExplorerRoutes } from '../database/explorer/routes.js';
 import { registerDocumentationRoutes } from '../database/explorer/reference-routes.js';

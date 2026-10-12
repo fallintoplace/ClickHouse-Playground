@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
     draftSaveStatus,
     sameSavedContent,
-} from '../../.workspace-build/src/frontend/queries/saved-queries/draft-save.js';
+} from '../../.workspace-build/src/frontend/queries/saved-queries/draft-save-state.js';
 import {
     draftFromDocument,
     recoverDraft,

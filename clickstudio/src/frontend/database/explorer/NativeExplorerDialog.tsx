@@ -1,5 +1,5 @@
 import { useRef, type ReactNode } from 'react';
-import { Button } from '../../ui/components/ui';
+import { Button } from '../../ui/components/primitives';
 import { useDialogFocus } from '../../ui/focus/useDialogFocus';
 
 export function NativeExplorerDialog({

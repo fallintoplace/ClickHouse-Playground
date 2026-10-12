@@ -3,7 +3,7 @@ import type { Result } from '../../../../shared/queries/results/types';
 import type { Schema, SchemaTable } from '../../../../shared/database/schema/types';
 import { sqlReferencesQualifiedTable } from '../../../../shared/database/tables/delete-table';
 import { api, apiResponses } from '../../../api/client';
-import { PLAYGROUND_CONNECTION_ID } from '../../../database/connections/playground';
+import { PLAYGROUND_CONNECTION_ID } from '../../../database/connections/playground-client';
 import type { Draft, WorkspaceState } from '../../../queries/editor/drafts/workspace-state';
 import { terminal } from '../../../queries/execution/status';
 import type { useWorkspaceController, WorkspaceProps } from '../../useWorkspaceController';

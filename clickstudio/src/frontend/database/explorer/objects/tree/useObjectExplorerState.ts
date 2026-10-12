@@ -7,7 +7,7 @@ import {
     explorerRelationId,
     type ExplorerCategoryKind,
     type ExplorerRelation,
-} from '../model';
+} from '../object-explorer-model';
 import {
     canDropTableTarget,
     isSystemDatabaseName,

@@ -1,6 +1,6 @@
 import { MAX_SQL_CHARS } from '../../../shared/queries/execution/limits.js';
-import { isResult } from '../../queries/execution/events.js';
-import { parseAssistantProposal } from '../proposals/assistant-proposal.js';
+import { isResult } from '../../queries/execution/execution-validation.js';
+import { parseAssistantProposal } from '../proposals/assistant-proposal-parser.js';
 import type { Proposal } from '../../../shared/assistant/types.js';
 import type { Result } from '../../../shared/queries/results/types.js';
 

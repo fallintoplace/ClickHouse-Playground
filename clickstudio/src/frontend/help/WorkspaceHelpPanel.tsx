@@ -1,6 +1,6 @@
 import { Fragment } from 'react';
 import { OverlayPortal } from '../ui/components/OverlayPortal';
-import { Button, cx } from '../ui/components/ui';
+import { Button, cx } from '../ui/components/primitives';
 import { Icon } from '../ui/components/icons';
 import type { WorkspaceHelpPanelProps } from './workspace-help-types';
 import { useWorkspaceHelpPanel } from './useWorkspaceHelpPanel';

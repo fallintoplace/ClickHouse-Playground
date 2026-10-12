@@ -6,7 +6,7 @@ import type { ResultPage } from '../../../shared/queries/results/types';
 import type { Run } from '../../../shared/queries/execution/types';
 import { NativeTable } from '../../ui/components/NativeTable';
 import { ScrollEdgeFrame } from '../../ui/components/ScrollEdgeShadows';
-import { cx, Spinner } from '../../ui/components/ui';
+import { cx, Spinner } from '../../ui/components/primitives';
 import { ResultTableControls } from './ResultTableControls';
 import { terminal } from '../execution/status';
 import { statementOutcome } from './statement-outcome';

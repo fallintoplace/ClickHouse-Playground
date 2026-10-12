@@ -5,7 +5,7 @@ import {
     comparisonDelta,
     comparableRun,
     comparePipelineOperators,
-} from '../../.core-build/src/frontend/queries/history/comparison.js';
+} from '../../.core-build/src/frontend/queries/history/run-comparison.js';
 const run = (id, fields = {}) => ({
     id,
     queryId: `query-${id}`,

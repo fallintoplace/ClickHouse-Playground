@@ -1,4 +1,4 @@
-import type { QueryTree } from './query-tree';
+import type { QueryTree } from './query-tree-parser';
 import type { Copy } from '../../../ui/copy';
 import { TreeGraph } from '../../../ui/components/TreeGraph';
 

@@ -1,6 +1,6 @@
 import type { SchemaTable } from '../../../../../shared/database/schema/types';
 import { quoteIdentifier } from '../../../../../shared/sql/sql';
-import { cx } from '../../../../ui/components/ui';
+import { cx } from '../../../../ui/components/primitives';
 import { Icon } from '../../../../ui/components/icons';
 
 export function ExplorerGroupRow({

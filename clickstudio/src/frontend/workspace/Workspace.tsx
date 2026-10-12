@@ -5,14 +5,14 @@ import { DetachedQueryPlaceholder } from '../queries/editor/components/DetachedQ
 import { ExportDialog } from '../queries/results/ExportDialog';
 import { HelpButton } from '../ui/components/HelpButton';
 import { ImportWizard } from '../database/imports/ImportWizard';
-import { tableQuerySql } from '../database/explorer/objects/model';
+import { tableQuerySql } from '../database/explorer/objects/object-explorer-model';
 import { InspectorPane } from './layout/panels/InspectorPane';
 import { ObservabilityExplorer } from '../database/explorer/activity/ObservabilityExplorer';
 import { OverlayPortal } from '../ui/components/OverlayPortal';
 import { RestoreRevisionDialog } from '../queries/saved-queries/RestoreRevisionDialog';
-import { cx } from '../ui/components/ui';
+import { cx } from '../ui/components/primitives';
 import { Icon } from '../ui/components/icons';
-import { inspectorLabel } from './layout/panels/labels';
+import { inspectorLabel } from './layout/panels/inspector-labels';
 import { ExecutionBar, RailButton } from './layout/WorkspaceChrome';
 import { WorkspaceDocumentTabs } from '../queries/editor/tabs/WorkspaceDocumentTabs';
 import { WorkspaceHelpPanel } from '../help/WorkspaceHelpPanel';
@@ -24,7 +24,7 @@ import {
     EXPERT_EXECUTION_NAVIGATION,
     primaryInspectorNavigation,
 } from './layout/panels/inspector-navigation';
-import { PLAYGROUND_CONNECTION_ID } from '../database/connections/playground';
+import { PLAYGROUND_CONNECTION_ID } from '../database/connections/playground-client';
 import { closeDraft, newDraft, type Draft } from '../queries/editor/drafts/workspace-state';
 
 import { WorkspaceToast } from './layout/notifications/WorkspaceToast';

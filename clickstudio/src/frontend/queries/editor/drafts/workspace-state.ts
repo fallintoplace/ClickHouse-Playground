@@ -2,7 +2,7 @@ import { CHART_KINDS } from '../../../../shared/queries/results/chart-types.js';
 import { MAX_SQL_CHARS } from '../../../../shared/queries/execution/limits.js';
 import type { ChartConfig } from '../../../../shared/queries/results/chart-settings.js';
 import type { QueryDocument } from '../../../../shared/queries/saved-queries/types.js';
-import type { SaveableDraft } from '../../saved-queries/draft-save.js';
+import type { SaveableDraft } from '../../saved-queries/draft-save-state.js';
 export const SAMPLE_SQL =
     "SELECT\n    toDate('2026-01-01') + number AS day,\n    (number + 1) * 10 AS events\nFROM numbers(7)\nORDER BY day";
 export interface Checkpoint {

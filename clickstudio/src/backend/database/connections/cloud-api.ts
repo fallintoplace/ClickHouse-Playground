@@ -75,7 +75,7 @@ import {
     isViewEngine,
     tableDeletionConfirmation,
 } from '../../../shared/database/tables/delete-table.js';
-import { cloudImportQueryLogOutcome } from '../imports/cloud-status.js';
+import { cloudImportQueryLogOutcome } from '../imports/cloud-query-log-outcome.js';
 import {
     parseReplicationSnapshot,
     replicationQueueQuery,
