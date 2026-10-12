@@ -32,6 +32,15 @@ export function HeatmapGrid({
     heatmapMaximum: number;
     compactNumber: Intl.NumberFormat;
 }) {
+    let captionNote = chartCopy.heatmapCompleteNote;
+    if (heatmap.tooLarge) {
+        captionNote = chartText(chartCopy.heatmapCutoffNote, {
+            cells: formatCount(MAX_HEATMAP_CELLS),
+        });
+    } else if (result.completeness === 'truncated') {
+        captionNote = chartCopy.heatmapTruncatedNote;
+    }
+
     return (
         <ScrollEdgeFrame<HTMLDivElement> className="heatmap-scroll-frame">
             {ref => (
@@ -122,13 +131,7 @@ export function HeatmapGrid({
                             measure: result.columns[yIndex]?.name ?? '',
                             rows: formatCount(heatmapYLabels.length),
                             columns: formatCount(heatmapXLabels.length),
-                            note: heatmap.tooLarge
-                                ? chartText(chartCopy.heatmapCutoffNote, {
-                                      cells: formatCount(MAX_HEATMAP_CELLS),
-                                  })
-                                : result.completeness === 'truncated'
-                                  ? chartCopy.heatmapTruncatedNote
-                                  : chartCopy.heatmapCompleteNote,
+                            note: captionNote,
                         })}
                     </div>
                 </div>

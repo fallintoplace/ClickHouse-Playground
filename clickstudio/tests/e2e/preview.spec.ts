@@ -194,10 +194,10 @@ test('Connect Cloud matches neutral secondary controls in both themes', async ({
         for (const property of ['background-color', 'border-color']) {
             await expect(connect).toHaveCSS(
                 property,
-                await save.evaluate(
-                    (element, name) => getComputedStyle(element).getPropertyValue(name),
-                    property,
-                ),
+                await save.evaluate(async (element, name) => {
+                    await Promise.all(element.getAnimations().map(animation => animation.finished));
+                    return getComputedStyle(element).getPropertyValue(name);
+                }, property),
             );
         }
         await save.hover();
@@ -205,7 +205,8 @@ test('Connect Cloud matches neutral secondary controls in both themes', async ({
             'color',
             await page.locator('.brand-name').evaluate(element => getComputedStyle(element).color),
         );
-        const hover = await save.evaluate(element => {
+        const hover = await save.evaluate(async element => {
+            await Promise.all(element.getAnimations().map(animation => animation.finished));
             const style = getComputedStyle(element);
             return {
                 background: style.backgroundColor,

@@ -24,7 +24,7 @@ const themes = [
         action: '#e0b68e',
         chrome: '#f7f9fe',
         logoColor: 'rgb(20, 39, 68)',
-        brandAccent: 'rgb(255, 190, 0)',
+        brandAccent: 'rgb(169, 71, 9)',
     },
 ] as const;
 
