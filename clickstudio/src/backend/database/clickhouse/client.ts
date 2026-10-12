@@ -49,7 +49,7 @@ import {
 import {
     buildReferenceEntryQuery,
     buildReferenceSearchQuery,
-    isMissingDocumentationSourceColumn,
+    withDocumentationSourceFallback,
 } from '../../../shared/database/reference/reference.js';
 import { AppError, requireThat } from '../../system/requests/errors.js';
 import { collectCompactStream } from './result-stream.js';
@@ -602,22 +602,10 @@ export class ClickHouseDriver implements QueryDriver, ImportDriver, CreateTableD
         query: string,
         category: ReferenceCategory,
     ): Promise<ClickHouseDocumentationSummary[]> {
-        const withSource = buildReferenceSearchQuery(query, category, true);
-        try {
-            return await this.rows<ClickHouseDocumentationSummary>(
-                id,
-                withSource.sql,
-                withSource.parameters,
-            );
-        } catch (error) {
-            if (!isMissingDocumentationSourceColumn(error)) throw error;
-            const withoutSource = buildReferenceSearchQuery(query, category, false);
-            return this.rows<ClickHouseDocumentationSummary>(
-                id,
-                withoutSource.sql,
-                withoutSource.parameters,
-            );
-        }
+        return withDocumentationSourceFallback(includeSource => {
+            const built = buildReferenceSearchQuery(query, category, includeSource);
+            return this.rows<ClickHouseDocumentationSummary>(id, built.sql, built.parameters);
+        });
     }
     async documentationEntry(
         id: string,
@@ -625,21 +613,13 @@ export class ClickHouseDriver implements QueryDriver, ImportDriver, CreateTableD
         type: string,
     ): Promise<ClickHouseDocumentationEntry | undefined> {
         const parameters = { name, type };
-        let rows: Array<Omit<ClickHouseDocumentationEntry, 'origin'>>;
-        try {
-            rows = await this.rows<Omit<ClickHouseDocumentationEntry, 'origin'>>(
+        const rows = await withDocumentationSourceFallback(includeSource =>
+            this.rows<Omit<ClickHouseDocumentationEntry, 'origin'>>(
                 id,
-                buildReferenceEntryQuery(true),
+                buildReferenceEntryQuery(includeSource),
                 parameters,
-            );
-        } catch (error) {
-            if (!isMissingDocumentationSourceColumn(error)) throw error;
-            rows = await this.rows<Omit<ClickHouseDocumentationEntry, 'origin'>>(
-                id,
-                buildReferenceEntryQuery(false),
-                parameters,
-            );
-        }
+            ),
+        );
         const row = rows[0];
         return row
             ? {

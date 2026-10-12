@@ -67,6 +67,17 @@ export function isMissingDocumentationSourceColumn(error: unknown) {
     );
 }
 
+export async function withDocumentationSourceFallback<T>(
+    read: (includeSource: boolean) => Promise<T>,
+): Promise<T> {
+    try {
+        return await read(true);
+    } catch (error) {
+        if (!isMissingDocumentationSourceColumn(error)) throw error;
+        return read(false);
+    }
+}
+
 export function buildReferenceSearchQuery(
     query: string,
     category: ReferenceCategory,

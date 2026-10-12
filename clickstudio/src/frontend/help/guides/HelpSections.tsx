@@ -1,16 +1,11 @@
-import { type ReactNode } from 'react';
-import type { SqlExample } from '../examples/sql-examples';
+import type { ComponentProps, ReactNode } from 'react';
 import { MaterializedViewExplorer } from '../../database/explorer/objects/MaterializedViewExplorer';
 import { MergeTreePartsPanel } from '../../database/explorer/storage/MergeTreePartsPanel';
 import { ReferenceExplorer } from '../reference/ReferenceExplorer';
 import { RunComparisonView } from '../../queries/history/RunComparison';
 import { SqlFlowView } from '../../queries/inspection/diagrams/SqlFlowView';
 import { Icon } from '../../ui/components/icons';
-import {
-    type HelpSectionDefinition,
-    type CategoryFilter,
-    type HelpPanelSection,
-} from '../workspace-help-model';
+import type { HelpSectionDefinition, HelpPanelSection } from '../workspace-help-model';
 import type { WorkspaceHelpPanelProps } from '../workspace-help-types';
 import type { HelpExplainAction } from '../workspace-help-types';
 import { HelpSectionHeading } from '../HelpSectionHeading';
@@ -21,6 +16,22 @@ import { MonitoringHelp } from '../previews/HelpFeaturePreviews';
 import { HelpTour } from './HelpGuides';
 import { HelpWorkflows } from './HelpGuides';
 import { HelpExplain } from './HelpGuides';
+
+type HelpSectionsProps = Omit<
+    ComponentProps<typeof SqlExamplesHelp>,
+    keyof WorkspaceHelpPanelProps
+> & {
+    renderTabPanel: (
+        id: HelpPanelSection,
+        className: string,
+        children: ReactNode,
+    ) => import('react').ReactElement | null;
+    standardTourSections: HelpSectionDefinition[];
+    renderTourCard: (item: HelpSectionDefinition) => import('react').ReactElement;
+    experimentalTourSections: HelpSectionDefinition[];
+    props: WorkspaceHelpPanelProps;
+    explainActions: HelpExplainAction[];
+};
 
 export function HelpSections({
     renderTabPanel,
@@ -41,30 +52,7 @@ export function HelpSections({
     setSelectedId,
     selectedIsScript,
     explainActions,
-}: {
-    renderTabPanel: (
-        id: HelpPanelSection,
-        className: string,
-        children: ReactNode,
-    ) => import('react').ReactElement | null;
-    standardTourSections: HelpSectionDefinition[];
-    renderTourCard: (item: HelpSectionDefinition) => import('react').ReactElement;
-    experimentalTourSections: HelpSectionDefinition[];
-    props: WorkspaceHelpPanelProps;
-    availableCategories: CategoryFilter[];
-    category: CategoryFilter;
-    setCategory: import('react').Dispatch<import('react').SetStateAction<CategoryFilter>>;
-    searchRef: import('react').RefObject<HTMLInputElement | null>;
-    search: string;
-    setSearch: import('react').Dispatch<import('react').SetStateAction<string>>;
-    cloudSchemaNotice: { message: string; error: boolean } | undefined;
-    filteredExamples: SqlExample[];
-    optionRefs: import('react').RefObject<Map<string, HTMLButtonElement>>;
-    selected: SqlExample | undefined;
-    setSelectedId: import('react').Dispatch<import('react').SetStateAction<string>>;
-    selectedIsScript: boolean;
-    explainActions: HelpExplainAction[];
-}) {
+}: HelpSectionsProps) {
     const {
         copy,
         experimentalLabel,

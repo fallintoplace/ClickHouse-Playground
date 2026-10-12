@@ -7,7 +7,7 @@ import type { Row } from '../../../shared/common/values.js';
 import {
     buildReferenceEntryQuery,
     buildReferenceSearchQuery,
-    isMissingDocumentationSourceColumn,
+    withDocumentationSourceFallback,
 } from '../../../shared/database/reference/reference.js';
 import { api, apiResponses, isFrontendDemoPreview, RequestError } from '../../api/client.js';
 import {
@@ -101,17 +101,12 @@ function playgroundProvider(): ReferenceProvider {
         parameters: Record<string, string>,
         signal: AbortSignal,
         convert: (result: PlaygroundQueryResult, row: Row) => T,
-    ) => {
-        try {
-            const result = await queryPlaygroundWithParams(query, parameters, signal);
+    ) =>
+        withDocumentationSourceFallback(async includeSource => {
+            const sql = includeSource ? query : query.replace(', source', '');
+            const result = await queryPlaygroundWithParams(sql, parameters, signal);
             return playgroundRows(result, convert);
-        } catch (error) {
-            if (!isMissingDocumentationSourceColumn(error)) throw error;
-            const fallbackQuery = query.replace(', source', '');
-            const result = await queryPlaygroundWithParams(fallbackQuery, parameters, signal);
-            return playgroundRows(result, convert);
-        }
-    };
+        });
     return {
         kind: 'native',
         async search(query, category, signal) {

@@ -25,11 +25,7 @@ export function sqlForRunKind(statement: string, kind: RunKind): string {
 }
 
 export function explainPrefixLength(kind: RunKind): number {
-    if (kind === 'explain') return 'EXPLAIN indexes = 1\n'.length;
-    if (kind === 'plan') return 'EXPLAIN PLAN json = 1, indexes = 1, description = 1\n'.length;
-    if (kind === 'pipeline') return 'EXPLAIN PIPELINE graph = 1, compact = 0\n'.length;
-    if (kind === 'analyze') return 'EXPLAIN ANALYZE\n'.length;
-    return 0;
+    return sqlForRunKind('', kind).length;
 }
 
 export function parseExplainPlan(input: unknown): ExplainPlan | undefined {

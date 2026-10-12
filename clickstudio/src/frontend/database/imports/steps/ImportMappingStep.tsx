@@ -1,56 +1,34 @@
-import type { cloudImportDatabases } from '../state/cloud-import';
+import type { ComponentProps } from 'react';
 import { CREATE_CLOUD_TABLE_TARGET } from '../state/cloud-import';
 import { ImportPreviewTable } from '../preview/ImportPreviewTable';
-import {
-    formatImportColumnCount,
-    formatImportRowCount,
-    type ImportPreview,
-} from '../state/import-wizard-model';
+import { formatImportColumnCount, formatImportRowCount } from '../state/import-wizard-model';
 import type { useImportWizardController } from '../useImportWizardController';
 import { Icon } from '../../../ui/components/icons';
 import { ImportNewTableForm } from '../preview/ImportNewTableForm';
 import { ImportColumnMapping } from '../preview/ImportColumnMapping';
 
-type ImportMappingStepProps = {
-    preview: ImportPreview;
-    importAnotherFile: () => void;
-    busy: ReturnType<typeof useImportWizardController>['busy'];
-    browserCloudImport: ReturnType<typeof useImportWizardController>['browserCloudImport'];
-    selectedDestinationChoice: 'existing' | 'create' | undefined;
-    availableTargets: ReturnType<typeof useImportWizardController>['availableTargets'];
-    setDestinationChoice: import('react').Dispatch<
-        import('react').SetStateAction<'existing' | 'create' | undefined>
-    >;
-    changeTarget: ReturnType<typeof useImportWizardController>['changeTarget'];
-    lastExistingTarget: ReturnType<typeof useImportWizardController>['lastExistingTarget'];
-    target: ReturnType<typeof useImportWizardController>['target'];
-    createTableDatabase: ReturnType<typeof useImportWizardController>['createTableDatabase'];
-    setCreateTableDatabase: ReturnType<typeof useImportWizardController>['setCreateTableDatabase'];
-    setError: ReturnType<typeof useImportWizardController>['setError'];
-    importableDatabases: ReturnType<typeof cloudImportDatabases>;
-    createTableAlreadyExists: ReturnType<
-        typeof useImportWizardController
-    >['createTableAlreadyExists'];
-    createTableName: ReturnType<typeof useImportWizardController>['createTableName'];
-    setCreateTableName: ReturnType<typeof useImportWizardController>['setCreateTableName'];
-    hasCreateIdColumn: boolean;
-    generateId: ReturnType<typeof useImportWizardController>['generateId'];
-    setGenerateId: ReturnType<typeof useImportWizardController>['setGenerateId'];
-    createColumns: ReturnType<typeof useImportWizardController>['createColumns'];
-    updateCreateColumn: ReturnType<typeof useImportWizardController>['updateCreateColumn'];
-    createColumnTypes: ReturnType<typeof useImportWizardController>['createColumnTypes'];
-    creatingTable: ReturnType<typeof useImportWizardController>['creatingTable'];
-    mappedColumnCount: number;
-    skippedColumnCount: number;
-    destinationColumns: ReturnType<typeof useImportWizardController>['destinationColumns'];
-    destinationNames: ReturnType<typeof useImportWizardController>['destinationNames'];
-    liveMappingIssue: { source: string; message: string } | undefined;
-    fields: ReturnType<typeof useImportWizardController>['fields'];
-    setFields: ReturnType<typeof useImportWizardController>['setFields'];
-    setMapping: ReturnType<typeof useImportWizardController>['setMapping'];
-    duplicateDestinations: ReturnType<typeof useImportWizardController>['duplicateDestinations'];
-    sampleColumns: ReturnType<typeof useImportWizardController>['sampleColumns'];
-};
+type ImportMappingStepProps = ComponentProps<typeof ImportNewTableForm> &
+    ComponentProps<typeof ImportColumnMapping> & {
+        importAnotherFile: () => void;
+        busy: ReturnType<typeof useImportWizardController>['busy'];
+        browserCloudImport: ReturnType<typeof useImportWizardController>['browserCloudImport'];
+        selectedDestinationChoice: 'existing' | 'create' | undefined;
+        availableTargets: ReturnType<typeof useImportWizardController>['availableTargets'];
+        setDestinationChoice: import('react').Dispatch<
+            import('react').SetStateAction<'existing' | 'create' | undefined>
+        >;
+        changeTarget: ReturnType<typeof useImportWizardController>['changeTarget'];
+        lastExistingTarget: ReturnType<typeof useImportWizardController>['lastExistingTarget'];
+        target: ReturnType<typeof useImportWizardController>['target'];
+        creatingTable: ReturnType<typeof useImportWizardController>['creatingTable'];
+        mappedColumnCount: number;
+        skippedColumnCount: number;
+        destinationNames: ReturnType<typeof useImportWizardController>['destinationNames'];
+        duplicateDestinations: ReturnType<
+            typeof useImportWizardController
+        >['duplicateDestinations'];
+        sampleColumns: ReturnType<typeof useImportWizardController>['sampleColumns'];
+    };
 
 export function ImportMappingStep({
     preview,

@@ -8,6 +8,7 @@ import {
     isMissingDocumentationSourceColumn,
     isReferenceCategory,
     referenceId,
+    withDocumentationSourceFallback,
 } from '../../.workspace-build/src/shared/database/reference/reference.js';
 import {
     BUNDLED_REFERENCE,
@@ -101,6 +102,56 @@ test('Missing documentation source detection handles ClickHouse expression ident
         isMissingDocumentationSourceColumn('Unknown expression identifier `source`'),
         false,
     );
+});
+
+test('Native documentation keeps source metadata when the server supports it', async () => {
+    const attempts = [];
+    const rows = [{ name: 'uniq', type: 'Aggregate Function', source: 'native' }];
+    const result = await withDocumentationSourceFallback(async includeSource => {
+        attempts.push(includeSource);
+        return rows;
+    });
+    assert.equal(result, rows);
+    assert.deepEqual(attempts, [true]);
+});
+
+test('Native documentation retries without source metadata on older servers', async () => {
+    const attempts = [];
+    const rows = [{ name: 'uniq', type: 'Aggregate Function' }];
+    const result = await withDocumentationSourceFallback(async includeSource => {
+        attempts.push(includeSource);
+        if (includeSource) throw new Error('Unknown identifier: source');
+        return rows;
+    });
+    assert.equal(result, rows);
+    assert.deepEqual(attempts, [true, false]);
+});
+
+test('Native documentation preserves unrelated query failures without retrying', async () => {
+    const attempts = [];
+    const failure = new Error('Not enough privileges to read system.documentation');
+    await assert.rejects(
+        withDocumentationSourceFallback(async includeSource => {
+            attempts.push(includeSource);
+            throw failure;
+        }),
+        error => error === failure,
+    );
+    assert.deepEqual(attempts, [true]);
+});
+
+test('Native documentation preserves fallback failures without another retry', async () => {
+    const attempts = [];
+    const failure = new Error("Missing columns: 'source'");
+    await assert.rejects(
+        withDocumentationSourceFallback(async includeSource => {
+            attempts.push(includeSource);
+            if (includeSource) throw new Error('Unknown identifier: source');
+            throw failure;
+        }),
+        error => error === failure,
+    );
+    assert.deepEqual(attempts, [true, false]);
 });
 
 test('Bundled references cover the offline ClickHouse documentation and examples', () => {

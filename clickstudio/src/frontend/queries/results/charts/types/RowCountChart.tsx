@@ -14,7 +14,8 @@ import type { Copy } from '../../../../ui/copy';
 import { ScrollEdgeFrame } from '../../../../ui/components/ScrollEdgeShadows';
 import { SelectControl } from '../../../../ui/components/SelectControl';
 import { ChartToolbar } from '../ChartToolbar';
-import { ChartAxisLabels } from '../ChartAxisLabels';
+import { ChartCanvas, ChartPlot } from '../rendering/chart-canvas';
+import type { ChartPlotModel } from '../rendering/chart-canvas';
 import {
     categoryAxisLayout,
     chartPlotBounds,
@@ -23,7 +24,6 @@ import {
     fitChartTicks,
     formatCount,
     seriesColor,
-    type ChartAxisTick,
 } from '../chart-helpers';
 import { useChartPlotWidth } from '../useChartPlotWidth';
 
@@ -169,19 +169,27 @@ export function RowCountChart({
         return { customTitle, timeUnit, chartAriaLabel };
     };
     const { customTitle, timeUnit, chartAriaLabel } = describeRowCountChart();
-    const renderChartSvg = createRowCountSvgRenderer({
+    const svg: ChartPlotModel = {
         viewportWidth,
         viewportHeight,
-        onPlotViewport,
         plotRight,
         chartAriaLabel,
         plotTop,
         plotMiddle,
         plotBottom,
         plotLeft,
-        max,
-        min,
-        valueFormatter,
+        chartYTicks: [
+            { value: max, position: plotTop },
+            { value: max / 2, position: plotMiddle },
+            { value: min, position: plotBottom },
+        ],
+        compactNumber: valueFormatter,
+        chartKind: timeAxis ? 'line' : 'bar',
+        zeroY: plotBottom,
+        chartXTicks: fittedTicks,
+    };
+    const renderChartSvg = createRowCountSvgRenderer(svg, {
+        onPlotViewport,
         timeAxis,
         series,
         xTime,
@@ -190,7 +198,6 @@ export function RowCountChart({
         bars,
         xCategory,
         barWidth,
-        axisTicks: fittedTicks,
     });
 
     return (
@@ -206,54 +213,12 @@ export function RowCountChart({
                     }
 
                     return (
-                        <div
-                            className={`chart-canvas${timeAxis ? '' : ' chart-canvas--categorical'}`}
-                        >
-                            {!timeAxis && (
-                                <svg
-                                    className="chart-category-y-axis"
-                                    viewBox={`0 0 80 ${viewportHeight}`}
-                                    style={{ height: viewportHeight }}
-                                    preserveAspectRatio="none"
-                                    aria-hidden="true"
-                                >
-                                    {[
-                                        { value: max, position: plotTop },
-                                        { value: max / 2, position: plotMiddle },
-                                        { value: min, position: plotBottom },
-                                    ].map(tick => (
-                                        <text
-                                            key={`${tick.position}-${tick.value}`}
-                                            className="chart-y-tick-label"
-                                            x="72"
-                                            y={tick.position}
-                                            textAnchor="end"
-                                            dominantBaseline="middle"
-                                        >
-                                            {valueFormatter.format(tick.value)}
-                                        </text>
-                                    ))}
-                                </svg>
-                            )}
-                            {timeAxis ? (
-                                renderChartSvg(false)
-                            ) : (
-                                <ScrollEdgeFrame<HTMLDivElement>
-                                    className="chart-category-scroll-frame"
-                                    onViewport={onCategoryViewport}
-                                >
-                                    {ref => (
-                                        <div
-                                            ref={ref}
-                                            className="chart-category-scroll"
-                                            tabIndex={0}
-                                        >
-                                            {renderChartSvg(true)}
-                                        </div>
-                                    )}
-                                </ScrollEdgeFrame>
-                            )}
-                        </div>
+                        <ChartCanvas
+                            model={svg}
+                            categoricalAxis={!timeAxis}
+                            onCategoryViewport={onCategoryViewport}
+                            renderChartSvg={renderChartSvg}
+                        />
                     );
                 };
                 return (
@@ -418,102 +383,33 @@ function RowCountChartToolbar({
     );
 }
 
-function createRowCountSvgRenderer({
-    viewportWidth,
-    viewportHeight,
-    onPlotViewport,
-    plotRight,
-    chartAriaLabel,
-    plotTop,
-    plotMiddle,
-    plotBottom,
-    plotLeft,
-    max,
-    min,
-    valueFormatter,
-    timeAxis,
-    series,
-    xTime,
-    y,
-    copy,
-    bars,
-    xCategory,
-    barWidth,
-    axisTicks,
-}: {
-    viewportWidth: number;
-    viewportHeight: number;
-    onPlotViewport: RefCallback<SVGSVGElement>;
-    plotRight: number;
-    chartAriaLabel: string;
-    plotTop: number;
-    plotMiddle: number;
-    plotBottom: number;
-    plotLeft: 0 | 80;
-    max: number;
-    min: number;
-    valueFormatter: Intl.NumberFormat;
-    timeAxis: boolean;
-    series: RowCountSeries[];
-    xTime: (timestamp: number) => number;
-    y: (value: number) => number;
-    copy: Copy['chart'];
-    bars: { key: string; label: string; count: number }[];
-    xCategory: (index: number, length: number) => number;
-    barWidth: number;
-    axisTicks: ChartAxisTick[];
-}) {
+function createRowCountSvgRenderer(
+    model: ChartPlotModel,
+    {
+        onPlotViewport,
+        timeAxis,
+        series,
+        xTime,
+        y,
+        copy,
+        bars,
+        xCategory,
+        barWidth,
+    }: {
+        onPlotViewport: RefCallback<SVGSVGElement>;
+        timeAxis: boolean;
+        series: RowCountSeries[];
+        xTime: (timestamp: number) => number;
+        y: (value: number) => number;
+        copy: Copy['chart'];
+        bars: { key: string; label: string; count: number }[];
+        xCategory: (index: number, length: number) => number;
+        barWidth: number;
+    },
+) {
+    const { plotBottom } = model;
     return (categoricalAxis: boolean) => (
-        <svg
-            ref={categoricalAxis ? undefined : onPlotViewport}
-            className={categoricalAxis ? 'chart-category-plot' : undefined}
-            viewBox={`0 0 ${categoricalAxis ? plotRight : viewportWidth} ${viewportHeight}`}
-            preserveAspectRatio={categoricalAxis ? 'none' : undefined}
-            style={
-                categoricalAxis
-                    ? {
-                          '--chart-plot-width': `${plotRight}px`,
-                          height: viewportHeight,
-                      }
-                    : undefined
-            }
-            role="img"
-            aria-label={chartAriaLabel}
-        >
-            {[plotTop, plotMiddle, plotBottom].map(value => (
-                <line
-                    key={value}
-                    x1={plotLeft}
-                    x2={plotRight}
-                    y1={value}
-                    y2={value}
-                    className="chart-gridline"
-                />
-            ))}
-            {!categoricalAxis &&
-                [
-                    { value: max, position: plotTop },
-                    { value: max / 2, position: plotMiddle },
-                    { value: min, position: plotBottom },
-                ].map(tick => (
-                    <text
-                        key={`${tick.position}-${tick.value}`}
-                        className="chart-y-tick-label"
-                        x={plotLeft - 24}
-                        y={tick.position}
-                        textAnchor="end"
-                        dominantBaseline="middle"
-                    >
-                        {valueFormatter.format(tick.value)}
-                    </text>
-                ))}
-            <line
-                x1={plotLeft}
-                x2={plotRight}
-                y1={plotBottom}
-                y2={plotBottom}
-                className="chart-zero-line"
-            />
+        <ChartPlot model={model} categoricalAxis={categoricalAxis} onPlotViewport={onPlotViewport}>
             {timeAxis
                 ? series.map((item, seriesIndex) => (
                       <g key={item.key} style={{ '--series-color': seriesColor(seriesIndex) }}>
@@ -576,7 +472,6 @@ function createRowCountSvgRenderer({
                           </rect>
                       );
                   })}
-            <ChartAxisLabels ticks={axisTicks} y={categoricalAxis ? plotBottom + 18 : 218} />
-        </svg>
+        </ChartPlot>
     );
 }

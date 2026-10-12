@@ -2,20 +2,13 @@ import type { RefCallback } from 'react';
 import { MAX_CHART_RENDER_POINTS } from '../../../../../shared/queries/results/results';
 import { formatCount, seriesColor, splitChartSegments } from '../chart-helpers';
 import type { ChartSvgModel } from './chart-svg-model';
-import { ChartAxisLabels } from '../ChartAxisLabels';
+import { ChartPlot } from './chart-canvas';
 
 export function createChartSvgRenderer(
-    {
-        viewportWidth,
-        viewportHeight,
-        plotRight,
-        chartAriaLabel,
-        plotTop,
-        plotMiddle,
-        plotBottom,
-        plotLeft,
-        chartYTicks,
-        compactNumber,
+    model: ChartSvgModel,
+    onPlotViewport: RefCallback<SVGSVGElement>,
+) {
+    const {
         chartKind,
         zeroY,
         scatterPoints,
@@ -29,10 +22,7 @@ export function createChartSvgRenderer(
         y,
         barWidth,
         chartRows,
-        chartXTicks,
-    }: ChartSvgModel,
-    onPlotViewport: RefCallback<SVGSVGElement>,
-) {
+    } = model;
     return (categoricalAxis: boolean) => {
         const renderSeries = () => {
             switch (chartKind) {
@@ -126,57 +116,13 @@ export function createChartSvgRenderer(
             }
         };
         return (
-            <svg
-                ref={categoricalAxis ? undefined : onPlotViewport}
-                className={categoricalAxis ? 'chart-category-plot' : undefined}
-                viewBox={`0 0 ${categoricalAxis ? plotRight : viewportWidth} ${viewportHeight}`}
-                preserveAspectRatio={categoricalAxis ? 'none' : undefined}
-                style={
-                    categoricalAxis
-                        ? {
-                              '--chart-plot-width': `${plotRight}px`,
-                              height: viewportHeight,
-                          }
-                        : undefined
-                }
-                role="img"
-                aria-label={chartAriaLabel}
+            <ChartPlot
+                model={model}
+                categoricalAxis={categoricalAxis}
+                onPlotViewport={onPlotViewport}
             >
-                {[plotTop, plotMiddle, plotBottom].map(value => (
-                    <line
-                        key={value}
-                        x1={plotLeft}
-                        x2={plotRight}
-                        y1={value}
-                        y2={value}
-                        className="chart-gridline"
-                    />
-                ))}
-                {!categoricalAxis &&
-                    chartYTicks.map(tick => (
-                        <text
-                            key={`${tick.position}-${tick.value}`}
-                            className="chart-y-tick-label"
-                            x={plotLeft - 24}
-                            y={tick.position}
-                            textAnchor="end"
-                            dominantBaseline="middle"
-                        >
-                            {compactNumber.format(tick.value)}
-                        </text>
-                    ))}
-                {chartKind !== 'scatter' && (
-                    <line
-                        x1={plotLeft}
-                        x2={plotRight}
-                        y1={zeroY}
-                        y2={zeroY}
-                        className="chart-zero-line"
-                    />
-                )}
                 {renderSeries()}
-                <ChartAxisLabels ticks={chartXTicks} y={categoricalAxis ? plotBottom + 18 : 218} />
-            </svg>
+            </ChartPlot>
         );
     };
 }

@@ -51,7 +51,7 @@ import {
 import {
     buildReferenceEntryQuery,
     buildReferenceSearchQuery,
-    isMissingDocumentationSourceColumn,
+    withDocumentationSourceFallback,
     isReferenceCategory,
 } from '../../../shared/database/reference/reference.js';
 import {
@@ -869,10 +869,9 @@ async function cloudReferenceSearch(
             'Choose a valid ClickHouse reference category.',
         );
     return withCloudClient(credentials, url, async client => {
-        const built = buildReferenceSearchQuery(query, category, true);
-        let rows: Omit<ClickHouseDocumentationSummary, 'origin'>[];
-        try {
-            rows = await queryRows(
+        const rows = await withDocumentationSourceFallback(includeSource => {
+            const built = buildReferenceSearchQuery(query, category, includeSource);
+            return queryRows<Omit<ClickHouseDocumentationSummary, 'origin'>>(
                 client,
                 built.sql,
                 built.parameters,
@@ -880,18 +879,7 @@ async function cloudReferenceSearch(
                 10,
                 MAX_CLOUD_REFERENCE_RESULT_ROWS,
             );
-        } catch (error) {
-            if (!isMissingDocumentationSourceColumn(error)) throw error;
-            const fallback = buildReferenceSearchQuery(query, category, false);
-            rows = await queryRows(
-                client,
-                fallback.sql,
-                fallback.parameters,
-                12_000,
-                10,
-                MAX_CLOUD_REFERENCE_RESULT_ROWS,
-            );
-        }
+        });
         return rows.map(row => ({ ...row, origin: 'native' }));
     });
 }
@@ -905,13 +893,15 @@ async function cloudReferenceEntry(
 ): Promise<ClickHouseDocumentationEntry | undefined> {
     return withCloudClient(credentials, url, async client => {
         const parameters = { name, type };
-        let rows: Omit<ClickHouseDocumentationEntry, 'origin'>[];
-        try {
-            rows = await queryRows(client, buildReferenceEntryQuery(true), parameters, 12_000, 10);
-        } catch (error) {
-            if (!isMissingDocumentationSourceColumn(error)) throw error;
-            rows = await queryRows(client, buildReferenceEntryQuery(false), parameters, 12_000, 10);
-        }
+        const rows = await withDocumentationSourceFallback(includeSource =>
+            queryRows<Omit<ClickHouseDocumentationEntry, 'origin'>>(
+                client,
+                buildReferenceEntryQuery(includeSource),
+                parameters,
+                12_000,
+                10,
+            ),
+        );
         const row = rows[0];
         return row ? { ...row, serverVersion, origin: 'native' } : undefined;
     });

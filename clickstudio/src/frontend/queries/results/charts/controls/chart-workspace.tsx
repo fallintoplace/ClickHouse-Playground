@@ -7,6 +7,7 @@ import type { prepareChartView } from '../rendering/chart-view-model';
 import type { createChartSvgRenderer } from '../rendering/chart-svg-renderer';
 import { renderChartControls } from './chart-controls';
 import { HeatmapGrid } from '../types/HeatmapGrid';
+import { ChartCanvas } from '../rendering/chart-canvas';
 
 export function renderChartWorkspace({
     chartKind,
@@ -33,7 +34,6 @@ export function renderChartWorkspace({
     categoricalAxis,
     svg,
     onCategoryViewport,
-    chartYTicks,
     renderChartSvg,
     scatterSummary,
     rowSummary,
@@ -120,50 +120,12 @@ export function renderChartWorkspace({
                     }
 
                     return (
-                        <div
-                            className={`chart-canvas${categoricalAxis ? ' chart-canvas--categorical' : ''}`}
-                        >
-                            {categoricalAxis && (
-                                <svg
-                                    className="chart-category-y-axis"
-                                    viewBox={`0 0 80 ${svg.viewportHeight}`}
-                                    style={{ height: svg.viewportHeight }}
-                                    preserveAspectRatio="none"
-                                    aria-hidden="true"
-                                >
-                                    {chartYTicks.map(tick => (
-                                        <text
-                                            key={`${tick.position}-${tick.value}`}
-                                            className="chart-y-tick-label"
-                                            x="72"
-                                            y={tick.position}
-                                            textAnchor="end"
-                                            dominantBaseline="middle"
-                                        >
-                                            {compactNumber.format(tick.value)}
-                                        </text>
-                                    ))}
-                                </svg>
-                            )}
-                            {categoricalAxis ? (
-                                <ScrollEdgeFrame<HTMLDivElement>
-                                    className="chart-category-scroll-frame"
-                                    onViewport={onCategoryViewport}
-                                >
-                                    {ref => (
-                                        <div
-                                            ref={ref}
-                                            className="chart-category-scroll"
-                                            tabIndex={0}
-                                        >
-                                            {renderChartSvg(true)}
-                                        </div>
-                                    )}
-                                </ScrollEdgeFrame>
-                            ) : (
-                                renderChartSvg(false)
-                            )}
-                        </div>
+                        <ChartCanvas
+                            model={svg}
+                            categoricalAxis={categoricalAxis}
+                            onCategoryViewport={onCategoryViewport}
+                            renderChartSvg={renderChartSvg}
+                        />
                     );
                 };
                 const renderLegend = () => {
