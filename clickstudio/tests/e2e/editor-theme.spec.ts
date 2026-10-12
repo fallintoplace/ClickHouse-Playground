@@ -181,7 +181,9 @@ for (const parser of ['ready', 'unavailable']) {
                 }
                 await expect(editor).toHaveText(sql);
                 if (state === 'selected') await page.keyboard.press('ArrowRight');
-                await editor.evaluate(element => (element as HTMLElement).blur());
+                await editor.evaluate(element => {
+                    if (element instanceof HTMLElement) element.blur();
+                });
             }
         }
     });

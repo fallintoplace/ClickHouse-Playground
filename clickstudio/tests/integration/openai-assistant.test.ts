@@ -11,15 +11,27 @@ import { createApp } from '../../src/backend/app/app.js';
 import { loadConfig } from '../../src/backend/system/config.js';
 import { DemoDriver } from '../../src/backend/database/clickhouse/sample-client.js';
 import { MemoryStore } from '../../src/backend/system/store.js';
+import { arrayValue, jsonRecord, jsonValue, stringValue } from '../helpers/type-guards.js';
 
-function assistantContext(): PreparedContext {
+function assistantContext(
+    payload: PreparedContext['payload'] = {
+        instructions: 'Use the supplied context.',
+        question: 'Summarize this SQL.',
+        context: JSON.stringify({ sql: 'SELECT 1' }),
+    },
+): PreparedContext {
     return {
-        payload: {
-            instructions: 'Use the supplied context.',
-            question: 'Summarize this SQL.',
-            context: JSON.stringify({ sql: 'SELECT 1' }),
-        },
-    } as unknown as PreparedContext;
+        id: 'test-context',
+        owner: 'test-owner',
+        connectionId: 'demo',
+        action: 'explain',
+        createdAt: '2026-09-28T00:00:00.000Z',
+        expiresAt: '2026-09-28T00:05:00.000Z',
+        baseSql: 'SELECT 1',
+        payload,
+        summary: [],
+        state: 'ready',
+    };
 }
 
 function isAssistantTimeout(error: unknown): boolean {
@@ -69,7 +81,7 @@ test('OpenAI receives prior chat messages before the fresh SQL context', async t
     let requestBody: Record<string, unknown> | undefined;
     globalThis.fetch = async (input, init) => {
         const url = String(input);
-        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        const body = jsonRecord(jsonValue(String(init?.body)), 'OpenAI request');
         if (url.endsWith('/responses/input_tokens'))
             return new Response(
                 JSON.stringify({ object: 'response.input_tokens', input_tokens: 200 }),
@@ -98,17 +110,15 @@ test('OpenAI receives prior chat messages before the fresh SQL context', async t
         globalThis.fetch = originalFetch;
     });
 
-    const context = {
-        payload: {
-            instructions: 'Use prior messages for follow-ups.',
-            question: 'And now?',
-            context: JSON.stringify({ sql: 'SELECT 2' }),
-            conversation: [
-                { role: 'user', content: 'Show the old question' },
-                { role: 'assistant', content: 'I need an airport table.' },
-            ],
-        },
-    } as unknown as PreparedContext;
+    const context = assistantContext({
+        instructions: 'Use prior messages for follow-ups.',
+        question: 'And now?',
+        context: JSON.stringify({ sql: 'SELECT 2' }),
+        conversation: [
+            { role: 'user', content: 'Show the old question' },
+            { role: 'assistant', content: 'I need an airport table.' },
+        ],
+    });
     const driver = new OpenAIDriver('test-key', 'test-model');
 
     await driver.propose(context, new AbortController().signal);
@@ -116,14 +126,15 @@ test('OpenAI receives prior chat messages before the fresh SQL context', async t
     assert.equal(requestBody?.store, false);
     assert.equal(requestBody?.service_tier, 'priority');
     assert.equal(requestBody?.reasoning, undefined);
-    assert.deepEqual((requestBody?.input as Array<Record<string, unknown>>).slice(0, 2), [
+    const input = arrayValue(requestBody?.input, 'OpenAI input');
+    assert.deepEqual(input.slice(0, 2), [
         { role: 'user', content: 'Show the old question' },
         { role: 'assistant', content: 'I need an airport table.' },
     ]);
-    const freshMessage = (requestBody?.input as Array<Record<string, unknown>>)[2];
+    const freshMessage = jsonRecord(input[2], 'Fresh OpenAI message');
     assert.equal(freshMessage.role, 'user');
-    const freshContent = freshMessage.content as Array<{ text: string }>;
-    assert.deepEqual(JSON.parse(freshContent[0]!.text), {
+    const freshContent = jsonRecord(arrayValue(freshMessage.content, 'Fresh message content')[0]);
+    assert.deepEqual(jsonValue(stringValue(freshContent.text, 'Fresh message text')), {
         question: 'And now?',
         context: { sql: 'SELECT 2' },
     });
@@ -133,7 +144,7 @@ test('Local assistant requests use the configured service tier without changing 
     const originalFetch = globalThis.fetch;
     let requestBody: Record<string, unknown> | undefined;
     globalThis.fetch = async (input, init) => {
-        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        const body = jsonRecord(jsonValue(String(init?.body)), 'OpenAI request');
         if (String(input).endsWith('/responses/input_tokens')) {
             assert.equal(body.service_tier, undefined);
             return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
@@ -199,7 +210,7 @@ test('Fast processing stays enabled when a context-length error retries with les
     globalThis.fetch = async (input, init) => {
         if (String(input).endsWith('/responses/input_tokens'))
             return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
-        requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+        requests.push(jsonRecord(jsonValue(String(init?.body)), 'OpenAI request'));
         if (requests.length === 1)
             return Response.json(
                 { error: { message: 'Context length exceeded.', code: 'context_length_exceeded' } },
@@ -236,7 +247,7 @@ test('Fast processing stays enabled when a context-length error retries with les
         ['priority', 'priority'],
     );
     assert.deepEqual(
-        requests.map(body => (body.input as unknown[]).length),
+        requests.map(body => arrayValue(body.input, 'OpenAI input').length),
         [3, 1],
     );
 });

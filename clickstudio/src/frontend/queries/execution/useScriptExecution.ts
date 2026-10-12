@@ -1,7 +1,7 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import type { Script } from '../../../shared/queries/execution/types';
 import { rememberRunIds } from '../saved-queries/draft-save';
-import { api, message } from '../../api/client';
+import { api, apiResponses, message } from '../../api/client';
 import type { Draft } from '../editor/drafts/workspace-state';
 
 export function useScriptExecution({
@@ -35,7 +35,10 @@ export function useScriptExecution({
             if (closed || inFlight || finished) return;
             inFlight = true;
             try {
-                const next = await api<Script>(`/scripts/${encodeURIComponent(scriptId)}`);
+                const next = await api(
+                    `/scripts/${encodeURIComponent(scriptId)}`,
+                    apiResponses.isScriptResponse,
+                );
                 if (closed) return;
                 setScripts(current => ({ ...current, [scriptId]: next }));
                 setReadError('');

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { mockWritableWorkspace } from './import-helpers.js';
 import { connectPreviewCloud, mockCloudEndpoint } from './cloud-import-helpers.js';
+import { jsonRecord } from '../helpers/type-guards.js';
 
 function gate() {
     let release: () => void = () => {};
@@ -86,7 +87,7 @@ test('Cloud connection and import startup preserve spinner sizes and reduced mot
     const schema = gate();
     let loadingSchema = false;
     await page.route('**/api/cloud', async route => {
-        const body = route.request().postDataJSON() as { action?: string };
+        const body = jsonRecord(route.request().postDataJSON(), 'Cloud request body');
         if (body.action === 'test') await connection.wait;
         if (body.action === 'schema' && loadingSchema) await schema.wait;
         await route.fallback();

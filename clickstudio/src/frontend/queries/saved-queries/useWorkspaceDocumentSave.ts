@@ -1,6 +1,6 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import type { QueryDocument } from '../../../shared/queries/saved-queries/types';
-import { api } from '../../api/client';
+import { api, apiResponses } from '../../api/client';
 import type {
     CompleteDraftFeedback,
     useDraftFeedback,
@@ -107,6 +107,7 @@ export function useWorkspaceDocumentSave({
                         draft.serverId
                             ? `/documents/${encodeURIComponent(draft.serverId)}`
                             : '/documents',
+                        apiResponses.isQueryDocumentResponse,
                         {
                             method: draft.serverId ? 'PUT' : 'POST',
                             body: payload,

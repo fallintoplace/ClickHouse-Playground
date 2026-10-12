@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { parseQueryTree, type QueryTree } from './query-tree';
 import type { Copy } from '../../../ui/copy';
-import { api, message } from '../../../api/client';
+import { api, apiResponses, message } from '../../../api/client';
 import { QueryTreeGraph } from './QueryTreeGraph';
 
 type LoadState = { key: string; loading: boolean; tree?: QueryTree; error?: string };
@@ -44,11 +44,11 @@ export function AnalyzerTreeView({
         const controller = new AbortController();
         loadedKey.current = undefined;
         setState({ key: requestKey, loading: true });
-        void api<string[]>('/connections/' + encodeURIComponent(connectionId) + '/query-tree', {
-            method: 'POST',
-            body: request,
-            signal: controller.signal,
-        })
+        void api(
+            '/connections/' + encodeURIComponent(connectionId) + '/query-tree',
+            apiResponses.isStringArray,
+            { method: 'POST', body: request, signal: controller.signal },
+        )
             .then(lines => {
                 if (controller.signal.aborted) return;
                 loadedKey.current = requestKey;

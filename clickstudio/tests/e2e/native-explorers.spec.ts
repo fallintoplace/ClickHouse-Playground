@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { trust, openWorkspacePanel, runButton } from './helpers.js';
+import { jsonRecord, stringValue } from '../helpers/type-guards.js';
 
 test('Materialized views have selectable dependency edges and refresh details', async ({
     page,
@@ -60,8 +61,11 @@ test('Run comparison selects two retained runs without executing another query',
                 new URL(response.url()).pathname === '/api/runs',
         );
         await runButton(page).click();
-        const next = (await (await submitted).json()) as { queryId: string };
-        await expect(page.locator('.execution-bar')).toHaveAttribute('data-query-id', next.queryId);
+        const next = jsonRecord(await (await submitted).json(), 'Run response');
+        await expect(page.locator('.execution-bar')).toHaveAttribute(
+            'data-query-id',
+            stringValue(next.queryId, 'Query ID'),
+        );
         await expect(page.locator('.execution-bar')).toHaveAttribute(
             'data-run-status',
             'succeeded',

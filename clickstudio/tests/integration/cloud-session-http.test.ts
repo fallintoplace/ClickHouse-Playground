@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import type { AddressInfo } from 'node:net';
 import { createApp } from '../../src/backend/app/app.js';
 import { loadConfig } from '../../src/backend/system/config.js';
 import { CLOUD_SESSION_COOKIE } from '../../src/backend/database/connections/cloud-sessions.js';
 import { MemoryStore } from '../../src/backend/system/store.js';
 import { DemoDriver } from '../../src/backend/database/clickhouse/sample-client.js';
+import { isRecord, jsonRecord, serverPort } from '../helpers/type-guards.js';
 
 const credentials = {
     host: 'service.region.provider.clickhouse.cloud:8443',
@@ -22,6 +22,16 @@ const tested = {
 };
 type CloudCall = { action: string; credentials?: typeof credentials };
 
+function isCloudCredentials(value: unknown): value is typeof credentials {
+    return (
+        isRecord(value) &&
+        typeof value.host === 'string' &&
+        typeof value.database === 'string' &&
+        typeof value.username === 'string' &&
+        typeof value.password === 'string'
+    );
+}
+
 async function start() {
     const cloudCalls: CloudCall[] = [];
     const cloudApi = {
@@ -30,19 +40,16 @@ async function start() {
             if (contentType.startsWith('multipart/form-data')) {
                 const form = await request.formData();
                 const value = form.get('credentials');
-                const saved =
-                    typeof value === 'string'
-                        ? (JSON.parse(value) as typeof credentials)
-                        : undefined;
+                const parsed: unknown = typeof value === 'string' ? JSON.parse(value) : undefined;
+                const saved = isCloudCredentials(parsed) ? parsed : undefined;
                 cloudCalls.push({ action: String(form.get('action') ?? ''), credentials: saved });
                 return Response.json({ accepted: true });
             }
-            const body = (await request.json()) as Record<string, unknown>;
+            const body = jsonRecord(await request.json(), 'Cloud request body');
             const action = typeof body.action === 'string' ? body.action : '';
-            const requestCredentials =
-                typeof body.credentials === 'object' && body.credentials !== null
-                    ? (body.credentials as typeof credentials)
-                    : undefined;
+            const requestCredentials = isCloudCredentials(body.credentials)
+                ? body.credentials
+                : undefined;
             cloudCalls.push({ action, credentials: requestCredentials });
             if (action === 'test') {
                 if (requestCredentials?.password === 'bad-password')
@@ -76,7 +83,7 @@ async function start() {
         server.once('listening', resolve);
         server.once('error', reject);
     });
-    config.origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    config.origin = `http://127.0.0.1:${serverPort(server)}`;
     const call = (
         path: string,
         body?: unknown,
@@ -122,11 +129,11 @@ test('Local Cloud connection restores after refresh without returning its passwo
     assert.equal(/Max-Age=/i.test(setCookie), false);
 
     const refreshed = await app.call('/cloud/session', undefined, { cookie: cookie! });
-    const snapshot = (await refreshed.json()) as {
-        session: { profile: Record<string, unknown>; tested: Record<string, unknown> } | null;
-    };
+    const snapshot = jsonRecord(await refreshed.json(), 'Cloud session response');
+    const session = jsonRecord(snapshot.session, 'Cloud session');
+    const profile = jsonRecord(session.profile, 'Cloud profile');
     assert.equal(refreshed.status, 200);
-    assert.equal(snapshot.session?.profile.host, tested.host);
+    assert.equal(profile.host, tested.host);
     assert.equal(JSON.stringify(snapshot).includes(credentials.password), false);
 
     const schema = await app.call('/cloud', { action: 'schema' }, { cookie: cookie! });
@@ -148,11 +155,11 @@ test('Local Cloud restore skips a stale duplicate cookie before the active sessi
     const refreshed = await app.call('/cloud/session', undefined, {
         cookie: `${staleCookie}; ${activeCookie}`,
     });
-    const snapshot = (await refreshed.json()) as {
-        session: { profile: Record<string, unknown> } | null;
-    };
+    const snapshot = jsonRecord(await refreshed.json(), 'Cloud session response');
+    const session = jsonRecord(snapshot.session, 'Cloud session');
+    const profile = jsonRecord(session.profile, 'Cloud profile');
     assert.equal(refreshed.status, 200);
-    assert.equal(snapshot.session?.profile.host, secondCredentials.host);
+    assert.equal(profile.host, secondCredentials.host);
 });
 
 test('Disconnect revokes every active session in a duplicate cookie', async t => {
@@ -230,10 +237,9 @@ test('A replacement Cloud connection invalidates the previous browser cookie onl
     assert.equal(rejected.status, 403);
     assert.equal(rejected.headers.get('set-cookie'), null);
     assert.ok(
-        (
-            (await (
-                await app.call('/cloud/session', undefined, { cookie: firstCookie })
-            ).json()) as { session: unknown }
+        jsonRecord(
+            await (await app.call('/cloud/session', undefined, { cookie: firstCookie })).json(),
+            'Cloud session response',
         ).session,
     );
 
@@ -252,10 +258,11 @@ test('A replacement Cloud connection invalidates the previous browser cookie onl
         await (await app.call('/cloud/session', undefined, { cookie: firstCookie })).json(),
         { session: null },
     );
-    const restored = (await (
-        await app.call('/cloud/session', undefined, { cookie: secondCookie })
-    ).json()) as { session: { profile: Record<string, unknown> } };
-    assert.equal(restored.session.profile.host, secondCredentials.host);
+    const restored = jsonRecord(
+        await (await app.call('/cloud/session', undefined, { cookie: secondCookie })).json(),
+        'Cloud session response',
+    );
+    assert.equal(jsonRecord(jsonRecord(restored.session).profile).host, secondCredentials.host);
 });
 
 test('Replacing a Cloud connection revokes every session in a duplicate cookie', async t => {
@@ -288,10 +295,14 @@ test('Replacing a Cloud connection revokes every session in a duplicate cookie',
         ).json(),
         { session: null },
     );
-    const restored = (await (
-        await app.call('/cloud/session', undefined, { cookie: replacementCookie })
-    ).json()) as { session: { profile: Record<string, unknown> } };
-    assert.equal(restored.session.profile.host, replacementCredentials.host);
+    const restored = jsonRecord(
+        await (await app.call('/cloud/session', undefined, { cookie: replacementCookie })).json(),
+        'Cloud session response',
+    );
+    assert.equal(
+        jsonRecord(jsonRecord(restored.session).profile).host,
+        replacementCredentials.host,
+    );
 });
 
 test('Local Cloud session creation rejects a cross-origin request before testing credentials', async t => {

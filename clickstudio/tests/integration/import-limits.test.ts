@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { jsonRecord } from '../helpers/type-guards.js';
 import { parseInput } from '../../src/backend/database/imports/imports.js';
 import { parseCsv } from '../../src/shared/database/imports/parser.js';
 import { mapImportRows } from '../../src/shared/database/imports/mapping.js';
@@ -179,10 +180,7 @@ for (const format of ['json', 'ndjson'] as const) {
             const row = result.rows[0]!;
             assert.equal(Object.getPrototypeOf(row), null);
             assert.equal(Object.getPrototypeOf(row.__proto__), null);
-            assert.equal(
-                Object.getPrototypeOf((row.__proto__ as Record<string, unknown>).constructor),
-                null,
-            );
+            assert.equal(Object.getPrototypeOf(jsonRecord(row.__proto__).constructor), null);
         }
     });
 

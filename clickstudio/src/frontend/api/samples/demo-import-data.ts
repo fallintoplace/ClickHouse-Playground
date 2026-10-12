@@ -3,12 +3,16 @@ import {
     IMPORT_ROW_LIMIT_LABEL,
     type ImportFormat,
 } from '../../../shared/database/imports/limits.js';
-import type { Json } from '../../../shared/common/values.js';
+import { isJson, isRecord, type Json } from '../../../shared/common/values.js';
 
 export type DemoImportFormat = ImportFormat;
 export type DemoImportRow = Record<string, Json>;
 export type DemoImportColumn = { name: string; type: string };
 export type DemoImportQueryResult = { columns: DemoImportColumn[]; rows: Json[][] };
+
+function isDemoImportRow(value: unknown): value is DemoImportRow {
+    return isRecord(value) && Object.values(value).every(isJson);
+}
 
 export const DEMO_IMPORT_TARGET = 'demo.interview_imports';
 export const DEMO_IMPORT_SAMPLE_CSV = `day,region,channel,events,revenue
@@ -100,12 +104,10 @@ export async function loadDemoImportRows(): Promise<DemoImportRow[]> {
                 .transaction(importStoreName, 'readonly')
                 .objectStore(importStoreName)
                 .get(importStorageKey);
-            request.onsuccess = () =>
-                resolve(
-                    Array.isArray(request.result?.rows)
-                        ? (request.result.rows as DemoImportRow[])
-                        : [],
-                );
+            request.onsuccess = () => {
+                const rows: unknown = request.result?.rows;
+                resolve(Array.isArray(rows) ? rows.filter(isDemoImportRow) : []);
+            };
             request.onerror = () =>
                 reject(request.error ?? new Error('Could not load browser demo rows'));
         });

@@ -1,6 +1,7 @@
 import type { ProfilePipeline, QueryProfile } from '../../../shared/queries/inspection/types.js';
 import type { Run } from '../../../shared/queries/execution/types.js';
 import { metadataInteger, type MetadataRow } from '../../../shared/database/explorer/metadata.js';
+import { isRecord } from '../../../shared/common/values.js';
 
 export interface ComparisonMetric {
     label: string;
@@ -24,14 +25,9 @@ function terminalEvidence(run: Run, profile?: QueryProfile): MetadataRow | undef
         !Array.isArray(profile.evidence)
     )
         return undefined;
-    return profile.evidence.find((value: unknown): value is MetadataRow =>
-        Boolean(
-            value &&
-            typeof value === 'object' &&
-            !Array.isArray(value) &&
-            (value as MetadataRow).query_id === run.queryId &&
-            (value as MetadataRow).type === 'QueryFinish',
-        ),
+    return profile.evidence.find(
+        (value): value is MetadataRow =>
+            isRecord(value) && value.query_id === run.queryId && value.type === 'QueryFinish',
     );
 }
 const sortedObject = (value: object) =>

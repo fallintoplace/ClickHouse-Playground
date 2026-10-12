@@ -17,6 +17,9 @@ import type {
     Script,
 } from '../../../shared/queries/execution/types.js';
 import type { Result, ResultPage } from '../../../shared/queries/results/types.js';
+import { isRecord } from '../../../shared/common/values.js';
+import { isQueryDocument } from '../../../shared/queries/saved-queries/validation.js';
+import { isResult, isRun, isScript } from '../../../shared/queries/execution/validation.js';
 import { splitSql } from '../../../shared/sql/sql.js';
 import { AppError, asError, requireThat } from '../../system/requests/errors.js';
 import { canWrite, mustOwn } from '../../system/login/permissions.js';
@@ -53,6 +56,41 @@ type StoredRun = Omit<Run, 'resultState'> & {
     resultState: Run['resultState'] | 'expired';
     resultExpiresAt?: string;
 };
+function isStoredRun(value: unknown): value is StoredRun {
+    if (
+        !isRecord(value) ||
+        (value.resultExpiresAt !== undefined && typeof value.resultExpiresAt !== 'string')
+    )
+        return false;
+    if (value.resultState === 'expired') return isRun({ ...value, resultState: 'unavailable' });
+    return isRun(value);
+}
+
+function isStoredResult(value: unknown): value is Result & { expiresAt?: string } {
+    return (
+        isRecord(value) &&
+        (value.expiresAt === undefined || typeof value.expiresAt === 'string') &&
+        isResult(value)
+    );
+}
+
+function isReceipt(value: unknown): value is Receipt {
+    return (
+        isRecord(value) &&
+        typeof value.id === 'string' &&
+        typeof value.fingerprint === 'string' &&
+        typeof value.resourceId === 'string' &&
+        (value.kind === 'run' || value.kind === 'script')
+    );
+}
+
+function isTrustRecord(value: unknown): value is { trusted: boolean; fingerprint?: string } {
+    return (
+        isRecord(value) &&
+        typeof value.trusted === 'boolean' &&
+        (value.fingerprint === undefined || typeof value.fingerprint === 'string')
+    );
+}
 export function terminal(run: Pick<Run, 'status'>) {
     return isTerminalRunStatus(run.status);
 }
@@ -70,18 +108,20 @@ export class RunService {
             concurrency?: number;
         } = {},
     ) {
-        for (const result of store.list<Result & { expiresAt?: string }>('results')) {
+        for (const result of store.list('results', isStoredResult)) {
             if (!('expiresAt' in result)) continue;
             delete result.expiresAt;
             store.put('results', result.runId, result);
         }
         // An interrupted query is never automatically replayed after a process restart.
-        for (const stored of store.list<StoredRun>('runs')) {
+        for (const stored of store.list('runs', isStoredRun)) {
             const legacy = 'resultExpiresAt' in stored || stored.resultState === 'expired';
             delete stored.resultExpiresAt;
             let resultState: Run['resultState'];
             if (stored.resultState === 'expired' || stored.resultState === 'reopenable')
-                resultState = store.get('results', stored.id) ? 'reopenable' : 'unavailable';
+                resultState = store.get('results', stored.id, isResult)
+                    ? 'reopenable'
+                    : 'unavailable';
             else resultState = stored.resultState;
             const run: Run = { ...stored, resultState };
             if (legacy || resultState !== stored.resultState) store.put('runs', run.id, run);
@@ -94,7 +134,7 @@ export class RunService {
                 void driver.cancel(run).catch(() => undefined);
             }
         }
-        for (const script of store.list<Script>('scripts'))
+        for (const script of store.list('scripts', isScript))
             if (script.status === 'running') {
                 script.status = 'interrupted';
                 for (const s of script.statements)
@@ -117,10 +157,7 @@ export class RunService {
         ]);
     }
     isTrusted(principal: Principal, connectionId: string): boolean {
-        const trust = this.store.get<{
-            trusted: boolean;
-            fingerprint?: string;
-        }>('trust', hash([principal.id, connectionId]));
+        const trust = this.store.get('trust', hash([principal.id, connectionId]), isTrustRecord);
         return (
             trust?.trusted === true &&
             trust.fingerprint === this.trustFingerprint(principal, connectionId)
@@ -170,11 +207,7 @@ export class RunService {
             );
         }
         if (request.documentId) {
-            const document = this.store.get<{
-                owner: string;
-                connectionId: string;
-                deletedAt?: string;
-            }>('documents', request.documentId);
+            const document = this.store.get('documents', request.documentId, isQueryDocument);
             requireThat(
                 document && !document.deletedAt,
                 404,
@@ -226,7 +259,7 @@ export class RunService {
         payload: unknown,
         kind: Receipt['kind'],
     ): Receipt | undefined {
-        const old = this.store.get<Receipt>('receipts', hash([principal.id, requestId]));
+        const old = this.store.get('receipts', hash([principal.id, requestId]), isReceipt);
         if (old)
             requireThat(
                 old.fingerprint === hash(payload) && old.kind === kind,
@@ -243,7 +276,7 @@ export class RunService {
         const previous = this.receipt(principal, request.clientRequestId, request, 'run');
         if (previous) {
             requireThat(
-                this.store.get('runs', previous.resourceId),
+                this.store.get('runs', previous.resourceId, isRun),
                 409,
                 'RETIRED_REQUEST',
                 'This earlier request was deleted and will not be replayed',
@@ -304,7 +337,7 @@ export class RunService {
         return structuredClone(run);
     }
     get(principal: Principal, id: string): Run {
-        const run = this.store.get<Run>('runs', id);
+        const run = this.store.get('runs', id, isRun);
         requireThat(run, 404, 'NOT_FOUND', 'Run not found');
         mustOwn(principal, run.owner);
         this.connection(principal, run.connectionId);
@@ -312,7 +345,7 @@ export class RunService {
     }
     list(principal: Principal, connectionId?: string, documentId?: string): Run[] {
         return this.store
-            .list<Run>('runs')
+            .list('runs', isRun)
             .filter(
                 r =>
                     r.owner === principal.id &&
@@ -337,7 +370,7 @@ export class RunService {
             'RESULT_UNAVAILABLE',
             'This run has no completed result',
         );
-        const result = this.store.get<Result>('results', id);
+        const result = this.store.get('results', id, isResult);
         requireThat(result, 409, 'RESULT_UNAVAILABLE', 'This run has no completed result');
         return result;
     }
@@ -431,7 +464,7 @@ export class RunService {
         audit(this.store, principal, 'run.delete', id);
     }
     private warning(id: string, message: string) {
-        const run = this.store.get<Run>('runs', id);
+        const run = this.store.get('runs', id, isRun);
         if (!run) return;
         if (!run.warnings.includes(message)) {
             run.warnings.push(message);
@@ -474,7 +507,7 @@ export class RunService {
         }
     }
     private async execute(id: string) {
-        const run = this.store.get<Run>('runs', id);
+        const run = this.store.get('runs', id, isRun);
         if (!run || terminal(run)) return;
         const principal: Principal = { id: run.owner, role: 'owner' };
         const controller = new AbortController();
@@ -568,7 +601,7 @@ export class RunService {
             run.elapsedMs = Math.round(performance.now() - start);
             run.finishedAt = new Date().toISOString();
             // Preserve warnings that a cancellation callback may have appended to persisted state.
-            const saved = this.store.get<Run>('runs', id);
+            const saved = this.store.get('runs', id, isRun);
             run.warnings = [...new Set([...run.warnings, ...(saved?.warnings ?? [])])];
             this.emit(run);
         }
@@ -595,7 +628,7 @@ export class RunService {
             old = this.receipt(principal, request.clientRequestId, payload, 'script');
         if (old) return this.getScript(principal, old.resourceId);
         requireThat(
-            this.store.list<Script>('scripts').filter(s => s.status === 'running').length < 4,
+            this.store.list('scripts', isScript).filter(s => s.status === 'running').length < 4,
             429,
             'SCRIPT_LIMIT',
             'At most four scripts can be active',
@@ -628,7 +661,7 @@ export class RunService {
         return script;
     }
     getScript(principal: Principal, id: string): Script {
-        const script = this.store.get<Script>('scripts', id);
+        const script = this.store.get('scripts', id, isScript);
         requireThat(script, 404, 'NOT_FOUND', 'Script not found');
         mustOwn(principal, script.owner);
         this.connection(principal, script.connectionId);
@@ -703,7 +736,7 @@ export class RunService {
     }
     async close() {
         this.closed = true;
-        for (const run of this.store.list<Run>('runs'))
+        for (const run of this.store.list('runs', isRun))
             if (!terminal(run)) await this.cancel({ id: run.owner, role: 'owner' }, run.id);
     }
 }

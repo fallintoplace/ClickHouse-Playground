@@ -28,6 +28,25 @@ type ClauseName =
     | 'LIMIT'
     | 'OFFSET'
     | 'UNION';
+const CLAUSE_NAMES = [
+    'WITH',
+    'SELECT',
+    'FROM',
+    'PREWHERE',
+    'WHERE',
+    'GROUP BY',
+    'HAVING',
+    'WINDOW',
+    'QUALIFY',
+    'ORDER BY',
+    'LIMIT',
+    'OFFSET',
+    'UNION',
+] as const satisfies readonly ClauseName[];
+
+function isClauseName(value: string): value is ClauseName {
+    return CLAUSE_NAMES.some(name => name === value);
+}
 type ClauseSpan = SourceRange & { name: ClauseName };
 type Source = { name: string; detail: string; range?: SourceRange };
 type FlowBranch = {
@@ -187,20 +206,7 @@ function clauseName(
         case 'WITH':
             return hasClauses ? undefined : 'WITH';
         default:
-            return [
-                'SELECT',
-                'FROM',
-                'PREWHERE',
-                'WHERE',
-                'HAVING',
-                'WINDOW',
-                'QUALIFY',
-                'LIMIT',
-                'OFFSET',
-                'UNION',
-            ].includes(word)
-                ? (word as ClauseName)
-                : undefined;
+            return isClauseName(word) ? word : undefined;
     }
 }
 

@@ -1,11 +1,4 @@
-import {
-    useEffect,
-    useRef,
-    useState,
-    type CSSProperties,
-    type Dispatch,
-    type SetStateAction,
-} from 'react';
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import {
     WORKSPACE_LAYOUT_STORAGE_KEY,
     clampPanelSplitRatio,
@@ -90,7 +83,7 @@ export function useWorkspacePanels({
         hasOutput && !queryCollapsed && !resultsCollapsed && !compactViewport,
     );
     const workspaceLayoutStyle = canSplitPanels
-        ? ({ '--query-panel-basis': `${panelLayout.splitRatio * 100}%` } as CSSProperties)
+        ? { '--query-panel-basis': `${panelLayout.splitRatio * 100}%` }
         : undefined;
     const startPanelSplit = (event: PanelPointerStartEvent) => {
         const content = workspaceContentRef.current;

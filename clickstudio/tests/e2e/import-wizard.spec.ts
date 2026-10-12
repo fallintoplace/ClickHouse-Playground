@@ -1,5 +1,6 @@
 import { setWorkspaceMode, trust } from './helpers.js';
 import { test, expect } from '@playwright/test';
+import { jsonRecord } from '../helpers/type-guards.js';
 import {
     schema,
     mockWritableWorkspace,
@@ -68,7 +69,7 @@ for (const mode of ['beginner', 'expert']) {
             }),
         );
         await page.route('**/api/imports/input-1/mapping', async route => {
-            mappingBody = route.request().postDataJSON() as Record<string, unknown>;
+            mappingBody = jsonRecord(route.request().postDataJSON(), 'Import mapping request');
             await route.fulfill({
                 json: {
                     id: 'mapping-1',
@@ -82,7 +83,7 @@ for (const mode of ['beginner', 'expert']) {
             });
         });
         await page.route('**/api/imports/mapping-1/commit', async route => {
-            commitBody = route.request().postDataJSON() as Record<string, unknown>;
+            commitBody = jsonRecord(route.request().postDataJSON(), 'Import commit request');
             await route.fulfill({
                 json: { id: 'mapping-1', table: 'demo.events', rows: 2, status: 'succeeded' },
             });
@@ -317,7 +318,7 @@ test('File import review lists skipped columns and success can start another imp
         });
     });
     await page.route('**/api/imports/input-1/mapping', async route => {
-        mappingBody = route.request().postDataJSON() as Record<string, unknown>;
+        mappingBody = jsonRecord(route.request().postDataJSON(), 'Import mapping request');
         await route.fulfill({
             json: {
                 id: 'mapping-1',
@@ -693,7 +694,7 @@ test('File import recovers an ambiguous write without offering a retry', async (
         route => route.fulfill({ json: recoverable }),
     );
     await page.route('**/api/imports/saved-import/review', async route => {
-        reviewBody = route.request().postDataJSON() as Record<string, unknown>;
+        reviewBody = jsonRecord(route.request().postDataJSON(), 'Import review request');
         const job = recoverable[0]!;
         recoverable = [];
         await route.fulfill({ json: { ...job, reviewedAt: '2026-09-23T00:02:00.000Z' } });

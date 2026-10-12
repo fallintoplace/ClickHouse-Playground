@@ -4,7 +4,7 @@ import {
     type TablePermissions,
 } from '../../../shared/database/tables/permissions';
 import { PLAYGROUND_CONNECTION_ID } from '../../../shared/database/connections/playground';
-import { post } from '../../api/client';
+import { apiResponses, post } from '../../api/client';
 import type { Connected } from '../../workspace/workspace-types';
 
 export function useTablePermissions(
@@ -22,9 +22,10 @@ export function useTablePermissions(
     useEffect(() => {
         if (!trusted || readOnlySource) return;
         const controller = new AbortController();
-        void post<TablePermissions>(
+        void post(
             `/connections/${encodeURIComponent(id)}/table-permissions`,
             { database, ...(table === undefined ? {} : { table }) },
+            apiResponses.isTablePermissions,
             { signal: controller.signal },
         )
             .then(permissions => {

@@ -8,7 +8,14 @@ import type { Json } from '../../../shared/common/values';
 import type { Schema, SchemaColumn } from '../../../shared/database/schema/types';
 import { mapImportRows } from '../../../shared/database/imports/mapping';
 import { useImportJobPolling } from './recovery/useImportJobPolling';
-import { api, isFrontendDemoPreview, message, post, RequestError } from '../../api/client';
+import {
+    api,
+    apiResponses,
+    isFrontendDemoPreview,
+    message,
+    post,
+    RequestError,
+} from '../../api/client';
 import {
     checkClickHouseCloudImport,
     CLICKHOUSE_CLOUD_CONNECTION_ID,
@@ -375,8 +382,9 @@ function useImportWizardRecovery(context: ImportWizardRecoveryContext) {
         }
 
         setBusy('recover');
-        void api<ImportJob[]>(
+        void api(
             `/imports?connectionId=${encodeURIComponent(importConnectionId)}&recoverable=true`,
+            apiResponses.arrayOf(apiResponses.isImportJob),
             { signal: controller.signal },
         )
             .then(async jobs => {
@@ -569,8 +577,9 @@ async function recoverUnresolvedImport(
 ) {
     setBusy('recover');
     try {
-        const jobs = await api<ImportJob[]>(
+        const jobs = await api(
             `/imports?connectionId=${encodeURIComponent(importConnectionId)}&recoverable=true`,
+            apiResponses.arrayOf(apiResponses.isImportJob),
         );
         setRecoverableJobs(jobs);
         const unresolved = jobs[0];
@@ -600,27 +609,27 @@ async function recoverUnresolvedImport(
     }
 }
 
-async function runCommitImport(
-    context: ImportActionSetters & {
-        mapping?: ImportMapping;
-        busy: BusyAction;
-        browserDemoImport: boolean;
-        browserCloudImport: boolean;
-        file?: File;
-        format?: ImportFormat;
-        creatingTable: boolean;
-        schema?: Schema;
-        createTableDatabase: string;
-        createTableName: string;
-        createColumns: CloudImportColumn[];
-        generateId: boolean;
-        importConnectionId: string;
-        preview?: ImportPreview;
-        savePendingImport: (value: PendingImport) => void;
-        clearPendingImport: () => void;
-        rememberJob: (job: ImportJob) => void;
-    },
-) {
+type RunCommitImportContext = ImportActionSetters & {
+    mapping?: ImportMapping;
+    busy: BusyAction;
+    browserDemoImport: boolean;
+    browserCloudImport: boolean;
+    file?: File;
+    format?: ImportFormat;
+    creatingTable: boolean;
+    schema?: Schema;
+    createTableDatabase: string;
+    createTableName: string;
+    createColumns: CloudImportColumn[];
+    generateId: boolean;
+    importConnectionId: string;
+    preview?: ImportPreview;
+    savePendingImport: (value: PendingImport) => void;
+    clearPendingImport: () => void;
+    rememberJob: (job: ImportJob) => void;
+};
+
+async function runCommitImport(context: RunCommitImportContext) {
     const {
         mapping: initialMapping,
         busy,
@@ -775,38 +784,7 @@ async function runCommitImport(
             });
         }
     };
-    const refreshServerMapping = async () => {
-        setJob(undefined);
-        clearPendingImport();
-        setMapping(undefined);
-        setStep('mapping');
-        try {
-            const [nextTargets, nextSchema] = await Promise.all([
-                api<string[]>(
-                    `/connections/${encodeURIComponent(importConnectionId)}/import-targets`,
-                ),
-                api<Schema>(`/connections/${encodeURIComponent(importConnectionId)}/schema`),
-            ]);
-            setTargets(nextTargets);
-            setSchema(nextSchema);
-            const nextTarget =
-                nextTargets.find(
-                    table =>
-                        table === mapping.table &&
-                        nextSchema.tables.some(item => `${item.database}.${item.name}` === table),
-                ) ?? '';
-            setTarget(nextTarget);
-            setLastExistingTarget(nextTarget);
-            setFields(
-                initialFields(preview?.columns ?? [], writableColumns(nextSchema, nextTarget)),
-            );
-            setError(
-                'The destination schema changed. Review the updated mapping before importing.',
-            );
-        } catch (refreshError) {
-            setError(`The destination schema changed. Refresh failed: ${message(refreshError)}`);
-        }
-    };
+    const refreshServerMapping = () => refreshServerImportMapping(context, mapping, preview);
     const recoverCommit = async (caught: unknown) => {
         if (browserCloudImport && queryId) {
             await recoverCloudImport(caught, queryId);
@@ -848,7 +826,10 @@ async function runCommitImport(
         }
         setError('The response was interrupted. Checking the saved import status…');
         try {
-            const next = await api<ImportJob>(`/imports/${encodeURIComponent(mapping.id)}`);
+            const next = await api(
+                `/imports/${encodeURIComponent(mapping.id)}`,
+                apiResponses.isImportJob,
+            );
             rememberJob(next);
         } catch {
             rememberJob({
@@ -891,13 +872,67 @@ async function runCommitImport(
                     : {}),
             });
         } else {
-            next = await post<ImportJob>(`/imports/${encodeURIComponent(mapping.id)}/commit`);
+            next = await post(
+                `/imports/${encodeURIComponent(mapping.id)}/commit`,
+                {},
+                apiResponses.isImportJob,
+            );
         }
         rememberJob(next);
     } catch (caught) {
         await recoverCommit(caught);
     } finally {
         setBusy('');
+    }
+}
+
+async function refreshServerImportMapping(
+    context: RunCommitImportContext,
+    mapping: ImportMapping,
+    preview?: ImportPreview,
+) {
+    const {
+        importConnectionId,
+        setJob,
+        clearPendingImport,
+        setMapping,
+        setStep,
+        setTargets,
+        setSchema,
+        setTarget,
+        setLastExistingTarget,
+        setFields,
+        setError,
+    } = context;
+    setJob(undefined);
+    clearPendingImport();
+    setMapping(undefined);
+    setStep('mapping');
+    try {
+        const [nextTargets, nextSchema] = await Promise.all([
+            api(
+                `/connections/${encodeURIComponent(importConnectionId)}/import-targets`,
+                apiResponses.isStringArray,
+            ),
+            api(
+                `/connections/${encodeURIComponent(importConnectionId)}/schema`,
+                apiResponses.isSchemaResponse,
+            ),
+        ]);
+        setTargets(nextTargets);
+        setSchema(nextSchema);
+        const nextTarget =
+            nextTargets.find(
+                table =>
+                    table === mapping.table &&
+                    nextSchema.tables.some(item => `${item.database}.${item.name}` === table),
+            ) ?? '';
+        setTarget(nextTarget);
+        setLastExistingTarget(nextTarget);
+        setFields(initialFields(preview?.columns ?? [], writableColumns(nextSchema, nextTarget)));
+        setError('The destination schema changed. Review the updated mapping before importing.');
+    } catch (refreshError) {
+        setError(`The destination schema changed. Refresh failed: ${message(refreshError)}`);
     }
 }
 
@@ -1013,11 +1048,15 @@ function createImportWizardFileActions(context: ImportWizardFileActionContext) {
                 };
             } else {
                 setCloudRows([]);
-                next = await post<ImportPreview>('/imports/preview', {
-                    name: nextFile.name,
-                    source,
-                    format: nextFormat,
-                });
+                next = await post(
+                    '/imports/preview',
+                    {
+                        name: nextFile.name,
+                        source,
+                        format: nextFormat,
+                    },
+                    apiResponses.isImportPreview,
+                );
             }
             setPreview(next);
             setStep('mapping');
@@ -1072,11 +1111,16 @@ async function runConfirmUnknownImport(context: ConfirmUnknownImportContext) {
         let checked = job;
         if (!browserCloudImport) {
             checked = job.reviewedAt
-                ? await post<ImportJob>(`/imports/${encodeURIComponent(job.id)}/reconcile`)
-                : await post<ImportJob>(`/imports/${encodeURIComponent(job.id)}/review`, {
-                      inspected: true,
-                      noActiveInsert: true,
-                  });
+                ? await post(
+                      `/imports/${encodeURIComponent(job.id)}/reconcile`,
+                      {},
+                      apiResponses.isImportJob,
+                  )
+                : await post(
+                      `/imports/${encodeURIComponent(job.id)}/review`,
+                      { inspected: true, noActiveInsert: true },
+                      apiResponses.isImportJob,
+                  );
             if (checked.status !== 'unknown') {
                 rememberJob(checked);
                 if (checked.status === 'succeeded')
@@ -1244,9 +1288,9 @@ function createImportWizardActions(context: ImportWizardActionsContext) {
     async function closeWizard() {
         if (!browserCloudImport && (busy || job?.status === 'running')) return;
         if (preview?.id && !browserCloudImport) {
-            void api(`/imports/${encodeURIComponent(preview.id)}`, { method: 'DELETE' }).catch(
-                () => undefined,
-            );
+            void api(`/imports/${encodeURIComponent(preview.id)}`, apiResponses.isUnknown, {
+                method: 'DELETE',
+            }).catch(() => undefined);
         }
         if (
             recoveryState === 'ready' &&
@@ -1738,11 +1782,15 @@ async function previewImportMapping({
                 missingFields: mapped.missingFields,
             };
         } else {
-            next = await post<ImportMapping>(`/imports/${encodeURIComponent(preview.id)}/mapping`, {
-                connectionId: importConnectionId,
-                table: target,
-                fields: selectedFields,
-            });
+            next = await post(
+                `/imports/${encodeURIComponent(preview.id)}/mapping`,
+                {
+                    connectionId: importConnectionId,
+                    table: target,
+                    fields: selectedFields,
+                },
+                apiResponses.isImportMapping,
+            );
         }
         setMapping(next);
         setStep('review');

@@ -81,11 +81,14 @@ async function askForChanges(page: Page, summary = 'Updated query.') {
 
 async function storedDraft(page: Page) {
     return page.evaluate(() => {
-        const state = JSON.parse(localStorage.getItem('clickstudio:workspace:demo:v1') ?? '{}') as {
-            activeId: string;
-            tabs: { id: string; sql: string; checkpoints: { reason: string; sql: string }[] }[];
-        };
-        return state.tabs?.find(tab => tab.id === state.activeId);
+        const isRecord = (value: unknown): value is Record<string, unknown> =>
+            typeof value === 'object' && value !== null && !Array.isArray(value);
+        const value: unknown = JSON.parse(
+            localStorage.getItem('clickstudio:workspace:demo:v1') ?? '{}',
+        );
+        if (!isRecord(value)) return undefined;
+        const tabs = Array.isArray(value.tabs) ? value.tabs.filter(isRecord) : [];
+        return tabs.find(tab => tab.id === value.activeId);
     });
 }
 
@@ -693,11 +696,14 @@ test('A restored proposal cannot replace or apply to a changed draft', async ({ 
     await expect.poll(async () => (await storedDraft(page))?.sql).toBe(originalSql);
     await page.evaluate(() => {
         const key = 'clickstudio:workspace:demo:v1';
-        const state = JSON.parse(localStorage.getItem(key)!) as {
-            activeId: string;
-            tabs: { id: string; sql: string }[];
-        };
-        const draft = state.tabs.find(tab => tab.id === state.activeId)!;
+        const isRecord = (value: unknown): value is Record<string, unknown> =>
+            typeof value === 'object' && value !== null && !Array.isArray(value);
+        const value: unknown = JSON.parse(localStorage.getItem(key) ?? '{}');
+        if (!isRecord(value)) throw new Error('Workspace state is not an object');
+        const state = value;
+        const tabs = Array.isArray(state.tabs) ? state.tabs.filter(isRecord) : [];
+        const draft = tabs.find(tab => tab.id === state.activeId);
+        if (!draft) throw new Error('Active workspace draft is missing');
         draft.sql = 'SELECT 99 AS changed';
         localStorage.setItem(key, JSON.stringify(state));
     });

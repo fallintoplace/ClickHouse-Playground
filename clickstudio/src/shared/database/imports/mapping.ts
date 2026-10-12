@@ -108,9 +108,9 @@ export function mapImportRows(
             `Map a source column to each required destination column: ${requiredUnmapped.map(column => column.name).join(', ')}.`,
         );
 
-    const missingFields: Record<string, number> = Object.create(null) as Record<string, number>;
+    const missingFields: Record<string, number> = {};
     const rows = sourceRows.map((row, rowIndex) => {
-        const mapped: Record<string, Json> = Object.create(null) as Record<string, Json>;
+        const mapped: Record<string, Json> = {};
         for (const [source, destination] of entries) {
             const column = writableByName.get(destination)!;
             if (!Object.hasOwn(row, source) || row[source] === undefined) {

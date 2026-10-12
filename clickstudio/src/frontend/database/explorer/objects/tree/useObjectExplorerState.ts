@@ -15,6 +15,7 @@ import {
 import type { ObjectExplorerProps } from './object-explorer-types';
 import { createRelationRenderer } from './object-relation-renderer';
 import { useTablePermissions } from '../../../tables/useTablePermissions';
+import { isRecord } from '../../../../../shared/common/values';
 
 export type ObjectExplorerView = ReturnType<typeof useObjectExplorerState>;
 
@@ -25,10 +26,8 @@ type ExplorerUiState = {
 const uiStateKey = (connectionId: string) => `clickstudio:object-explorer:${connectionId}:v1`;
 function recoverUiState(key: string): ExplorerUiState {
     try {
-        const value = JSON.parse(window.localStorage.getItem(key) ?? 'null') as {
-            selectedId?: unknown;
-            expandedIds?: unknown;
-        } | null;
+        const parsed: unknown = JSON.parse(window.localStorage.getItem(key) ?? 'null');
+        const value = isRecord(parsed) ? parsed : {};
         return {
             selectedId: typeof value?.selectedId === 'string' ? value.selectedId : undefined,
             expandedIds: Array.isArray(value?.expandedIds)

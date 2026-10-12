@@ -10,6 +10,12 @@ import {
 import type { Script } from '../../src/shared/queries/execution/types.js';
 import { newDraft } from '../../src/frontend/queries/editor/drafts/workspace-state.js';
 
+declare global {
+    interface Window {
+        restoreDraftStorage: () => void;
+    }
+}
+
 const popout = (page: Page) =>
     page.getByRole('button', { name: 'Open editor in a separate window', exact: true });
 
@@ -283,9 +289,7 @@ test('Draft storage warning stays visible until browser storage recovers', async
     await page.clock.install();
     await page.clock.runFor(20000);
     await expect(warning).toBeVisible();
-    await page.evaluate(() =>
-        (window as unknown as { restoreDraftStorage: () => void }).restoreDraftStorage(),
-    );
+    await page.evaluate(() => window.restoreDraftStorage());
     await replaceSql(page, 'SELECT 124');
     await page.clock.runFor(200);
     await expect(warning).toHaveCount(0);

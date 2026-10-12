@@ -322,7 +322,8 @@ for (const fixture of [
             await expect
                 .poll(async () =>
                     plot.evaluate(svg => {
-                        const matrix = (svg as SVGSVGElement).getScreenCTM();
+                        if (!(svg instanceof SVGSVGElement)) return Number.POSITIVE_INFINITY;
+                        const matrix = svg.getScreenCTM();
                         if (!matrix) return Number.POSITIVE_INFINITY;
                         return Math.abs(matrix.a / matrix.d - 1);
                     }),

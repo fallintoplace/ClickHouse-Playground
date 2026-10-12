@@ -19,7 +19,8 @@ import {
 } from '../../shared/queries/inspection/explain-plan.js';
 import { buildQueryProfile, parsePipelineResult } from '../../shared/queries/inspection/profile.js';
 import { sqlErrorRange } from '../queries/editor/sql-error.js';
-import { isResult, isRun } from '../queries/execution/events.js';
+import { isResult, isRun, isScript } from '../queries/execution/events.js';
+import { isQueryDocument } from '../../shared/queries/saved-queries/validation.js';
 import {
     loadPlaygroundSchema,
     PLAYGROUND_CONNECTION,
@@ -55,10 +56,7 @@ import {
     type DemoImportRow,
 } from './samples/demo-import-data.js';
 import { demoFlamegraph, demoReplication, demoWorkload } from '../../shared/samples/activity.js';
-import {
-    WORKLOAD_WINDOWS,
-    type WorkloadWindow,
-} from '../../shared/database/explorer/activity/workload.js';
+import { isWorkloadWindow } from '../../shared/database/explorer/activity/workload.js';
 import {
     DEMO_PREVIEW_RUN_ID,
     DEMO_PREVIEW_SQL,
@@ -80,6 +78,23 @@ import {
     resultFor,
     schema,
 } from './samples/demo-preview-fixtures.js';
+import { isRecord } from '../../shared/common/values.js';
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+    return isRecord(value) && Object.values(value).every(item => typeof item === 'string');
+}
+
+function stringRecord(value: unknown): Record<string, string> {
+    if (!isStringRecord(value)) throw new Error('Expected string values.');
+    return value;
+}
+
+const DEMO_IMPORT_COLUMNS = ['day', 'region', 'channel', 'events', 'revenue'] as const;
+type DemoImportColumnName = (typeof DEMO_IMPORT_COLUMNS)[number];
+
+function isDemoImportColumn(value: unknown): value is DemoImportColumnName {
+    return typeof value === 'string' && DEMO_IMPORT_COLUMNS.some(column => column === value);
+}
 
 export {
     DEMO_PREVIEW_INITIAL_STARTERS,
@@ -290,22 +305,14 @@ export class BrowserWorkspaceApi {
             }
         if (Array.isArray(state.scripts))
             for (const value of state.scripts) {
-                const script = record(value);
-                if (typeof script.id === 'string' && typeof script.sql === 'string')
-                    this.scripts.set(script.id, value as Script);
+                if (isScript(value)) this.scripts.set(value.id, value);
             }
     }
 
     private restoreDocumentState(state: ReturnType<typeof record>) {
         if (Array.isArray(state.documents))
             for (const value of state.documents) {
-                const document = record(value);
-                if (
-                    typeof document.id === 'string' &&
-                    typeof document.sql === 'string' &&
-                    typeof document.name === 'string'
-                )
-                    this.documents.set(document.id, value as QueryDocument);
+                if (isQueryDocument(value)) this.documents.set(value.id, value);
             }
         if (Array.isArray(state.revisions))
             for (const entry of state.revisions) {
@@ -315,17 +322,9 @@ export class BrowserWorkspaceApi {
                     !Array.isArray(entry[1])
                 )
                     continue;
-                const versions = entry[1].filter((value): value is QueryDocument => {
-                    const revision = record(value);
-                    return (
-                        typeof revision.id === 'string' &&
-                        typeof revision.name === 'string' &&
-                        typeof revision.sql === 'string' &&
-                        typeof revision.revision === 'number' &&
-                        Number.isSafeInteger(revision.revision) &&
-                        revision.revision > 0
-                    );
-                });
+                const versions = entry[1].filter(
+                    (value): value is QueryDocument => isQueryDocument(value) && value.revision > 0,
+                );
                 if (versions.length) this.revisions.set(entry[0], versions);
             }
     }
@@ -931,22 +930,20 @@ export class BrowserWorkspaceApi {
             throw new Error('This preview expired; upload the file again');
         if (body.connectionId !== 'demo' || body.table !== DEMO_IMPORT_TARGET)
             throw new Error('Choose the browser demo table as the destination');
-        const fields = record(body.fields) as Record<string, unknown>;
+        const fields = stringRecord(body.fields);
         const destinations = Object.values(fields);
-        const allowed = ['day', 'region', 'channel', 'events', 'revenue'];
         if (
             !destinations.length ||
-            destinations.some(value => typeof value !== 'string' || !allowed.includes(value)) ||
+            destinations.some(value => !isDemoImportColumn(value)) ||
             new Set(destinations).size !== destinations.length
         )
             throw new Error('Each destination column must be mapped once');
         const mappedRows = input.rows.map(row => {
-            const mapped = Object.create(null) as DemoImportRow;
+            const mapped: DemoImportRow = {};
             for (const [source, destination] of Object.entries(fields)) {
                 if (
                     !input.columns.includes(source) ||
-                    typeof destination !== 'string' ||
-                    !allowed.includes(destination) ||
+                    !isDemoImportColumn(destination) ||
                     !Object.hasOwn(row, source)
                 )
                     throw new Error('Mapping references an unknown source or destination column');
@@ -959,7 +956,7 @@ export class BrowserWorkspaceApi {
             inputId: id,
             connectionId: 'demo',
             table: DEMO_IMPORT_TARGET,
-            fields: fields as Record<string, string>,
+            fields,
             rows: mappedRows,
         };
         this.demoImportMappings.set(mapping.id, mapping);
@@ -1219,9 +1216,10 @@ export class BrowserWorkspaceApi {
                 if (!this.trusted)
                     throw new Error('Trust this connection before inspecting workload history.');
                 const rawMinutes = url.searchParams.get('minutes') ?? '60';
-                if (!WORKLOAD_WINDOWS.some(minutes => String(minutes) === rawMinutes))
+                const minutes = Number(rawMinutes);
+                if (!isWorkloadWindow(minutes))
                     throw new Error('minutes must be 15, 60, 360, or 1440.');
-                return demoWorkload('demo', Number(rawMinutes) as WorkloadWindow);
+                return demoWorkload('demo', minutes);
             }
             case 'replication':
                 if (!this.trusted)
@@ -1305,7 +1303,7 @@ export class BrowserWorkspaceApi {
         options: RequestOptions,
     ): Promise<unknown> {
         const sql = typeof body.sql === 'string' ? body.sql : '';
-        const parameters = record(body.parameters) as Record<string, string>;
+        const parameters = stringRecord(body.parameters);
         if (parts[1] === PLAYGROUND_CONNECTION_ID) {
             if (Object.keys(parameters).length)
                 throw new Error(
@@ -1380,7 +1378,7 @@ export class BrowserWorkspaceApi {
                 crypto.randomUUID(),
                 statement.sql,
                 'query',
-                record(body.parameters) as Record<string, string>,
+                stringRecord(body.parameters),
                 { sourceFrom: sourceFrom + statement.from, sourceTo: sourceFrom + statement.to },
             );
             return { ...statement, runId: run.id, status: 'succeeded' as const };
@@ -1709,7 +1707,7 @@ export class BrowserWorkspaceApi {
             body.kind === 'analyze'
                 ? body.kind
                 : 'query';
-        const parameters = record(body.parameters) as Record<string, string>;
+        const parameters = stringRecord(body.parameters);
         if (body.connectionId === PLAYGROUND_CONNECTION_ID) {
             if (Object.keys(parameters).length)
                 throw new Error(

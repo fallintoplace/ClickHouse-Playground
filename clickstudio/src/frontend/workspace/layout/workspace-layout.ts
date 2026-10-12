@@ -1,3 +1,5 @@
+import { isRecord } from '../../../shared/common/values';
+
 export const WORKSPACE_PANEL_IDS = ['query', 'results'] as const;
 export type WorkspacePanelId = (typeof WORKSPACE_PANEL_IDS)[number];
 export type WorkspacePanelState = {
@@ -24,9 +26,7 @@ export function clampPanelSplitRatio(value: number): number {
 }
 
 function panelState(value: unknown): WorkspacePanelState {
-    if (!value || typeof value !== 'object') return { collapsed: false };
-    const candidate = value as Partial<WorkspacePanelState>;
-    return { collapsed: candidate.collapsed === true };
+    return { collapsed: isRecord(value) && value.collapsed === true };
 }
 
 export function defaultWorkspacePanelLayout(): WorkspacePanelLayout {
@@ -45,11 +45,8 @@ export function defaultWorkspacePanelLayout(): WorkspacePanelLayout {
 export function recoverWorkspacePanelLayout(raw: string | null): WorkspacePanelLayout {
     if (!raw) return defaultWorkspacePanelLayout();
     try {
-        const candidate = JSON.parse(raw) as {
-            splitRatio?: unknown;
-            query?: unknown;
-            results?: unknown;
-        };
+        const parsed: unknown = JSON.parse(raw);
+        const candidate = isRecord(parsed) ? parsed : {};
         return {
             version: 1,
             splitRatio: finite(candidate.splitRatio)

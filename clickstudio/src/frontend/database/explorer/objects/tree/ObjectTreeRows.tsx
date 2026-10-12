@@ -1,4 +1,3 @@
-import { type CSSProperties } from 'react';
 import type { SchemaTable } from '../../../../../shared/database/schema/types';
 import { quoteIdentifier } from '../../../../../shared/sql/sql';
 import { cx } from '../../../../ui/components/ui';
@@ -32,7 +31,7 @@ export function ExplorerGroupRow({
                 database && 'is-database',
                 !database && `is-${kind}`,
             )}
-            style={{ '--tree-indent': `${Math.max(0, level - 1) * 12}px` } as CSSProperties}
+            style={{ '--tree-indent': `${Math.max(0, level - 1) * 12}px` }}
         >
             <button
                 type="button"
@@ -88,7 +87,7 @@ export function ObjectLeafRow({
                 `is-${glyph}`,
                 selected && 'is-selected',
             )}
-            style={{ '--tree-indent': `${Math.max(0, level - 1) * 12}px` } as CSSProperties}
+            style={{ '--tree-indent': `${Math.max(0, level - 1) * 12}px` }}
         >
             <span className="object-tree-toggle object-tree-spacer" />
             <button

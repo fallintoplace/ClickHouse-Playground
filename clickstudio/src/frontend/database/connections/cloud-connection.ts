@@ -11,13 +11,11 @@ import {
 } from '../../../shared/database/connections/cloud-policy.js';
 import { DEFAULT_LIMITS } from '../../../shared/queries/execution/settings.js';
 import { type Capability, type Connection } from '../../../shared/database/connections/types.js';
-import {
-    type ClickHouseDocumentationEntry,
-    type ClickHouseDocumentationSummary,
-} from '../../../shared/database/reference/types.js';
-import { type Column, type Row } from '../../../shared/common/values.js';
+import type { ClickHouseDocumentationEntry } from '../../../shared/database/reference/types.js';
+import { isJson, isRecord, type Column, type Row } from '../../../shared/common/values.js';
 import { type Schema, type SchemaColumn } from '../../../shared/database/schema/types.js';
 import type { ReplicationSnapshot } from '../../../shared/database/explorer/activity/replication.js';
+import { isQueryLogSource } from '../../../shared/database/explorer/activity/workload.js';
 import type {
     QueryLogSource,
     WorkloadSnapshot,
@@ -27,14 +25,18 @@ import type {
     FlamegraphSnapshot,
     FlamegraphSource,
 } from '../../../shared/queries/inspection/flamegraph.js';
+import { isFlamegraphSource } from '../../../shared/queries/inspection/flamegraph.js';
 import type { CloudImportColumn } from '../imports/state/cloud-import.js';
-import type { CreateTableColumn } from '../../../shared/database/tables/create-table.js';
+import {
+    CREATE_TABLE_COLUMN_TYPES,
+    type CreateTableColumn,
+} from '../../../shared/database/tables/create-table.js';
 import type {
     NativeExplorerRequest,
     NativeExplorerSnapshot,
 } from '../../../shared/database/explorer/explorers.js';
 import type { MergeTreePartsSnapshot } from '../../../shared/database/explorer/storage/parts.js';
-import type { TablePermissions } from '../../../shared/database/tables/permissions.js';
+import * as apiResponses from '../../api/response-guards.js';
 
 export { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../../shared/database/connections/cloud-policy.js';
 
@@ -88,20 +90,191 @@ type ActiveCloudConnection = {
 const CLOUD_PROFILE_STORAGE_KEY = 'clickstudio:cloud-connection-profile:v1';
 let activeCloud: ActiveCloudConnection | undefined;
 
+type CloudResponseGuard<T> = (value: unknown) => value is T;
+type CloudSessionState = {
+    session: { profile: SavedCloudConnectionProfile; tested: CloudConnectionTest } | null;
+};
+
+function isCloudSessionState(value: unknown): value is CloudSessionState {
+    if (!isRecord(value)) return false;
+    if (value.session === null) return true;
+    return (
+        isRecord(value.session) &&
+        isSavedCloudConnectionProfile(value.session.profile) &&
+        isCloudConnectionTest(value.session.tested)
+    );
+}
+
+function isNull(value: unknown): value is null {
+    return value === null;
+}
+
+function isCancellation(value: unknown): value is { cancelled: boolean; queryId: string } {
+    return (
+        isRecord(value) && typeof value.cancelled === 'boolean' && typeof value.queryId === 'string'
+    );
+}
+
+function isCloudTableCreation(value: unknown): value is {
+    database: string;
+    table: string;
+    columns: CreateTableColumn[];
+    orderBy: string;
+    queryId: string;
+} {
+    return (
+        isRecord(value) &&
+        typeof value.database === 'string' &&
+        typeof value.table === 'string' &&
+        Array.isArray(value.columns) &&
+        value.columns.every(isCreateTableColumn) &&
+        typeof value.orderBy === 'string' &&
+        typeof value.queryId === 'string'
+    );
+}
+
+function isCreateTableColumn(value: unknown): value is CreateTableColumn {
+    return (
+        isRecord(value) &&
+        typeof value.name === 'string' &&
+        CREATE_TABLE_COLUMN_TYPES.some(type => type === value.type) &&
+        (value.generatedId === undefined || typeof value.generatedId === 'boolean')
+    );
+}
+
+function isCloudTableDrop(
+    value: unknown,
+): value is { database: string; table: string; queryId: string } {
+    return (
+        isRecord(value) &&
+        typeof value.database === 'string' &&
+        typeof value.table === 'string' &&
+        typeof value.queryId === 'string'
+    );
+}
+
+function cloudResponse<T>(value: unknown, guard: CloudResponseGuard<T>): T {
+    if (!guard(value))
+        throw new CloudRequestError(
+            'INVALID_RESPONSE',
+            'ClickHouse Cloud returned an invalid response.',
+            502,
+        );
+    return value;
+}
+
+function cloudFailure(response: Response, payload: unknown): CloudRequestError {
+    const root = isRecord(payload) ? payload : {};
+    const detail = isRecord(root.error) ? root.error : {};
+    return new CloudRequestError(
+        typeof detail.code === 'string' ? detail.code : 'CLOUD_REQUEST',
+        typeof detail.message === 'string'
+            ? detail.message
+            : `ClickHouse Cloud returned HTTP ${response.status}.`,
+        response.status,
+    );
+}
+
+function isSavedCloudConnectionProfile(value: unknown): value is SavedCloudConnectionProfile {
+    return (
+        isRecord(value) &&
+        typeof value.host === 'string' &&
+        typeof value.database === 'string' &&
+        typeof value.username === 'string'
+    );
+}
+
+function isCapability(value: unknown): value is Capability {
+    return (
+        isRecord(value) &&
+        typeof value.available === 'boolean' &&
+        (value.reason === undefined || typeof value.reason === 'string')
+    );
+}
+
+function isOptionalString(value: unknown): value is string | undefined {
+    return value === undefined || typeof value === 'string';
+}
+
+function isCloudConnectionTest(value: unknown): value is CloudConnectionTest {
+    if (!isRecord(value)) return false;
+    return (
+        typeof value.host === 'string' &&
+        typeof value.database === 'string' &&
+        typeof value.username === 'string' &&
+        typeof value.serverVersion === 'string' &&
+        isCapability(value.queryLog) &&
+        isCapability(value.replication) &&
+        isCapability(value.progress) &&
+        isCapability(value.cancellation) &&
+        isCapability(value.explain) &&
+        isCapability(value.explainPlan) &&
+        isCapability(value.explainAnalyze) &&
+        isCapability(value.queryTree) &&
+        isCapability(value.explainPipeline) &&
+        isCapability(value.pipeline) &&
+        isCapability(value.traceLog) &&
+        isCapability(value.documentation) &&
+        isCapability(value.parameters) &&
+        (value.queryLogSource === undefined || isQueryLogSource(value.queryLogSource)) &&
+        (value.traceLogSource === undefined || isFlamegraphSource(value.traceLogSource))
+    );
+}
+
+function isCloudQueryResult(value: unknown): value is CloudQueryResult {
+    return (
+        isRecord(value) &&
+        typeof value.queryId === 'string' &&
+        Array.isArray(value.columns) &&
+        value.columns.every(
+            column =>
+                isRecord(column) &&
+                typeof column.name === 'string' &&
+                typeof column.type === 'string',
+        ) &&
+        Array.isArray(value.rows) &&
+        value.rows.every(row => Array.isArray(row) && row.every(isJson)) &&
+        typeof value.elapsedMs === 'number' &&
+        Number.isFinite(value.elapsedMs) &&
+        typeof value.bytes === 'number' &&
+        Number.isFinite(value.bytes) &&
+        typeof value.truncated === 'boolean' &&
+        (value.writtenRows === undefined ||
+            (typeof value.writtenRows === 'number' && Number.isFinite(value.writtenRows)))
+    );
+}
+
+function isCloudProgress(value: unknown): value is {
+    progress?: { readRows: string; readBytes: string; elapsedMs: number; memory?: string };
+} {
+    if (!isRecord(value)) return false;
+    if (value.progress === undefined) return true;
+    return (
+        isRecord(value.progress) &&
+        typeof value.progress.readRows === 'string' &&
+        typeof value.progress.readBytes === 'string' &&
+        typeof value.progress.elapsedMs === 'number' &&
+        Number.isFinite(value.progress.elapsedMs) &&
+        isOptionalString(value.progress.memory)
+    );
+}
+
+function isCloudImportJob(value: unknown): value is CloudImportJob {
+    return (
+        apiResponses.isImportJob(value) &&
+        typeof value.connectionId === 'string' &&
+        typeof value.queryId === 'string' &&
+        typeof value.createdAt === 'string'
+    );
+}
+
 export function loadSavedCloudConnectionProfile(): SavedCloudConnectionProfile | undefined {
     try {
         const value: unknown = JSON.parse(
             window.localStorage.getItem(CLOUD_PROFILE_STORAGE_KEY) ?? 'null',
         );
-        if (typeof value !== 'object' || value === null) return undefined;
-        const profile = value as Record<string, unknown>;
-        if (
-            typeof profile.host !== 'string' ||
-            typeof profile.database !== 'string' ||
-            typeof profile.username !== 'string'
-        )
-            return undefined;
-        return { host: profile.host, database: profile.database, username: profile.username };
+        if (!isSavedCloudConnectionProfile(value)) return undefined;
+        return value;
     } catch {
         return undefined;
     }
@@ -124,7 +297,11 @@ export class CloudRequestError extends Error {
     }
 }
 
-async function requestCloud<T>(body: CloudRequest, signal?: AbortSignal): Promise<T> {
+async function requestCloud<T>(
+    body: CloudRequest,
+    guard: CloudResponseGuard<T>,
+    signal?: AbortSignal,
+): Promise<T> {
     const requestBody = activeCloud?.localSession
         ? Object.fromEntries(Object.entries(body).filter(([key]) => key !== 'credentials'))
         : body;
@@ -136,27 +313,15 @@ async function requestCloud<T>(body: CloudRequest, signal?: AbortSignal): Promis
         ...(signal ? { signal } : {}),
     });
     const payload: unknown = await response.json().catch(() => null);
-    if (!response.ok) {
-        const root =
-            typeof payload === 'object' && payload !== null
-                ? (payload as Record<string, unknown>)
-                : {};
-        const detail =
-            typeof root.error === 'object' && root.error !== null
-                ? (root.error as Record<string, unknown>)
-                : {};
-        throw new CloudRequestError(
-            typeof detail.code === 'string' ? detail.code : 'CLOUD_REQUEST',
-            typeof detail.message === 'string'
-                ? detail.message
-                : `ClickHouse Cloud returned HTTP ${response.status}.`,
-            response.status,
-        );
-    }
-    return payload as T;
+    if (!response.ok) throw cloudFailure(response, payload);
+    return cloudResponse(payload, guard);
 }
 
-async function localCloudSession<T>(method: 'GET' | 'POST' | 'DELETE', body?: unknown): Promise<T> {
+async function localCloudSession<T>(
+    method: 'GET' | 'POST' | 'DELETE',
+    guard: CloudResponseGuard<T>,
+    body?: unknown,
+): Promise<T> {
     const response = await fetch('/api/cloud/session', {
         method,
         credentials: 'same-origin',
@@ -167,27 +332,11 @@ async function localCloudSession<T>(method: 'GET' | 'POST' | 'DELETE', body?: un
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
     const payload: unknown = method === 'DELETE' ? null : await response.json().catch(() => null);
-    if (!response.ok) {
-        const root =
-            typeof payload === 'object' && payload !== null
-                ? (payload as Record<string, unknown>)
-                : {};
-        const detail =
-            typeof root.error === 'object' && root.error !== null
-                ? (root.error as Record<string, unknown>)
-                : {};
-        throw new CloudRequestError(
-            typeof detail.code === 'string' ? detail.code : 'CLOUD_REQUEST',
-            typeof detail.message === 'string'
-                ? detail.message
-                : `ClickHouse Cloud returned HTTP ${response.status}.`,
-            response.status,
-        );
-    }
-    return payload as T;
+    if (!response.ok) throw cloudFailure(response, payload);
+    return cloudResponse(payload, guard);
 }
 
-async function requestCloudImport<T>(form: FormData): Promise<T> {
+async function requestCloudImport<T>(form: FormData, guard: CloudResponseGuard<T>): Promise<T> {
     const response = await fetch('/api/cloud', {
         method: 'POST',
         credentials: 'same-origin',
@@ -195,24 +344,8 @@ async function requestCloudImport<T>(form: FormData): Promise<T> {
         body: form,
     });
     const payload: unknown = await response.json().catch(() => null);
-    if (!response.ok) {
-        const root =
-            typeof payload === 'object' && payload !== null
-                ? (payload as Record<string, unknown>)
-                : {};
-        const detail =
-            typeof root.error === 'object' && root.error !== null
-                ? (root.error as Record<string, unknown>)
-                : {};
-        throw new CloudRequestError(
-            typeof detail.code === 'string' ? detail.code : 'CLOUD_REQUEST',
-            typeof detail.message === 'string'
-                ? detail.message
-                : `ClickHouse Cloud returned HTTP ${response.status}.`,
-            response.status,
-        );
-    }
-    return payload as T;
+    if (!response.ok) throw cloudFailure(response, payload);
+    return cloudResponse(payload, guard);
 }
 
 function capability(available: boolean, reason?: string) {
@@ -287,8 +420,8 @@ export async function connectClickHouseCloud(
     persistInLocalServer = false,
 ) {
     const tested = persistInLocalServer
-        ? await localCloudSession<CloudConnectionTest>('POST', { credentials })
-        : await requestCloud<CloudConnectionTest>({ action: CLOUD_ACTIONS.test, credentials });
+        ? await localCloudSession('POST', isCloudConnectionTest, { credentials })
+        : await requestCloud({ action: CLOUD_ACTIONS.test, credentials }, isCloudConnectionTest);
     const connection = makeConnection(credentials, tested);
     activeCloud = persistInLocalServer
         ? { connection, localSession: true }
@@ -297,9 +430,7 @@ export async function connectClickHouseCloud(
 }
 
 export async function restoreClickHouseCloudSession() {
-    const payload = await localCloudSession<{
-        session: { profile: SavedCloudConnectionProfile; tested: CloudConnectionTest } | null;
-    }>('GET');
+    const payload = await localCloudSession('GET', isCloudSessionState);
     if (!payload.session) return undefined;
     const connection = makeConnection(payload.session.profile, payload.session.tested);
     activeCloud = { connection, localSession: true };
@@ -311,7 +442,7 @@ export function getClickHouseCloudConnection() {
 }
 
 export async function disconnectClickHouseCloud() {
-    if (activeCloud?.localSession) await localCloudSession<void>('DELETE');
+    if (activeCloud?.localSession) await localCloudSession('DELETE', isNull);
     activeCloud = undefined;
 }
 
@@ -326,13 +457,16 @@ export async function runClickHouseCloudSql(
             'Reconnect to ClickHouse Cloud before running SQL.',
             401,
         );
-    return await requestCloud<CloudQueryResult>({
-        action: CLOUD_ACTIONS.run,
-        credentials: activeCloud.credentials,
-        sql,
-        ...(sessionId ? { sessionId } : {}),
-        ...options,
-    });
+    return await requestCloud(
+        {
+            action: CLOUD_ACTIONS.run,
+            credentials: activeCloud.credentials,
+            sql,
+            ...(sessionId ? { sessionId } : {}),
+            ...options,
+        },
+        isCloudQueryResult,
+    );
 }
 
 export async function loadClickHouseCloudSchema(
@@ -344,11 +478,14 @@ export async function loadClickHouseCloudSchema(
             'Reconnect to ClickHouse Cloud before loading its schema.',
             401,
         );
-    return await requestCloud<Schema>({
-        action: CLOUD_ACTIONS.schema,
-        credentials: activeCloud.credentials,
-        ...offsets,
-    });
+    return await requestCloud(
+        {
+            action: CLOUD_ACTIONS.schema,
+            credentials: activeCloud.credentials,
+            ...offsets,
+        },
+        apiResponses.isSchemaResponse,
+    );
 }
 
 export async function loadClickHouseCloudQueryTree(
@@ -362,8 +499,9 @@ export async function loadClickHouseCloudQueryTree(
             'Reconnect to ClickHouse Cloud before analyzing SQL.',
             401,
         );
-    return await requestCloud<string[]>(
+    return await requestCloud(
         { action: CLOUD_ACTIONS.queryTree, credentials: activeCloud.credentials, sql, parameters },
+        apiResponses.isStringArray,
         signal,
     );
 }
@@ -375,9 +513,11 @@ export async function loadClickHouseCloudProgress(queryId: string, signal?: Abor
             'Reconnect to ClickHouse Cloud to load query progress.',
             401,
         );
-    const response = await requestCloud<{
-        progress?: { readRows: string; readBytes: string; elapsedMs: number; memory?: string };
-    }>({ action: CLOUD_ACTIONS.progress, credentials: activeCloud.credentials, queryId }, signal);
+    const response = await requestCloud(
+        { action: CLOUD_ACTIONS.progress, credentials: activeCloud.credentials, queryId },
+        isCloudProgress,
+        signal,
+    );
     return response.progress;
 }
 
@@ -388,8 +528,9 @@ export async function cancelClickHouseCloudQuery(queryId: string, signal?: Abort
             'Reconnect to ClickHouse Cloud before stopping SQL.',
             401,
         );
-    return await requestCloud<{ cancelled: boolean; queryId: string }>(
+    return await requestCloud(
         { action: CLOUD_ACTIONS.cancel, credentials: activeCloud.credentials, queryId },
+        isCancellation,
         signal,
     );
 }
@@ -408,8 +549,9 @@ export async function loadClickHouseCloudProfileEvidence(queryId: string, signal
             'Test the connection to check query-log access.',
             409,
         );
-    return await requestCloud<Record<string, unknown>[]>(
+    return await requestCloud(
         { action: CLOUD_ACTIONS.profile, credentials: activeCloud.credentials, queryId, source },
+        apiResponses.isRecordArrayResponse,
         signal,
     );
 }
@@ -425,8 +567,9 @@ export async function loadClickHouseCloudPipeline(
             'Reconnect to ClickHouse Cloud before loading pipeline details.',
             401,
         );
-    return await requestCloud<string[]>(
+    return await requestCloud(
         { action: CLOUD_ACTIONS.pipeline, credentials: activeCloud.credentials, sql, parameters },
+        apiResponses.isStringArray,
         signal,
     );
 }
@@ -456,7 +599,7 @@ export async function loadClickHouseCloudFlamegraph(
             ? date.toISOString().slice(0, 10)
             : new Date().toISOString().slice(0, 10);
     };
-    return await requestCloud<FlamegraphSnapshot>(
+    return await requestCloud(
         {
             action: CLOUD_ACTIONS.flamegraph,
             credentials: activeCloud.credentials,
@@ -465,6 +608,7 @@ export async function loadClickHouseCloudFlamegraph(
             endDate: asDate(finishedAt ?? createdAt),
             source,
         },
+        apiResponses.isFlamegraphSnapshot,
         signal,
     );
 }
@@ -480,13 +624,14 @@ export async function searchClickHouseCloudDocumentation(
             'Reconnect to ClickHouse Cloud before searching reference docs.',
             401,
         );
-    return await requestCloud<ClickHouseDocumentationSummary[]>(
+    return await requestCloud(
         {
             action: CLOUD_ACTIONS.documentationSearch,
             credentials: activeCloud.credentials,
             query,
             category,
         },
+        apiResponses.arrayOf(apiResponses.isClickHouseDocumentationSummary),
         signal,
     );
 }
@@ -502,7 +647,7 @@ export async function loadClickHouseCloudDocumentationEntry(
             'Reconnect to ClickHouse Cloud before opening reference docs.',
             401,
         );
-    return await requestCloud<ClickHouseDocumentationEntry | undefined>(
+    return await requestCloud(
         {
             action: CLOUD_ACTIONS.documentationEntry,
             credentials: activeCloud.credentials,
@@ -510,6 +655,8 @@ export async function loadClickHouseCloudDocumentationEntry(
             type,
             serverVersion: activeCloud.connection.manifest?.serverVersion,
         },
+        (value): value is ClickHouseDocumentationEntry | undefined =>
+            value === undefined || apiResponses.isClickHouseDocumentationEntry(value),
         signal,
     );
 }
@@ -524,8 +671,9 @@ export async function loadClickHouseCloudNativeExplorer(
             'Reconnect to ClickHouse Cloud before inspecting metadata.',
             401,
         );
-    return await requestCloud<NativeExplorerSnapshot>(
+    return await requestCloud(
         { action: CLOUD_ACTIONS.nativeExplorer, credentials: activeCloud.credentials, ...request },
+        apiResponses.isNativeExplorerSnapshot,
         signal,
     );
 }
@@ -541,8 +689,9 @@ export async function loadClickHouseCloudTableParts(
             'Reconnect to ClickHouse Cloud before inspecting storage.',
             401,
         );
-    return await requestCloud<MergeTreePartsSnapshot>(
+    return await requestCloud(
         { action: CLOUD_ACTIONS.tableParts, credentials: activeCloud.credentials, database, table },
+        apiResponses.isMergeTreePartsSnapshot,
         signal,
     );
 }
@@ -559,17 +708,14 @@ export async function createClickHouseCloudTable(input: {
             'Reconnect to ClickHouse Cloud before creating a table.',
             401,
         );
-    return await requestCloud<{
-        database: string;
-        table: string;
-        columns: CreateTableColumn[];
-        orderBy: string;
-        queryId: string;
-    }>({
-        action: CLOUD_ACTIONS.createTable,
-        credentials: activeCloud.credentials,
-        ...input,
-    });
+    return await requestCloud(
+        {
+            action: CLOUD_ACTIONS.createTable,
+            credentials: activeCloud.credentials,
+            ...input,
+        },
+        isCloudTableCreation,
+    );
 }
 
 export async function dropClickHouseCloudTable(
@@ -583,13 +729,16 @@ export async function dropClickHouseCloudTable(
             'Reconnect to ClickHouse Cloud before deleting a table.',
             401,
         );
-    return await requestCloud<{ database: string; table: string; queryId: string }>({
-        action: CLOUD_ACTIONS.dropTable,
-        credentials: activeCloud.credentials,
-        database,
-        table,
-        confirmation,
-    });
+    return await requestCloud(
+        {
+            action: CLOUD_ACTIONS.dropTable,
+            credentials: activeCloud.credentials,
+            database,
+            table,
+            confirmation,
+        },
+        isCloudTableDrop,
+    );
 }
 
 export async function loadClickHouseCloudTablePermissions(
@@ -599,13 +748,14 @@ export async function loadClickHouseCloudTablePermissions(
 ) {
     if (!activeCloud)
         throw new CloudRequestError('CLOUD_DISCONNECTED', 'Reconnect to ClickHouse Cloud.', 401);
-    return requestCloud<TablePermissions>(
+    return requestCloud(
         {
             action: CLOUD_ACTIONS.tablePermissions,
             credentials: activeCloud.credentials,
             database,
             ...(table === undefined ? {} : { table }),
         },
+        apiResponses.isTablePermissions,
         signal,
     );
 }
@@ -628,7 +778,7 @@ export async function importClickHouseCloudFile(input: CloudImportInput): Promis
     if (input.deduplicationToken) form.set('deduplicationToken', input.deduplicationToken);
     if (input.expectedColumns) form.set('expectedColumns', JSON.stringify(input.expectedColumns));
     if (input.createTable) form.set('createTable', JSON.stringify(input.createTable));
-    return await requestCloudImport<CloudImportJob>(form);
+    return await requestCloudImport(form, isCloudImportJob);
 }
 
 export async function insertClickHouseCloudRow(input: {
@@ -668,14 +818,17 @@ export async function checkClickHouseCloudImport(
             'Reconnect to ClickHouse Cloud before checking import status.',
             401,
         );
-    return await requestCloud<CloudImportJob>({
-        action: CLOUD_ACTIONS.importStatus,
-        credentials: activeCloud.credentials,
-        queryId,
-        table,
-        rows,
-        ...(deduplicationToken ? { deduplicationToken } : {}),
-    });
+    return await requestCloud(
+        {
+            action: CLOUD_ACTIONS.importStatus,
+            credentials: activeCloud.credentials,
+            queryId,
+            table,
+            rows,
+            ...(deduplicationToken ? { deduplicationToken } : {}),
+        },
+        isCloudImportJob,
+    );
 }
 
 export async function loadClickHouseCloudWorkload(
@@ -695,8 +848,9 @@ export async function loadClickHouseCloudWorkload(
             'Test the connection to check query-log access.',
             409,
         );
-    return await requestCloud<WorkloadSnapshot>(
+    return await requestCloud(
         { action: CLOUD_ACTIONS.workload, credentials: activeCloud.credentials, minutes, source },
+        apiResponses.isWorkloadSnapshot,
         signal,
     );
 }
@@ -710,8 +864,9 @@ export async function loadClickHouseCloudReplication(
             'Reconnect to ClickHouse Cloud before loading replication status.',
             401,
         );
-    return await requestCloud<ReplicationSnapshot>(
+    return await requestCloud(
         { action: CLOUD_ACTIONS.replication, credentials: activeCloud.credentials },
+        apiResponses.isReplicationSnapshot,
         signal,
     );
 }

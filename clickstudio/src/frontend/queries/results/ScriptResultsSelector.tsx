@@ -155,9 +155,8 @@ function moveMenuFocus(event: KeyboardEvent<HTMLDivElement>) {
         ),
     );
     if (!items.length) return;
-    const current = items.indexOf(
-        event.currentTarget.ownerDocument.activeElement as HTMLButtonElement,
-    );
+    const activeElement = event.currentTarget.ownerDocument.activeElement;
+    const current = activeElement instanceof HTMLButtonElement ? items.indexOf(activeElement) : -1;
     let next: number;
     switch (event.key) {
         case 'ArrowDown':
@@ -214,15 +213,15 @@ export function ScriptResultsSelector({
         };
         const closeOnFocusOutside = (event: FocusEvent) => {
             if (
-                !element.contains(event.target as Node) &&
-                !trigger.current?.contains(event.target as Node)
+                !event.composedPath().includes(element) &&
+                (!trigger.current || !event.composedPath().includes(trigger.current))
             )
                 close();
         };
         const reposition = (event: Event) => {
             if (
                 element.matches(':popover-open') &&
-                !element.contains(event.target as Node) &&
+                !event.composedPath().includes(element) &&
                 trigger.current
             )
                 positionMenu(element, trigger.current);

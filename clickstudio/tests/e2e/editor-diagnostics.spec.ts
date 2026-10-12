@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { openBlankSql, replaceSql, runButton, trust, useAdvancedMode } from './helpers.js';
-import type { QueryDocument } from '../../src/shared/queries/saved-queries/types.js';
+import { isQueryDocument } from '../../src/shared/queries/saved-queries/validation.js';
+import { decodeValue, jsonRecord, stringValue } from '../helpers/type-guards.js';
 
 const diagnosticMarker = (page: Page) => page.locator('.cm-lint-marker-error');
 
@@ -11,8 +12,11 @@ async function runSuccessfully(page: Page) {
             new URL(response.url()).pathname === '/api/runs',
     );
     await runButton(page).click();
-    const created = (await (await response).json()) as { queryId: string };
-    await expect(page.locator('.execution-bar')).toHaveAttribute('data-query-id', created.queryId);
+    const created = jsonRecord(await (await response).json(), 'Run response');
+    await expect(page.locator('.execution-bar')).toHaveAttribute(
+        'data-query-id',
+        stringValue(created.queryId, 'Query ID'),
+    );
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'succeeded');
     await expect(runButton(page)).toBeEnabled();
 }
@@ -26,8 +30,11 @@ async function selectRange(page: Page, from: number, to: number) {
                 .find((entry: PerformanceEntry) =>
                     entry.name.includes('/@codemirror_view.js'),
                 )!.name;
-            const { EditorView } = (await import(url)) as typeof import('@codemirror/view');
-            const view = EditorView.findFromDOM(root as HTMLElement)!;
+            const { EditorView }: typeof import('@codemirror/view') = await import(url);
+            if (!(root instanceof HTMLElement))
+                throw new Error('Editor root is not an HTML element');
+            const view = EditorView.findFromDOM(root);
+            if (!view) throw new Error('Editor view is not attached to its root');
             view.dispatch({ selection: { anchor: selection.from, head: selection.to } });
             view.focus();
         },
@@ -122,7 +129,11 @@ test('Save and Restore retries clear only their own feedback', async ({ page }) 
             new URL(response.url()).pathname === '/api/documents',
     );
     await page.getByTestId('save-query').click();
-    const saved = (await (await firstSave).json()) as QueryDocument;
+    const saved = decodeValue(
+        await (await firstSave).json(),
+        isQueryDocument,
+        'Saved query response',
+    );
     await replaceSql(page, 'SELECT 222');
     const documentPath = (url: URL) => url.pathname === `/api/documents/${saved.id}`;
     const secondSave = page.waitForResponse(

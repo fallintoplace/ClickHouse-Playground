@@ -3,10 +3,16 @@ import {
     useMemo,
     useRef,
     useState,
-    type CSSProperties,
     type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { geoCentroid, geoGraticule10, geoMercator, geoPath, type GeoPermissibleObjects } from 'd3';
+import {
+    geoCentroid,
+    geoGraticule10,
+    geoMercator,
+    geoPath,
+    type ExtendedFeature,
+    type ExtendedFeatureCollection,
+} from 'd3';
 import type { GeoProjection } from 'd3';
 import { displayValue, numericType } from '../../../../shared/queries/results/results';
 import {
@@ -20,6 +26,7 @@ import {
 import { geoHueForValue } from './geo-color';
 import type { Column } from '../../../../shared/common/values';
 import type { Result } from '../../../../shared/queries/results/types';
+import { isRecord } from '../../../../shared/common/values';
 import { ScrollEdgeFrame } from '../../../ui/components/ScrollEdgeShadows';
 import { Spinner } from '../../../ui/components/ui';
 
@@ -27,9 +34,47 @@ const WIDTH = 960;
 const HEIGHT = 470;
 const EMPTY_COLUMNS: Column[] = [];
 const formatCount = (value: number) => new Intl.NumberFormat('en').format(value);
-const geometryObject = (feature: GeoFeature): GeoPermissibleObjects =>
-    ({ type: 'Feature', properties: {}, geometry: feature.geometry }) as GeoPermissibleObjects;
-type CountryFeature = GeoPermissibleObjects & { type: 'Feature'; properties?: { name?: string } };
+const geometryObject = (
+    feature: GeoFeature,
+): ExtendedFeature<GeoJSON.GeometryObject, Record<string, never>> => ({
+    type: 'Feature',
+    properties: {},
+    geometry: feature.geometry,
+});
+type CountryFeature = GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon, { name?: string }>;
+
+function isPosition(value: unknown): value is GeoJSON.Position {
+    return Array.isArray(value) && value.length >= 2 && value.every(Number.isFinite);
+}
+
+function isPositions(value: unknown): value is GeoJSON.Position[] {
+    return Array.isArray(value) && value.every(isPosition);
+}
+
+function isPolygonCoordinates(value: unknown): value is GeoJSON.Position[][] {
+    return Array.isArray(value) && value.every(isPositions);
+}
+
+function isMultiPolygonCoordinates(value: unknown): value is GeoJSON.Position[][][] {
+    return Array.isArray(value) && value.every(isPolygonCoordinates);
+}
+
+function isCountryFeature(value: unknown): value is CountryFeature {
+    if (
+        !isRecord(value) ||
+        value.type !== 'Feature' ||
+        !isRecord(value.properties) ||
+        !isRecord(value.geometry)
+    )
+        return false;
+    if (value.properties.name !== undefined && typeof value.properties.name !== 'string')
+        return false;
+    return (
+        (value.geometry.type === 'Polygon' && isPolygonCoordinates(value.geometry.coordinates)) ||
+        (value.geometry.type === 'MultiPolygon' &&
+            isMultiPolygonCoordinates(value.geometry.coordinates))
+    );
+}
 type PointLabelPlacement = {
     x: number;
     y: number;
@@ -64,24 +109,19 @@ function MapCanvas({
         })
             .then(response => (response.ok ? response.json() : undefined))
             .then((collection: unknown) => {
-                if (
-                    !collection ||
-                    typeof collection !== 'object' ||
-                    !('features' in collection) ||
-                    !Array.isArray(collection.features)
-                )
-                    return;
-                setCountryFeatures(collection.features as CountryFeature[]);
+                if (!isRecord(collection) || !Array.isArray(collection.features)) return;
+                setCountryFeatures(collection.features.filter(isCountryFeature));
             })
             .catch(() => undefined);
         return () => controller.abort();
     }, []);
-    const collection = useMemo(
-        () =>
-            ({
-                type: 'FeatureCollection',
-                features: prepared.features.map(feature => geometryObject(feature)),
-            }) as GeoPermissibleObjects,
+    const collection = useMemo<
+        ExtendedFeatureCollection<ExtendedFeature<GeoJSON.GeometryObject, Record<string, never>>>
+    >(
+        () => ({
+            type: 'FeatureCollection',
+            features: prepared.features.map(geometryObject),
+        }),
         [prepared.features],
     );
     const map = useMemo(() => {
@@ -107,7 +147,17 @@ function MapCanvas({
             graticule: path(geoGraticule10()),
             countries: countryFeatures.flatMap(country => {
                 const d = path(country);
-                return d ? [{ name: country.properties?.name, d }] : [];
+                return d
+                    ? [
+                          {
+                              name:
+                                  typeof country.properties.name === 'string'
+                                      ? country.properties.name
+                                      : undefined,
+                              d,
+                          },
+                      ]
+                    : [];
             }),
         };
     }, [collection, countryFeatures]);
@@ -212,7 +262,7 @@ function MapCanvas({
                             const style = {
                                 '--geo-intensity': `${Math.round(intensity(feature))}%`,
                                 '--geo-hue': geoHueForValue(feature.measure, minimum, maximum),
-                            } as CSSProperties;
+                            };
                             if (feature.geometry.type === 'Point') {
                                 const projected = map.projection(feature.geometry.coordinates);
                                 if (!projected) return null;

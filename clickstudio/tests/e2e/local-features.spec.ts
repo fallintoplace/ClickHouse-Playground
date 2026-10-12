@@ -4,6 +4,8 @@ import type { Schema } from '../../src/shared/database/schema/types.js';
 import { PLAYGROUND_CONNECTION } from '../../src/shared/database/connections/playground.js';
 import type { CloudConnectionTest } from '../../src/frontend/database/connections/cloud-connection.js';
 import { trust } from './helpers.js';
+import { arrayValue, decodeValue, jsonRecord, stringValue } from '../helpers/type-guards.js';
+import { isResult } from '../../src/frontend/queries/execution/events.js';
 
 const cloudSchema: Schema = {
     connectionId: 'clickhouse-cloud',
@@ -69,7 +71,7 @@ async function resultPage(page: Page, transform: (result: Result) => Result) {
         url => url.pathname.endsWith('/result'),
         async route => {
             const response = await route.fetch();
-            const result = (await response.json()) as Result;
+            const result = decodeValue(await response.json(), isResult, 'Result response');
             await route.fulfill({ response, json: { ...result, ...transform(result) } });
         },
     );
@@ -142,8 +144,12 @@ test('Local Cloud connection restores after refresh and exports retained rows fr
     } | null = null;
     await page.route('**/api/connections', async route => {
         const response = await route.fetch();
-        const connections = (await response.json()) as { id: string }[];
-        if (!connections.some(connection => connection.id === PLAYGROUND_CONNECTION.id))
+        const connections = arrayValue(await response.json(), 'Connection response');
+        if (
+            !connections.some(
+                connection => jsonRecord(connection, 'Connection').id === PLAYGROUND_CONNECTION.id,
+            )
+        )
             connections.push(PLAYGROUND_CONNECTION);
         await route.fulfill({ response, json: connections });
     });
@@ -155,8 +161,12 @@ test('Local Cloud connection restores after refresh and exports retained rows fr
             return;
         }
         if (method === 'POST') {
-            const { credentials } = route.request().postDataJSON() as {
-                credentials: { host: string; database: string; username: string };
+            const body = jsonRecord(route.request().postDataJSON(), 'Cloud session request');
+            const credentialValues = jsonRecord(body.credentials, 'Cloud credentials');
+            const credentials = {
+                host: stringValue(credentialValues.host, 'Cloud host'),
+                database: stringValue(credentialValues.database, 'Cloud database'),
+                username: stringValue(credentialValues.username, 'Cloud username'),
             };
             savedCloudSession = { profile: credentials, tested: cloudConnectionTest };
             await route.fulfill({ json: cloudConnectionTest });
@@ -166,8 +176,8 @@ test('Local Cloud connection restores after refresh and exports retained rows fr
         await route.fulfill({ status: 204 });
     });
     await page.route('**/api/cloud', async route => {
-        const body = route.request().postDataJSON() as { action?: string; queryId?: string };
-        cloudActions.push(body.action ?? '');
+        const body = jsonRecord(route.request().postDataJSON(), 'Cloud request body');
+        cloudActions.push(typeof body.action === 'string' ? body.action : '');
         if (body.action === 'test') {
             await route.fulfill({ json: cloudConnectionTest });
             return;
@@ -179,7 +189,8 @@ test('Local Cloud connection restores after refresh and exports retained rows fr
         if (body.action === 'run') {
             await route.fulfill({
                 json: {
-                    queryId: body.queryId ?? 'clickstudio-run-test',
+                    queryId:
+                        typeof body.queryId === 'string' ? body.queryId : 'clickstudio-run-test',
                     columns: [
                         { name: 'day', type: 'Date' },
                         { name: 'events', type: 'UInt64' },

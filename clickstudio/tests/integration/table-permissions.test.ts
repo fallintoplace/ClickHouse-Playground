@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import type { AddressInfo } from 'node:net';
 import { ClickHouseDriver } from '../../src/backend/database/clickhouse/client.js';
 import { loadConfig } from '../../src/backend/system/config.js';
+import { serverPort } from '../helpers/type-guards.js';
 
 test('Local permission probes use the writer identity and preserve ClickHouse grant SQL', async t => {
     const requests: { query: string; authorization?: string; format: string | null }[] = [];
@@ -30,7 +30,7 @@ test('Local permission probes use the writer identity and preserve ClickHouse gr
     });
     await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
     const config = loadConfig({
-        CLICKHOUSE_URL: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
+        CLICKHOUSE_URL: `http://127.0.0.1:${serverPort(server)}`,
         CLICKHOUSE_USER: 'fixture-reader',
         CLICKHOUSE_PASSWORD: 'reader-secret',
         CLICKHOUSE_WRITER_USER: 'fixture-writer',

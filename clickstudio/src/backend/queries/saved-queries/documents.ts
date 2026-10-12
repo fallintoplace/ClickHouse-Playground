@@ -9,6 +9,9 @@ import type {
     QueryDocument,
 } from '../../../shared/queries/saved-queries/types.js';
 import type { Principal } from '../../../shared/common/identity.js';
+import { isRecord } from '../../../shared/common/values.js';
+import { isQueryDocument } from '../../../shared/queries/saved-queries/validation.js';
+import { isResult, isRun } from '../../../shared/queries/execution/validation.js';
 import { DEFAULT_LIMITS } from '../../../shared/queries/execution/settings.js';
 import { AppError, requireThat } from '../../system/requests/errors.js';
 import { canWrite, mustOwn } from '../../system/login/permissions.js';
@@ -31,6 +34,51 @@ const LEGACY_CHART_KINDS = ['area', 'stacked', 'pie'] as const;
 function isStringArray(value: unknown): value is string[] {
     return Array.isArray(value) && value.every(item => typeof item === 'string');
 }
+
+function isShare(value: unknown): value is Share {
+    return (
+        isRecord(value) &&
+        typeof value.id === 'string' &&
+        typeof value.owner === 'string' &&
+        typeof value.publishedId === 'string' &&
+        typeof value.expiresAt === 'string'
+    );
+}
+
+function isPublished(value: unknown): value is Published {
+    return (
+        isRecord(value) &&
+        typeof value.id === 'string' &&
+        typeof value.owner === 'string' &&
+        typeof value.documentId === 'string' &&
+        typeof value.revision === 'number' &&
+        Number.isSafeInteger(value.revision) &&
+        typeof value.publishedAt === 'string' &&
+        typeof value.expiresAt === 'string' &&
+        isQueryDocument(value.document) &&
+        isRun(value.run) &&
+        isResult(value.result) &&
+        value.resultLifetime === 'snapshot' &&
+        (value.source === 'live-run' || value.source === 'imported' || value.source === 'fixture')
+    );
+}
+
+function isComment(value: unknown): value is Comment {
+    if (!isRecord(value) || !isRecord(value.anchor)) return false;
+    return (
+        typeof value.id === 'string' &&
+        typeof value.owner === 'string' &&
+        typeof value.documentId === 'string' &&
+        typeof value.revision === 'number' &&
+        Number.isSafeInteger(value.revision) &&
+        typeof value.text === 'string' &&
+        typeof value.createdAt === 'string' &&
+        (value.anchor.from === undefined || typeof value.anchor.from === 'number') &&
+        (value.anchor.to === undefined || typeof value.anchor.to === 'number') &&
+        (value.anchor.runId === undefined || typeof value.anchor.runId === 'string') &&
+        (value.anchor.column === undefined || typeof value.anchor.column === 'number')
+    );
+}
 export class ArtifactService {
     constructor(
         private readonly store: Store,
@@ -39,7 +87,7 @@ export class ArtifactService {
     ) {}
     list(p: Principal, includeTrash = false, connectionId?: string): QueryDocument[] {
         return this.store
-            .list<QueryDocument>('documents')
+            .list('documents', isQueryDocument)
             .filter(
                 d =>
                     d.owner === p.id &&
@@ -52,18 +100,18 @@ export class ArtifactService {
         return { ...document, chart: parseChart(document.chart) };
     }
     get(p: Principal, id: string, revision?: number): QueryDocument {
-        const current = this.store.get<QueryDocument>('documents', id);
+        const current = this.store.get('documents', id, isQueryDocument);
         requireThat(current, 404, 'NOT_FOUND', 'Document not found');
         mustOwn(p, current.owner);
         if (revision === undefined) return this.normalizeDocument(current);
-        const historical = this.store.get<QueryDocument>('revisions', `${id}-${revision}`);
+        const historical = this.store.get('revisions', `${id}-${revision}`, isQueryDocument);
         requireThat(historical, 404, 'REVISION_NOT_FOUND', 'Revision not found');
         return this.normalizeDocument(historical);
     }
     revisions(p: Principal, id: string): QueryDocument[] {
         this.get(p, id);
         return this.store
-            .list<QueryDocument>('revisions')
+            .list('revisions', isQueryDocument)
             .filter(d => d.id === id)
             .sort((a, b) => b.revision - a.revision)
             .map(document => this.normalizeDocument(document));
@@ -298,12 +346,12 @@ export class ArtifactService {
             );
         }
         const publishedId = hash([id, revision, d.runId]);
-        const prior = this.store.get<Published>('published', publishedId);
+        const prior = this.store.get('published', publishedId, isPublished);
         const now = Date.now();
         if (prior && Date.parse(prior.expiresAt) > now) return prior;
         requireThat(
             this.store
-                .list<Published>('published')
+                .list('published', isPublished)
                 .filter(publication => Date.parse(publication.expiresAt) > now).length < 50,
             507,
             'PUBLICATION_CAPACITY',
@@ -334,7 +382,7 @@ export class ArtifactService {
         return pub;
     }
     published(p: Principal, id: string): Published {
-        const pub = this.store.get<Published>('published', id);
+        const pub = this.store.get('published', id, isPublished);
         requireThat(pub, 404, 'NOT_FOUND', 'Published revision not found');
         mustOwn(p, pub.owner);
         requireThat(
@@ -347,7 +395,7 @@ export class ArtifactService {
     }
     publications(p: Principal): Published[] {
         return this.store
-            .list<Published>('published')
+            .list('published', isPublished)
             .filter(v => v.owner === p.id && Date.parse(v.expiresAt) > Date.now());
     }
     share(
@@ -372,7 +420,7 @@ export class ArtifactService {
     }
     resolveShare(token: string): Published {
         requireThat(/^[A-Za-z0-9_-]{43}$/.test(token), 404, 'NOT_FOUND', 'Share not found');
-        const share = this.store.get<Share>('shares', hash(token));
+        const share = this.store.get('shares', hash(token), isShare);
         requireThat(share, 404, 'NOT_FOUND', 'Share not found');
         requireThat(
             Date.parse(share.expiresAt) > Date.now(),
@@ -385,16 +433,16 @@ export class ArtifactService {
     revokeShares(p: Principal, publishedId: string) {
         canWrite(p);
         this.published(p, publishedId);
-        for (const share of this.store.list<Share>('shares'))
+        for (const share of this.store.list('shares', isShare))
             if (share.publishedId === publishedId) this.store.delete('shares', share.id);
         audit(this.store, p, 'snapshot.revoke-shares', publishedId);
     }
     deletePublication(p: Principal, id: string) {
         canWrite(p);
-        const pub = this.store.get<Published>('published', id);
+        const pub = this.store.get('published', id, isPublished);
         requireThat(pub, 404, 'NOT_FOUND', 'Published revision not found');
         mustOwn(p, pub.owner);
-        for (const share of this.store.list<Share>('shares'))
+        for (const share of this.store.list('shares', isShare))
             if (share.publishedId === id) this.store.delete('shares', share.id);
         this.store.delete('published', id);
         audit(this.store, p, 'snapshot.delete', id);
@@ -437,7 +485,7 @@ export class ArtifactService {
     comments(p: Principal, id: string): Comment[] {
         this.get(p, id);
         return this.store
-            .list<Comment>('comments')
+            .list('comments', isComment)
             .filter(c => c.documentId === id && c.owner === p.id);
     }
     export(p: Principal) {
@@ -463,7 +511,7 @@ export class ArtifactService {
         // Validate the complete bundle in isolation before changing durable state. This avoids
         // partial imports on validation errors; filesystem failures are still not transactions.
         const staged = new MemoryStore();
-        for (const current of this.store.list<QueryDocument>('documents'))
+        for (const current of this.store.list('documents', isQueryDocument))
             staged.put('documents', current.id, current);
         const staging = new ArtifactService(staged, this.runs, this.authorizeConnection);
         const documents = v.documents.map(raw => {
@@ -488,12 +536,12 @@ export class ArtifactService {
         return documents;
     }
     sweep() {
-        for (const pub of this.store.list<Published>('published'))
+        for (const pub of this.store.list('published', isPublished))
             if (Date.parse(pub.expiresAt) <= Date.now() && pub.result.rows.length) {
                 pub.result.rows = [];
                 this.store.put('published', pub.id, pub);
             }
-        for (const s of this.store.list<Share>('shares'))
+        for (const s of this.store.list('shares', isShare))
             if (Date.parse(s.expiresAt) <= Date.now()) this.store.delete('shares', s.id);
     }
 }

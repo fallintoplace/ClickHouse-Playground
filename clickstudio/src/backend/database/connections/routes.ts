@@ -15,6 +15,32 @@ import { type Config } from '../../system/config.js';
 import { cloudSessionCookieOptions } from './cookies.js';
 import { body, principal, id, boolean } from '../../system/requests/http.js';
 import type { Driver } from '../../app/types.js';
+import { isRecord } from '../../../shared/common/values.js';
+
+function requestBody(request: Request): ReadableStream<Uint8Array> {
+    const reader = Readable.toWeb(request).getReader();
+    return new globalThis.ReadableStream<Uint8Array>({
+        async pull(controller) {
+            try {
+                const { done, value } = await reader.read();
+                if (done) {
+                    controller.close();
+                } else if (value instanceof Uint8Array) {
+                    controller.enqueue(value);
+                } else if (typeof value === 'string') {
+                    controller.enqueue(new TextEncoder().encode(value));
+                } else {
+                    controller.error(new TypeError('Request stream contains an invalid chunk.'));
+                }
+            } catch (error) {
+                controller.error(error);
+            }
+        },
+        cancel(reason) {
+            return reader.cancel(reason);
+        },
+    });
+}
 
 export function registerCloudApi(
     app: Express,
@@ -56,11 +82,7 @@ export function registerCloudApi(
                 return;
             }
             const credentialsValue = body(req).credentials;
-            if (
-                typeof credentialsValue !== 'object' ||
-                credentialsValue === null ||
-                Array.isArray(credentialsValue)
-            ) {
+            if (!isRecord(credentialsValue)) {
                 res.status(400).json({
                     error: {
                         code: 'CLOUD_CREDENTIALS',
@@ -69,12 +91,11 @@ export function registerCloudApi(
                 });
                 return;
             }
-            const credentials = credentialsValue as Partial<CloudCredentials>;
             if (
-                typeof credentials.host !== 'string' ||
-                typeof credentials.database !== 'string' ||
-                typeof credentials.username !== 'string' ||
-                typeof credentials.password !== 'string'
+                typeof credentialsValue.host !== 'string' ||
+                typeof credentialsValue.database !== 'string' ||
+                typeof credentialsValue.username !== 'string' ||
+                typeof credentialsValue.password !== 'string'
             ) {
                 res.status(400).json({
                     error: {
@@ -84,6 +105,12 @@ export function registerCloudApi(
                 });
                 return;
             }
+            const credentials: CloudCredentials = {
+                host: credentialsValue.host,
+                database: credentialsValue.database,
+                username: credentialsValue.username,
+                password: credentialsValue.password,
+            };
             const headers = cloudHeaders(req);
             headers.set('content-type', 'application/json');
             const request = new globalThis.Request(cloudUrl(req), {
@@ -97,7 +124,7 @@ export function registerCloudApi(
                 return;
             }
             const tested: unknown = await response.json();
-            if (typeof tested !== 'object' || tested === null || Array.isArray(tested)) {
+            if (!isRecord(tested)) {
                 res.status(502).json({
                     error: {
                         code: 'CLOUD_RESPONSE',
@@ -106,7 +133,7 @@ export function registerCloudApi(
                 });
                 return;
             }
-            const test = tested as Record<string, unknown>;
+            const test = tested;
             const savedCredentials: CloudCredentials = {
                 host: typeof test.host === 'string' ? test.host : credentials.host,
                 database: typeof test.database === 'string' ? test.database : credentials.database,
@@ -148,7 +175,7 @@ export function registerCloudApi(
                 const incomingInit: RequestInit & { duplex?: 'half' } = {
                     method: req.method,
                     headers: incomingHeaders,
-                    body: Readable.toWeb(req) as ReadableStream,
+                    body: requestBody(req),
                     duplex: 'half',
                 };
                 const incoming = new globalThis.Request(url, incomingInit);
@@ -160,7 +187,7 @@ export function registerCloudApi(
                 const incomingInit: RequestInit & { duplex?: 'half' } = {
                     method: req.method,
                     headers,
-                    body: Readable.toWeb(req) as ReadableStream,
+                    body: requestBody(req),
                     duplex: 'half',
                 };
                 request = new globalThis.Request(url, incomingInit);
@@ -181,7 +208,7 @@ export function registerCloudApi(
                     body:
                         req.method === 'GET' || req.method === 'HEAD'
                             ? undefined
-                            : (Readable.toWeb(req) as ReadableStream),
+                            : requestBody(req),
                     ...(req.method === 'GET' || req.method === 'HEAD'
                         ? {}
                         : { duplex: 'half' as const }),

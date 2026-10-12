@@ -5,7 +5,7 @@ import type { Result, ResultPage } from '../../../shared/queries/results/types';
 import type { Run } from '../../../shared/queries/execution/types';
 import type { FlamegraphSnapshot } from '../../../shared/queries/inspection/flamegraph';
 import { parseRunEvent } from './events';
-import { api, isFrontendDemoPreview, message } from '../../api/client';
+import { api, apiResponses, isFrontendDemoPreview, message } from '../../api/client';
 import { RetainedRunUnavailableError } from '../../api/browser-workspace';
 import { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../database/connections/cloud-connection';
 import { terminal } from './status';
@@ -25,7 +25,7 @@ export function useRunEvidence({
     loadHistory: () => Promise<void>;
     onRunUnavailable: (runId: string) => void;
 }) {
-    const [run, setRunForRun] = useScopedValue<Run>(activeRunId);
+    const [run, setRunForRun, , updateRunForRun] = useScopedValue<Run>(activeRunId);
     const [resultPageState, setResultPageForRun] = useScopedValue<{
         page: number;
         value: ResultPage;
@@ -36,18 +36,18 @@ export function useRunEvidence({
         useScopedValue<ProfilePipeline>(activeRunId);
     const [flamegraph, setFlamegraphForRun, flamegraphsByRun] =
         useScopedValue<FlamegraphSnapshot>(activeRunId);
-    const [storedPage, setPageForRun] = useScopedValue<number>(activeRunId);
+    const [storedPage, , , updatePageForRun] = useScopedValue<number>(activeRunId);
     const page = storedPage ?? 0;
     const setPage = useCallback<Dispatch<SetStateAction<number>>>(
         next => {
             if (!activeRunId) return;
-            setPageForRun(
+            updatePageForRun(
                 activeRunId,
                 current => (typeof next === 'function' ? next(current ?? 0) : next),
                 true,
             );
         },
-        [activeRunId, setPageForRun],
+        [activeRunId, updatePageForRun],
     );
     const [runReadFeedback, setRunReadFeedback] = useScopedValue<WorkspaceFeedback | undefined>(
         activeRunId,
@@ -67,7 +67,7 @@ export function useRunEvidence({
     useEffect(() => {
         if (!activeRunId) return;
         let cancelled = false;
-        void api<Run>(`/runs/${encodeURIComponent(activeRunId)}`)
+        void api(`/runs/${encodeURIComponent(activeRunId)}`, apiResponses.isRunResponse)
             .then(next => {
                 if (cancelled || next.connectionId !== connectionId) return;
                 setRunForRun(activeRunId, next);
@@ -102,8 +102,9 @@ export function useRunEvidence({
     useEffect(() => {
         if (!activeRunId || !run || !terminal(run) || run.resultState !== 'reopenable') return;
         let cancelled = false;
-        void api<ResultPage>(
+        void api(
             `/runs/${encodeURIComponent(activeRunId)}/result?offset=${page * DEFAULT_RESULT_PAGE_ROWS}&count=${DEFAULT_RESULT_PAGE_ROWS}`,
+            apiResponses.isResultPage,
         )
             .then(next => {
                 if (!cancelled) {
@@ -143,7 +144,7 @@ export function useRunEvidence({
                 if (payload.run.id !== activeRunId || payload.run.connectionId !== connectionId)
                     return;
                 setRunReadFeedback(activeRunId, undefined);
-                setRunForRun(activeRunId, current =>
+                updateRunForRun(activeRunId, current =>
                     !current || current.sequence <= payload.sequence ? payload.run : current,
                 );
                 if (terminal(payload.run)) {
@@ -157,18 +158,20 @@ export function useRunEvidence({
         };
         stream.onerror = () => setEventState('reconnecting');
         return () => stream.close();
-    }, [activeRunId, connectionId, loadHistory, running, setRunForRun, setRunReadFeedback]);
+    }, [activeRunId, connectionId, loadHistory, running, updateRunForRun, setRunReadFeedback]);
 
     useEffect(() => {
         if (!running || eventState === 'live' || !activeRunId) return;
         return startVisiblePolling(
             async signal => {
                 try {
-                    const next = await api<Run>(`/runs/${encodeURIComponent(activeRunId)}`, {
-                        signal,
-                    });
+                    const next = await api(
+                        `/runs/${encodeURIComponent(activeRunId)}`,
+                        apiResponses.isRunResponse,
+                        { signal },
+                    );
                     if (signal.aborted || next.connectionId !== connectionId) return;
-                    setRunForRun(activeRunId, current =>
+                    updateRunForRun(activeRunId, current =>
                         !current || current.sequence <= next.sequence ? next : current,
                     );
                     setRunReadFeedback(activeRunId, undefined);
@@ -190,7 +193,7 @@ export function useRunEvidence({
         eventState,
         loadHistory,
         running,
-        setRunForRun,
+        updateRunForRun,
         setRunReadFeedback,
     ]);
 

@@ -1,5 +1,8 @@
 export const WORKLOAD_WINDOWS = [15, 60, 360, 1440] as const;
 export type WorkloadWindow = (typeof WORKLOAD_WINDOWS)[number];
+export function isWorkloadWindow(value: unknown): value is WorkloadWindow {
+    return WORKLOAD_WINDOWS.some(window => window === value);
+}
 export const QUERY_LOG_SOURCES = ['user_query_log', 'query_log'] as const;
 export type QueryLogSource = (typeof QUERY_LOG_SOURCES)[number];
 export function isQueryLogSource(value: unknown): value is QueryLogSource {

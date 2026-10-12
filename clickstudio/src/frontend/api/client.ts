@@ -1,9 +1,11 @@
-import type { ApiError } from '../../shared/common/errors';
+import type { ApiError } from '../../shared/common/errors.js';
 import {
     CLICKHOUSE_CLOUD_CONNECTION_ID,
     getClickHouseCloudConnection,
-} from '../database/connections/cloud-connection';
-import { BrowserWorkspaceApi } from './browser-workspace';
+} from '../database/connections/cloud-connection.js';
+import { BrowserWorkspaceApi } from './browser-workspace.js';
+import type { ResponseGuard } from './response-guards.js';
+export * as apiResponses from './response-guards.js';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 export type ApiOptions = {
@@ -61,12 +63,21 @@ function isCloudWorkspaceSelected() {
     );
 }
 
-export async function api<T>(path: string, options: ApiOptions = {}): Promise<T> {
+function decodeResponse<T>(value: unknown, guard: ResponseGuard<T>): T {
+    if (!guard(value)) throw new Error('The server returned an invalid response.');
+    return value;
+}
+
+export async function api<T>(
+    path: string,
+    guard: ResponseGuard<T>,
+    options: ApiOptions = {},
+): Promise<T> {
     if (demoPreview && path !== '/assistant/sql')
-        return (await demoPreview.request(path, options)) as T;
+        return decodeResponse(await demoPreview.request(path, options), guard);
     if (!demoPreview && isCloudWorkspaceSelected() && usesCloudWorkspacePreview(path)) {
         cloudWorkspacePreview ??= new BrowserWorkspaceApi();
-        return (await cloudWorkspacePreview.request(path, options)) as T;
+        return decodeResponse(await cloudWorkspacePreview.request(path, options), guard);
     }
 
     const response = await fetch(`/api${path}`, {
@@ -90,13 +101,14 @@ export async function api<T>(path: string, options: ApiOptions = {}): Promise<T>
                   };
         throw new RequestError(response.status, detail);
     }
-    return content as T;
+    return decodeResponse(content, guard);
 }
 export const post = <T>(
     path: string,
-    body: unknown = {},
+    body: unknown,
+    guard: ResponseGuard<T>,
     options: Pick<ApiOptions, 'signal'> = {},
-) => api<T>(path, { method: 'POST', body, ...options });
+) => api(path, guard, { method: 'POST', body, ...options });
 export function download(name: string, value: unknown, type = 'application/json') {
     const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
     const url = URL.createObjectURL(new Blob([text], { type }));

@@ -1,5 +1,6 @@
 import { workspacePath, setWorkspaceMode } from './helpers.js';
 import { test, expect, type Page, type Route } from '@playwright/test';
+import { jsonRecord } from '../helpers/type-guards.js';
 
 const schema = {
     connectionId: 'live',
@@ -111,7 +112,7 @@ async function mockLiveWorkspace(
         }),
     );
     await page.route('**/api/connections/live/trust', async route => {
-        trusted = Boolean((route.request().postDataJSON() as { trusted?: unknown }).trusted);
+        trusted = Boolean(jsonRecord(route.request().postDataJSON()).trusted);
         await route.fulfill({ json: { trusted } });
     });
     await page.route('**/api/connections/live/schema', async route => {
@@ -234,7 +235,7 @@ test('A late denial for a previous table does not hide the current table actions
     let previousResolved = false;
     let currentResolved = false;
     await page.route('**/api/connections/live/table-permissions', async route => {
-        const { table } = route.request().postDataJSON() as { table?: string };
+        const { table } = jsonRecord(route.request().postDataJSON(), 'Table permissions request');
         if (table === 'events') {
             await new Promise<void>(resolve => {
                 denyPrevious = resolve;

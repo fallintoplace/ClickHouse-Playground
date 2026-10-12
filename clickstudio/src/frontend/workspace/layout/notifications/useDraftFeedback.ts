@@ -6,6 +6,10 @@ export type DraftFeedback = WorkspaceFeedback & { source: DraftFeedbackSource };
 export type CompleteDraftFeedback = (feedback?: WorkspaceFeedback) => boolean;
 type FeedbackBySource = Partial<Record<DraftFeedbackSource, WorkspaceFeedback>>;
 
+function isDraftFeedbackSource(value: string): value is DraftFeedbackSource {
+    return value === 'save' || value === 'restore';
+}
+
 export function useDraftFeedback(activeDraftId: string) {
     const [byDraft, setByDraft] = useState<Record<string, FeedbackBySource>>({});
     const attempts = useRef(new Map<string, number>());
@@ -42,7 +46,7 @@ export function useDraftFeedback(activeDraftId: string) {
     }, []);
     const feedback: DraftFeedback[] = Object.entries(byDraft[activeDraftId] ?? {}).flatMap(
         ([source, feedback]) =>
-            feedback ? [{ ...feedback, source: source as DraftFeedbackSource }] : [],
+            feedback && isDraftFeedbackSource(source) ? [{ ...feedback, source }] : [],
     );
     return { feedback, begin, clearInfo };
 }

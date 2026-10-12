@@ -1,7 +1,5 @@
 import type { RefObject } from 'react';
-import type { FlamegraphSnapshot } from '../../../shared/queries/inspection/flamegraph';
-import type { ProfilePipeline, QueryProfile } from '../../../shared/queries/inspection/types';
-import { api, message } from '../../api/client';
+import { api, apiResponses, message } from '../../api/client';
 import type { Connected } from '../../workspace/workspace-types';
 import type { useRunEvidence } from '../execution/useRunEvidence';
 
@@ -44,7 +42,10 @@ export function createQueryEvidenceActions({
         if (connection.manifest?.queryLog.available === false) return;
         const runId = activeRunId;
         await loadAsset(runId, 'the query profile', async () => {
-            const response = await api<QueryProfile>(`/runs/${encodeURIComponent(runId)}/profile`);
+            const response = await api(
+                `/runs/${encodeURIComponent(runId)}/profile`,
+                apiResponses.isQueryProfile,
+            );
             setProfileForRun(runId, response);
         });
     };
@@ -54,8 +55,9 @@ export function createQueryEvidenceActions({
         if (connection.manifest?.pipeline.available === false) return;
         const runId = activeRunId;
         await loadAsset(runId, 'the query pipeline', async () => {
-            const response = await api<ProfilePipeline>(
+            const response = await api(
                 `/runs/${encodeURIComponent(runId)}/profile/pipeline`,
+                apiResponses.isProfilePipeline,
             );
             if (activeRunIdRef.current !== runId) return;
             setPipelineForRun(runId, response);
@@ -66,8 +68,9 @@ export function createQueryEvidenceActions({
         if (!activeRunId || connection.manifest?.traceLog?.available !== true) return;
         const runId = activeRunId;
         await loadAsset(runId, 'the flamegraph', async () => {
-            const response = await api<FlamegraphSnapshot>(
+            const response = await api(
                 `/runs/${encodeURIComponent(runId)}/profile/flamegraph`,
+                apiResponses.isFlamegraphSnapshot,
             );
             if (activeRunIdRef.current === runId) setFlamegraphForRun(runId, response);
         });

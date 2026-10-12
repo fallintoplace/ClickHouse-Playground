@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { replaceSql, trust } from './helpers.js';
+import { jsonRecord, stringValue } from '../helpers/type-guards.js';
 
 test('An empty truncated retained result does not claim the query matched no rows', async ({
     page,
@@ -38,16 +39,17 @@ test('Statements without a result set do not show the empty SELECT message', asy
         const request = route.request();
         const url = new URL(request.url());
         if (request.method() === 'POST' && url.pathname === '/api/runs') {
-            const input = request.postDataJSON() as { connectionId: string; sql: string };
+            const input = jsonRecord(request.postDataJSON(), 'Run request body');
+            const sql = stringValue(input.sql, 'Run SQL');
             const id = `outcome-run-${++sequence}`;
             const createdAt = new Date(Date.UTC(2026, 0, sequence)).toISOString();
-            const isSelect = /^\s*SELECT\b/i.test(input.sql);
+            const isSelect = /^\s*SELECT\b/i.test(sql);
             const columns = isSelect ? [{ name: 'value', type: 'UInt64' }] : [];
             let writtenRows: 0 | 2 | undefined;
 
-            if (/^\s*INSERT\b/i.test(input.sql)) {
+            if (/^\s*INSERT\b/i.test(sql)) {
                 writtenRows = 2;
-            } else if (/^\s*(?:DELETE|CREATE)\b/i.test(input.sql)) {
+            } else if (/^\s*(?:DELETE|CREATE)\b/i.test(sql)) {
                 writtenRows = 0;
             } else {
                 writtenRows = undefined;
@@ -57,7 +59,7 @@ test('Statements without a result set do not show the empty SELECT message', asy
                 id,
                 queryId: `outcome-query-${sequence}`,
                 owner: 'local-owner',
-                connectionId: input.connectionId,
+                connectionId: stringValue(input.connectionId, 'Connection ID'),
                 sql: input.sql,
                 kind: 'query',
                 parameters: {},

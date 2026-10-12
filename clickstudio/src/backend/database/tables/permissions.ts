@@ -10,6 +10,7 @@ import {
 } from '../../../shared/database/tables/permissions.js';
 import { requireThat } from '../../system/requests/errors.js';
 import type { ClickHouseClient } from '@clickhouse/client';
+import { isRecord } from '../../../shared/common/values.js';
 
 type PermissionQuery = (sql: string) => Promise<Record<string, unknown>[]>;
 
@@ -136,7 +137,16 @@ export async function queryTablePermissions(
             return text
                 .split('\n')
                 .filter(line => line.trim())
-                .map(line => JSON.parse(line) as Record<string, unknown>);
+                .map(line => {
+                    const value: unknown = JSON.parse(line);
+                    requireThat(
+                        isRecord(value),
+                        502,
+                        'PERMISSIONS_RESPONSE',
+                        'ClickHouse returned an invalid permission response.',
+                    );
+                    return value;
+                });
         },
         database,
         table,

@@ -5,7 +5,6 @@ import {
     useState,
     useId,
     useRef,
-    type CSSProperties,
     type KeyboardEvent,
 } from 'react';
 import type { ReactNode } from 'react';
@@ -719,10 +718,10 @@ function renderPipelineGraphViewport({
                             }
                             const runtimeShare = Math.max(0, Math.min(100, node.timePercent ?? 0));
                             const runtimeStyle = runtime
-                                ? ({
+                                ? {
                                       '--runtime-node-fill': `color-mix(in srgb, var(--accent) ${10 + runtimeShare * 0.34}%, var(--panel-raised))`,
                                       '--runtime-node-stroke': `color-mix(in srgb, var(--accent) ${18 + runtimeShare * 0.62}%, var(--line-bright))`,
-                                  } as CSSProperties)
+                                  }
                                 : undefined;
                             const runtimeTiming =
                                 node.durationMs === undefined

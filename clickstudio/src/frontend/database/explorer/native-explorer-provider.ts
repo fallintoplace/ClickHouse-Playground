@@ -3,7 +3,7 @@ import {
     type NativeExplorerRequest,
     type NativeExplorerSnapshot,
 } from '../../../shared/database/explorer/explorers';
-import { api, isFrontendDemoPreview } from '../../api/client';
+import { api, apiResponses, isFrontendDemoPreview } from '../../api/client';
 import {
     CLICKHOUSE_CLOUD_CONNECTION_ID,
     loadClickHouseCloudNativeExplorer,
@@ -34,8 +34,9 @@ export function requestNativeExplorer(
             },
             signal,
         );
-    return api<NativeExplorerSnapshot>(
+    return api(
         `/connections/${encodeURIComponent(connectionId)}/native-explorer`,
+        apiResponses.isNativeExplorerSnapshot,
         { method: 'POST', body: request, signal },
     );
 }

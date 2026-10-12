@@ -12,7 +12,7 @@ import {
     type CreateTableColumn,
 } from '../../../shared/database/tables/create-table';
 import type { Connected } from '../../workspace/workspace-types';
-import { message, post } from '../../api/client';
+import { apiResponses, message, post } from '../../api/client';
 import {
     CLICKHOUSE_CLOUD_CONNECTION_ID,
     createClickHouseCloudTable,
@@ -169,12 +169,16 @@ export function CreateTableDialog({ connection, databases, onClose, onCreated }:
                     orderBy,
                 });
             } else {
-                await post(`/connections/${encodeURIComponent(connection.id)}/tables`, {
-                    database: database.trim(),
-                    table: table.trim(),
-                    columns,
-                    orderBy,
-                });
+                await post(
+                    `/connections/${encodeURIComponent(connection.id)}/tables`,
+                    {
+                        database: database.trim(),
+                        table: table.trim(),
+                        columns,
+                        orderBy,
+                    },
+                    apiResponses.isUnknown,
+                );
             }
             setCreated(true);
             onCreated({ database: database.trim(), table: table.trim() });

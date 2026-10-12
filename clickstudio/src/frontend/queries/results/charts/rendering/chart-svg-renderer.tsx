@@ -1,4 +1,4 @@
-import type { CSSProperties, RefCallback } from 'react';
+import type { RefCallback } from 'react';
 import { MAX_CHART_RENDER_POINTS } from '../../../../../shared/queries/results/results';
 import { formatCount, seriesColor, splitChartSegments } from '../chart-helpers';
 import type { ChartSvgModel } from './chart-svg-model';
@@ -54,10 +54,7 @@ export function createChartSvgRenderer(
                     return plotSeries.map(series => {
                         const segments = splitChartSegments(series.points);
                         return (
-                            <g
-                                key={series.columnIndex}
-                                style={{ '--series-color': series.color } as CSSProperties}
-                            >
+                            <g key={series.columnIndex} style={{ '--series-color': series.color }}>
                                 {segments
                                     .filter(points => points.length > 1)
                                     .map((points, index) => (
@@ -113,15 +110,13 @@ export function createChartSvgRenderer(
                                     height={height}
                                     rx="3"
                                     className={`chart-bar${disableBarAnimation ? ' chart-bar--static' : ''}`}
-                                    style={
-                                        {
-                                            '--series-color': series.color,
-                                            strokeWidth: Math.min(1, barWidth * 0.4),
-                                            ...(disableBarAnimation
-                                                ? {}
-                                                : { animationDelay: `${point.index * 20}ms` }),
-                                        } as CSSProperties
-                                    }
+                                    style={{
+                                        '--series-color': series.color,
+                                        strokeWidth: Math.min(1, barWidth * 0.4),
+                                        ...(disableBarAnimation
+                                            ? {}
+                                            : { animationDelay: `${point.index * 20}ms` }),
+                                    }}
                                 >
                                     <title>{`${point.label}: ${result.columns[series.columnIndex]?.name} ${point.value}`}</title>
                                 </rect>,
@@ -138,10 +133,10 @@ export function createChartSvgRenderer(
                 preserveAspectRatio={categoricalAxis ? 'none' : undefined}
                 style={
                     categoricalAxis
-                        ? ({
+                        ? {
                               '--chart-plot-width': `${plotRight}px`,
                               height: viewportHeight,
-                          } as CSSProperties)
+                          }
                         : undefined
                 }
                 role="img"

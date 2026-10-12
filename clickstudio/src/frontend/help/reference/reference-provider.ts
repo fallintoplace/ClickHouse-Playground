@@ -9,7 +9,7 @@ import {
     buildReferenceSearchQuery,
     isMissingDocumentationSourceColumn,
 } from '../../../shared/database/reference/reference.js';
-import { api, isFrontendDemoPreview, RequestError } from '../../api/client.js';
+import { api, apiResponses, isFrontendDemoPreview, RequestError } from '../../api/client.js';
 import {
     PLAYGROUND_CONNECTION_ID,
     PlaygroundError,
@@ -80,11 +80,17 @@ function serverProvider(connection: Connected): ReferenceProvider {
         kind: 'native',
         search(query, category, signal) {
             const params = new URLSearchParams({ query, category });
-            return api<ClickHouseDocumentationSummary[]>(`${prefix}/search?${params}`, { signal });
+            return api(
+                `${prefix}/search?${params}`,
+                apiResponses.arrayOf(apiResponses.isClickHouseDocumentationSummary),
+                { signal },
+            );
         },
         get(name, type, signal) {
             const params = new URLSearchParams({ name, type });
-            return api<ClickHouseDocumentationEntry>(`${prefix}/entry?${params}`, { signal });
+            return api(`${prefix}/entry?${params}`, apiResponses.isClickHouseDocumentationEntry, {
+                signal,
+            });
         },
     };
 }

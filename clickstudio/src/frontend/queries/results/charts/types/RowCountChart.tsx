@@ -1,4 +1,4 @@
-import type { CSSProperties, RefCallback } from 'react';
+import type { RefCallback } from 'react';
 import {
     type RowCountSeries,
     countRowsByCategory,
@@ -471,10 +471,10 @@ function createRowCountSvgRenderer({
             preserveAspectRatio={categoricalAxis ? 'none' : undefined}
             style={
                 categoricalAxis
-                    ? ({
+                    ? {
                           '--chart-plot-width': `${plotRight}px`,
                           height: viewportHeight,
-                      } as CSSProperties)
+                      }
                     : undefined
             }
             role="img"
@@ -516,10 +516,7 @@ function createRowCountSvgRenderer({
             />
             {timeAxis
                 ? series.map((item, seriesIndex) => (
-                      <g
-                          key={item.key}
-                          style={{ '--series-color': seriesColor(seriesIndex) } as CSSProperties}
-                      >
+                      <g key={item.key} style={{ '--series-color': seriesColor(seriesIndex) }}>
                           {item.points.length > 1 && (
                               <polyline
                                   points={item.points
@@ -562,15 +559,13 @@ function createRowCountSvgRenderer({
                               height={height}
                               rx="3"
                               className={`chart-bar${disableBarAnimation ? ' chart-bar--static' : ''}`}
-                              style={
-                                  {
-                                      '--series-color': seriesColor(0),
-                                      strokeWidth: Math.min(1, barWidth * 0.4),
-                                      ...(disableBarAnimation
-                                          ? {}
-                                          : { animationDelay: `${index * 25}ms` }),
-                                  } as CSSProperties
-                              }
+                              style={{
+                                  '--series-color': seriesColor(0),
+                                  strokeWidth: Math.min(1, barWidth * 0.4),
+                                  ...(disableBarAnimation
+                                      ? {}
+                                      : { animationDelay: `${index * 25}ms` }),
+                              }}
                           >
                               <title>
                                   {chartText(copy.categoryBarTooltip, {

@@ -730,7 +730,7 @@ function InspectorMoreMenu({
     useEffect(() => {
         if (!open) return;
         const closeOutside = (event: PointerEvent) => {
-            if (!root.current?.contains(event.target as Node)) setOpen(false);
+            if (!root.current || !event.composedPath().includes(root.current)) setOpen(false);
         };
         const closeOnEscape = (event: globalThis.KeyboardEvent) => {
             if (event.key !== 'Escape') return;
@@ -755,7 +755,9 @@ function InspectorMoreMenu({
             menu.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? [],
         );
         if (!items.length) return;
-        const current = items.indexOf(document.activeElement as HTMLButtonElement);
+        const activeElement = document.activeElement;
+        const current =
+            activeElement instanceof HTMLButtonElement ? items.indexOf(activeElement) : -1;
         let next: number | undefined;
 
         switch (event.key) {

@@ -11,7 +11,7 @@ import type { QueryDocument } from '../../shared/queries/saved-queries/types';
 import type { Run } from '../../shared/queries/execution/types';
 import type { Schema } from '../../shared/database/schema/types';
 import { sameSavedContent } from '../queries/saved-queries/draft-save';
-import { api, message } from '../api/client';
+import { api, apiResponses, message } from '../api/client';
 import {
     loadPlaygroundServerVersion,
     PLAYGROUND_CONNECTION_ID,
@@ -88,6 +88,7 @@ export function useWorkspaceData({
             try {
                 const next = await api<Run[]>(
                     `/runs?connectionId=${encodeURIComponent(connectionId)}`,
+                    apiResponses.arrayOf(apiResponses.isRunResponse),
                     { signal },
                 );
                 if (!signal?.aborted && historyRequestRef.current === requestId) {
@@ -109,6 +110,7 @@ export function useWorkspaceData({
         try {
             const next = await api<QueryDocument[]>(
                 `/documents?trash=true&connectionId=${encodeURIComponent(connectionId)}`,
+                apiResponses.arrayOf(apiResponses.isQueryDocumentResponse),
             );
             if (documentsRequestRef.current === requestId) {
                 setDocuments(next);
@@ -155,6 +157,7 @@ export function useWorkspaceData({
             try {
                 const next = await api<QueryDocument[]>(
                     `/documents/${encodeURIComponent(documentId)}/revisions`,
+                    apiResponses.arrayOf(apiResponses.isQueryDocumentResponse),
                 );
                 const currentDraft = workspaceRef.current.tabs.find(
                     draft => draft.id === workspaceRef.current.activeId,
@@ -190,6 +193,7 @@ export function useWorkspaceData({
             try {
                 const next = await api<Schema>(
                     `/connections/${encodeURIComponent(connectionId)}/schema${refresh ? '?refresh=true' : ''}`,
+                    apiResponses.isSchemaResponse,
                 );
                 if (schemaRequestRef.current === requestId && trustedRef.current) {
                     setSchema(next);
@@ -228,6 +232,7 @@ export function useWorkspaceData({
                 params.set('columnOffset', String(current.pagination.columns));
             const next = await api<Schema>(
                 `/connections/${encodeURIComponent(connectionId)}/schema?${params}`,
+                apiResponses.isSchemaResponse,
             );
             if (schemaRequestRef.current !== requestId || !trustedRef.current) return undefined;
             const tableKey = (table: Schema['tables'][number]) =>

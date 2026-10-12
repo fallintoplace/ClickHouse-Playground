@@ -3,7 +3,7 @@ import {
     type MergeTreePart,
     type MergeTreePartsSnapshot,
 } from '../../../../shared/database/explorer/storage/parts';
-import { api, isFrontendDemoPreview } from '../../../api/client';
+import { api, apiResponses, isFrontendDemoPreview } from '../../../api/client';
 import {
     CLICKHOUSE_CLOUD_CONNECTION_ID,
     loadClickHouseCloudTableParts,
@@ -128,8 +128,9 @@ export async function loadTableParts(
     } else if (connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID) {
         snapshot = await loadClickHouseCloudTableParts(database, table, signal);
     } else {
-        snapshot = await api<unknown>(
+        snapshot = await api(
             `/connections/${encodeURIComponent(connectionId)}/table-parts`,
+            apiResponses.isUnknown,
             {
                 method: 'POST',
                 body: { database, table },

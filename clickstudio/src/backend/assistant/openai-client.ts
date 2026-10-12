@@ -111,10 +111,12 @@ function logProviderFailure(stage: string, error: unknown, inputTokens?: number)
 function dropOldestConversationTurn(
     messages: OpenAI.Responses.ResponseInput,
 ): OpenAI.Responses.ResponseInput {
-    if (!Array.isArray(messages) || !messages.length) return messages;
+    if (typeof messages === 'string' || !messages.length) return messages;
     let remove = 1;
-    const firstRole = (messages[0] as { role?: string } | undefined)?.role;
-    const secondRole = (messages[1] as { role?: string } | undefined)?.role;
+    const first = messages[0];
+    const second = messages[1];
+    const firstRole = first && 'role' in first ? first.role : undefined;
+    const secondRole = second && 'role' in second ? second.role : undefined;
     if (firstRole === 'user' && secondRole === 'assistant') remove = 2;
     return messages.slice(remove);
 }

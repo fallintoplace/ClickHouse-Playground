@@ -45,14 +45,14 @@ export function ChartPopover({
             if (
                 element.matches(':popover-open') &&
                 button.current &&
-                !element.contains(event.target as Node)
+                !event.composedPath().includes(element)
             )
                 positionPopover(element, button.current);
         };
         const closeOnFocusOutside = (event: FocusEvent) => {
             if (
-                !element.contains(event.target as Node) &&
-                !button.current?.contains(event.target as Node)
+                !event.composedPath().includes(element) &&
+                (!button.current || !event.composedPath().includes(button.current))
             )
                 close();
         };

@@ -1,17 +1,11 @@
 import { StringDecoder } from 'node:string_decoder';
-import type { Column, Json, Row } from '../../../shared/common/values.js';
+import { isJson, type Column, type Row } from '../../../shared/common/values.js';
 import type { Limits } from '../../../shared/queries/execution/settings.js';
 import { AppError, requireThat } from '../../system/requests/errors.js';
 import type { DriverResult } from '../../queries/execution/runs.js';
 
 function isStringArray(value: unknown): value is string[] {
     return Array.isArray(value) && value.every(item => typeof item === 'string');
-}
-function isJson(value: unknown): value is Json {
-    if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
-    if (typeof value === 'number') return Number.isFinite(value);
-    if (Array.isArray(value)) return value.every(isJson);
-    return value !== null && typeof value === 'object' && Object.values(value).every(isJson);
 }
 function isRow(value: unknown): value is Row {
     return Array.isArray(value) && value.every(isJson);

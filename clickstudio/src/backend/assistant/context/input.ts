@@ -1,4 +1,4 @@
-import type { Json } from '../../../shared/common/values.js';
+import { isJson } from '../../../shared/common/values.js';
 import type { Result } from '../../../shared/queries/results/types.js';
 import type { Schema, SchemaColumn, SchemaTable } from '../../../shared/database/schema/types.js';
 import type { AssistantRepairContext } from '../../../shared/assistant/actions.js';
@@ -115,13 +115,13 @@ export function assistantResultFrom(value: unknown): Result | undefined {
         };
     });
     const rows = value.rows.map(row => {
-        if (!Array.isArray(row) || row.length !== columns.length)
+        if (!Array.isArray(row) || row.length !== columns.length || !row.every(isJson))
             throw new AppError(
                 400,
                 'INVALID_RESULT',
                 'Select a valid retained result and try again.',
             );
-        return row as Json[];
+        return row;
     });
     return {
         runId: field(value.runId, 'Result run ID', 200),

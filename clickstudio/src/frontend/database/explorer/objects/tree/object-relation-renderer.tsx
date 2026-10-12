@@ -1,4 +1,3 @@
-import { type CSSProperties } from 'react';
 import {
     explorerColumnId,
     explorerColumnsId,
@@ -94,7 +93,7 @@ export function createRelationRenderer({
                         selectedId === relation.id && 'is-selected',
                         highlightedTableId === relation.id && 'is-import-highlight',
                     )}
-                    style={{ '--tree-indent': `${Math.max(0, level - 1) * 12}px` } as CSSProperties}
+                    style={{ '--tree-indent': `${Math.max(0, level - 1) * 12}px` }}
                 >
                     <button
                         type="button"

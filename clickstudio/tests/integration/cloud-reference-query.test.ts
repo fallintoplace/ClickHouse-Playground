@@ -6,14 +6,14 @@ test('Cloud reference queries raise the row cap without changing other inspector
     const settings: Array<{
         clickhouse_settings?: { max_result_rows?: string; max_result_bytes?: string };
     }> = [];
-    const client = {
+    const client: Parameters<typeof queryRows>[0] = {
         async query(options: {
             clickhouse_settings?: { max_result_rows?: string; max_result_bytes?: string };
         }) {
             settings.push(options);
             return { json: async () => [] };
         },
-    } as unknown as Parameters<typeof queryRows>[0];
+    };
 
     await queryRows(client, 'SELECT name FROM system.tables');
     await queryRows(client, 'SELECT name, type FROM system.documentation', {}, 12_000, 10, 6_000);

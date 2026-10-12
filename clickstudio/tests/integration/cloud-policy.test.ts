@@ -27,12 +27,12 @@ test('Cloud connections advertise their query budget while inspector requests ke
     });
 
     const requests: Array<{ clickhouse_settings?: Record<string, unknown> }> = [];
-    const client = {
+    const client: Parameters<typeof queryRows>[0] = {
         async query(options: { clickhouse_settings?: Record<string, unknown> }) {
             requests.push(options);
             return { json: async () => [] };
         },
-    } as unknown as Parameters<typeof queryRows>[0];
+    };
     await queryRows(client, 'SELECT name FROM system.tables');
     const defaults = requests[0]?.clickhouse_settings;
     assert.equal(defaults?.max_result_rows, '2000');

@@ -207,7 +207,10 @@ function drawCandlestickAxes({
         .call(
             axisBottom(xScale)
                 .ticks(8)
-                .tickFormat(value => dateFormat.format(value as Date))
+                .tickFormat(value => {
+                    const timestamp = value instanceof Date ? value.getTime() : Number(value);
+                    return Number.isFinite(timestamp) ? dateFormat.format(new Date(timestamp)) : '';
+                })
                 .tickSize(0),
         );
     xAxis.select('.domain').attr('stroke', gridColor);
@@ -240,10 +243,12 @@ function drawCandleNavigator({
     bidAskColor: string;
 }) {
     const overview = scaleUtc().domain(fullDomain).range([LEFT, RIGHT]);
-    const navigatorY = scaleLinear()
-        .domain(extent(candles, candle => candle.close) as [number, number])
-        .nice()
-        .range([NAV_BOTTOM, NAV_TOP]);
+    const closeExtent = extent(candles, candle => candle.close);
+    const closeDomain: [number, number] =
+        closeExtent[0] === undefined || closeExtent[1] === undefined
+            ? [0, 1]
+            : [closeExtent[0], closeExtent[1]];
+    const navigatorY = scaleLinear().domain(closeDomain).nice().range([NAV_BOTTOM, NAV_TOP]);
     const navigatorLine = line<Candle>()
         .x(candle => overview(new Date(candle.time)))
         .y(candle => navigatorY(candle.close))
@@ -267,16 +272,17 @@ function drawCandleNavigator({
                 setRangePreset('all');
                 return;
             }
-            const selection = event.selection as [number, number];
+            const [start, end] = event.selection;
+            if (typeof start !== 'number' || typeof end !== 'number') return;
             const next: [number, number] = [
-                overview.invert(selection[0]).getTime(),
-                overview.invert(selection[1]).getTime(),
+                overview.invert(start).getTime(),
+                overview.invert(end).getTime(),
             ];
             setWindowRange(next);
             setRangePreset('custom');
         });
     const brushGroup = root.append('g').attr('class', 'market-brush').call(brush);
-    const initialSelection = domain.map(value => overview(value)) as [number, number];
+    const initialSelection: [number, number] = [overview(domain[0]), overview(domain[1])];
     brushGroup.call(brush.move, initialSelection);
     brushGroup
         .selectAll('.selection')
@@ -752,18 +758,13 @@ function drawCandleIndicators({
     const spreadValues = plotted.flatMap(candle =>
         candle.spread === undefined ? [] : [candle.spread],
     );
-    const spreadExtent = extent(spreadValues) as [number, number];
-    let spreadRange;
-
-    if (spreadExtent[0] === undefined) {
-        spreadRange = [0, 1] as [number, number];
-    } else if (spreadExtent[0] === spreadExtent[1]) {
-        spreadRange = [spreadExtent[0] * 0.95, spreadExtent[1] * 1.05 || spreadExtent[0] + 1] as [
-            number,
-            number,
-        ];
-    } else {
-        spreadRange = spreadExtent;
+    const spreadExtent = extent(spreadValues);
+    let spreadRange: [number, number] = [0, 1];
+    if (spreadExtent[0] !== undefined && spreadExtent[1] !== undefined) {
+        spreadRange =
+            spreadExtent[0] === spreadExtent[1]
+                ? [spreadExtent[0] * 0.95, spreadExtent[1] * 1.05 || spreadExtent[0] + 1]
+                : [spreadExtent[0], spreadExtent[1]];
     }
     const spreadScale = scaleLinear()
         .domain(spreadRange)

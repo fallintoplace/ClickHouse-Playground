@@ -47,9 +47,8 @@ const MAX_VISIBLE_PROPERTIES = 24;
 const DEFAULT_SKIP_KEYS = ['value'] as const;
 
 export function asNativeAstObject(value: unknown): NativeAstObject | undefined {
-    return typeof value === 'object' && value !== null && !Array.isArray(value)
-        ? (value as NativeAstObject)
-        : undefined;
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+    return Object.fromEntries(Object.entries(value));
 }
 
 export function nativeAstType(value: unknown): string | undefined {

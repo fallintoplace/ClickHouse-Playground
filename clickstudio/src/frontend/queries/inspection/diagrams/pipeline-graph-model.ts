@@ -228,7 +228,7 @@ export function sqlFlowNodeKind(kind: string, copy?: Copy['common']) {
         output: 'sqlFlowOutputKind',
         stage: 'sqlFlowStageKind',
     };
-    const key = translation[kind as ProfilePipelineNode['kind']];
+    const key = Object.entries(translation).find(([nodeKind]) => nodeKind === kind)?.[1];
     return key && copy ? copy[key] : kind;
 }
 

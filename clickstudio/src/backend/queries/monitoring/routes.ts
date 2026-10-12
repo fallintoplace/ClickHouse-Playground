@@ -1,10 +1,24 @@
 import { MONITOR_CONDITIONS } from './conditions.js';
 import express from 'express';
 import type { AuditEvent } from '../../../shared/common/identity.js';
+import { isRecord } from '../../../shared/common/values.js';
 import { MonitorService } from './monitors.js';
 import { type Store } from '../../system/store.js';
 import { choice, identifier, integer } from '../../system/requests/validation.js';
 import { principal, body, id, boolean } from '../../system/requests/http.js';
+
+function isAuditEvent(value: unknown): value is AuditEvent {
+    return (
+        isRecord(value) &&
+        typeof value.id === 'string' &&
+        typeof value.at === 'string' &&
+        typeof value.owner === 'string' &&
+        typeof value.action === 'string' &&
+        typeof value.resourceId === 'string' &&
+        (value.outcome === 'allowed' || value.outcome === 'denied' || value.outcome === 'failed') &&
+        (value.ruleId === undefined || typeof value.ruleId === 'string')
+    );
+}
 
 export function registerMonitorRoutes({
     app,
@@ -41,7 +55,7 @@ export function registerMonitorRoutes({
     app.get('/api/audit', (_req, res) =>
         res.json(
             store
-                .list<AuditEvent>('audit')
+                .list('audit', isAuditEvent)
                 .filter(e => e.owner === principal(res).id)
                 .sort((a, b) => b.at.localeCompare(a.at))
                 .slice(0, 200),

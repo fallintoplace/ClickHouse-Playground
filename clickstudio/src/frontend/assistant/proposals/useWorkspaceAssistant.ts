@@ -8,7 +8,7 @@ import { parseAssistantProposal } from './assistant-proposal';
 import type { AssistantConversationMessage } from '../../../shared/assistant/types';
 import type { Result } from '../../../shared/queries/results/types';
 import type { Schema } from '../../../shared/database/schema/types';
-import { isFrontendDemoPreview, message, post } from '../../api/client';
+import { apiResponses, isFrontendDemoPreview, message, post } from '../../api/client';
 import { useAssistantChats } from '../chat/useAssistantChats';
 import {
     pendingEditorProposal,
@@ -291,7 +291,7 @@ function createAssistantSqlRequestHandler(context: AssistantSqlRequestContext) {
                 ...current,
                 [chatId]: { turnId, phase: 'generating' },
             }));
-            const response = await post<unknown>(
+            const response = await post(
                 '/assistant/sql',
                 {
                     connectionId,
@@ -319,6 +319,7 @@ function createAssistantSqlRequestHandler(context: AssistantSqlRequestContext) {
                     evidenceSql: storedRunContext?.evidenceSql,
                     error: storedRunContext?.error,
                 },
+                apiResponses.isUnknown,
                 { signal: controller.signal },
             );
             controller.signal.throwIfAborted();
@@ -536,9 +537,10 @@ export function useWorkspaceAssistant({
             const response: unknown =
                 isFrontendDemoPreview && proposal.owner === 'vercel-session'
                     ? { ...proposal, decision, decidedAt: new Date().toISOString() }
-                    : await post<unknown>(
+                    : await post(
                           `/assistant/proposals/${encodeURIComponent(proposal.id)}/decision`,
                           { decision, connectionId, currentSql: active.sql },
+                          apiResponses.isUnknown,
                           { signal: request.controller.signal },
                       );
             request.controller.signal.throwIfAborted();

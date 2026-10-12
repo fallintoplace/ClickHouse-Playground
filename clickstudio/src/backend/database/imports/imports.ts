@@ -3,6 +3,7 @@ import type { ImportJobStatus } from '../../../shared/database/imports/status.js
 import type { ImportFormat } from '../../../shared/database/imports/limits.js';
 import { randomUUID } from 'node:crypto';
 import type { Json } from '../../../shared/common/values.js';
+import { isJson, isRecord } from '../../../shared/common/values.js';
 import type { Principal } from '../../../shared/common/identity.js';
 import type { Schema, SchemaColumn } from '../../../shared/database/schema/types.js';
 import { quoteIdentifier } from '../../../shared/sql/sql.js';
@@ -10,6 +11,8 @@ import { AppError, requireThat, asError } from '../../system/requests/errors.js'
 import { canWrite, mustOwn } from '../../system/login/permissions.js';
 import { hash, audit, type Store } from '../../system/store.js';
 import { ImportMappingError, mapImportRows } from '../../../shared/database/imports/mapping.js';
+import { IMPORT_FORMATS } from '../../../shared/database/imports/limits.js';
+import { IMPORT_JOB_STATUSES } from '../../../shared/database/imports/status.js';
 
 export interface InputPreview {
     id: string;
@@ -75,13 +78,86 @@ interface Mapping {
     missingFields: Record<string, number>;
     expiresAt: string;
 }
+
+function isJsonRecord(value: unknown): value is Record<string, Json> {
+    return isRecord(value) && Object.values(value).every(isJson);
+}
+
+function isStringArray(value: unknown): value is string[] {
+    return Array.isArray(value) && value.every(item => typeof item === 'string');
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+    return isRecord(value) && Object.values(value).every(item => typeof item === 'string');
+}
+
+function isInputPreview(value: unknown): value is InputPreview {
+    return (
+        isRecord(value) &&
+        typeof value.id === 'string' &&
+        typeof value.owner === 'string' &&
+        typeof value.name === 'string' &&
+        IMPORT_FORMATS.some(format => format === value.format) &&
+        isStringArray(value.columns) &&
+        Array.isArray(value.rows) &&
+        value.rows.every(isJsonRecord) &&
+        typeof value.createdAt === 'string' &&
+        typeof value.expiresAt === 'string'
+    );
+}
+
+function isImportJob(value: unknown): value is ImportJob {
+    return (
+        isRecord(value) &&
+        typeof value.id === 'string' &&
+        typeof value.owner === 'string' &&
+        typeof value.inputId === 'string' &&
+        typeof value.connectionId === 'string' &&
+        typeof value.table === 'string' &&
+        typeof value.queryId === 'string' &&
+        (value.deduplicationToken === undefined || typeof value.deduplicationToken === 'string') &&
+        typeof value.rows === 'number' &&
+        Number.isSafeInteger(value.rows) &&
+        typeof value.createdAt === 'string' &&
+        IMPORT_JOB_STATUSES.some(status => status === value.status) &&
+        (value.error === undefined || typeof value.error === 'string') &&
+        (value.reconciliationRequired === undefined ||
+            typeof value.reconciliationRequired === 'boolean') &&
+        (value.reviewedAt === undefined || typeof value.reviewedAt === 'string')
+    );
+}
+
+function isMapping(value: unknown): value is Mapping {
+    return (
+        isRecord(value) &&
+        typeof value.id === 'string' &&
+        typeof value.owner === 'string' &&
+        typeof value.inputId === 'string' &&
+        typeof value.connectionId === 'string' &&
+        typeof value.table === 'string' &&
+        (value.deduplicationToken === undefined || typeof value.deduplicationToken === 'string') &&
+        isStringRecord(value.fields) &&
+        typeof value.schemaHash === 'string' &&
+        Array.isArray(value.rows) &&
+        value.rows.every(isJsonRecord) &&
+        isRecord(value.missingFields) &&
+        Object.values(value.missingFields).every(
+            item => typeof item === 'number' && Number.isSafeInteger(item),
+        ) &&
+        typeof value.expiresAt === 'string'
+    );
+}
+
+function isExpiringImport(value: unknown): value is { id: string; expiresAt: string } {
+    return isRecord(value) && typeof value.id === 'string' && typeof value.expiresAt === 'string';
+}
 export class ImportService {
     constructor(
         private readonly store: Store,
         private readonly driver: ImportDriver,
         private readonly trusted: (p: Principal, c: string) => boolean,
     ) {
-        for (const job of store.list<ImportJob>('imports'))
+        for (const job of store.list('imports', isImportJob))
             if (job.status === 'running') {
                 job.status = 'unknown';
                 job.reconciliationRequired = true;
@@ -120,7 +196,7 @@ export class ImportService {
         return input;
     }
     get(principal: Principal, id: string): InputPreview {
-        const input = this.store.get<InputPreview>('inputs', id);
+        const input = this.store.get('inputs', id, isInputPreview);
         requireThat(input, 404, 'NOT_FOUND', 'Input preview not found');
         mustOwn(principal, input.owner);
         requireThat(
@@ -132,14 +208,14 @@ export class ImportService {
         return input;
     }
     getJob(principal: Principal, id: string): ImportJob {
-        const job = this.store.get<ImportJob>('imports', id);
+        const job = this.store.get('imports', id, isImportJob);
         requireThat(job, 404, 'NOT_FOUND', 'Import job not found');
         mustOwn(principal, job.owner);
         return job;
     }
     listRecoverable(principal: Principal, connectionId?: string): ImportJob[] {
         return this.store
-            .list<ImportJob>('imports')
+            .list('imports', isImportJob)
             .filter(
                 job =>
                     job.owner === principal.id &&
@@ -209,13 +285,13 @@ export class ImportService {
     }
     async commit(principal: Principal, mappingId: string): Promise<ImportJob> {
         canWrite(principal);
-        const mapping = this.store.get<Mapping>('mappings', mappingId);
+        const mapping = this.store.get('mappings', mappingId, isMapping);
         requireThat(mapping, 404, 'NOT_FOUND', 'Mapping not found');
         mustOwn(principal, mapping.owner);
-        const old = this.store.get<ImportJob>('imports', mappingId);
+        const old = this.store.get('imports', mappingId, isImportJob);
         if (old) return old;
         const unresolved = this.store
-            .list<ImportJob>('imports')
+            .list('imports', isImportJob)
             .find(
                 job =>
                     job.owner === principal.id &&
@@ -251,10 +327,10 @@ export class ImportService {
             'IMPORT_NOT_ALLOWED',
             'Destination trust or availability changed during schema validation',
         );
-        const existing = this.store.get<ImportJob>('imports', mappingId);
+        const existing = this.store.get('imports', mappingId, isImportJob);
         if (existing) return existing;
         const stillUnresolved = this.store
-            .list<ImportJob>('imports')
+            .list('imports', isImportJob)
             .find(
                 job =>
                     job.owner === principal.id &&
@@ -390,16 +466,13 @@ export class ImportService {
         canWrite(principal);
         this.get(principal, id);
         this.store.delete('inputs', id);
-        for (const m of this.store.list<Mapping>('mappings'))
+        for (const m of this.store.list('mappings', isMapping))
             if (m.inputId === id) this.store.delete('mappings', m.id);
         audit(this.store, principal, 'input.delete', id);
     }
     sweep() {
         for (const bucket of ['inputs', 'mappings'])
-            for (const item of this.store.list<{
-                id: string;
-                expiresAt: string;
-            }>(bucket))
+            for (const item of this.store.list(bucket, isExpiringImport))
                 if (Date.parse(item.expiresAt) <= Date.now()) this.store.delete(bucket, item.id);
     }
 }

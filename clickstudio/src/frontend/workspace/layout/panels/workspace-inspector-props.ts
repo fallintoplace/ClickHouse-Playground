@@ -2,7 +2,7 @@ import type { Run } from '../../../../shared/queries/execution/types';
 import type { Result } from '../../../../shared/queries/results/types';
 import type { Schema, SchemaTable } from '../../../../shared/database/schema/types';
 import { sqlReferencesQualifiedTable } from '../../../../shared/database/tables/delete-table';
-import { api } from '../../../api/client';
+import { api, apiResponses } from '../../../api/client';
 import { PLAYGROUND_CONNECTION_ID } from '../../../database/connections/playground';
 import type { Draft, WorkspaceState } from '../../../queries/editor/drafts/workspace-state';
 import { terminal } from '../../../queries/execution/status';
@@ -22,7 +22,11 @@ async function loadAssistantRunContext(
         if (snapshot?.runId === run.id) {
             result = snapshot;
         } else {
-            result = await api<Result>(`/runs/${encodeURIComponent(run.id)}/snapshot`, { signal });
+            result = await api(
+                `/runs/${encodeURIComponent(run.id)}/snapshot`,
+                apiResponses.isResultResponse,
+                { signal },
+            );
         }
     } else {
         result = undefined;

@@ -6,10 +6,7 @@ import { requireThat } from '../../system/requests/errors.js';
 import { canWrite } from '../../system/login/permissions.js';
 import { guardSql } from '../../queries/execution/guards.js';
 import { choice, stringMap, text } from '../../system/requests/validation.js';
-import {
-    WORKLOAD_WINDOWS,
-    type WorkloadWindow,
-} from '../../../shared/database/explorer/activity/workload.js';
+import { WORKLOAD_WINDOWS } from '../../../shared/database/explorer/activity/workload.js';
 import type { Driver } from '../../app/types.js';
 import { id, body, principal } from '../../system/requests/http.js';
 
@@ -76,14 +73,15 @@ export function registerExplorerRoutes({
             'INVALID_REQUEST',
             'minutes must be a single value',
         );
-        const value = choice(
-            req.query.minutes ?? '60',
-            WORKLOAD_WINDOWS.map(String),
+        const value = req.query.minutes ?? '60';
+        const minutes = WORKLOAD_WINDOWS.find(window => String(window) === value);
+        requireThat(
+            minutes !== undefined,
             400,
             'INVALID_REQUEST',
             'minutes must be 15, 60, 360, or 1440',
         );
-        res.json(await driver.workload(connectionId, Number(value) as WorkloadWindow));
+        res.json(await driver.workload(connectionId, minutes));
     });
     app.get('/api/connections/:id/replication', async (req, res) => {
         const p = principal(res),

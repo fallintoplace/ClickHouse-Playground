@@ -15,6 +15,7 @@ import type { ClickHouseDocumentationEntry } from '../../../shared/database/refe
 import type { Principal } from '../../../shared/common/identity.js';
 import type { Result } from '../../../shared/queries/results/types.js';
 import type { Schema } from '../../../shared/database/schema/types.js';
+import { isRecord } from '../../../shared/common/values.js';
 import { AppError, requireThat } from '../../system/requests/errors.js';
 import { canWrite, mustOwn } from '../../system/login/permissions.js';
 import { audit, type Store } from '../../system/store.js';
@@ -72,6 +73,54 @@ export interface PreparedContext {
     evaluationSchema?: Pick<Schema, 'tables' | 'truncated'>;
     state: 'ready' | 'running' | 'complete' | 'failed' | 'cancelled';
     proposalId?: string;
+}
+
+function isPreparedContext(value: unknown): value is PreparedContext {
+    if (!isRecord(value) || !isRecord(value.payload)) return false;
+    const { payload } = value;
+    return (
+        typeof value.id === 'string' &&
+        typeof value.owner === 'string' &&
+        typeof value.connectionId === 'string' &&
+        ASSISTANT_ACTIONS.some(action => action === value.action) &&
+        typeof value.createdAt === 'string' &&
+        typeof value.expiresAt === 'string' &&
+        typeof value.baseSql === 'string' &&
+        typeof payload.instructions === 'string' &&
+        typeof payload.question === 'string' &&
+        typeof payload.context === 'string' &&
+        Array.isArray(value.summary) &&
+        value.summary.every(item => typeof item === 'string') &&
+        ['ready', 'running', 'complete', 'failed', 'cancelled'].some(
+            state => state === value.state,
+        ) &&
+        (value.proposalId === undefined || typeof value.proposalId === 'string')
+    );
+}
+
+function isProposal(value: unknown): value is Proposal {
+    if (
+        !isRecord(value) ||
+        typeof value.id !== 'string' ||
+        typeof value.owner !== 'string' ||
+        typeof value.connectionId !== 'string' ||
+        !ASSISTANT_ACTIONS.some(action => action === value.action) ||
+        typeof value.createdAt !== 'string' ||
+        typeof value.baseSql !== 'string' ||
+        typeof value.responseId !== 'string' ||
+        typeof value.model !== 'string' ||
+        typeof value.promptVersion !== 'string' ||
+        !Array.isArray(value.contextSummary) ||
+        !value.contextSummary.every(item => typeof item === 'string') ||
+        !['pending', 'accepted', 'rejected'].some(decision => decision === value.decision)
+    )
+        return false;
+    try {
+        validateProposal(value);
+        return true;
+    } catch {
+        return false;
+    }
 }
 export interface AssistantDriver {
     available: boolean;
@@ -420,7 +469,7 @@ export class AssistantService {
         private readonly driver: AssistantDriver,
         private readonly authorized: (p: Principal, c: string) => boolean,
     ) {
-        for (const c of store.list<PreparedContext>('ai-contexts'))
+        for (const c of store.list('ai-contexts', isPreparedContext))
             if (c.state === 'running') {
                 c.state = 'failed';
                 delete c.payload.image;
@@ -491,7 +540,7 @@ export class AssistantService {
             'AI_CONSENT_REQUIRED',
             'Review and explicitly approve the context before sending',
         );
-        const context = this.store.get<PreparedContext>('ai-contexts', contextId);
+        const context = this.store.get('ai-contexts', contextId, isPreparedContext);
         requireThat(context, 404, 'NOT_FOUND', 'Prepared context not found');
         mustOwn(p, context.owner);
         requireThat(
@@ -581,14 +630,14 @@ export class AssistantService {
         }
     }
     get(p: Principal, id: string): Proposal {
-        const proposal = this.store.get<Proposal>('proposals', id);
+        const proposal = this.store.get('proposals', id, isProposal);
         requireThat(proposal, 404, 'NOT_FOUND', 'Proposal not found');
         mustOwn(p, proposal.owner);
         return proposal;
     }
     evaluation(p: Principal): AssistantEvaluationReport {
         return buildEvaluationReport(
-            this.store.list<Proposal>('proposals').filter(proposal => proposal.owner === p.id),
+            this.store.list('proposals', isProposal).filter(proposal => proposal.owner === p.id),
         );
     }
     decide(
@@ -641,7 +690,7 @@ export class AssistantService {
         audit(this.store, p, 'ai.delete', id);
     }
     sweep() {
-        for (const c of this.store.list<PreparedContext>('ai-contexts'))
+        for (const c of this.store.list('ai-contexts', isPreparedContext))
             if (Date.parse(c.expiresAt) <= Date.now() && c.state !== 'running')
                 this.store.delete('ai-contexts', c.id);
     }

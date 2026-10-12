@@ -9,7 +9,7 @@ import type { Run, Script } from '../../../shared/queries/execution/types';
 import type { RunKind } from '../../../shared/queries/execution/status';
 import { DEFAULT_LIMITS } from '../../../shared/queries/execution/settings';
 import { rememberRunIds } from '../saved-queries/draft-save';
-import { message, post } from '../../api/client';
+import { apiResponses, message, post } from '../../api/client';
 import type { EditorHandle } from '../editor/components/SqlEditor';
 import { terminal } from './status';
 import type { Copy, ExperienceLevel } from '../../ui/copy';
@@ -65,6 +65,24 @@ type WorkspaceExecutionOptions = {
     storeFailedQueryError: (failure: FailedQueryError) => void;
     setViewForDraft: ReturnType<typeof useScopedValue<ResultsView>>[1];
 };
+
+async function performWorkspaceTask(
+    context: Pick<WorkspaceExecutionOptions, 'busy' | 'setBusy' | 'setError'>,
+    task: () => Promise<void>,
+    kind: BusyAction = 'save',
+    onFailure?: (caught: unknown) => void,
+) {
+    if (context.busy) return;
+    context.setBusy(kind);
+    try {
+        await task();
+    } catch (caught) {
+        if (onFailure) onFailure(caught);
+        else context.setError(message(caught));
+    } finally {
+        context.setBusy('');
+    }
+}
 
 export function createExampleDraft(example: SqlExample, copy: Copy['common']) {
     const name =
@@ -128,26 +146,12 @@ export function useWorkspaceExecution({
     const executionInFlightRef = useRef(false);
     const cancellingRef = useRef(false);
     const { run, setRunForRun } = evidence;
-
-    const perform = async (
+    const perform = (
         task: () => Promise<void>,
         kind: BusyAction = 'save',
         onFailure?: (caught: unknown) => void,
-    ) => {
-        if (busy) return;
-        setBusy(kind);
-        try {
-            await task();
-        } catch (caught) {
-            if (onFailure) {
-                onFailure(caught);
-            } else {
-                setError(message(caught));
-            }
-        } finally {
-            setBusy('');
-        }
-    };
+    ) => performWorkspaceTask({ busy, setBusy, setError }, task, kind, onFailure);
+
     const performExecution = async (
         task: () => Promise<void>,
         kind: BusyAction = 'run',
@@ -156,7 +160,7 @@ export function useWorkspaceExecution({
         if (executionInFlightRef.current) return;
         executionInFlightRef.current = true;
         try {
-            await perform(task, kind, onFailure);
+            await performWorkspaceTask({ busy, setBusy, setError }, task, kind, onFailure);
         } finally {
             executionInFlightRef.current = false;
         }
@@ -293,12 +297,21 @@ export function useWorkspaceExecution({
         setCancelling(true);
         try {
             if (scriptId) {
-                const cancelled = await post<Script>(
+                const cancelled = await post(
                     `/scripts/${encodeURIComponent(scriptId)}/cancel`,
+                    {},
+                    apiResponses.isScriptResponse,
                 );
                 setScripts(current => ({ ...current, [cancelled.id]: cancelled }));
             } else if (runId) {
-                setRunForRun(runId, await post<Run>(`/runs/${encodeURIComponent(runId)}/cancel`));
+                setRunForRun(
+                    runId,
+                    await post(
+                        `/runs/${encodeURIComponent(runId)}/cancel`,
+                        {},
+                        apiResponses.isRunResponse,
+                    ),
+                );
             }
         } catch (caught) {
             setError('Couldn’t confirm cancellation. Check the query status.', {
@@ -572,7 +585,11 @@ function createDraftExecutor({
                     );
                     let created: Script;
                     try {
-                        created = await post<Script>('/scripts', { ...payload, stopOnError: true });
+                        created = await post(
+                            '/scripts',
+                            { ...payload, stopOnError: true },
+                            apiResponses.isScriptResponse,
+                        );
                     } catch (caught) {
                         pendingExecution.clear(payload.clientRequestId);
                         throw caught;
@@ -608,7 +625,7 @@ function createDraftExecutor({
                     );
                     let created: Run;
                     try {
-                        created = await post<Run>('/runs', payload);
+                        created = await post('/runs', payload, apiResponses.isRunResponse);
                     } catch (caught) {
                         pendingExecution.clear(payload.clientRequestId);
                         throw caught;

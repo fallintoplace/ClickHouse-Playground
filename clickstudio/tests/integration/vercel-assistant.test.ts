@@ -2,6 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { APIConnectionTimeoutError } from 'openai';
 import handler from '../../api/assistant/sql.js';
+import {
+    arrayValue,
+    jsonRecord,
+    jsonValue,
+    responseErrorCode,
+    responseRecord,
+    stringValue,
+} from '../helpers/type-guards.js';
 
 const endpoint = 'https://clickstudio.example/api/assistant/sql';
 
@@ -36,7 +44,7 @@ test('Vercel assistant defaults to Fast processing and honors the server service
     process.env.OPENAI_API_KEY = 'test-key';
     let requestBody: Record<string, unknown> | undefined;
     globalThis.fetch = async (input, init) => {
-        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        const body = jsonRecord(jsonValue(String(init?.body)), 'OpenAI request');
         if (String(input).endsWith('/responses/input_tokens')) {
             assert.equal(body.service_tier, undefined);
             return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
@@ -75,7 +83,7 @@ test('Vercel assistant defaults to Fast processing and honors the server service
         assert.equal(requestBody?.reasoning, undefined);
         assert.equal(requestBody?.store, false);
         assert.equal(
-            ((await response.json()) as { summary: string }).summary,
+            stringValue((await responseRecord(response, 'Assistant response')).summary, 'Summary'),
             'This SQL returns one row.',
         );
     }
@@ -99,10 +107,7 @@ test('Vercel assistant rejects an invalid service tier before contacting OpenAI'
     });
     const response = await handler.fetch(request(assistantBody()));
     assert.equal(response.status, 400);
-    assert.equal(
-        ((await response.json()) as { error: { code: string } }).error.code,
-        'OPENAI_SERVICE_TIER',
-    );
+    assert.equal(await responseErrorCode(response), 'OPENAI_SERVICE_TIER');
 });
 
 test('Vercel Fix with AI sends failure context without a saved run and returns a repair proposal', async t => {
@@ -119,19 +124,24 @@ test('Vercel Fix with AI sends failure context without a saved run and returns a
     globalThis.fetch = async (input, init) => {
         if (String(input).endsWith('/responses/input_tokens'))
             return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
-        const payload = JSON.parse(String(init?.body)) as {
-            input: { content: { text: string }[] }[];
-        };
-        const current = JSON.parse(payload.input[0]!.content[0]!.text) as {
-            question: string;
-            context: Record<string, unknown>;
-        };
-        assert.equal(current.context.action, 'repair');
-        assert.match(current.question, /Fix this query error/i);
-        assert.equal(current.context.sql, sql);
-        assert.equal(current.context.evidenceSql, 'SELECT event_count FROM demo.events');
-        assert.equal(current.context.error, '[47] Unknown column event_count');
-        assert.equal(current.context.result, undefined);
+        const payload = jsonRecord(jsonValue(String(init?.body)), 'OpenAI request');
+        const input = arrayValue(payload.input, 'OpenAI input').map(item =>
+            jsonRecord(item, 'OpenAI message'),
+        );
+        const content = arrayValue(input[0]?.content, 'OpenAI message content').map(item =>
+            jsonRecord(item, 'OpenAI content item'),
+        );
+        const current = jsonRecord(
+            jsonValue(stringValue(content[0]?.text, 'OpenAI context text')),
+            'Assistant context',
+        );
+        const context = jsonRecord(current.context, 'Assistant context details');
+        assert.equal(context.action, 'repair');
+        assert.match(stringValue(current.question, 'Assistant question'), /Fix this query error/i);
+        assert.equal(context.sql, sql);
+        assert.equal(context.evidenceSql, 'SELECT event_count FROM demo.events');
+        assert.equal(context.error, '[47] Unknown column event_count');
+        assert.equal(context.result, undefined);
         return Response.json({
             id: 'repair-response',
             status: 'completed',
@@ -162,7 +172,7 @@ test('Vercel Fix with AI sends failure context without a saved run and returns a
         }),
     );
     assert.equal(response.status, 201);
-    const proposal = (await response.json()) as { action: string; baseSql: string; sql: string };
+    const proposal = await responseRecord(response, 'Assistant proposal');
     assert.equal(proposal.action, 'repair');
     assert.equal(proposal.baseSql, sql);
     assert.equal(proposal.sql, repairedSql);
@@ -185,10 +195,7 @@ test('Vercel Fix with AI rejects incomplete failure context before calling the p
             request({ ...assistantBody(), action: 'repair', repair }),
         );
         assert.equal(response.status, 400);
-        assert.equal(
-            ((await response.json()) as { error: { code: string } }).error.code,
-            'INVALID_REQUEST',
-        );
+        assert.equal(await responseErrorCode(response), 'INVALID_REQUEST');
     }
 });
 
@@ -198,7 +205,7 @@ test('Vercel SQL generation requires a same-origin workspace request', async () 
     try {
         const response = await handler.fetch(request({}, { origin: 'https://other.example' }));
         assert.equal(response.status, 403);
-        assert.equal(((await response.json()) as { error: { code: string } }).error.code, 'ORIGIN');
+        assert.equal(await responseErrorCode(response), 'ORIGIN');
     } finally {
         if (prior === undefined) delete process.env.OPENAI_API_KEY;
         else process.env.OPENAI_API_KEY = prior;
@@ -211,10 +218,7 @@ test('Vercel SQL generation reports a missing server-side API key', async () => 
     try {
         const response = await handler.fetch(request({}));
         assert.equal(response.status, 503);
-        assert.equal(
-            ((await response.json()) as { error: { code: string } }).error.code,
-            'AI_UNAVAILABLE',
-        );
+        assert.equal(await responseErrorCode(response), 'AI_UNAVAILABLE');
     } finally {
         if (prior === undefined) delete process.env.OPENAI_API_KEY;
         else process.env.OPENAI_API_KEY = prior;
@@ -264,10 +268,7 @@ test('Vercel assistant keeps non-timeout provider failures as 502 errors', async
 
     const response = await handler.fetch(request(assistantBody()));
     assert.equal(response.status, 502);
-    assert.equal(
-        ((await response.json()) as { error: { code: string } }).error.code,
-        'AI_PROVIDER_ERROR',
-    );
+    assert.equal(await responseErrorCode(response), 'AI_PROVIDER_ERROR');
 });
 
 test('Vercel assistant keeps malformed structured output separate from timeout errors', async t => {
@@ -292,10 +293,7 @@ test('Vercel assistant keeps malformed structured output separate from timeout e
 
     const response = await handler.fetch(request(assistantBody()));
     assert.equal(response.status, 502);
-    assert.equal(
-        ((await response.json()) as { error: { code: string } }).error.code,
-        'AI_PROVIDER_ERROR',
-    );
+    assert.equal(await responseErrorCode(response), 'AI_PROVIDER_ERROR');
 });
 
 test('Vercel assistant accepts larger table lists with matching structured-output limits', async t => {
@@ -322,10 +320,12 @@ test('Vercel assistant accepts larger table lists with matching structured-outpu
         };
         const schemas: unknown[] = [];
         globalThis.fetch = async (input, init) => {
-            const payload = JSON.parse(String(init?.body)) as {
-                text: { format: { schema: { properties: { tables: unknown } } } };
-            };
-            schemas.push(payload.text.format.schema.properties.tables);
+            const payload = jsonRecord(jsonValue(String(init?.body)), 'OpenAI request');
+            const text = jsonRecord(payload.text, 'OpenAI text format');
+            const format = jsonRecord(text.format, 'OpenAI response format');
+            const schema = jsonRecord(format.schema, 'OpenAI schema');
+            const properties = jsonRecord(schema.properties, 'OpenAI schema properties');
+            schemas.push(properties.tables);
             if (String(input).endsWith('/responses/input_tokens'))
                 return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
             return Response.json({
@@ -352,7 +352,7 @@ test('Vercel assistant accepts larger table lists with matching structured-outpu
             }),
         );
         assert.equal(response.status, 201);
-        const proposal = (await response.json()) as { tables: string[]; sql: string | null };
+        const proposal = await responseRecord(response, 'Assistant proposal');
         assert.deepEqual(proposal.tables, tables);
         assert.equal(proposal.sql, null);
         assert.deepEqual(
@@ -444,10 +444,7 @@ test('Vercel SQL generation rejects an incomplete schema before contacting OpenA
             request({ connectionId: 'cloud', question: 'List rows', sql: 'SELECT 1', schema: {} }),
         );
         assert.equal(response.status, 400);
-        assert.equal(
-            ((await response.json()) as { error: { code: string } }).error.code,
-            'INVALID_SCHEMA',
-        );
+        assert.equal(await responseErrorCode(response), 'INVALID_SCHEMA');
     } finally {
         if (prior === undefined) delete process.env.OPENAI_API_KEY;
         else process.env.OPENAI_API_KEY = prior;
@@ -472,9 +469,10 @@ test('Vercel assistant returns a requested table proposal with example geography
     globalThis.fetch = async (input, init) => {
         if (String(input).endsWith('/responses/input_tokens'))
             return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
-        const payload = JSON.parse(String(init?.body)) as { instructions?: string };
-        assert.doesNotMatch(payload.instructions ?? '', /SQL must be SELECT\/WITH only/i);
-        assert.doesNotMatch(payload.instructions ?? '', /Never claim a query ran/i);
+        const payload = jsonRecord(jsonValue(String(init?.body)), 'OpenAI request');
+        const instructions = stringValue(payload.instructions, 'OpenAI instructions');
+        assert.doesNotMatch(instructions, /SQL must be SELECT\/WITH only/i);
+        assert.doesNotMatch(instructions, /Never claim a query ran/i);
         return Response.json({
             id: 'resp_interview',
             status: 'completed',
@@ -511,7 +509,7 @@ test('Vercel assistant returns a requested table proposal with example geography
             }),
         );
         assert.equal(response.status, 201);
-        const proposal = (await response.json()) as { sql: string; caveats: string[] };
+        const proposal = await responseRecord(response, 'Assistant proposal');
         assert.equal(proposal.sql, sql);
         assert.match(proposal.caveats[0] ?? '', /example rows/i);
     } finally {
@@ -539,20 +537,29 @@ test('Vercel assistant returns a full table copy when the source is present', as
     globalThis.fetch = async (input, init) => {
         if (String(input).endsWith('/responses/input_tokens'))
             return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
-        const payload = JSON.parse(String(init?.body)) as {
-            input: Array<{ content: Array<{ text: string }> }>;
-        };
-        const supplied = JSON.parse(payload.input[0]!.content[0]!.text) as {
-            question: string;
-            context: {
-                tables: Array<{ database: string; name: string }>;
-                schema: Array<{ name: string }>;
-            };
-        };
-        assert.match(supplied.question, /Include all rows and columns from the source table/i);
-        assert.deepEqual(supplied.context.tables, [{ database: 'default', name: 'geography' }]);
+        const payload = jsonRecord(jsonValue(String(init?.body)), 'OpenAI request');
+        const input = arrayValue(payload.input, 'OpenAI input').map(item =>
+            jsonRecord(item, 'OpenAI message'),
+        );
+        const contentItems = arrayValue(input[0]?.content, 'OpenAI message content').map(item =>
+            jsonRecord(item, 'OpenAI content item'),
+        );
+        const supplied = jsonRecord(
+            jsonValue(stringValue(contentItems[0]?.text, 'OpenAI context text')),
+            'Assistant context',
+        );
+        const context = jsonRecord(supplied.context, 'Assistant context details');
+        assert.match(
+            stringValue(supplied.question, 'Assistant question'),
+            /Include all rows and columns from the source table/i,
+        );
+        assert.deepEqual(arrayValue(context.tables, 'Assistant tables'), [
+            { database: 'default', name: 'geography' },
+        ]);
         assert.deepEqual(
-            supplied.context.schema.map(column => column.name),
+            arrayValue(context.schema, 'Assistant schema').map(column =>
+                stringValue(jsonRecord(column, 'Assistant schema column').name, 'Column name'),
+            ),
             ['country', 'place', 'latitude', 'longitude'],
         );
         return Response.json({
@@ -599,9 +606,9 @@ test('Vercel assistant returns a full table copy when the source is present', as
             }),
         );
         assert.equal(response.status, 201);
-        const proposal = (await response.json()) as { sql: string; quality: { status: string } };
+        const proposal = await responseRecord(response, 'Assistant proposal');
         assert.equal(proposal.sql, sql);
-        assert.equal(proposal.quality.status, 'pass');
+        assert.equal(jsonRecord(proposal.quality, 'Proposal quality').status, 'pass');
     } finally {
         globalThis.fetch = priorFetch;
         if (priorKey === undefined) delete process.env.OPENAI_API_KEY;

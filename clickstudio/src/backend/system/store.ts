@@ -24,17 +24,21 @@ function errorCode(error: unknown): string | undefined {
         : undefined;
 }
 export interface Store {
-    get<T>(bucket: string, id: string): T | undefined;
+    get<T>(bucket: string, id: string, guard: StoreGuard<T>): T | undefined;
     put<T>(bucket: string, id: string, value: T): void;
     delete(bucket: string, id: string): void;
-    list<T>(bucket: string): T[];
+    list<T>(bucket: string, guard: StoreGuard<T>): T[];
     keys(bucket: string): string[];
     count(bucket: string): number;
 }
+export type StoreGuard<T> = (value: unknown) => value is T;
 export class MemoryStore implements Store {
     private data = new Map<string, Map<string, unknown>>();
-    get<T>(bucket: string, id: string): T | undefined {
-        return structuredClone(this.data.get(bucket)?.get(id)) as T | undefined;
+    get<T>(bucket: string, id: string, guard: StoreGuard<T>): T | undefined {
+        const value = this.data.get(bucket)?.get(id);
+        if (value === undefined) return undefined;
+        const clone = structuredClone(value);
+        return guard(clone) ? clone : undefined;
     }
     put<T>(bucket: string, id: string, value: T) {
         if (!this.data.has(bucket)) this.data.set(bucket, new Map());
@@ -43,8 +47,11 @@ export class MemoryStore implements Store {
     delete(bucket: string, id: string) {
         this.data.get(bucket)?.delete(id);
     }
-    list<T>(bucket: string): T[] {
-        return structuredClone([...(this.data.get(bucket)?.values() ?? [])]) as T[];
+    list<T>(bucket: string, guard: StoreGuard<T>): T[] {
+        const values = [...(this.data.get(bucket)?.values() ?? [])].map(value =>
+            structuredClone(value),
+        );
+        return values.filter(guard);
     }
     keys(bucket: string): string[] {
         return [...(this.data.get(bucket)?.keys() ?? [])];
@@ -80,9 +87,10 @@ export class FileStore implements Store {
             ? join(this.directory, bucket)
             : join(this.directory, bucket, `${id}.json`);
     }
-    get<T>(bucket: string, id: string): T | undefined {
+    get<T>(bucket: string, id: string, guard: StoreGuard<T>): T | undefined {
         try {
-            return JSON.parse(readFileSync(this.path(bucket, id), 'utf8')) as T;
+            const value: unknown = JSON.parse(readFileSync(this.path(bucket, id), 'utf8'));
+            return guard(value) ? value : undefined;
         } catch (error) {
             if (errorCode(error) === 'ENOENT') return undefined;
             throw error;
@@ -146,10 +154,13 @@ export class FileStore implements Store {
         this.counts.set(bucket, count);
         return count;
     }
-    list<T>(bucket: string): T[] {
-        return this.keys(bucket)
-            .map(id => this.get<T>(bucket, id)!)
-            .filter(Boolean);
+    list<T>(bucket: string, guard: StoreGuard<T>): T[] {
+        const values: T[] = [];
+        for (const id of this.keys(bucket)) {
+            const value = this.get(bucket, id, guard);
+            if (value !== undefined) values.push(value);
+        }
+        return values;
     }
 }
 function stableStringify(value: unknown): string {

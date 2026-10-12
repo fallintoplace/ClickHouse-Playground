@@ -1,3 +1,5 @@
+import { isRecord } from '../../../common/values.js';
+
 export type PartsMetric = 'compressedBytes' | 'rows' | 'marks';
 export type PartsLayout = 'map' | 'treemap' | 'galaxy';
 export type PartsState = 'all' | 'active' | 'inactive';
@@ -91,8 +93,7 @@ function sum(values: readonly string[]) {
 function rowRecord(value: unknown): Record<string, unknown> | undefined {
     if (Array.isArray(value))
         return Object.fromEntries(partColumns.map((key, index) => [key, value[index]]));
-    if (value === null || typeof value !== 'object') return undefined;
-    return value as Record<string, unknown>;
+    return isRecord(value) ? value : undefined;
 }
 
 export function parseMergeTreeParts(

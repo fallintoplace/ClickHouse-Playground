@@ -1,4 +1,4 @@
-import type { Json } from '../../common/values.js';
+import { isJson, type Json } from '../../common/values.js';
 import type { RunKind } from '../execution/status.js';
 
 export type ExplainPlanProperty = { name: string; value: Json };
@@ -74,7 +74,9 @@ export function parseExplainPlan(input: unknown): ExplainPlan | undefined {
         const properties = Object.entries(raw)
             .filter(([name]) => !PLAN_NODE_KEYS.has(name))
             .slice(0, 100)
-            .map(([name, value]) => ({ name: name.slice(0, 160), value: value as Json }));
+            .flatMap(([name, value]) =>
+                isJson(value) ? [{ name: name.slice(0, 160), value }] : [],
+            );
         if (Object.keys(raw).length - PLAN_NODE_KEYS.size > properties.length) truncated = true;
         const rawChildren = Array.isArray(raw.Plans) ? raw.Plans : [];
         const children: ExplainPlanNode[] = [];

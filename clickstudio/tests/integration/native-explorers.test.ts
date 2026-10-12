@@ -1,15 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import type { AddressInfo } from 'node:net';
 import { createApp } from '../../src/backend/app/app.js';
 import { loadConfig } from '../../src/backend/system/config.js';
 import { MemoryStore } from '../../src/backend/system/store.js';
+import { serverPort } from '../helpers/type-guards.js';
 
 test('Native explorers require trust and validate bounded, fixed request types', async t => {
     const service = createApp(loadConfig({ DEMO_MODE: 'true' }), { store: new MemoryStore() });
     const server = service.app.listen(0, '127.0.0.1');
     await new Promise<void>(resolve => server.once('listening', resolve));
-    const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const origin = `http://127.0.0.1:${serverPort(server)}`;
     const post = (path: string, body: unknown) =>
         fetch(`${origin}/api${path}`, {
             method: 'POST',

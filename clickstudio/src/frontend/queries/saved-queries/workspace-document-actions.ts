@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { QueryDocument } from '../../../shared/queries/saved-queries/types';
-import { message, post, RequestError } from '../../api/client';
+import { apiResponses, message, post, RequestError } from '../../api/client';
 import { checkpoint, type Draft, type WorkspaceState } from '../editor/drafts/workspace-state';
 import type { useWorkspaceExecution } from '../execution/useWorkspaceExecution';
 import { sameSavedContent } from './draft-save';
@@ -152,6 +152,7 @@ export function createRevisionRestorer({
                         revision: revision.revision,
                         baseRevision: latestSaved.revision,
                     },
+                    apiResponses.isQueryDocumentResponse,
                 );
                 const currentDraft = workspaceRef.current.tabs.find(item => item.id === draft.id);
                 const editedDuringRestore = Boolean(

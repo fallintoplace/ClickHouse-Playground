@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { setTimeout as sleep } from 'node:timers/promises';
 import * as cloud from '../../src/frontend/database/connections/cloud-connection.js';
 import { BrowserWorkspaceApi } from '../../src/frontend/api/browser-workspace.js';
-import type { Run, Script } from '../../src/shared/queries/execution/types.js';
+import { isRun, isScript } from '../../src/frontend/queries/execution/events.js';
+import { decodeValue, jsonRecord, jsonValue } from '../helpers/type-guards.js';
 
 const credentials = {
     host: 'service.clickhouse.cloud:8443',
@@ -28,7 +29,7 @@ const result = {
 
 test('Browser Cloud failed queries retain selected document offsets', async t => {
     t.mock.method(globalThis, 'fetch', async (_url: unknown, options?: RequestInit) => {
-        const body = JSON.parse(String(options?.body)) as { action: string };
+        const body = jsonRecord(jsonValue(String(options?.body)), 'Cloud request body');
         return body.action === 'test'
             ? Response.json(tested)
             : Response.json(
@@ -39,19 +40,23 @@ test('Browser Cloud failed queries retain selected document offsets', async t =>
     t.after(() => cloud.disconnectClickHouseCloud());
     await cloud.connectClickHouseCloud(credentials);
     const api = new BrowserWorkspaceApi();
-    const created = (await api.request('/runs', {
-        method: 'POST',
-        body: {
-            connectionId: 'clickhouse-cloud',
-            sql: 'SELECT missing()',
-            sourceFrom: 25,
-            sourceTo: 41,
-        },
-    })) as Run;
+    const created = decodeValue(
+        await api.request('/runs', {
+            method: 'POST',
+            body: {
+                connectionId: 'clickhouse-cloud',
+                sql: 'SELECT missing()',
+                sourceFrom: 25,
+                sourceTo: 41,
+            },
+        }),
+        isRun,
+        'Run response',
+    );
     let run = created;
     for (let attempt = 0; run.status === 'running' && attempt < 100; attempt++) {
         await sleep(1);
-        run = (await api.request(`/runs/${created.id}`)) as Run;
+        run = decodeValue(await api.request(`/runs/${created.id}`), isRun, 'Run response');
     }
     assert.equal(run.status, 'failed');
     assert.equal(run.sourceFrom, 25);
@@ -60,10 +65,10 @@ test('Browser Cloud failed queries retain selected document offsets', async t =>
 
 test('Browser Cloud scripts keep script-local statement spans and document-relative run spans', async t => {
     t.mock.method(globalThis, 'fetch', async (_url: unknown, options?: RequestInit) => {
-        const body = JSON.parse(String(options?.body)) as { action: string; queryId?: string };
+        const body = jsonRecord(jsonValue(String(options?.body)), 'Cloud request body');
         if (body.action === 'test') return Response.json(tested);
         assert.match(
-            body.queryId ?? '',
+            typeof body.queryId === 'string' ? body.queryId : '',
             /^clickstudio-run-[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i,
         );
         return Response.json({ ...result, queryId: body.queryId });
@@ -72,19 +77,36 @@ test('Browser Cloud scripts keep script-local statement spans and document-relat
     await cloud.connectClickHouseCloud(credentials);
     const api = new BrowserWorkspaceApi();
     const sql = '  SELECT 1;\n SELECT 2;';
-    const created = (await api.request('/scripts', {
-        method: 'POST',
-        body: { connectionId: 'clickhouse-cloud', sql, sourceFrom: 35, sourceTo: 35 + sql.length },
-    })) as Script;
+    const created = decodeValue(
+        await api.request('/scripts', {
+            method: 'POST',
+            body: {
+                connectionId: 'clickhouse-cloud',
+                sql,
+                sourceFrom: 35,
+                sourceTo: 35 + sql.length,
+            },
+        }),
+        isScript,
+        'Script response',
+    );
     let script = created;
     for (let attempt = 0; script.status === 'running' && attempt < 100; attempt++) {
         await sleep(1);
-        script = (await api.request(`/scripts/${created.id}`)) as Script;
+        script = decodeValue(
+            await api.request(`/scripts/${created.id}`),
+            isScript,
+            'Script response',
+        );
     }
     assert.equal(script.status, 'succeeded');
     for (const statement of script.statements) {
         assert.equal(sql.slice(statement.from, statement.to), statement.sql);
-        const run = (await api.request(`/runs/${statement.runId}`)) as Run;
+        const run = decodeValue(
+            await api.request(`/runs/${statement.runId}`),
+            isRun,
+            'Run response',
+        );
         assert.equal(run.sourceFrom, 35 + statement.from);
         assert.equal(run.sourceTo, 35 + statement.to);
     }
@@ -92,17 +114,13 @@ test('Browser Cloud scripts keep script-local statement spans and document-relat
 
 test('Browser Cloud failed script statements retain a failed run with document-relative diagnostics', async t => {
     t.mock.method(globalThis, 'fetch', async (_url: unknown, options?: RequestInit) => {
-        const body = JSON.parse(String(options?.body)) as {
-            action: string;
-            sql?: string;
-            queryId?: string;
-        };
+        const body = jsonRecord(jsonValue(String(options?.body)), 'Cloud request body');
         if (body.action === 'test') return Response.json(tested);
         assert.match(
-            body.queryId ?? '',
+            typeof body.queryId === 'string' ? body.queryId : '',
             /^clickstudio-run-[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i,
         );
-        if (body.sql?.includes('missing()'))
+        if (typeof body.sql === 'string' && body.sql.includes('missing()'))
             return Response.json(
                 { error: { code: 'CLICKHOUSE_46', message: 'Unknown function missing' } },
                 { status: 400 },
@@ -113,14 +131,27 @@ test('Browser Cloud failed script statements retain a failed run with document-r
     await cloud.connectClickHouseCloud(credentials);
     const api = new BrowserWorkspaceApi();
     const sql = 'SELECT 1; SELECT missing(); SELECT 3';
-    const created = (await api.request('/scripts', {
-        method: 'POST',
-        body: { connectionId: 'clickhouse-cloud', sql, sourceFrom: 40, sourceTo: 40 + sql.length },
-    })) as Script;
+    const created = decodeValue(
+        await api.request('/scripts', {
+            method: 'POST',
+            body: {
+                connectionId: 'clickhouse-cloud',
+                sql,
+                sourceFrom: 40,
+                sourceTo: 40 + sql.length,
+            },
+        }),
+        isScript,
+        'Script response',
+    );
     let script = created;
     for (let attempt = 0; script.status === 'running' && attempt < 100; attempt++) {
         await sleep(1);
-        script = (await api.request(`/scripts/${created.id}`)) as Script;
+        script = decodeValue(
+            await api.request(`/scripts/${created.id}`),
+            isScript,
+            'Script response',
+        );
     }
     assert.equal(script.status, 'partial');
     assert.deepEqual(
@@ -129,7 +160,7 @@ test('Browser Cloud failed script statements retain a failed run with document-r
     );
     const failed = script.statements[1]!;
     assert.ok(failed.runId);
-    const run = (await api.request(`/runs/${failed.runId}`)) as Run;
+    const run = decodeValue(await api.request(`/runs/${failed.runId}`), isRun, 'Run response');
     assert.equal(run.status, 'failed');
     assert.equal(run.queryId, `clickstudio-run-${run.id}`);
     assert.equal(run.resultState, 'unavailable');
@@ -142,9 +173,9 @@ for (const kind of ['explain', 'plan', 'pipeline', 'analyze'] as const)
     test(`Browser Cloud ${kind} runs store original SQL and normalize syntax locations`, async t => {
         let executedSql = '';
         t.mock.method(globalThis, 'fetch', async (_url: unknown, options?: RequestInit) => {
-            const body = JSON.parse(String(options?.body)) as { action: string; sql?: string };
+            const body = jsonRecord(jsonValue(String(options?.body)), 'Cloud request body');
             if (body.action === 'test') return Response.json(tested);
-            executedSql = body.sql ?? '';
+            executedSql = typeof body.sql === 'string' ? body.sql : '';
             return Response.json(
                 { error: { code: 'CLICKHOUSE_62', message: 'Syntax error (line 2, col 8)' } },
                 { status: 400 },
@@ -154,20 +185,24 @@ for (const kind of ['explain', 'plan', 'pipeline', 'analyze'] as const)
         await cloud.connectClickHouseCloud(credentials);
         const api = new BrowserWorkspaceApi();
         const sql = 'SELECT bad';
-        const created = (await api.request('/runs', {
-            method: 'POST',
-            body: {
-                connectionId: 'clickhouse-cloud',
-                sql,
-                kind,
-                sourceFrom: 40,
-                sourceTo: 40 + sql.length,
-            },
-        })) as Run;
+        const created = decodeValue(
+            await api.request('/runs', {
+                method: 'POST',
+                body: {
+                    connectionId: 'clickhouse-cloud',
+                    sql,
+                    kind,
+                    sourceFrom: 40,
+                    sourceTo: 40 + sql.length,
+                },
+            }),
+            isRun,
+            'Run response',
+        );
         let run = created;
         for (let attempt = 0; run.status === 'running' && attempt < 100; attempt++) {
             await sleep(1);
-            run = (await api.request(`/runs/${created.id}`)) as Run;
+            run = decodeValue(await api.request(`/runs/${created.id}`), isRun, 'Run response');
         }
         assert.equal(run.status, 'failed');
         assert.equal(run.sql, sql);

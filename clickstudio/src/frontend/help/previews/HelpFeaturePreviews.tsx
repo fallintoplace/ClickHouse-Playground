@@ -17,7 +17,7 @@ const geoPreviewMarkerStyle = (city: (typeof GEO_HELP_CITIES)[number]): CSSPrope
         top: `${7 + ((90 - city.latitude) / 180) * 86}%`,
         '--geo-hue': geoHueForValue(city.events, minimumGeoPreviewEvents, maximumGeoPreviewEvents),
         '--geo-demo-size': `${7 + intensity * 5}px`,
-    } as CSSProperties;
+    };
 };
 
 export function GeoHelpPreview({

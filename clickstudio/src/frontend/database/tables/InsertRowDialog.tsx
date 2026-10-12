@@ -1,7 +1,16 @@
 import type { ImportJobStatus } from '../../../shared/database/imports/status';
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type Dispatch,
+    type FormEvent,
+    type SetStateAction,
+} from 'react';
 import type { SchemaColumn, SchemaTable } from '../../../shared/database/schema/types';
-import { api, message, post, RequestError } from '../../api/client';
+import { api, apiResponses, message, post, RequestError } from '../../api/client';
 import {
     checkClickHouseCloudImport,
     CLICKHOUSE_CLOUD_CONNECTION_ID,
@@ -41,6 +50,51 @@ type ImportJob = {
 type Step = 'edit' | 'review' | 'status';
 function optionalColumn(column: SchemaColumn) {
     return Boolean(column.defaultKind) || /^Nullable\(/.test(column.type);
+}
+
+async function confirmInsertedRow({
+    job,
+    busy,
+    setBusy,
+    setError,
+    setJob,
+    reportSuccess,
+}: {
+    job: ImportJob | undefined;
+    busy: boolean;
+    setBusy: Dispatch<SetStateAction<boolean>>;
+    setError: Dispatch<SetStateAction<string>>;
+    setJob: Dispatch<SetStateAction<ImportJob | undefined>>;
+    reportSuccess: () => void;
+}) {
+    if (!job || busy) return;
+    setBusy(true);
+    setError('');
+    try {
+        const next = job.queryId
+            ? job
+            : await post(
+                  `/imports/${encodeURIComponent(job.id)}/review`,
+                  { inspected: true, noActiveInsert: true },
+                  apiResponses.isImportJob,
+              );
+        if (next.status === 'running' || next.status === 'succeeded') {
+            setJob(next);
+            if (next.status === 'succeeded') reportSuccess();
+            return;
+        }
+        setJob({
+            ...next,
+            status: 'succeeded',
+            error: undefined,
+            reviewedAt: next.reviewedAt ?? new Date().toISOString(),
+        });
+        reportSuccess();
+    } catch (caught) {
+        setError(`Could not record that the row is present: ${message(caught)}`);
+    } finally {
+        setBusy(false);
+    }
 }
 
 export function InsertRowDialog({ connectionId, table, columns, onClose, onInserted }: Props) {
@@ -96,7 +150,10 @@ export function InsertRowDialog({ connectionId, table, columns, onClose, onInser
                 if (element.open) element.close();
             };
         }
-        void api<string[]>(`/connections/${encodeURIComponent(connectionId)}/import-targets`)
+        void api(
+            `/connections/${encodeURIComponent(connectionId)}/import-targets`,
+            apiResponses.isStringArray,
+        )
             .then(targets => {
                 if (!Array.isArray(targets) || targets.some(target => typeof target !== 'string'))
                     throw new Error('The connection returned an invalid list of insert targets.');
@@ -125,7 +182,7 @@ export function InsertRowDialog({ connectionId, table, columns, onClose, onInser
                       job.rows,
                       job.deduplicationToken,
                   )
-                : api<ImportJob>(`/imports/${encodeURIComponent(job.id)}`);
+                : api(`/imports/${encodeURIComponent(job.id)}`, apiResponses.isImportJob);
             void status
                 .then(next => {
                     if (!active) return;
@@ -196,7 +253,11 @@ export function InsertRowDialog({ connectionId, table, columns, onClose, onInser
                           queryId,
                           deduplicationToken,
                       })
-                    : await post<ImportJob>(`/imports/${encodeURIComponent(mapping.id)}/commit`);
+                    : await post(
+                          `/imports/${encodeURIComponent(mapping.id)}/commit`,
+                          {},
+                          apiResponses.isImportJob,
+                      );
             setJob(next);
             if (next.status === 'succeeded') reportSuccess();
         } catch (caught) {
@@ -230,6 +291,7 @@ export function InsertRowDialog({ connectionId, table, columns, onClose, onInser
                 try {
                     const recovered = await api<ImportJob>(
                         `/imports/${encodeURIComponent(mapping.id)}`,
+                        apiResponses.isImportJob,
                     );
                     setJob(recovered);
                     if (recovered.status === 'succeeded') reportSuccess();
@@ -256,7 +318,11 @@ export function InsertRowDialog({ connectionId, table, columns, onClose, onInser
                       job.rows,
                       job.deduplicationToken,
                   )
-                : await post<ImportJob>(`/imports/${encodeURIComponent(job.id)}/reconcile`);
+                : await post(
+                      `/imports/${encodeURIComponent(job.id)}/reconcile`,
+                      {},
+                      apiResponses.isImportJob,
+                  );
             setJob(next);
             if (next.status === 'succeeded') reportSuccess();
         } catch (caught) {
@@ -266,35 +332,8 @@ export function InsertRowDialog({ connectionId, table, columns, onClose, onInser
         }
     }
 
-    async function confirmInserted() {
-        if (!job || busy) return;
-        setBusy(true);
-        setError('');
-        try {
-            const next = job.queryId
-                ? job
-                : await post<ImportJob>(`/imports/${encodeURIComponent(job.id)}/review`, {
-                      inspected: true,
-                      noActiveInsert: true,
-                  });
-            if (next.status === 'running' || next.status === 'succeeded') {
-                setJob(next);
-                if (next.status === 'succeeded') reportSuccess();
-                return;
-            }
-            setJob({
-                ...next,
-                status: 'succeeded',
-                error: undefined,
-                reviewedAt: next.reviewedAt ?? new Date().toISOString(),
-            });
-            reportSuccess();
-        } catch (caught) {
-            setError(`Could not record that the row is present: ${message(caught)}`);
-        } finally {
-            setBusy(false);
-        }
-    }
+    const confirmInserted = () =>
+        confirmInsertedRow({ job, busy, setBusy, setError, setJob, reportSuccess });
 
     async function retryUnknown() {
         return await retryUnknownInsert({
@@ -404,9 +443,9 @@ function closeInsertRowDialog({
 }) {
     if (busy || job?.status === 'running') return;
     if (preview && job?.status !== 'unknown')
-        void api(`/imports/${encodeURIComponent(preview.id)}`, { method: 'DELETE' }).catch(
-            () => undefined,
-        );
+        void api(`/imports/${encodeURIComponent(preview.id)}`, apiResponses.isUnknown, {
+            method: 'DELETE',
+        }).catch(() => undefined);
     onClose();
 }
 
@@ -443,25 +482,30 @@ async function reviewInsertRow(event: FormEvent<HTMLFormElement>, context: Revie
             setStep('review');
             return;
         }
-        nextPreview = await post<Preview>('/imports/preview', {
-            name: `${tableName}-row.json`,
-            source: JSON.stringify([row]),
-            format: 'json',
-        });
-        const nextMapping = await post<Mapping>(
+        nextPreview = await post(
+            '/imports/preview',
+            {
+                name: `${tableName}-row.json`,
+                source: JSON.stringify([row]),
+                format: 'json',
+            },
+            apiResponses.isImportPreview,
+        );
+        const nextMapping = await post(
             `/imports/${encodeURIComponent(nextPreview.id)}/mapping`,
             {
                 connectionId,
                 table: name,
                 fields: Object.fromEntries(Object.keys(row).map(column => [column, column])),
             },
+            apiResponses.isImportMapping,
         );
         setPreview(nextPreview);
         setMapping(nextMapping);
         setStep('review');
     } catch (caught) {
         if (nextPreview)
-            void api(`/imports/${encodeURIComponent(nextPreview.id)}`, {
+            void api(`/imports/${encodeURIComponent(nextPreview.id)}`, apiResponses.isUnknown, {
                 method: 'DELETE',
             }).catch(() => undefined);
         setError(message(caught));
@@ -848,6 +892,7 @@ async function retryUnknownInsert({
             try {
                 const recovered = await api<ImportJob>(
                     `/imports/${encodeURIComponent(retryMapping.id)}`,
+                    apiResponses.isImportJob,
                 );
                 setJob(recovered);
                 if (recovered.status === 'succeeded') reportSuccess();
@@ -867,7 +912,11 @@ async function retryUnknownInsert({
                   job.rows,
                   job.deduplicationToken,
               )
-            : await post<ImportJob>(`/imports/${encodeURIComponent(job.id)}/reconcile`);
+            : await post(
+                  `/imports/${encodeURIComponent(job.id)}/reconcile`,
+                  {},
+                  apiResponses.isImportJob,
+              );
         if (checked.status !== 'unknown') {
             setJob(checked);
             if (checked.status === 'succeeded') reportSuccess();
@@ -885,9 +934,10 @@ async function retryUnknownInsert({
                 throw new Error(
                     'The row preview expired. Close this dialog and prepare the row again.',
                 );
-            const reviewed = await post<ImportJob>(
+            const reviewed = await post(
                 `/imports/${encodeURIComponent(job.id)}/review`,
                 { inspected: true, noActiveInsert: true },
+                apiResponses.isImportJob,
             );
             if (reviewed.status !== 'unknown') {
                 setJob(reviewed);
@@ -898,7 +948,7 @@ async function retryUnknownInsert({
                 setJob(reviewed);
                 return;
             }
-            retryMapping = await post<Mapping>(
+            retryMapping = await post(
                 `/imports/${encodeURIComponent(preview.id)}/mapping`,
                 {
                     connectionId,
@@ -906,6 +956,7 @@ async function retryUnknownInsert({
                     fields: mapping.fields,
                     deduplicationToken: job.deduplicationToken ?? null,
                 },
+                apiResponses.isImportMapping,
             );
         }
 
@@ -933,7 +984,11 @@ async function retryUnknownInsert({
                   queryId: retryQueryId,
                   deduplicationToken: retryDeduplicationToken,
               })
-            : await post<ImportJob>(`/imports/${encodeURIComponent(retryMapping.id)}/commit`);
+            : await post(
+                  `/imports/${encodeURIComponent(retryMapping.id)}/commit`,
+                  {},
+                  apiResponses.isImportJob,
+              );
         setJob(next);
         if (next.status === 'succeeded') reportSuccess();
     } catch (caught) {

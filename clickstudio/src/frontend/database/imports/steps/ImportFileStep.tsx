@@ -1,5 +1,5 @@
 import { IMPORT_FILE_SIZE_LABEL } from '../../../../shared/database/imports/limits';
-import { api } from '../../../api/client';
+import { api, apiResponses } from '../../../api/client';
 import { ImportPreviewTable } from '../preview/ImportPreviewTable';
 import { formatImportColumnCount, formatImportRowCount } from '../state/import-wizard-model';
 import { useImportWizardController } from '../useImportWizardController';
@@ -101,9 +101,11 @@ export function ImportFileStep({
                             type="button"
                             onClick={() => {
                                 if (!browserCloudImport)
-                                    void api(`/imports/${encodeURIComponent(preview.id)}`, {
-                                        method: 'DELETE',
-                                    }).catch(() => undefined);
+                                    void api(
+                                        `/imports/${encodeURIComponent(preview.id)}`,
+                                        apiResponses.isUnknown,
+                                        { method: 'DELETE' },
+                                    ).catch(() => undefined);
                                 setPreview(undefined);
                                 setMapping(undefined);
                                 setStep('file');

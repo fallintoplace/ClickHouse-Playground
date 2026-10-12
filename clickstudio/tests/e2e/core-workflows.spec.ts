@@ -1,6 +1,9 @@
 import {
     workspacePath,
     setWorkspaceMode,
+    arrayValue,
+    jsonRecord,
+    stringValue,
     currentQueryId,
     openBlankSql,
     openStatementResults,
@@ -191,13 +194,7 @@ test('Result view and page stay with their draft run', async ({ page }) => {
         const request = route.request();
         const url = new URL(request.url());
         if (request.method() === 'POST' && url.pathname === '/api/runs') {
-            const input = request.postDataJSON() as {
-                connectionId: string;
-                sql: string;
-                parameters?: Record<string, string>;
-                limits?: Record<string, number>;
-                tags?: Record<string, string>;
-            };
+            const input = jsonRecord(request.postDataJSON(), 'Run request body');
             const runNumber = retainedRuns.length + 1;
             const id = `state-run-${runNumber}`;
             const queryId = `state-query-${runNumber}`;
@@ -333,7 +330,9 @@ test('Run button submits the live CodeMirror document before React catches up', 
         request => request.method() === 'POST' && new URL(request.url()).pathname === '/api/runs',
     );
     await page.locator('.cm-content').evaluate((element, currentSql) => {
-        const content = element as HTMLElement;
+        if (!(element instanceof HTMLElement))
+            throw new Error('Editor content is not an HTML element');
+        const content = element;
         content.focus();
         document.execCommand('selectAll');
         if (!document.execCommand('insertText', false, currentSql))
@@ -351,7 +350,7 @@ test('Run button submits the live CodeMirror document before React catches up', 
         runButton.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     }, sql);
     const request = await submitted;
-    expect((request.postDataJSON() as { sql: string }).sql).toBe(sql);
+    expect(stringValue(jsonRecord(request.postDataJSON()).sql, 'Submitted SQL')).toBe(sql);
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'succeeded');
 });
 
@@ -636,7 +635,7 @@ test('Restoring a version keeps run status aligned and retains its result while 
     await page.route(runCollectionPath, async route => {
         if (route.request().method() !== 'POST') return route.continue();
         const response = await route.fetch();
-        const run = (await response.json()) as Record<string, unknown>;
+        const run = jsonRecord(await response.json(), 'Run response');
         await route.fulfill({ response, json: { ...run, status: 'running' } });
     });
     await page.route(runActivityPath, async route => {
@@ -1155,7 +1154,7 @@ test('A failed saved run shows its submitted error in Output', async ({ page }) 
     await page.route(runRoute, async route => {
         if (route.request().method() !== 'POST') return route.continue();
         const response = await route.fetch();
-        const run = (await response.json()) as Record<string, unknown>;
+        const run = jsonRecord(await response.json(), 'Run response');
         failedRun = {
             ...run,
             status: 'failed',
@@ -1325,10 +1324,24 @@ test('Experimental panels retain collapse settings while Standard keeps them exp
     await expect
         .poll(() =>
             page.evaluate(() => {
-                const layout = JSON.parse(
+                const layoutValue: unknown = JSON.parse(
                     localStorage.getItem('clickstudio:workspace-layout:v1') ?? 'null',
-                ) as { query?: { collapsed?: boolean }; results?: { collapsed?: boolean } } | null;
-                return layout?.query?.collapsed === true && layout.results?.collapsed === true;
+                );
+                if (typeof layoutValue !== 'object' || layoutValue === null) return false;
+                const layout = layoutValue;
+                if (!('query' in layout) || !('results' in layout)) return false;
+                const query = layout.query;
+                const results = layout.results;
+                return (
+                    typeof query === 'object' &&
+                    query !== null &&
+                    typeof results === 'object' &&
+                    results !== null &&
+                    'collapsed' in query &&
+                    query.collapsed === true &&
+                    'collapsed' in results &&
+                    results.collapsed === true
+                );
             }),
         )
         .toBe(true);
@@ -2050,7 +2063,7 @@ test('SQL and parameter edits keep old results without a status pill', async ({ 
     page.on('request', request => {
         if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/runs') {
             runRequests++;
-            submittedSql = (request.postDataJSON() as { sql: string }).sql;
+            submittedSql = stringValue(jsonRecord(request.postDataJSON()).sql, 'Submitted SQL');
         }
     });
     await trust(page);
@@ -2324,7 +2337,7 @@ test('A delayed chart snapshot cannot update the draft after selecting another s
         url => url.pathname === '/api/documents',
         async route => {
             if (route.request().method() !== 'POST') return route.continue();
-            savePayload = route.request().postDataJSON() as Record<string, unknown>;
+            savePayload = jsonRecord(route.request().postDataJSON(), 'Document request body');
             await route.continue();
         },
     );
@@ -2361,7 +2374,7 @@ test('A delayed chart snapshot cannot update the draft after selecting another s
         await snapshotFinished;
         await page.getByTestId('save-query').click();
         await expect.poll(() => savePayload).toBeDefined();
-        expect((savePayload?.chart as { kind: string }).kind).toBe('table');
+        expect(jsonRecord(savePayload?.chart, 'Saved chart').kind).toBe('table');
     } finally {
         releaseSnapshot();
     }
@@ -2395,7 +2408,7 @@ test('Ask AI keeps chat history when SQL changes and sends prior messages with f
 }) => {
     const requests: Array<Record<string, unknown>> = [];
     await page.route('**/api/assistant/sql', async route => {
-        const body = route.request().postDataJSON() as Record<string, unknown>;
+        const body = jsonRecord(route.request().postDataJSON(), 'Assistant request body');
         requests.push(body);
         await route.fulfill({
             json: {
@@ -2439,9 +2452,12 @@ test('Ask AI keeps chat history when SQL changes and sends prior messages with f
     expect(requests[0]?.includeRun).toBe(true);
     expect(requests[0]?.result).toBeTruthy();
     expect(requests[1]?.sql).toBe('SELECT 2');
-    const previousTurn = JSON.parse(
-        (requests[1]?.conversation as Array<{ role: string; content: string }>)[0]?.content ?? '{}',
-    ) as Record<string, unknown>;
+    const previousTurnRequest = jsonRecord(arrayValue(requests[1]?.conversation)[0]);
+    const previousTurn = jsonRecord(
+        JSON.parse(
+            typeof previousTurnRequest.content === 'string' ? previousTurnRequest.content : '{}',
+        ),
+    );
     expect(previousTurn).toMatchObject({
         question: 'Show the old question',
         sql: requests[0]?.sql,
@@ -2514,7 +2530,7 @@ test('Ask AI keeps chat history when SQL changes and sends prior messages with f
 
 test('Ask AI renders answer lists, emphasis, and safe links as Markdown', async ({ page }) => {
     await page.route('**/api/assistant/sql', async route => {
-        const body = route.request().postDataJSON() as Record<string, unknown>;
+        const body = jsonRecord(route.request().postDataJSON(), 'Assistant request body');
         await route.fulfill({
             json: {
                 id: 'markdown-answer',
@@ -2559,7 +2575,7 @@ test('Ask AI renders answer lists, emphasis, and safe links as Markdown', async 
 
 test('Ask AI formats proposal citations in summaries and assumptions', async ({ page }) => {
     await page.route('**/api/assistant/sql', async route => {
-        const body = route.request().postDataJSON() as Record<string, unknown>;
+        const body = jsonRecord(route.request().postDataJSON(), 'Assistant request body');
         await route.fulfill({
             json: {
                 id: 'markdown-proposal',
@@ -2673,7 +2689,7 @@ test('Ask AI shows a stop action while a response is in progress', async ({ page
 
 test('Custom AI chat name and answer survive reload', async ({ page }) => {
     await page.route('**/api/assistant/sql', async route => {
-        const body = route.request().postDataJSON() as Record<string, unknown>;
+        const body = jsonRecord(route.request().postDataJSON(), 'Assistant request body');
         await route.fulfill({
             json: {
                 id: 'custom-title-answer',
@@ -2961,11 +2977,20 @@ test('Script polling persists every statement run ID, including fast intermediat
         page.evaluate(() => {
             const value = localStorage.getItem('clickstudio:workspace:demo:v1');
             if (!value) return [];
-            const workspace = JSON.parse(value) as {
-                tabs: { id: string; runIds: string[]; activeRunId?: string }[];
-                activeId: string;
-            };
-            return workspace.tabs.find(tab => tab.id === workspace.activeId)?.runIds ?? [];
+            const workspaceValue: unknown = JSON.parse(value);
+            if (typeof workspaceValue !== 'object' || workspaceValue === null) return [];
+            const workspace = workspaceValue;
+            if (!('tabs' in workspace) || !Array.isArray(workspace.tabs)) return [];
+            const tabs = workspace.tabs.filter(
+                (tab): tab is Record<string, unknown> =>
+                    typeof tab === 'object' && tab !== null && !Array.isArray(tab),
+            );
+            if (!('activeId' in workspace)) return [];
+            const activeTab = tabs.find(tab => tab.id === workspace.activeId);
+            return Array.isArray(activeTab?.runIds) &&
+                activeTab.runIds.every(runId => typeof runId === 'string')
+                ? activeTab.runIds
+                : [];
         });
     await expect.poll(runIds).toEqual(['run-a', 'run-b', 'run-c']);
     await expect
@@ -3165,7 +3190,7 @@ for (const outcome of ['failed', 'pending'] as const) {
         let pendingFinished = false;
         let releasePending: (() => void) | undefined;
         await page.route('**/api/connections/demo/query-tree', async route => {
-            const body = route.request().postDataJSON() as { sql: string };
+            const body = jsonRecord(route.request().postDataJSON(), 'Query tree request body');
             if (body.sql === secondSql) {
                 secondRequested = true;
                 if (outcome === 'failed') {

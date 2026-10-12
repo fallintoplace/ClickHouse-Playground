@@ -1,10 +1,10 @@
-import type { ImportJobStatus } from '../../../../shared/database/imports/status';
-import type { ImportFormat } from '../../../../shared/database/imports/limits';
-import type { Json } from '../../../../shared/common/values';
-import type { Schema, SchemaColumn } from '../../../../shared/database/schema/types';
-import { api } from '../../../api/client';
+import type { ImportJobStatus } from '../../../../shared/database/imports/status.js';
+import type { ImportFormat } from '../../../../shared/database/imports/limits.js';
+import type { Json } from '../../../../shared/common/values.js';
+import type { Schema, SchemaColumn } from '../../../../shared/database/schema/types.js';
+import { api, apiResponses } from '../../../api/client.js';
 
-export type { ImportFormat } from '../../../../shared/database/imports/limits';
+export type { ImportFormat } from '../../../../shared/database/imports/limits.js';
 export const importSteps = [
     { id: 'file', label: 'File' },
     { id: 'mapping', label: 'Set up' },
@@ -135,12 +135,14 @@ export function initialFields(
 
 export function loadImportSetup(connectionId: string, signal?: AbortSignal) {
     return Promise.all([
-        api<string[]>(
+        api(
             `/connections/${encodeURIComponent(connectionId)}/import-targets`,
+            apiResponses.isStringArray,
             signal ? { signal } : {},
         ),
-        api<Schema>(
+        api(
             `/connections/${encodeURIComponent(connectionId)}/schema`,
+            apiResponses.isSchemaResponse,
             signal ? { signal } : {},
         ),
     ]);

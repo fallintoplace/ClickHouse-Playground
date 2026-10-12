@@ -1,5 +1,6 @@
 import { setWorkspaceMode, openBlankSql, runButton, trust } from './helpers.js';
 import { test, expect, type Page } from '@playwright/test';
+import { arrayValue, jsonRecord, numberValue, stringValue } from '../helpers/type-guards.js';
 
 async function replaceSql(page: Page, sql: string) {
     await page.locator('.cm-content').focus();
@@ -15,8 +16,10 @@ async function editorState(page: Page) {
             .getEntriesByType('resource')
             .find((entry: PerformanceEntry) => entry.name.includes('/@codemirror_view.js'))?.name;
         if (!url) throw new Error('Editor module was not loaded');
-        const { EditorView } = (await import(url)) as typeof import('@codemirror/view');
-        const editor = EditorView.findFromDOM(root as HTMLElement)!;
+        const { EditorView }: typeof import('@codemirror/view') = await import(url);
+        if (!(root instanceof HTMLElement)) throw new Error('Editor root is not an HTML element');
+        const editor = EditorView.findFromDOM(root);
+        if (!editor) throw new Error('Editor view is not attached to its root');
         return {
             sql: editor.state.doc.toString(),
             ranges: editor.state.selection.ranges.map(range => ({
@@ -36,14 +39,17 @@ async function editorDiagnostics(page: Page) {
             if (!url) throw new Error(`${name} was not loaded`);
             return url;
         };
-        const { EditorView } = (await import(
+        const { EditorView }: typeof import('@codemirror/view') = await import(
             moduleUrl('/@codemirror_view.js')
-        )) as typeof import('@codemirror/view');
-        const { forEachDiagnostic } = (await import(
+        );
+        const { forEachDiagnostic }: typeof import('@codemirror/lint') = await import(
             moduleUrl('/@codemirror_lint.js')
-        )) as typeof import('@codemirror/lint');
+        );
+        if (!(root instanceof HTMLElement)) throw new Error('Editor root is not an HTML element');
+        const editor = EditorView.findFromDOM(root);
+        if (!editor) throw new Error('Editor view is not attached to its root');
         const diagnostics: Array<{ from: number; source: string | undefined }> = [];
-        forEachDiagnostic(EditorView.findFromDOM(root as HTMLElement)!.state, (diagnostic, from) =>
+        forEachDiagnostic(editor.state, (diagnostic, from) =>
             diagnostics.push({ from, source: diagnostic.source }),
         );
         return diagnostics;
@@ -58,8 +64,12 @@ async function selectRange(page: Page, anchor: number, head = anchor) {
                 .find((entry: PerformanceEntry) =>
                     entry.name.includes('/@codemirror_view.js'),
                 )?.name;
-            const { EditorView } = (await import(url!)) as typeof import('@codemirror/view');
-            const editor = EditorView.findFromDOM(root as HTMLElement)!;
+            if (!url) throw new Error('Editor module was not loaded');
+            const { EditorView }: typeof import('@codemirror/view') = await import(url);
+            if (!(root instanceof HTMLElement))
+                throw new Error('Editor root is not an HTML element');
+            const editor = EditorView.findFromDOM(root);
+            if (!editor) throw new Error('Editor view is not attached to its root');
             editor.dispatch({ selection, scrollIntoView: true });
             editor.focus();
         },
@@ -295,11 +305,7 @@ test('selected repeated SQL submits exact source offsets and highlights the sele
     await selectRange(page, sql.length, sql.indexOf('\n') + 1);
     await page.route('**/api/runs', route => {
         if (route.request().method() !== 'POST') return route.continue();
-        const body = route.request().postDataJSON() as {
-            sourceFrom: number;
-            sourceTo: number;
-            sql: string;
-        };
+        const body = jsonRecord(route.request().postDataJSON(), 'Run request body');
         expect(body.sourceFrom).toBe(sql.lastIndexOf('SELECT'));
         expect(body.sourceTo).toBe(sql.length - 1);
         expect(body.sql).toBe('SELECT missing()');
@@ -376,7 +382,9 @@ test('Cmd/Ctrl+S saves SQL typed in the Standard detached window', async ({ page
     await popup.keyboard.press('ControlOrMeta+s');
     const response = await submitted;
     expect(response.ok()).toBe(true);
-    expect(((await response.json()) as { sql: string }).sql).toBe('SELECT 42 AS detached_save');
+    expect(stringValue(jsonRecord(await response.json()).sql, 'Saved SQL')).toBe(
+        'SELECT 42 AS detached_save',
+    );
     await page.getByRole('button', { name: 'Dock editor here', exact: true }).click();
     await expect.poll(async () => (await editorState(page)).sql).toBe('SELECT 42 AS detached_save');
 });
@@ -464,29 +472,34 @@ test('selected scripts preserve each run offset in the original draft', async ({
             new URL(response.url()).pathname === '/api/scripts',
     );
     await runButton(page).click();
-    const script = (await (await submitted).json()) as {
-        id: string;
-        statements: Array<{ from: number; to: number; runId?: string }>;
-    };
-    expect(script.statements.length).toBe(2);
+    const script = jsonRecord(await (await submitted).json(), 'Script response');
+    const scriptId = stringValue(script.id, 'Script ID');
+    const statements = arrayValue(script.statements, 'Script statements').map(statement =>
+        jsonRecord(statement, 'Script statement'),
+    );
+    expect(statements.length).toBe(2);
     await expect
         .poll(async () => {
-            const response = await page.request.get(`/api/scripts/${script.id}`);
-            const current = (await response.json()) as typeof script;
+            const response = await page.request.get(`/api/scripts/${scriptId}`);
+            const current = jsonRecord(await response.json(), 'Script response');
+            const currentStatements = arrayValue(current.statements, 'Script statements').map(
+                statement => jsonRecord(statement, 'Script statement'),
+            );
             const ranges = [];
-            for (const statement of current.statements) {
-                if (!statement.runId) return [];
-                const run = (await (
-                    await page.request.get(`/api/runs/${statement.runId}`)
-                ).json()) as { sourceFrom: number; sourceTo: number };
+            for (const statement of currentStatements) {
+                if (typeof statement.runId !== 'string') return [];
+                const run = jsonRecord(
+                    await (await page.request.get(`/api/runs/${statement.runId}`)).json(),
+                    'Run response',
+                );
                 ranges.push([run.sourceFrom, run.sourceTo]);
             }
             return ranges;
         })
         .toEqual(
-            script.statements.map(statement => [
-                sourceFrom + statement.from,
-                sourceFrom + statement.to,
+            statements.map(statement => [
+                sourceFrom + numberValue(statement.from, 'Statement start'),
+                sourceFrom + numberValue(statement.to, 'Statement end'),
             ]),
         );
 });

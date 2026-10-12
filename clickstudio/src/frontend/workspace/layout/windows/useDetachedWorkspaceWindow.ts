@@ -19,10 +19,11 @@ function copyWorkspaceStyles(source: Document, target: Document) {
     for (const sourceNode of Array.from(
         source.head.querySelectorAll('style, link[rel~="stylesheet"]'),
     )) {
-        const clone = sourceNode.cloneNode(true) as HTMLStyleElement | HTMLLinkElement;
+        const clone = sourceNode.cloneNode(true);
+        if (!(clone instanceof Element)) continue;
         clone.setAttribute('data-clickstudio-detached-style', '');
-        if (clone.tagName === 'LINK')
-            (clone as HTMLLinkElement).href = (sourceNode as HTMLLinkElement).href;
+        if (clone instanceof HTMLLinkElement && sourceNode instanceof HTMLLinkElement)
+            clone.href = sourceNode.href;
         target.head.append(clone);
     }
 }

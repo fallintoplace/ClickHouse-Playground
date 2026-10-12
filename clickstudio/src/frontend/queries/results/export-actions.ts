@@ -1,6 +1,5 @@
-import type { Result } from '../../../shared/queries/results/types';
 import { exportCsv } from '../../../shared/queries/results/results';
-import { api, download, isFrontendDemoPreview, message } from '../../api/client';
+import { api, apiResponses, download, isFrontendDemoPreview, message } from '../../api/client';
 import { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../database/connections/cloud-connection';
 import type { Draft } from '../editor/drafts/workspace-state';
 import type { useRunEvidence } from '../execution/useRunEvidence';
@@ -23,7 +22,10 @@ export function createQueryExportActions({
                 const full =
                     snapshot?.runId === run.id
                         ? snapshot
-                        : await api<Result>(`/runs/${encodeURIComponent(run.id)}/snapshot`);
+                        : await api(
+                              `/runs/${encodeURIComponent(run.id)}/snapshot`,
+                              apiResponses.isResultResponse,
+                          );
                 download(`${run.queryId}.csv`, exportCsv(full), 'text/csv;charset=utf-8');
                 return;
             }

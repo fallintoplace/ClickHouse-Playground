@@ -48,7 +48,6 @@ export interface PreparedGeoFeatures {
     sampled: boolean;
 }
 
-const GEO_TYPES = new Set<NativeGeoType>(NATIVE_GEO_TYPES);
 const MAX_GEO_LITERAL_LENGTH = 1_000_000;
 const MAX_GEO_LITERAL_VALUES = 200_000;
 const MAX_GEO_LITERAL_DEPTH = 8;
@@ -117,8 +116,8 @@ const identifierLike = /(^|_)(id|key|index|cell|h3)($|_)/i;
 const namedLabel = /(^|_)(name|label|city|country|region|place|route|title)($|_)/i;
 
 export function nativeGeoType(type: string): NativeGeoType | undefined {
-    const typeName = baseType(type) as NativeGeoType;
-    return GEO_TYPES.has(typeName) ? typeName : undefined;
+    const typeName = baseType(type);
+    return NATIVE_GEO_TYPES.find(candidate => candidate === typeName);
 }
 
 export function nativeGeoColumns(columns: Column[]): number[] {

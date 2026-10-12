@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { tableDeletionConfirmation } from '../../../shared/database/tables/delete-table';
 import type { SchemaTable } from '../../../shared/database/schema/types';
-import { api } from '../../api/client';
+import { api, apiResponses } from '../../api/client';
 import {
     CLICKHOUSE_CLOUD_CONNECTION_ID,
     dropClickHouseCloudTable,
@@ -38,10 +38,14 @@ export function DeleteTableDialog({ connectionId, table, onClose, onDeleted }: P
             if (connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID) {
                 await dropClickHouseCloudTable(table.database, table.name, confirmation);
             } else {
-                await api(`/connections/${encodeURIComponent(connectionId)}/tables`, {
-                    method: 'DELETE',
-                    body: { database: table.database, table: table.name, confirmation },
-                });
+                await api(
+                    `/connections/${encodeURIComponent(connectionId)}/tables`,
+                    apiResponses.isUnknown,
+                    {
+                        method: 'DELETE',
+                        body: { database: table.database, table: table.name, confirmation },
+                    },
+                );
             }
             onDeleted(table);
             onClose();

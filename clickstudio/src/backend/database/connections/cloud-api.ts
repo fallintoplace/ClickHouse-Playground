@@ -82,9 +82,9 @@ import {
 } from '../../../shared/database/explorer/activity/replication.js';
 import {
     QUERY_LOG_SOURCES,
+    isWorkloadWindow,
     isQueryLogSource,
     parseWorkloadSnapshot,
-    WORKLOAD_WINDOWS,
     workloadFamiliesQuery,
     workloadPointsQuery,
     type QueryLogSource,
@@ -154,6 +154,29 @@ function validImportDeduplicationToken(value: unknown): value is string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+    return isRecord(value) && Object.values(value).every(item => typeof item === 'string');
+}
+
+function isCreateTableColumnType(value: unknown): value is CreateTableColumnType {
+    return CREATE_TABLE_COLUMN_TYPES.some(type => type === value);
+}
+
+function isExpectedColumns(
+    value: unknown,
+): value is { name: string; type: string; defaultKind: string }[] {
+    return (
+        Array.isArray(value) &&
+        value.every(
+            column =>
+                isRecord(column) &&
+                typeof column.name === 'string' &&
+                typeof column.type === 'string' &&
+                typeof column.defaultKind === 'string',
+        )
+    );
 }
 
 function json(body: unknown, status = 200): Response {
@@ -241,7 +264,7 @@ function asString(value: unknown): string {
 }
 
 export async function queryRows<T>(
-    client: ReturnType<typeof makeClient>,
+    client: Pick<ReturnType<typeof makeClient>, 'query'>,
     query: string,
     queryParams: Record<string, string> = {},
     timeoutMs = CLOUD_QUERY_TIMEOUT_MS,
@@ -542,14 +565,14 @@ async function createCloudTable(
             !isRecord(value) ||
             !isImportIdentifier(value.name) ||
             typeof value.type !== 'string' ||
-            !(CREATE_TABLE_COLUMN_TYPES as readonly string[]).includes(value.type)
+            !isCreateTableColumnType(value.type)
         )
             throw new AppError(400, 'TABLE_COLUMNS', 'Check the table column names and types.');
         if (value.generatedId !== undefined && typeof value.generatedId !== 'boolean')
             throw new AppError(400, 'TABLE_COLUMNS', 'Check the generated ID option.');
         return {
             name: value.name,
-            type: value.type as CreateTableColumnType,
+            type: value.type,
             ...(value.generatedId === true ? { generatedId: true } : {}),
         };
     });
@@ -649,21 +672,21 @@ function queryParameters(value: unknown): Record<string, string> {
     if (value === undefined) return {};
     if (!isRecord(value) || Object.keys(value).length > 50)
         throw new AppError(400, 'QUERY_PARAMETERS', 'Use up to 50 named query parameters.');
-    const entries = Object.entries(value);
-    if (
-        entries.some(
-            ([name, item]) =>
-                !/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(name) ||
-                typeof item !== 'string' ||
-                item.length > 8_000,
+    const parameters: [string, string][] = [];
+    for (const [name, item] of Object.entries(value)) {
+        if (
+            !/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(name) ||
+            typeof item !== 'string' ||
+            item.length > 8_000
         )
-    )
-        throw new AppError(
-            400,
-            'QUERY_PARAMETERS',
-            'Each query parameter needs a valid name and a text value under 8 KB.',
-        );
-    return Object.fromEntries(entries) as Record<string, string>;
+            throw new AppError(
+                400,
+                'QUERY_PARAMETERS',
+                'Each query parameter needs a valid name and a text value under 8 KB.',
+            );
+        parameters.push([name, item]);
+    }
+    return Object.fromEntries(parameters);
 }
 
 async function runSql(
@@ -925,10 +948,6 @@ async function cloudReferenceEntry(
     }
 }
 
-function isWorkloadWindow(value: unknown): value is WorkloadWindow {
-    return typeof value === 'number' && (WORKLOAD_WINDOWS as readonly number[]).includes(value);
-}
-
 async function readWorkload(
     credentials: CloudCredentials,
     url: string,
@@ -1050,11 +1069,11 @@ async function readReplication(credentials: CloudCredentials, url: string) {
     }
 }
 
-function parseFormJson<T>(form: FormData, key: string): T | undefined {
+function parseFormJson(form: FormData, key: string): unknown {
     const value = form.get(key);
     if (typeof value !== 'string') return undefined;
     try {
-        return JSON.parse(value) as T;
+        return JSON.parse(value);
     } catch {
         throw new AppError(400, 'IMPORT_REQUEST', `The ${key} field is not valid JSON.`);
     }
@@ -1248,25 +1267,22 @@ async function commitCloudImport(
     const deduplicationToken =
         deduplicationTokenValue === null ? undefined : deduplicationTokenValue;
     const target = form.get('target');
-    const fields = parseFormJson<Record<string, unknown>>(form, 'fields');
-    if (!fields || typeof fields !== 'object' || Array.isArray(fields))
+    const fieldsValue = parseFormJson(form, 'fields');
+    if (!isStringRecord(fieldsValue))
         throw new AppError(400, 'IMPORT_MAPPING', 'Choose at least one destination column.');
+    const fields = fieldsValue;
     const source = await file.text();
     const parsed = parseInput(source, format);
     if (!parsed.rows.length)
         throw new AppError(400, 'IMPORT_EMPTY', 'The input contains no data rows.');
-    const createTable = parseFormJson<{
-        database?: unknown;
-        name?: unknown;
-        columns?: unknown;
-        generateId?: unknown;
-    }>(form, 'createTable');
+    const createTable = parseFormJson(form, 'createTable');
     const creating = createTable !== undefined;
+    const generateId = isRecord(createTable) && createTable.generateId === true;
     let createColumns: { source: string; name: string; type: CreateTableColumnType }[] = [];
 
     const prepareNewImportTable = async () => {
         if (
-            !createTable ||
+            !isRecord(createTable) ||
             (createTable.database !== undefined &&
                 (!isValidTableDatabase(createTable.database) ||
                     isSystemDatabaseName(createTable.database))) ||
@@ -1291,7 +1307,7 @@ async function commitCloudImport(
                 !parsed.columns.includes(value.source) ||
                 !isImportIdentifier(value.name) ||
                 typeof value.type !== 'string' ||
-                !(CREATE_TABLE_COLUMN_TYPES as readonly string[]).includes(value.type)
+                !isCreateTableColumnType(value.type)
             )
                 throw new AppError(
                     400,
@@ -1301,7 +1317,7 @@ async function commitCloudImport(
             return {
                 source: value.source,
                 name: value.name,
-                type: value.type as CreateTableColumnType,
+                type: value.type,
             };
         });
         if (
@@ -1390,11 +1406,9 @@ async function commitCloudImport(
         );
         if (!allColumns.length)
             throw new AppError(404, 'IMPORT_TABLE', 'The selected table has no visible columns.');
-        const expectedColumns = parseFormJson<
-            { name: string; type: string; defaultKind: string }[]
-        >(form, 'expectedColumns');
+        const expectedColumns = parseFormJson(form, 'expectedColumns');
         if (
-            !Array.isArray(expectedColumns) ||
+            !isExpectedColumns(expectedColumns) ||
             JSON.stringify(expectedColumns) !==
                 JSON.stringify(
                     allColumns.map(({ name, type, defaultKind }) => ({ name, type, defaultKind })),
@@ -1443,12 +1457,7 @@ async function commitCloudImport(
 
     let mappedRows: Record<string, Json>[];
     try {
-        mappedRows = mapImportRows(
-            parsed.rows,
-            parsed.columns,
-            fields as Record<string, string>,
-            destinationColumns,
-        ).rows;
+        mappedRows = mapImportRows(parsed.rows, parsed.columns, fields, destinationColumns).rows;
     } catch (error) {
         if (error instanceof ImportMappingError) throw new AppError(400, error.code, error.message);
         throw error;
@@ -1461,7 +1470,7 @@ async function commitCloudImport(
                 ...createColumns.map(
                     column => `${quoteIdentifier(column.name)} Nullable(${column.type})`,
                 ),
-                ...(createTable?.generateId === true
+                ...(generateId
                     ? [
                           `\`id\` UInt64 DEFAULT generateSerialID(${quoteStringLiteral(`${tableDatabase}.${tableName}`)})`,
                       ]

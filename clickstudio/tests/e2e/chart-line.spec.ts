@@ -133,7 +133,11 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const)
             await expect(lines).toHaveCount(fixture.lines);
             await expect(results.locator('.chart-point')).toHaveCount(fixture.points);
             const lengths = await lines.evaluateAll(elements =>
-                elements.map(element => (element as SVGPolylineElement).getTotalLength()),
+                elements.map(element => {
+                    if (!(element instanceof SVGPolylineElement))
+                        throw new Error('Line chart element is not an SVG polyline');
+                    return element.getTotalLength();
+                }),
             );
             if (
                 fixture.name === 'dense category lines' ||
@@ -157,7 +161,9 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const)
             const actual = await canvas.screenshot({ animations: 'disabled' });
             await lines.evaluateAll(elements =>
                 elements.forEach(element => {
-                    (element as SVGPolylineElement).style.strokeDasharray = 'none';
+                    if (!(element instanceof SVGPolylineElement))
+                        throw new Error('Line chart element is not an SVG polyline');
+                    element.style.strokeDasharray = 'none';
                 }),
             );
             const solid = await canvas.screenshot({ animations: 'disabled' });

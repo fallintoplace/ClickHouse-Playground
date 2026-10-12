@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import type { AddressInfo } from 'node:net';
 import { randomUUID } from 'node:crypto';
 import { createApp } from '../../src/backend/app/app.js';
 import { loadConfig } from '../../src/backend/system/config.js';
@@ -15,9 +14,19 @@ import type {
     ClickHouseDocumentationEntry,
     ClickHouseDocumentationSummary,
 } from '../../src/shared/database/reference/types.js';
-import type { QueryDocument, Published } from '../../src/shared/queries/saved-queries/types.js';
+import { isQueryDocument } from '../../src/shared/queries/saved-queries/validation.js';
 import type { ReferenceCategory } from '../../src/shared/database/reference/reference.js';
-import type { Run } from '../../src/shared/queries/execution/types.js';
+import { isRun } from '../../src/frontend/queries/execution/events.js';
+import { apiResponses } from '../../src/frontend/api/response-guards.js';
+import {
+    arrayValue,
+    decodeArray,
+    decodeValue,
+    jsonRecord,
+    responseErrorCode,
+    serverPort,
+    stringValue,
+} from '../helpers/type-guards.js';
 type CloudApiStub = { fetch: (request: Request) => Promise<Response> };
 async function start(
     token?: string,
@@ -39,7 +48,7 @@ async function start(
         server.once('listening', resolve);
         server.once('error', reject);
     });
-    config.port = (server.address() as AddressInfo).port;
+    config.port = serverPort(server);
     config.origin = `http://127.0.0.1:${config.port}`;
     const call = (
         path: string,
@@ -78,10 +87,7 @@ test('Proposal decisions reject stored-only states and unknown values before loo
             currentSql: '',
         });
         assert.equal(response.status, 400);
-        assert.equal(
-            ((await response.json()) as { error: { code: string } }).error.code,
-            'DECISION',
-        );
+        assert.equal(await responseErrorCode(response), 'DECISION');
     }
     for (const decision of ['accepted', 'rejected']) {
         const response = await app.call('/assistant/proposals/missing/decision', {
@@ -90,10 +96,7 @@ test('Proposal decisions reject stored-only states and unknown values before loo
             currentSql: '',
         });
         assert.equal(response.status, 404);
-        assert.equal(
-            ((await response.json()) as { error: { code: string } }).error.code,
-            'NOT_FOUND',
-        );
+        assert.equal(await responseErrorCode(response), 'NOT_FOUND');
     }
 });
 class NoQueryLogDemoDriver extends DemoDriver {
@@ -259,7 +262,7 @@ test('Local API exposes the public Playground as ready and read only', async t =
         server.once('listening', resolve);
         server.once('error', reject);
     });
-    config.origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    config.origin = `http://127.0.0.1:${serverPort(server)}`;
     t.after(async () => {
         await service.close();
         server.closeAllConnections();
@@ -270,23 +273,17 @@ test('Local API exposes the public Playground as ready and read only', async t =
         headers: { 'x-clickstudio-intent': '1' },
     });
     assert.equal(response.status, 200);
-    const connections = (await response.json()) as Array<{
-        id: string;
-        trusted: boolean;
-        readonly: boolean;
-        manifest?: {
-            import: { available: boolean };
-            scripts: { available: boolean };
-            parameters: { available: boolean };
-        };
-    }>;
+    const connections = arrayValue(await response.json(), 'Connection list').map(connection =>
+        jsonRecord(connection, 'Connection'),
+    );
     const playground = connections.find(connection => connection.id === 'playground');
     assert.ok(playground);
     assert.equal(playground.trusted, true);
     assert.equal(playground.readonly, true);
-    assert.equal(playground.manifest?.import.available, false);
-    assert.equal(playground.manifest?.scripts.available, false);
-    assert.equal(playground.manifest?.parameters.available, false);
+    const manifest = jsonRecord(playground.manifest, 'Playground capabilities');
+    assert.equal(jsonRecord(manifest.import).available, false);
+    assert.equal(jsonRecord(manifest.scripts).available, false);
+    assert.equal(jsonRecord(manifest.parameters).available, false);
 });
 
 test('Write targets accept valid tables in any non-system database', () => {
@@ -304,22 +301,17 @@ test('Import targets list tables from visible non-system databases', async () =>
     const driver = new ClickHouseDriver(
         loadConfig({ CLICKHOUSE_DATABASE: 'analytics', CLICKHOUSE_USER: 'interview_user' }),
     );
-    const queryDriver = driver as unknown as {
-        rows: (
-            _id: string,
-            query: string,
-            parameters?: Record<string, string>,
-        ) => Promise<Array<{ database: string; name: string }>>;
-    };
-    queryDriver.rows = async (_id, query, parameters = {}) => {
-        assert.match(query, /system\.tables/);
-        assert.deepEqual(parameters, { database: 'analytics' });
-        return [
-            { database: 'analytics', name: 'events' },
-            { database: 'default', name: 'interview_events' },
-            { database: 'system', name: 'users' },
-        ];
-    };
+    Object.defineProperty(driver, 'rows', {
+        value: async (_id: string, query: string, parameters: Record<string, string> = {}) => {
+            assert.match(query, /system\.tables/);
+            assert.deepEqual(parameters, { database: 'analytics' });
+            return [
+                { database: 'analytics', name: 'events' },
+                { database: 'default', name: 'interview_events' },
+                { database: 'system', name: 'users' },
+            ];
+        },
+    });
     assert.deepEqual(await driver.targets('local'), [
         'analytics.events',
         'default.interview_events',
@@ -347,7 +339,7 @@ test('Writes fall back to the connection identity when no writer is configured',
         server.once('listening', resolve);
         server.once('error', reject);
     });
-    const port = (server.address() as AddressInfo).port;
+    const port = serverPort(server);
     const driver = new ClickHouseDriver(
         loadConfig({
             CLICKHOUSE_URL: `http://127.0.0.1:${port}`,
@@ -404,7 +396,7 @@ test('Public Playground queries stay within its server result-row limit', async 
         server.once('listening', resolve);
         server.once('error', reject);
     });
-    const port = (server.address() as AddressInfo).port;
+    const port = serverPort(server);
     const config = loadConfig({});
     const playground = config.profiles.find(profile => profile.publicPlayground);
     assert.ok(playground);
@@ -418,7 +410,7 @@ test('Public Playground queries stay within its server result-row limit', async 
         parameters: {},
         limits: playground.limits,
         tags: {},
-    } as Run;
+    } satisfies import('../../src/shared/queries/execution/types.js').Run;
     try {
         const result = await driver.execute(run, AbortSignal.timeout(5000), () => undefined);
         assert.deepEqual(result.rows, [['ready']]);
@@ -501,10 +493,7 @@ test('Reference routes report unavailable native documentation instead of return
     await s.call('/connections/demo/trust', { trusted: true, confirmation: 'demo' });
     const response = await s.call('/connections/demo/documentation/search');
     assert.equal(response.status, 409);
-    assert.equal(
-        ((await response.json()) as { error: { code: string } }).error.code,
-        'CAPABILITY_UNAVAILABLE',
-    );
+    assert.equal(await responseErrorCode(response), 'CAPABILITY_UNAVAILABLE');
 });
 
 test('Assistant context includes relevant native ClickHouse documentation before consent', async t => {
@@ -520,18 +509,20 @@ test('Assistant context includes relevant native ClickHouse documentation before
         sql: 'SELECT quantileExact(0.5)(latency_ms) FROM events',
     });
     assert.equal(response.status, 201);
-    const prepared = (await response.json()) as { payload: { context: string }; summary: string[] };
-    const context = JSON.parse(prepared.payload.context) as {
-        referenceDocs: Array<{ name: string; origin: string; serverVersion: string }>;
-    };
+    const prepared = jsonRecord(await response.json(), 'Prepared assistant context');
+    const payload = jsonRecord(prepared.payload, 'Prepared context payload');
+    const context = jsonRecord(JSON.parse(stringValue(payload.context, 'Context JSON')));
+    const referenceDocs = arrayValue(context.referenceDocs).map(item =>
+        jsonRecord(item, 'Reference document'),
+    );
     assert.ok(
         driver.entries.some(
             entry => entry.name === 'quantileExact' && entry.type === 'Aggregate Function',
         ),
     );
-    assert.equal(context.referenceDocs[0]?.name, 'quantileExact');
-    assert.equal(context.referenceDocs[0]?.origin, 'native');
-    assert.ok(prepared.summary.some(item => item.includes('server 24.6-test')));
+    assert.equal(jsonRecord(referenceDocs[0]).name, 'quantileExact');
+    assert.equal(jsonRecord(referenceDocs[0]).origin, 'native');
+    assert.ok(arrayValue(prepared.summary).some(item => String(item).includes('server 24.6-test')));
 });
 
 test('Assistant context falls back to the bundled ClickHouse documentation', async t => {
@@ -546,13 +537,13 @@ test('Assistant context falls back to the bundled ClickHouse documentation', asy
         sql: 'SELECT quantileExact(0.5)(latency_ms) FROM events',
     });
     assert.equal(response.status, 201);
-    const prepared = (await response.json()) as { payload: { context: string }; summary: string[] };
-    const context = JSON.parse(prepared.payload.context) as {
-        referenceDocs: Array<{ name: string; origin: string; serverVersion: string }>;
-    };
-    assert.equal(context.referenceDocs[0]?.name, 'quantileExact');
-    assert.equal(context.referenceDocs[0]?.origin, 'bundled');
-    assert.match(context.referenceDocs[0]?.serverVersion ?? '', /^(?:Offline docs |Demo catalog)/);
+    const prepared = jsonRecord(await response.json(), 'Prepared assistant context');
+    const payload = jsonRecord(prepared.payload, 'Prepared context payload');
+    const context = jsonRecord(JSON.parse(stringValue(payload.context, 'Context JSON')));
+    const reference = jsonRecord(arrayValue(context.referenceDocs)[0], 'Reference document');
+    assert.equal(reference.name, 'quantileExact');
+    assert.equal(reference.origin, 'bundled');
+    assert.match(stringValue(reference.serverVersion), /^(?:Offline docs |Demo catalog)/);
 });
 
 test('Ask AI uses a validated Playground server version supplied by the browser', async t => {
@@ -561,8 +552,10 @@ test('Ask AI uses a validated Playground server version supplied by the browser'
         available: true,
         model: 'fixture',
         propose: async context => {
-            sentVersion = (JSON.parse(context.payload.context) as { serverVersion: string })
-                .serverVersion;
+            sentVersion = stringValue(
+                jsonRecord(JSON.parse(context.payload.context)).serverVersion,
+                'Server version',
+            );
             return {
                 content: {
                     sql: null,
@@ -608,7 +601,7 @@ test('Ask AI uses browser Cloud schema and run evidence without resolving a loca
         available: true,
         model: 'fixture',
         propose: async context => {
-            sentContext = JSON.parse(context.payload.context) as Record<string, unknown>;
+            sentContext = jsonRecord(JSON.parse(context.payload.context), 'Assistant context');
             return {
                 content: {
                     sql: 'SELECT player FROM default.world_cup_golden_boot',
@@ -670,16 +663,19 @@ test('Ask AI uses browser Cloud schema and run evidence without resolving a loca
         { database: 'default', table: 'world_cup_golden_boot', name: 'player', type: 'String' },
     ]);
     assert.equal(sentContext?.evidenceSql, 'SELECT player FROM default.world_cup_golden_boot');
-    assert.deepEqual((sentContext?.result as { rows: unknown[][] }).rows, [['Marta']]);
+    assert.deepEqual(jsonRecord(sentContext?.result, 'Result context').rows, [['Marta']]);
 
-    const proposal = (await response.json()) as { id: string; decision: string };
-    const accepted = await s.call(`/assistant/proposals/${proposal.id}/decision`, {
-        decision: 'accepted',
-        connectionId: 'clickhouse-cloud',
-        currentSql: 'SELECT player FROM default.world_cup_golden_boot',
-    });
+    const proposal = jsonRecord(await response.json(), 'Assistant proposal');
+    const accepted = await s.call(
+        `/assistant/proposals/${stringValue(proposal.id, 'Proposal ID')}/decision`,
+        {
+            decision: 'accepted',
+            connectionId: 'clickhouse-cloud',
+            currentSql: 'SELECT player FROM default.world_cup_golden_boot',
+        },
+    );
     assert.equal(accepted.status, 200);
-    assert.equal(((await accepted.json()) as { decision: string }).decision, 'accepted');
+    assert.equal(jsonRecord(await accepted.json()).decision, 'accepted');
 
     const invalidSchema = await s.call('/assistant/sql', {
         connectionId: 'clickhouse-cloud',
@@ -706,7 +702,10 @@ for (const connectionId of ['demo', 'clickhouse-cloud'])
             propose: async context => {
                 assert.equal(context.action, 'repair');
                 assert.equal(context.baseSql, sql);
-                const payload = JSON.parse(context.payload.context) as Record<string, unknown>;
+                const payload = jsonRecord(
+                    JSON.parse(context.payload.context),
+                    'Assistant context',
+                );
                 assert.equal(payload.evidenceSql, 'SELECT event_count FROM demo.events');
                 assert.equal(payload.error, error);
                 assert.equal(payload.result, undefined);
@@ -744,16 +743,19 @@ for (const connectionId of ['demo', 'clickhouse-cloud'])
             repair: { sql: 'SELECT event_count FROM demo.events', error },
         });
         assert.equal(response.status, 201);
-        const proposal = (await response.json()) as { id: string; action: string; sql: string };
+        const proposal = jsonRecord(await response.json(), 'Assistant proposal');
         assert.equal(proposal.action, 'repair');
         assert.equal(proposal.sql, repairedSql);
-        const accepted = await s.call(`/assistant/proposals/${proposal.id}/decision`, {
-            connectionId,
-            decision: 'accepted',
-            currentSql: sql,
-        });
+        const accepted = await s.call(
+            `/assistant/proposals/${stringValue(proposal.id, 'Proposal ID')}/decision`,
+            {
+                connectionId,
+                decision: 'accepted',
+                currentSql: sql,
+            },
+        );
         assert.equal(accepted.status, 200);
-        assert.equal(((await accepted.json()) as { decision: string }).decision, 'accepted');
+        assert.equal(jsonRecord(await accepted.json()).decision, 'accepted');
     });
 
 test('Removed voice endpoints return the API not-found response', async t => {
@@ -765,10 +767,7 @@ test('Removed voice endpoints return the API not-found response', async t => {
     ] as const) {
         const response = await s.call(path, input);
         assert.equal(response.status, 404);
-        assert.equal(
-            ((await response.json()) as { error: { code: string } }).error.code,
-            'NOT_FOUND',
-        );
+        assert.equal(await responseErrorCode(response), 'NOT_FOUND');
     }
 });
 test('HTTP query flow requires explicit trust and is idempotent', async t => {
@@ -782,13 +781,17 @@ test('HTTP query flow requires explicit trust and is idempotent', async t => {
     );
     const a = await s.call('/runs', input);
     assert.equal(a.status, 202);
-    const run = (await a.json()) as Run;
-    const duplicate = (await (await s.call('/runs', input)).json()) as Run;
+    const run = decodeValue(await a.json(), isRun, 'Run response');
+    const duplicate = decodeValue(
+        await (await s.call('/runs', input)).json(),
+        isRun,
+        'Duplicate run response',
+    );
     assert.equal(duplicate.id, run.id);
     await s.runs.wait(owner, run.id);
     const page = await s.call(`/runs/${run.id}/result?offset=0&count=2`);
     assert.equal(page.status, 200);
-    assert.equal((await page.json()).rows.length, 2);
+    assert.equal(arrayValue(jsonRecord(await page.json()).rows).length, 2);
     const event = await s.call(`/runs/${run.id}/events`);
     const text = await event.text();
     assert.match(text, /data: /);
@@ -799,17 +802,21 @@ test('Pipeline inspection works when query-log evidence is unavailable', async t
         s = await start(undefined, undefined, driver);
     t.after(() => s.stop());
     await s.call('/connections/demo/trust', { trusted: true, confirmation: 'demo' });
-    const run = (await (
-        await s.call('/runs', {
-            clientRequestId: randomUUID(),
-            connectionId: 'demo',
-            sql: 'SELECT number FROM numbers(4)',
-        })
-    ).json()) as Run;
+    const run = decodeValue(
+        await (
+            await s.call('/runs', {
+                clientRequestId: randomUUID(),
+                connectionId: 'demo',
+                sql: 'SELECT number FROM numbers(4)',
+            })
+        ).json(),
+        isRun,
+        'Run response',
+    );
     await s.runs.wait(owner, run.id);
     const response = await s.call(`/runs/${run.id}/profile/pipeline`);
     assert.equal(response.status, 200);
-    const pipeline = await response.json();
+    const pipeline = jsonRecord(await response.json(), 'Pipeline response');
     assert.equal(pipeline.source, 'explain_pipeline');
     assert.equal(driver.evidenceCalls, 0);
 });
@@ -847,13 +854,17 @@ test('Observability routes honor manifest capabilities and keep flamegraphs scop
     assert.equal((await s.call('/connections/demo/workload')).status, 409);
     assert.equal((await s.call('/connections/demo/replication')).status, 409);
 
-    const run = (await (
-        await s.call('/runs', {
-            clientRequestId: randomUUID(),
-            connectionId: 'demo',
-            sql: 'SELECT 1',
-        })
-    ).json()) as Run;
+    const run = decodeValue(
+        await (
+            await s.call('/runs', {
+                clientRequestId: randomUUID(),
+                connectionId: 'demo',
+                sql: 'SELECT 1',
+            })
+        ).json(),
+        isRun,
+        'Run response',
+    );
     await s.runs.wait(owner, run.id);
     assert.equal((await s.call(`/runs/${run.id}/profile/flamegraph`)).status, 409);
 });
@@ -861,17 +872,21 @@ test('Completed demo runs expose one bounded flamegraph with CPU and wall-clock 
     const s = await start();
     t.after(() => s.stop());
     await s.call('/connections/demo/trust', { trusted: true, confirmation: 'demo' });
-    const run = (await (
-        await s.call('/runs', {
-            clientRequestId: randomUUID(),
-            connectionId: 'demo',
-            sql: 'SELECT 1',
-        })
-    ).json()) as Run;
+    const run = decodeValue(
+        await (
+            await s.call('/runs', {
+                clientRequestId: randomUUID(),
+                connectionId: 'demo',
+                sql: 'SELECT 1',
+            })
+        ).json(),
+        isRun,
+        'Run response',
+    );
     await s.runs.wait(owner, run.id);
     const response = await s.call(`/runs/${run.id}/profile/flamegraph`);
     assert.equal(response.status, 200);
-    const flamegraph = await response.json();
+    const flamegraph = jsonRecord(await response.json(), 'Flamegraph response');
     assert.equal(flamegraph.queryId, run.queryId);
     assert.ok(flamegraph.series.CPU.samples > 0);
     assert.ok(flamegraph.series.Real.samples > 0);
@@ -906,11 +921,7 @@ test('Assistant evaluation report is available without a provider and keeps SQL 
     t.after(() => s.stop());
     const response = await s.call('/assistant/evaluation');
     assert.equal(response.status, 200);
-    const report = (await response.json()) as {
-        total: number;
-        benchmark: { total: number; passed: number; score: number; mode: string };
-        latest: unknown[];
-    };
+    const report = jsonRecord(await response.json(), 'Evaluation report');
     assert.equal(report.total, 0);
     assert.deepEqual(report.benchmark, { total: 6, passed: 6, score: 100, mode: 'static' });
     assert.deepEqual(report.latest, []);
@@ -946,32 +957,46 @@ test('Sharing exposes an immutable snapshot, not an execution credential', async
     const s = await start();
     t.after(() => s.stop());
     await s.call('/connections/demo/trust', { trusted: true, confirmation: 'demo' });
-    const run = (await (
-        await s.call('/runs', {
-            clientRequestId: randomUUID(),
-            connectionId: 'demo',
-            sql: 'SELECT 1',
-        })
-    ).json()) as Run;
+    const run = decodeValue(
+        await (
+            await s.call('/runs', {
+                clientRequestId: randomUUID(),
+                connectionId: 'demo',
+                sql: 'SELECT 1',
+            })
+        ).json(),
+        isRun,
+        'Run response',
+    );
     await s.runs.wait(owner, run.id);
-    const doc = (await (
-        await s.call('/documents', {
-            name: 'Evidence.sql',
-            connectionId: 'demo',
-            sql: 'SELECT 1',
-            runId: run.id,
-        })
-    ).json()) as QueryDocument;
-    const pub = (await (
-        await s.call(`/documents/${doc.id}/publish`, { revision: 1 })
-    ).json()) as Published;
-    assert.equal((await s.call(`/published/${pub.id}/share`, {})).status, 400);
-    const share = await (
-        await s.call(`/published/${pub.id}/share`, { acknowledgeShare: true })
-    ).json();
+    const doc = decodeValue(
+        await (
+            await s.call('/documents', {
+                name: 'Evidence.sql',
+                connectionId: 'demo',
+                sql: 'SELECT 1',
+                runId: run.id,
+            })
+        ).json(),
+        isQueryDocument,
+        'Saved query response',
+    );
+    const pub = jsonRecord(
+        await (await s.call(`/documents/${doc.id}/publish`, { revision: 1 })).json(),
+        'Published query response',
+    );
+    const publishedId = stringValue(pub.id, 'Published query ID');
+    assert.equal((await s.call(`/published/${publishedId}/share`, {})).status, 400);
+    const share = jsonRecord(
+        await (await s.call(`/published/${publishedId}/share`, { acknowledgeShare: true })).json(),
+        'Share response',
+    );
     await s.call(`/documents/${doc.id}`, { ...doc, baseRevision: 1, sql: 'SELECT 2' }, {}, 'PUT');
-    const snapshot = (await (await s.call(`/shared/${share.token}`)).json()) as Published;
-    assert.equal(snapshot.document.sql, 'SELECT 1');
+    const snapshot = jsonRecord(
+        await (await s.call(`/shared/${stringValue(share.token, 'Share token')}`)).json(),
+        'Shared query response',
+    );
+    assert.equal(jsonRecord(snapshot.document).sql, 'SELECT 1');
     assert.equal(
         (
             await s.call('/runs', {
@@ -1024,7 +1049,9 @@ test('Recoverable import endpoints expose only owned unresolved jobs and keep am
     const listed = await s.call('/imports?connectionId=demo&recoverable=true');
     assert.equal(listed.status, 200);
     assert.deepEqual(
-        ((await listed.json()) as ImportJob[]).map(job => job.id),
+        decodeArray(await listed.json(), apiResponses.isImportJob, 'Import jobs').map(
+            job => job.id,
+        ),
         ['open-job'],
     );
     assert.equal((await s.call('/imports?recoverable=false')).status, 400);
@@ -1033,7 +1060,12 @@ test('Recoverable import endpoints expose only owned unresolved jobs and keep am
     await s.call('/connections/demo/trust', { trusted: true, confirmation: 'demo' });
     const reconciled = await s.call('/imports/open-job/reconcile', {});
     assert.equal(reconciled.status, 200);
-    assert.equal(((await reconciled.json()) as ImportJob).status, 'unknown');
+    const reconciledJob = decodeValue(
+        await reconciled.json(),
+        apiResponses.isImportJob,
+        'Reconciled import job',
+    );
+    assert.equal(reconciledJob.status, 'unknown');
     assert.equal(
         (await s.call('/imports/open-job/review', { inspected: false, noActiveInsert: false }))
             .status,
@@ -1049,7 +1081,8 @@ test('Recoverable import endpoints expose only owned unresolved jobs and keep am
         noActiveInsert: true,
     });
     assert.equal(review.status, 200);
-    assert.ok(((await review.json()) as ImportJob).reviewedAt);
+    const reviewedJob = jsonRecord(await review.json(), 'Reviewed import job');
+    assert.ok(reviewedJob.reviewedAt);
     assert.deepEqual(
         await (await s.call('/imports?connectionId=demo&recoverable=true')).json(),
         [],

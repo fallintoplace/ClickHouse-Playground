@@ -43,6 +43,14 @@ for (const path of paths) {
         };
         checkFocus(file);
     }
+    if (path.endsWith('.d.ts')) {
+        const file = ts.createSourceFile(path, source, ts.ScriptTarget.ESNext, true);
+        for (const d of file.parseDiagnostics) {
+            console.error(path, ts.flattenDiagnosticMessageText(d.messageText, '\n'));
+            failed++;
+        }
+        continue;
+    }
     const result = ts.transpileModule(source, {
         fileName: path,
         reportDiagnostics: true,

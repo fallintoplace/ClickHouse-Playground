@@ -2,6 +2,8 @@ import { test, expect, type Page } from '@playwright/test';
 import type { QueryDocument } from '../../src/shared/queries/saved-queries/types.js';
 import type { Run } from '../../src/shared/queries/execution/types.js';
 import { openWorkspacePanel, runButton, trust, useAdvancedMode } from './helpers.js';
+import { isQueryDocument } from '../../src/shared/queries/saved-queries/validation.js';
+import { decodeValue, jsonRecord } from '../helpers/type-guards.js';
 
 async function replaceSql(page: Page, sql: string) {
     await page.locator('.cm-content').click();
@@ -71,7 +73,7 @@ test('Reopening and saving a metric keeps its saved contract and dependency', as
         url => url.pathname === '/api/documents/saved-metric' && url.searchParams.size === 0,
         async route => {
             if (route.request().method() !== 'PUT') return route.continue();
-            savePayload = route.request().postDataJSON() as Record<string, unknown>;
+            savePayload = jsonRecord(route.request().postDataJSON(), 'Document request body');
             await route.fulfill({
                 json: {
                     ...savedDocument,
@@ -119,7 +121,7 @@ test('Saving a query creates a revision and later edits stay local', async ({ pa
     await page.getByTestId('save-query').click();
     const response = await saveResponse;
     expect(response.ok()).toBe(true);
-    const saved = (await response.json()) as { revision: number; sql: string };
+    const saved = jsonRecord(await response.json(), 'Saved query response');
     expect(saved).toMatchObject({ revision: 1, sql: 'SELECT 111' });
     await replaceSql(page, 'SELECT 222');
     await expect(page.locator('.cm-content')).toContainText('SELECT 222');
@@ -186,7 +188,11 @@ for (const scenario of ['edit', 'switch tab'] as const) {
                 new URL(response.url()).pathname === '/api/documents',
         );
         await page.getByTestId('save-query').click();
-        const saved = (await (await firstSave).json()) as QueryDocument;
+        const saved = decodeValue(
+            await (await firstSave).json(),
+            isQueryDocument,
+            'Saved query response',
+        );
         await replaceSql(page, 'SELECT 222 AS revision_value');
         const secondSave = page.waitForResponse(
             response =>
@@ -227,7 +233,11 @@ for (const scenario of ['edit', 'switch tab'] as const) {
             if (scenario === 'switch tab') await page.getByTestId('new-sql').click();
             await replaceSql(page, 'SELECT 999 AS local_edit');
             release();
-            const restored = (await (await restoreResponse).json()) as QueryDocument;
+            const restored = decodeValue(
+                await (await restoreResponse).json(),
+                isQueryDocument,
+                'Restored query response',
+            );
             expect(restored.sql).toBe('SELECT 111 AS revision_value');
             expect(restored.revision).toBe(3);
             await expect(page.locator('.cm-content')).toContainText('SELECT 999 AS local_edit');

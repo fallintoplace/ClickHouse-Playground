@@ -1,9 +1,5 @@
-import type { ReplicationSnapshot } from '../../../../shared/database/explorer/activity/replication';
-import type {
-    WorkloadSnapshot,
-    WorkloadWindow,
-} from '../../../../shared/database/explorer/activity/workload';
-import { api } from '../../../api/client';
+import type { WorkloadWindow } from '../../../../shared/database/explorer/activity/workload';
+import { api, apiResponses } from '../../../api/client';
 import {
     CLICKHOUSE_CLOUD_CONNECTION_ID,
     loadClickHouseCloudReplication,
@@ -13,8 +9,9 @@ import {
 export function loadWorkload(connectionId: string, minutes: WorkloadWindow, signal: AbortSignal) {
     if (connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID)
         return loadClickHouseCloudWorkload(minutes, signal);
-    return api<WorkloadSnapshot>(
+    return api(
         `/connections/${encodeURIComponent(connectionId)}/workload?minutes=${minutes}`,
+        apiResponses.isWorkloadSnapshot,
         { signal },
     );
 }
@@ -22,8 +19,9 @@ export function loadWorkload(connectionId: string, minutes: WorkloadWindow, sign
 export function loadReplication(connectionId: string, signal: AbortSignal) {
     if (connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID)
         return loadClickHouseCloudReplication(signal);
-    return api<ReplicationSnapshot>(
+    return api(
         `/connections/${encodeURIComponent(connectionId)}/replication`,
+        apiResponses.isReplicationSnapshot,
         { signal },
     );
 }

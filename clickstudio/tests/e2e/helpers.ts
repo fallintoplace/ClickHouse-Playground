@@ -1,4 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
+import { arrayValue, jsonRecord, numberValue, stringValue } from '../helpers/type-guards.js';
+
+export { arrayValue, jsonRecord, numberValue, stringValue };
 
 export const runButton = (page: Page) => page.getByTestId('run-button');
 
@@ -20,12 +23,6 @@ export async function openResultFilter(target: Page | Locator) {
         await target.getByRole('button', { name: 'Search rows', exact: true }).click();
     await input.focus();
     return input;
-}
-
-export function jsonRecord(value: unknown, label = 'JSON value'): Record<string, unknown> {
-    if (typeof value !== 'object' || value === null || Array.isArray(value))
-        throw new Error(`${label} was not an object`);
-    return value as Record<string, unknown>;
 }
 
 export function runIdentity(value: unknown): { id: string; queryId: string } {

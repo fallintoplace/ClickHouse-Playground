@@ -1,5 +1,5 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
-import { api, message, post } from '../../../api/client';
+import { api, apiResponses, message, post } from '../../../api/client';
 import { checkClickHouseCloudImport } from '../../connections/cloud-connection';
 import type { BusyAction, ImportJob, Step } from '../state/import-wizard-model';
 
@@ -49,11 +49,16 @@ export function useImportJobPolling({
                         job.deduplicationToken,
                     );
                 } else if (job.reconciliationRequired) {
-                    next = await post<ImportJob>(
+                    next = await post(
                         `/imports/${encodeURIComponent(job.id)}/reconcile`,
+                        {},
+                        apiResponses.isImportJob,
                     );
                 } else {
-                    next = await api<ImportJob>(`/imports/${encodeURIComponent(job.id)}`);
+                    next = await api(
+                        `/imports/${encodeURIComponent(job.id)}`,
+                        apiResponses.isImportJob,
+                    );
                 }
                 if (!current) return;
                 setJob(next);

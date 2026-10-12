@@ -1,13 +1,9 @@
 import { useCallback, useRef } from 'react';
 import type { Result } from '../../../shared/queries/results/types';
 import type { Run } from '../../../shared/queries/execution/types';
-import { api } from '../../api/client';
+import { api, apiResponses } from '../../api/client';
 
-type SnapshotSetter = (
-    target: string,
-    next: Result | ((current: Result | undefined) => Result),
-    allowInactive?: boolean,
-) => void;
+type SnapshotSetter = (target: string, next: Result, allowInactive?: boolean) => void;
 
 export function useResultSnapshot({
     activeRunId,
@@ -36,7 +32,10 @@ export function useResultSnapshot({
         const runId = activeRunId;
         let request = requests.current.get(runId);
         if (!request) {
-            request = api<Result>(`/runs/${encodeURIComponent(runId)}/snapshot`);
+            request = api(
+                `/runs/${encodeURIComponent(runId)}/snapshot`,
+                apiResponses.isResultResponse,
+            );
             requests.current.set(runId, request);
         }
         try {

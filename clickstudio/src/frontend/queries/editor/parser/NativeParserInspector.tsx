@@ -1,5 +1,6 @@
 import type { NativeParseSnapshot, NativeParserStatus } from '../../../../shared/sql/parser';
 import { nativeHighlightRanges } from '../../../../shared/sql/parser';
+import { asNativeAstObject } from './ast';
 import { Button, cx, Spinner } from '../../../ui/components/ui';
 import { Icon } from '../../../ui/components/icons';
 
@@ -82,13 +83,8 @@ export function NativeParserInspector({ status, snapshot, onRetry }: Props) {
             {status === 'ready' &&
                 snapshot?.statements.map((statement, index) => {
                     const { result } = statement;
-                    const astType =
-                        typeof result.ast === 'object' &&
-                        result.ast !== null &&
-                        !Array.isArray(result.ast) &&
-                        typeof (result.ast as { type?: unknown }).type === 'string'
-                            ? (result.ast as { type: string }).type
-                            : undefined;
+                    const nodeType = asNativeAstObject(result.ast)?.type;
+                    const astType = typeof nodeType === 'string' ? nodeType : undefined;
                     const functions = [
                         ...new Set(
                             nativeHighlightRanges(statement.sql, 0, result.highlights)

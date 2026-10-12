@@ -6,6 +6,7 @@ import {
     runButton,
     runIdentity,
     jsonRecord,
+    numberValue,
     trust,
     trustCurrentConnection,
 } from './helpers.js';
@@ -270,8 +271,8 @@ test('Run, chart, save and reload preserve the same execution evidence', async (
             new URL(response.url()).pathname === '/api/documents',
     );
     await page.getByTestId('save-query').click();
-    const saved = (await (await saveResponse).json()) as { revision: number };
-    expect(saved.revision).toBe(1);
+    const saved = jsonRecord(await (await saveResponse).json(), 'Saved query response');
+    expect(numberValue(saved.revision, 'Revision')).toBe(1);
     await page.reload();
     const recovered = page.getByRole('region', { name: 'Query results' });
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'succeeded');

@@ -2,12 +2,43 @@ import { MONITOR_CONDITIONS } from './conditions.js';
 import { randomUUID } from 'node:crypto';
 import type { Monitor, Notice } from './types.js';
 import type { Principal } from '../../../shared/common/identity.js';
+import { isRecord } from '../../../shared/common/values.js';
 import { requireThat } from '../../system/requests/errors.js';
 import { canWrite, mustOwn } from '../../system/login/permissions.js';
 import { audit, hash, type Store } from '../../system/store.js';
 import { integer } from '../../system/requests/validation.js';
 import { terminal, type RunService } from '../execution/runs.js';
 import type { ArtifactService } from '../saved-queries/documents.js';
+
+function isMonitor(value: unknown): value is Monitor {
+    return (
+        isRecord(value) &&
+        typeof value.id === 'string' &&
+        typeof value.owner === 'string' &&
+        typeof value.publishedId === 'string' &&
+        typeof value.intervalSeconds === 'number' &&
+        Number.isSafeInteger(value.intervalSeconds) &&
+        typeof value.paused === 'boolean' &&
+        typeof value.createdAt === 'string' &&
+        typeof value.nextAt === 'string' &&
+        (value.lastRunId === undefined || typeof value.lastRunId === 'string') &&
+        (value.lastHash === undefined || typeof value.lastHash === 'string') &&
+        MONITOR_CONDITIONS.some(condition => condition === value.condition)
+    );
+}
+
+function isNotice(value: unknown): value is Notice {
+    return (
+        isRecord(value) &&
+        typeof value.id === 'string' &&
+        typeof value.owner === 'string' &&
+        typeof value.monitorId === 'string' &&
+        typeof value.runId === 'string' &&
+        typeof value.createdAt === 'string' &&
+        MONITOR_CONDITIONS.some(condition => condition === value.reason) &&
+        typeof value.read === 'boolean'
+    );
+}
 /** Single-process, fixed-interval UTC scheduling. Notifications are owner-only and in-app. */
 export class MonitorService {
     private ticking = false;
@@ -58,11 +89,11 @@ export class MonitorService {
         return monitor;
     }
     list(p: Principal) {
-        return this.store.list<Monitor>('monitors').filter(m => m.owner === p.id);
+        return this.store.list('monitors', isMonitor).filter(m => m.owner === p.id);
     }
     pause(p: Principal, id: string, paused: boolean) {
         canWrite(p);
-        const monitor = this.store.get<Monitor>('monitors', id);
+        const monitor = this.store.get('monitors', id, isMonitor);
         requireThat(monitor, 404, 'NOT_FOUND', 'Monitor not found');
         mustOwn(p, monitor.owner);
         monitor.paused = paused;
@@ -76,7 +107,7 @@ export class MonitorService {
     }
     notices(p: Principal) {
         return this.store
-            .list<Notice>('notices')
+            .list('notices', isNotice)
             .filter(n => n.owner === p.id)
             .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     }
@@ -84,7 +115,7 @@ export class MonitorService {
         if (this.ticking) return;
         this.ticking = true;
         try {
-            for (const monitor of this.store.list<Monitor>('monitors')) {
+            for (const monitor of this.store.list('monitors', isMonitor)) {
                 if (monitor.paused || Date.parse(monitor.nextAt) > now) continue;
                 const p: Principal = { id: monitor.owner, role: 'owner' },
                     slot = monitor.nextAt;
@@ -129,7 +160,7 @@ export class MonitorService {
     }
     private async evaluate(p: Principal, id: string, runId: string) {
         const run = await this.runs.wait(p, runId),
-            monitor = this.store.get<Monitor>('monitors', id);
+            monitor = this.store.get('monitors', id, isMonitor);
         if (!monitor) return;
         if (run.status !== 'succeeded' && run.status !== 'truncated') {
             this.notify(monitor, runId, 'failure');
@@ -164,7 +195,7 @@ export class MonitorService {
         };
         this.store.put('notices', notice.id, notice);
         const all = this.store
-            .list<Notice>('notices')
+            .list('notices', isNotice)
             .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
         for (const old of all.slice(0, Math.max(0, all.length - 500)))
             this.store.delete('notices', old.id);

@@ -97,19 +97,30 @@ function parseCompactRows(body: string) {
     } catch {
         throw parsePlaygroundError(body);
     }
+    const columnNames = Array.isArray(names)
+        ? names.filter((name): name is string => typeof name === 'string')
+        : [];
+    const columnTypes = Array.isArray(types)
+        ? types.filter((type): type is string => typeof type === 'string')
+        : [];
     if (
         !Array.isArray(names) ||
-        !names.every(name => typeof name === 'string') ||
+        columnNames.length !== names.length ||
         !Array.isArray(types) ||
-        !types.every(type => typeof type === 'string') ||
-        names.length !== types.length
+        columnTypes.length !== types.length ||
+        columnNames.length !== columnTypes.length
     )
         throw new PlaygroundError(
             'INVALID_PLAYGROUND_RESPONSE',
             'ClickHouse Playground returned invalid column metadata.',
         );
 
-    const columns = names.map((name, index) => ({ name, type: types[index] as string }));
+    const columns = columnNames.map((name, index) => {
+        const type = columnTypes[index];
+        if (type === undefined)
+            throw new Error('ClickHouse Playground returned invalid column metadata.');
+        return { name, type };
+    });
     const rows = lines.slice(2).map((line, rowIndex) => {
         let values: unknown;
         try {

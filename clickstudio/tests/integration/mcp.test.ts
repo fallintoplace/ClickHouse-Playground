@@ -1,6 +1,5 @@
 import test, { type TestContext } from 'node:test';
 import assert from 'node:assert/strict';
-import type { AddressInfo } from 'node:net';
 import { request } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -16,6 +15,16 @@ import type { ApiError } from '../../src/shared/common/errors.js';
 import type { Connection } from '../../src/shared/database/connections/types.js';
 import type { ResultPage } from '../../src/shared/queries/results/types.js';
 import type { Run } from '../../src/shared/queries/execution/types.js';
+import { isRecord } from '../../src/shared/common/values.js';
+import { isConnected, isResultPage } from '../../src/frontend/api/response-guards.js';
+import { isRun } from '../../src/frontend/queries/execution/events.js';
+import {
+    decodeArray,
+    decodeValue,
+    jsonRecord,
+    serverPort,
+    stringValue,
+} from '../helpers/type-guards.js';
 
 const owner = { id: 'local-owner', role: 'owner' } as const;
 type FixtureResult = Awaited<ReturnType<DemoDriver['execute']>>;
@@ -97,6 +106,37 @@ interface Output {
     error?: ApiError;
     cancellationRequested?: boolean;
 }
+
+function isOutput(value: unknown): value is Output {
+    if (!isRecord(value)) return false;
+    return (
+        (value.clientRequestId === undefined || typeof value.clientRequestId === 'string') &&
+        (value.connections === undefined ||
+            (Array.isArray(value.connections) && value.connections.every(isConnected))) &&
+        (value.run === undefined || isRun(value.run)) &&
+        (value.runId === undefined || typeof value.runId === 'string') &&
+        (value.result === undefined || isResultPage(value.result)) &&
+        (value.error === undefined ||
+            (isRecord(value.error) &&
+                typeof value.error.code === 'string' &&
+                typeof value.error.message === 'string')) &&
+        (value.cancellationRequested === undefined ||
+            typeof value.cancellationRequested === 'boolean')
+    );
+}
+
+type ToolDefinition = Awaited<ReturnType<Client['listTools']>>['tools'][number];
+
+function inputProperty(
+    tools: ToolDefinition[],
+    toolName: string,
+    propertyName: string,
+): Record<string, unknown> {
+    const tool = tools.find(candidate => candidate.name === toolName);
+    const properties = tool?.inputSchema.properties;
+    if (!properties) throw new Error(`Tool ${toolName} has no input properties`);
+    return jsonRecord(properties[propertyName], `Tool ${toolName} property ${propertyName}`);
+}
 async function start(
     t: TestContext,
     options: {
@@ -117,7 +157,7 @@ async function start(
         listener.once('listening', resolve);
         listener.once('error', reject);
     });
-    config.port = (listener.address() as AddressInfo).port;
+    config.port = serverPort(listener);
     config.origin = `http://127.0.0.1:${config.port}`;
     const client = new Client(
         { name: 'ClickStudio integration tests', version: '1.0.0' },
@@ -144,10 +184,10 @@ async function start(
     const call = async (name: string, args: Record<string, unknown> = {}) => {
         const value = await client.callTool({ name, arguments: args });
         assert.ok(value.structuredContent);
-        const content = value.content as Array<{ type: string; text: string }>;
-        assert.equal(content[0]?.type, 'text');
-        assert.deepEqual(JSON.parse(content[0]!.text), value.structuredContent);
-        return { ...value, data: value.structuredContent as Output };
+        const first = value.content[0];
+        if (!first || first.type !== 'text') throw new Error('Tool response has no text result');
+        assert.deepEqual(JSON.parse(first.text), value.structuredContent);
+        return { ...value, data: decodeValue(value.structuredContent, isOutput, 'Tool response') };
     };
     const completed = async (name: string, args: Record<string, unknown> = {}) => {
         const submission = await call(name, args);
@@ -261,16 +301,20 @@ test('MCP remains compatible with a legacy SDK client on the same endpoint', asy
     );
     assert.equal((await client.listTools()).tools.length, 7);
     const input = query({ clientRequestId: randomUUID() });
-    const submission = (await client.callTool({ name: 'execute_sql', arguments: input }))
-        .structuredContent as Output;
+    const submission = decodeValue(
+        (await client.callTool({ name: 'execute_sql', arguments: input })).structuredContent,
+        isOutput,
+        'SQL submission',
+    );
     assert.equal(submission.run?.status, 'queued');
     assert.equal(submission.result, undefined);
     const result = await client.callTool({
         name: 'get_result',
         arguments: { runId: submission.run!.id, waitSeconds: 3 },
     });
-    assert.equal((result.structuredContent as Output).run?.status, 'succeeded');
-    assert.deepEqual((result.structuredContent as Output).result?.rows, s.fixture.result.rows);
+    const output = decodeValue(result.structuredContent, isOutput, 'Result response');
+    assert.equal(output.run?.status, 'succeeded');
+    assert.deepEqual(output.result?.rows, s.fixture.result.rows);
     assert.equal((await s.call('execute_sql', input)).data.run?.id, submission.run!.id);
     assert.equal(s.fixture.calls.length, 1);
 });
@@ -284,33 +328,16 @@ test('MCP publishes parameter limits and reserves waiting for result requests', 
         assert.equal(schema.additionalProperties, false);
     }
     assert.ok(tools.find(tool => tool.name === 'get_result')!.inputSchema.properties!.waitSeconds);
-    assert.equal(
-        (
-            tools.find(tool => tool.name === 'get_result')!.inputSchema.properties!.count as {
-                maximum: number;
-            }
-        ).maximum,
-        1000,
-    );
+    assert.equal(inputProperty(tools, 'get_result', 'count').maximum, 1000);
     for (const name of ['execute_sql', 'explain_query']) {
-        assert.equal(
-            (
-                tools.find(tool => tool.name === name)!.inputSchema.properties!.sql as {
-                    maxLength: number;
-                }
-            ).maxLength,
-            200000,
-        );
-        const parameters = tools.find(tool => tool.name === name)!.inputSchema.properties!
-            .parameters as {
-            maxProperties: number;
-            propertyNames: { pattern: string };
-            additionalProperties: { type: string; maxLength: number };
-        };
+        assert.equal(inputProperty(tools, name, 'sql').maxLength, 200000);
+        const parameters = inputProperty(tools, name, 'parameters');
         assert.equal(parameters.maxProperties, 50);
-        assert.equal(parameters.additionalProperties.type, 'string');
-        assert.equal(parameters.additionalProperties.maxLength, 4000);
-        const key = new RegExp(parameters.propertyNames.pattern);
+        const additionalProperties = jsonRecord(parameters.additionalProperties);
+        const propertyNames = jsonRecord(parameters.propertyNames);
+        assert.equal(additionalProperties.type, 'string');
+        assert.equal(additionalProperties.maxLength, 4000);
+        const key = new RegExp(stringValue(propertyNames.pattern, 'Parameter pattern'));
         for (const name of ['value', '_value', 'a'.repeat(64)]) assert.equal(key.test(name), true);
         for (const name of [
             '',
@@ -459,7 +486,11 @@ test('MCP preserves exact values, bound parameters, limits, and shared API histo
     assert.equal(Object.hasOwn(response.data.run!, 'sql'), false);
     assert.equal(Object.hasOwn(response.data.run!, 'parameters'), false);
     assert.deepEqual(s.fixture.calls[0]?.parameters, { value: '18446744073709551615' });
-    const history = (await (await fetch(`${s.origin}/api/runs`)).json()) as Run[];
+    const history = decodeArray(
+        await (await fetch(`${s.origin}/api/runs`)).json(),
+        isRun,
+        'Run history',
+    );
     assert.equal(history[0]?.id, response.data.run?.id);
     assert.equal(history[0]?.sql, 'SELECT {value:UInt64}');
 });

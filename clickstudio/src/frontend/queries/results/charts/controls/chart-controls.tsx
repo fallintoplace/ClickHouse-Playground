@@ -1,5 +1,4 @@
 import type { ChartKind } from '../../../../../shared/queries/results/chart-types';
-import type { CSSProperties } from 'react';
 import { MAX_CHART_SERIES } from '../../../../../shared/queries/results/results';
 import type { CandlestickConfig } from '../../../../../shared/queries/results/chart-settings';
 import type { Result } from '../../../../../shared/queries/results/types';
@@ -222,13 +221,11 @@ export function renderChartControls({
                                         }}
                                     />
                                     <span
-                                        style={
-                                            {
-                                                '--series-color': seriesColor(
-                                                    Math.max(0, measureIndexes.indexOf(index)),
-                                                ),
-                                            } as CSSProperties
-                                        }
+                                        style={{
+                                            '--series-color': seriesColor(
+                                                Math.max(0, measureIndexes.indexOf(index)),
+                                            ),
+                                        }}
                                     />
                                     {result.columns[index]?.name}
                                 </label>

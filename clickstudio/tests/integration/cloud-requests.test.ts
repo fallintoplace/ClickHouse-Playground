@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import cloudApi from '../../api/cloud.js';
 import * as cloud from '../../src/frontend/database/connections/cloud-connection.js';
 import { BrowserWorkspaceApi } from '../../src/frontend/api/browser-workspace.js';
+import { jsonRecord, jsonValue, responseErrorCode } from '../helpers/type-guards.js';
 
 const credentials = {
     host: 'service.clickhouse.cloud:8443',
@@ -21,7 +22,7 @@ test('Browser Cloud workspace forwards table permission targets and returns indi
     const requests: Record<string, unknown>[] = [];
     const permissions = { create: false, insert: true, drop: false };
     t.mock.method(globalThis, 'fetch', async (_url: unknown, options?: RequestInit) => {
-        const body = JSON.parse(String(options?.body)) as Record<string, unknown>;
+        const body = jsonRecord(jsonValue(String(options?.body)), 'Cloud request body');
         requests.push(body);
         return Response.json(body.action === 'test' ? tested : permissions);
     });
@@ -46,7 +47,7 @@ test('Browser Cloud workspace forwards table permission targets and returns indi
 test('Cloud wrappers preserve action spellings and their JSON request fields', async t => {
     const requests: unknown[] = [];
     t.mock.method(globalThis, 'fetch', async (_url: unknown, options?: RequestInit) => {
-        requests.push(JSON.parse(String(options?.body)) as unknown);
+        requests.push(jsonValue(String(options?.body)));
         assert.equal(options?.method, 'POST');
         assert.equal(options?.credentials, 'same-origin');
         return Response.json(tested);
@@ -201,14 +202,8 @@ test('Unknown Cloud JSON actions keep their error and credential validation prec
     ]) {
         const response = await cloudApi.fetch(request({ action, credentials }));
         assert.equal(response.status, 400);
-        assert.equal(
-            ((await response.json()) as { error: { code: string } }).error.code,
-            'CLOUD_ACTION',
-        );
+        assert.equal(await responseErrorCode(response), 'CLOUD_ACTION');
     }
     const response = await cloudApi.fetch(request({ action: 'unknown' }));
-    assert.equal(
-        ((await response.json()) as { error: { code: string } }).error.code,
-        'CLOUD_CREDENTIALS',
-    );
+    assert.equal(await responseErrorCode(response), 'CLOUD_CREDENTIALS');
 });

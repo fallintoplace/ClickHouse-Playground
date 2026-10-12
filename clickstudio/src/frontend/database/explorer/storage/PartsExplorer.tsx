@@ -1,13 +1,6 @@
 import { easeCubicInOut, hierarchy, pack, scaleLinear, select, treemap } from 'd3';
 import type { ScaleLinear, HierarchyCircularNode, HierarchyRectangularNode } from 'd3';
-import {
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-    type CSSProperties,
-    type KeyboardEvent,
-} from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type {
     MergeTreePart,
     MergeTreePartsSnapshot,
@@ -36,6 +29,14 @@ type Cell = {
     children?: Cell[];
 };
 type PartsLayoutNode = HierarchyCircularNode<Cell> | HierarchyRectangularNode<Cell>;
+
+function isRectangularNode(node: PartsLayoutNode): node is HierarchyRectangularNode<Cell> {
+    return 'x0' in node && 'y0' in node && 'x1' in node && 'y1' in node;
+}
+
+function isCircularNode(node: PartsLayoutNode): node is HierarchyCircularNode<Cell> {
+    return 'x' in node && 'y' in node && 'r' in node;
+}
 
 const width = 1_000;
 const height = 510;
@@ -247,21 +248,23 @@ export function PartsExplorer({
         const selected = layout.descendants().find(node => node.data.id === zoomedPartition);
         let transform = 'translate(0,0) scale(1)';
         if (selected) {
-            const bounds =
-                layoutMode === 'treemap'
-                    ? (() => {
-                          const rect = selected as HierarchyRectangularNode<Cell>;
-                          return { x0: rect.x0, y0: rect.y0, x1: rect.x1, y1: rect.y1 };
-                      })()
-                    : (() => {
-                          const circle = selected as HierarchyCircularNode<Cell>;
-                          return {
-                              x0: circle.x - circle.r,
-                              y0: circle.y - circle.r,
-                              x1: circle.x + circle.r,
-                              y1: circle.y + circle.r,
-                          };
-                      })();
+            let bounds: { x0: number; y0: number; x1: number; y1: number } | undefined;
+            if (layoutMode === 'treemap' && isRectangularNode(selected)) {
+                bounds = {
+                    x0: selected.x0,
+                    y0: selected.y0,
+                    x1: selected.x1,
+                    y1: selected.y1,
+                };
+            } else if (layoutMode === 'galaxy' && isCircularNode(selected)) {
+                bounds = {
+                    x0: selected.x - selected.r,
+                    y0: selected.y - selected.r,
+                    x1: selected.x + selected.r,
+                    y1: selected.y + selected.r,
+                };
+            }
+            if (!bounds) return;
             const scale =
                 Math.min(
                     width / Math.max(1, bounds.x1 - bounds.x0),
@@ -964,6 +967,7 @@ function renderPartsGraph({
                                 selectedPart.partition === part.partition &&
                                 selectedPart.active === part.active;
                             if (layoutMode === 'treemap') {
+                                if (!isRectangularNode(node)) return null;
                                 return renderTreemapCell(
                                     node,
                                     depth,
@@ -974,6 +978,7 @@ function renderPartsGraph({
                                     keyCell,
                                 );
                             }
+                            if (!isCircularNode(node)) return null;
                             return renderGalaxyCell(
                                 node,
                                 depth,
@@ -988,7 +993,8 @@ function renderPartsGraph({
                             .filter(node => node.depth === 1)
                             .map(node => {
                                 if (layoutMode === 'treemap') {
-                                    const rect = node as HierarchyRectangularNode<Cell>;
+                                    if (!isRectangularNode(node)) return null;
+                                    const rect = node;
                                     const rectWidth = Math.max(0, rect.x1 - rect.x0),
                                         rectHeight = Math.max(0, rect.y1 - rect.y0);
                                     const badgeWidth = Math.min(
@@ -1025,15 +1031,13 @@ function renderPartsGraph({
                                                 width={badgeWidth}
                                                 height={badgeHeight}
                                                 rx="7"
-                                                style={
-                                                    {
-                                                        '--part-color':
-                                                            palette[
-                                                                (node.data.colorIndex ?? 0) %
-                                                                    palette.length
-                                                            ],
-                                                    } as CSSProperties
-                                                }
+                                                style={{
+                                                    '--part-color':
+                                                        palette[
+                                                            (node.data.colorIndex ?? 0) %
+                                                                palette.length
+                                                        ],
+                                                }}
                                             />
                                             {badgeWidth > 35 && (
                                                 <text
@@ -1048,7 +1052,8 @@ function renderPartsGraph({
                                         </g>
                                     );
                                 }
-                                const circle = node as HierarchyCircularNode<Cell>;
+                                if (!isCircularNode(node)) return null;
+                                const circle = node;
                                 const badgeWidth = Math.min(
                                     circle.r * 2,
                                     Math.max(36, node.data.label.length * 6 + 18),
@@ -1080,15 +1085,12 @@ function renderPartsGraph({
                                             width={badgeWidth}
                                             height="21"
                                             rx="10"
-                                            style={
-                                                {
-                                                    '--part-color':
-                                                        palette[
-                                                            (node.data.colorIndex ?? 0) %
-                                                                palette.length
-                                                        ],
-                                                } as CSSProperties
-                                            }
+                                            style={{
+                                                '--part-color':
+                                                    palette[
+                                                        (node.data.colorIndex ?? 0) % palette.length
+                                                    ],
+                                            }}
                                         />
                                         {badgeWidth > 35 && (
                                             <text y={-Math.min(circle.r, 13) + 14}>
@@ -1117,7 +1119,7 @@ function renderPartsGraph({
 }
 
 function renderTreemapCell(
-    node: PartsLayoutNode,
+    node: HierarchyRectangularNode<Cell>,
     depth: number,
     color: string,
     part: MergeTreePart | undefined,
@@ -1125,7 +1127,7 @@ function renderTreemapCell(
     handleCell: (id: string, part?: MergeTreePart) => void,
     keyCell: (event: KeyboardEvent<SVGElement>, id: string, part?: MergeTreePart) => void,
 ) {
-    const rect = node as HierarchyRectangularNode<Cell>;
+    const rect = node;
     const cellWidth = Math.max(0, rect.x1 - rect.x0),
         cellHeight = Math.max(0, rect.y1 - rect.y0);
     const label = part?.name ?? node.data.label;
@@ -1147,7 +1149,7 @@ function renderTreemapCell(
                 width={cellWidth}
                 height={cellHeight}
                 rx={depth === 1 ? 10 : 4}
-                style={{ '--part-color': color } as CSSProperties}
+                style={{ '--part-color': color }}
             />
             {part && cellWidth > 82 && cellHeight > 28 && (
                 <text
@@ -1163,7 +1165,7 @@ function renderTreemapCell(
 }
 
 function renderGalaxyCell(
-    node: PartsLayoutNode,
+    node: HierarchyCircularNode<Cell>,
     depth: number,
     color: string,
     part: MergeTreePart | undefined,
@@ -1171,7 +1173,7 @@ function renderGalaxyCell(
     handleCell: (id: string, part?: MergeTreePart) => void,
     keyCell: (event: KeyboardEvent<SVGElement>, id: string, part?: MergeTreePart) => void,
 ) {
-    const circle = node as HierarchyCircularNode<Cell>;
+    const circle = node;
     const radius = circle.r;
     return (
         <g
@@ -1185,7 +1187,7 @@ function renderGalaxyCell(
             onKeyDown={depth === 1 ? undefined : event => keyCell(event, node.data.id, part)}
         >
             <title>{part ? tooltip(part) : node.data.label}</title>
-            <circle r={radius} style={{ '--part-color': color } as CSSProperties} />
+            <circle r={radius} style={{ '--part-color': color }} />
             {part && radius > 22 && (
                 <text className="parts-cell-label" y="3">
                     {part.name.length > 20 ? `${part.name.slice(0, 19)}…` : part.name}

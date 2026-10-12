@@ -2,9 +2,7 @@ import {
     parseNativeParseResult,
     type NativeFormatResult,
     type NativeParseResult,
-    type NativeParserReply,
     type NativeParserRequest,
-    type NativeParserWorkerStatus,
 } from '../../../../shared/sql/parser';
 
 type ParserExports = {
@@ -18,14 +16,6 @@ type ParserExports = {
     ch_result_data: () => number;
     ch_result_size: () => number;
 };
-const worker = globalThis as unknown as {
-    postMessage: (message: NativeParserReply | NativeParserWorkerStatus) => void;
-    addEventListener: (
-        type: 'message',
-        listener: (event: MessageEvent<NativeParserRequest>) => void,
-    ) => void;
-};
-
 const ERRNO_SUCCESS = 0;
 const ERRNO_BADF = 8;
 const ERRNO_NOSYS = 52;
@@ -214,11 +204,11 @@ async function initialize() {
         const parser = createParser(
             await instantiate(new Uint8Array(await response.arrayBuffer())),
         );
-        worker.postMessage({ kind: 'status', status: 'ready' });
+        globalThis.postMessage({ kind: 'status', status: 'ready' });
         return parser;
     } catch (error) {
         const reason = message(error);
-        worker.postMessage({ kind: 'status', status: 'unavailable', reason });
+        globalThis.postMessage({ kind: 'status', status: 'unavailable', reason });
         throw error;
     }
 }
@@ -228,20 +218,20 @@ function parser() {
     return parserPromise;
 }
 
-worker.addEventListener('message', event => {
+globalThis.addEventListener('message', (event: MessageEvent<NativeParserRequest>) => {
     void (async () => {
         const request = event.data;
         try {
             const runtime = await parser();
             if (request.kind === 'parseMany') {
-                worker.postMessage({
+                globalThis.postMessage({
                     id: request.id,
                     kind: 'parseMany',
                     ok: true,
                     results: request.sql.map(sql => runtime.parse(sql)),
                 });
             } else {
-                worker.postMessage({
+                globalThis.postMessage({
                     id: request.id,
                     kind: 'formatMany',
                     ok: true,
@@ -249,7 +239,7 @@ worker.addEventListener('message', event => {
                 });
             }
         } catch (error) {
-            worker.postMessage({
+            globalThis.postMessage({
                 id: request.id,
                 kind: request.kind,
                 ok: false,

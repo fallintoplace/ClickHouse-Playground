@@ -135,7 +135,7 @@ export function SelectControl({
             if (
                 element.matches(':popover-open') &&
                 trigger.current &&
-                !element.contains(event.target as Node)
+                !event.composedPath().includes(element)
             )
                 positionMenu();
         };

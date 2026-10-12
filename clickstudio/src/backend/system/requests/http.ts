@@ -4,6 +4,7 @@ import {
 } from '../../../shared/database/imports/limits.js';
 import { type Request, type Response } from 'express';
 import type { Principal } from '../../../shared/common/identity.js';
+import { isRecord } from '../../../shared/common/values.js';
 import { requireThat } from './errors.js';
 import { identifier, record, text } from './validation.js';
 
@@ -32,7 +33,16 @@ export function boolean(v: unknown, name: string) {
 }
 
 export function principal(res: Response): Principal {
-    return res.locals.principal as Principal;
+    const value: unknown = res.locals.principal;
+    requireThat(
+        isRecord(value) &&
+            typeof value.id === 'string' &&
+            (value.role === 'owner' || value.role === 'viewer'),
+        401,
+        'AUTH_REQUIRED',
+        'Sign in before continuing.',
+    );
+    return { id: value.id, role: value.role };
 }
 
 export function number(v: unknown, fallback: number) {

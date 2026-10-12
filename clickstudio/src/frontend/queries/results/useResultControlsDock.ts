@@ -78,8 +78,8 @@ export function useResultControlsDock() {
         const outside = (event: Event) => {
             if (
                 !pinned &&
-                !element.contains(event.target as Node) &&
-                !control.contains(event.target as Node)
+                !event.composedPath().includes(element) &&
+                !event.composedPath().includes(control)
             )
                 close();
         };
@@ -90,7 +90,8 @@ export function useResultControlsDock() {
             close(true);
         };
         const otherPopover = (event: Event) => {
-            if ((event as ToggleEvent).newState === 'open' && event.target !== element) close();
+            if ('newState' in event && event.newState === 'open' && event.target !== element)
+                close();
         };
         const observer = new ResizeObserver(reposition);
         observer.observe(control);

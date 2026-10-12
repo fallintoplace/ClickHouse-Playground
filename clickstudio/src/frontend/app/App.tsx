@@ -1,6 +1,6 @@
 import { THEMES, DEFAULT_ACCENT } from '../ui/styles/appearance-types';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, message, post } from '../api/client';
+import { api, apiResponses, message, post } from '../api/client';
 import { Button, cx, Spinner } from '../ui/components/ui';
 import { Icon } from '../ui/components/icons';
 import { CloudConnectionDialog } from '../database/connections/CloudConnectionDialog';
@@ -178,10 +178,13 @@ function App() {
     }, [dark, theme]);
 
     const loadSession = useCallback(async () => {
-        const next = await api<Session>('/session');
+        const next = await api('/session', apiResponses.isSession);
         setSession(next);
         if (next.principal) {
-            let profiles = await api<Connected[]>('/connections');
+            let profiles = await api(
+                '/connections',
+                apiResponses.arrayOf(apiResponses.isConnected),
+            );
             if (next.cloudConnectionPersistence === 'local-server') {
                 try {
                     const cloud = await restoreClickHouseCloudSession();
@@ -220,7 +223,7 @@ function App() {
         setBusy(true);
         setSessionError('');
         try {
-            await post('/session', { token });
+            await post('/session', { token }, apiResponses.isUnknown);
             setToken('');
             await loadSession();
         } catch (error) {
@@ -342,7 +345,10 @@ function App() {
                     connections={connections}
                     onSelectConnection={selectConnection}
                     onRefreshConnections={async () => {
-                        const latest = await api<Connected[]>('/connections');
+                        const latest = await api(
+                            '/connections',
+                            apiResponses.arrayOf(apiResponses.isConnected),
+                        );
                         setConnections(latest);
                     }}
                     trustActionRef={trustActionRef}

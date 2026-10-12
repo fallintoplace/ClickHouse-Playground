@@ -24,17 +24,24 @@ function dialogControls(root: HTMLElement) {
             ),
     );
     return controls.filter(element => {
-        if (!element.matches('input[type="radio"][name]')) return true;
-        const radio = element as HTMLInputElement;
+        const radio = radioInput(element);
+        if (!radio?.matches('input[type="radio"][name]')) return true;
         if (!radio.name) return true;
-        const group = controls.filter(
-            (candidate): candidate is HTMLInputElement =>
-                candidate.matches('input[type="radio"]') &&
-                (candidate as HTMLInputElement).name === radio.name &&
-                (candidate as HTMLInputElement).form === radio.form,
-        );
-        return radio === (group.find(candidate => candidate.checked) ?? group[0]);
+        const group = controls.filter(candidate => {
+            const candidateRadio = radioInput(candidate);
+            return (
+                candidateRadio?.matches('input[type="radio"]') === true &&
+                candidateRadio.name === radio.name &&
+                candidateRadio.form === radio.form
+            );
+        });
+        return radio === (group.find(candidate => radioInput(candidate)?.checked) ?? group[0]);
     });
+}
+
+function radioInput(element: HTMLElement): HTMLInputElement | undefined {
+    const Input = element.ownerDocument.defaultView?.HTMLInputElement;
+    return Input && element instanceof Input ? element : undefined;
 }
 
 export function useDialogFocus(

@@ -10,7 +10,7 @@ import {
     type ComparisonMetric,
 } from './comparison';
 import { nativeBytes, nativeCount, nativeTime } from '../../database/explorer/format';
-import { api, message } from '../../api/client';
+import { api, apiResponses, message } from '../../api/client';
 import { NativeExplorerDialog } from '../../database/explorer/NativeExplorerDialog';
 import { OverlayPortal } from '../../ui/components/OverlayPortal';
 import { PipelineGraph } from '../inspection/diagrams/PipelineGraph';
@@ -155,9 +155,11 @@ function ComparisonBody({
                 async id =>
                     [
                         id,
-                        await api<QueryProfile>(`/runs/${encodeURIComponent(id)}/profile`, {
-                            signal: controller.signal,
-                        }),
+                        await api(
+                            `/runs/${encodeURIComponent(id)}/profile`,
+                            apiResponses.isQueryProfile,
+                            { signal: controller.signal },
+                        ),
                     ] as const,
             ),
         )

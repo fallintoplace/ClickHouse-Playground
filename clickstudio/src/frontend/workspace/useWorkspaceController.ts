@@ -20,7 +20,7 @@ import { recommendChart } from '../../shared/queries/results/results';
 import { parameterNames, type SqlParameter } from '../../shared/sql/sql';
 import type { QueryDocument } from '../../shared/queries/saved-queries/types';
 import type { Run, Script } from '../../shared/queries/execution/types';
-import { message, post } from '../api/client';
+import { apiResponses, message, post } from '../api/client';
 import type { EditorHandle } from '../queries/editor/components/SqlEditor';
 import { terminal } from '../queries/execution/status';
 import type { Copy, ExperienceLevel } from '../ui/copy';
@@ -164,10 +164,14 @@ function createWorkspaceConnectionActions({
                     )
                 )
                     return;
-                await post(`/connections/${encodeURIComponent(connection.id)}/trust`, {
-                    trusted: !trusted,
-                    confirmation: connection.id,
-                });
+                await post(
+                    `/connections/${encodeURIComponent(connection.id)}/trust`,
+                    {
+                        trusted: !trusted,
+                        confirmation: connection.id,
+                    },
+                    apiResponses.isUnknown,
+                );
                 await onRefreshConnections();
             },
             'save',
@@ -179,7 +183,11 @@ function createWorkspaceConnectionActions({
     const testConnection = () =>
         perform(
             async () => {
-                await post<Connected>(`/connections/${encodeURIComponent(connection.id)}/test`);
+                await post(
+                    `/connections/${encodeURIComponent(connection.id)}/test`,
+                    {},
+                    apiResponses.isConnected,
+                );
                 await onRefreshConnections();
             },
             'save',
@@ -248,10 +256,11 @@ function useWorkspaceDraftActions({
     const patch = useCallback(
         (values: Partial<Draft>) => {
             const draft = workspaceRef.current.tabs.find(item => item.id === active.id);
-            const contentChanged = Object.entries(values).some(
-                ([key, value]) =>
-                    key !== 'from' && key !== 'to' && value !== draft?.[key as keyof Draft],
-            );
+            const contentChanged = Object.entries(values).some(([key, value]) => {
+                if (key === 'from' || key === 'to') return false;
+                const existing = Object.entries(draft ?? {}).find(([field]) => field === key)?.[1];
+                return value !== existing;
+            });
             update(active.id, draft => ({ ...draft, ...values }));
             if (contentChanged) clearDraftFeedbackInfo(active.id);
         },
@@ -288,18 +297,20 @@ export function useWorkspaceController({
     const [savingDraftIds, setSavingDraftIds] = useState<Record<string, boolean>>({});
     const [scripts, setScripts] = useState<Record<string, Script>>({});
     const script = active.scriptId ? scripts[active.scriptId] : undefined;
-    const [draftView, setViewForDraft] = useScopedValue<ResultsView>(active.id);
+    const [draftView, setViewForDraft, , updateViewForDraft] = useScopedValue<ResultsView>(
+        active.id,
+    );
     const view = draftView ?? 'results';
     const [selectedScriptResult, setSelectedScriptResult] = useScopedValue<string>(active.id);
     const setView = useCallback<Dispatch<SetStateAction<ResultsView>>>(
         next => {
-            setViewForDraft(
+            updateViewForDraft(
                 active.id,
                 current => (typeof next === 'function' ? next(current ?? 'results') : next),
                 true,
             );
         },
-        [active.id, setViewForDraft],
+        [active.id, updateViewForDraft],
     );
     const [exampleChartRunId, setExampleChartRunId] = useState<string>();
     const ui = useWorkspaceUiState({ experience, active });
