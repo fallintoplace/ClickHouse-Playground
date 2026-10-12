@@ -148,7 +148,6 @@
   --overlay-backdrop: #20242c47;
   --browser-chrome: #f7f9fe;
   --brand-logo: var(--text);
-  --brand-accent: #ffbe00;
 }
 
 :root[data-theme="click-light"]
