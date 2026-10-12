@@ -32,6 +32,7 @@ export function SelectControl({
     const [search, setSearch] = useState('');
     const [activeIndex, setActiveIndex] = useState(0);
     const selected = options.find(option => option.value === value);
+    const hasEnabledOptions = options.some(option => !option.disabled);
     const availableOptions = hideDisabledOptions
         ? options.filter(option => !option.disabled)
         : options;
@@ -62,7 +63,7 @@ export function SelectControl({
 
     const showMenu = () => {
         const element = menu.current;
-        if (!element || element.matches(':popover-open')) return;
+        if (!element || !hasEnabledOptions || element.matches(':popover-open')) return;
         setSearch('');
         const selectedIndex = availableOptions.findIndex(
             option => option.value === value && !option.disabled,
@@ -111,6 +112,12 @@ export function SelectControl({
     };
 
     useEffect(() => {
+        const element = menu.current;
+        if (hasEnabledOptions || !element?.matches(':popover-open')) return;
+        element.hidePopover();
+    }, [hasEnabledOptions]);
+
+    useEffect(() => {
         if (!open) return;
         const element = menu.current;
         const document = element?.ownerDocument;
@@ -145,6 +152,7 @@ export function SelectControl({
                 ref={trigger}
                 type="button"
                 className="chart-select-trigger"
+                disabled={!hasEnabledOptions}
                 role="combobox"
                 aria-label={label}
                 aria-haspopup="listbox"

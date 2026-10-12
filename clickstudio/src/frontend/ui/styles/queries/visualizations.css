@@ -2305,6 +2305,14 @@
   color: var(--text);
 }
 
+.chart-select-trigger:disabled,
+.chart-select-trigger:disabled:hover {
+  border-color: var(--line);
+  background: var(--panel-raised);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
 .chart-select-value {
   min-width: 0;
   overflow: hidden;
