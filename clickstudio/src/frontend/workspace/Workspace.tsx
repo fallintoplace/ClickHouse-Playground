@@ -22,7 +22,7 @@ import { WorkspaceResultsPanel } from '../queries/results/WorkspaceResultsPanel'
 import {
     EXPERT_BROWSE_NAVIGATION,
     EXPERT_EXECUTION_NAVIGATION,
-    primaryInspectorNavigation,
+    inspectorRailNavigation,
 } from './layout/panels/inspector-navigation';
 import { PLAYGROUND_CONNECTION_ID } from '../database/connections/playground-client';
 import { closeDraft, newDraft, type Draft } from '../queries/editor/drafts/workspace-state';
@@ -167,8 +167,8 @@ export function Workspace({
                 executionPending: Boolean(pendingExecution.execution),
                 executionStopRequested: Boolean(
                     pendingExecution.execution?.scriptId &&
-                        script?.id === pendingExecution.execution.scriptId &&
-                        script.cancelled,
+                    script?.id === pendingExecution.execution.scriptId &&
+                    script.cancelled,
                 ),
                 cancelling,
                 draftFeedback: model.draftFeedback,
@@ -404,18 +404,17 @@ function renderWorkspaceLayout({
             <div className="workspace-layout">
                 <aside className="icon-rail" aria-label="Workspace tools">
                     <span className="rail-separator" />
-                    {experience === 'expert' &&
-                        primaryInspectorNavigation(true).map(item => (
-                            <RailButton
-                                key={item.id}
-                                icon={item.icon}
-                                label={copy.common[item.copyKey]}
-                                active={inspector === item.id && drawerOpen}
-                                accent={item.id === 'assistant'}
-                                testId={item.id === 'assistant' ? 'open-ai' : undefined}
-                                onClick={() => showInspector(item.id)}
-                            />
-                        ))}
+                    {inspectorRailNavigation(experience === 'expert').map(item => (
+                        <RailButton
+                            key={item.id}
+                            icon={item.icon}
+                            label={copy.common[item.copyKey]}
+                            active={inspector === item.id && drawerOpen}
+                            accent={item.id === 'assistant'}
+                            testId={item.id === 'assistant' ? 'open-ai' : undefined}
+                            onClick={() => showInspector(item.id)}
+                        />
+                    ))}
                     <span className="rail-spacer" />
                     <span className="rail-separator" />
                     <RailButton

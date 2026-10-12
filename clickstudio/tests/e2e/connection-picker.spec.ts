@@ -50,8 +50,14 @@ for (const mode of ['Standard', 'Experimental']) {
         await setWorkspaceMode(page, mode);
         await expect(page.getByRole('button', { name: 'New table', exact: true })).toHaveCount(0);
         if (mode === 'Standard') {
+            const openObjects = page
+                .locator('.icon-rail')
+                .getByRole('button', { name: 'Objects', exact: true });
+            await expect(openObjects).toBeVisible();
+            await openObjects.click();
+            await expect(page.locator('.object-explorer-section')).toBeVisible();
             await expect(
-                page.locator('.icon-rail').getByRole('button', { name: 'Objects', exact: true }),
+                page.getByRole('button', { name: 'View dependencies', exact: true }),
             ).toHaveCount(0);
             await expect(page.getByRole('button', { name: 'Insert row', exact: true })).toHaveCount(
                 0,

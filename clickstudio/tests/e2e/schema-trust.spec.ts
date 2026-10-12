@@ -160,10 +160,11 @@ for (const mode of ['beginner', 'expert']) {
         await mockLiveWorkspace(page, route => route.fulfill({ json: schema }), mode);
         if (mode === 'beginner') {
             await expect(page.locator('.object-explorer-section')).toHaveCount(0);
-            await expect(
-                page.locator('.icon-rail').getByRole('button', { name: 'Objects', exact: true }),
-            ).toHaveCount(0);
-            await setWorkspaceMode(page, 'Experimental');
+            await page
+                .locator('.icon-rail')
+                .getByRole('button', { name: 'Objects', exact: true })
+                .click();
+            await expect(page.locator('.object-explorer-section')).toBeVisible();
         }
         await expect.poll(() => permissionRequests).toBeGreaterThan(0);
         await expect(page.getByRole('button', { name: 'New table', exact: true })).toHaveCount(0);
@@ -438,9 +439,7 @@ test('Object explorer keeps the partial-schema notice beside an empty loaded pag
     ).toBeVisible();
 });
 
-test('Standard loads schema without opening Objects and keeps it available in Experimental', async ({
-    page,
-}) => {
+test('Standard loads schema and opens Objects only on demand', async ({ page }) => {
     const loaded = page.waitForResponse(
         response => new URL(response.url()).pathname === '/api/connections/live/schema',
     );
@@ -448,9 +447,13 @@ test('Standard loads schema without opening Objects and keeps it available in Ex
     expect((await loaded).ok()).toBe(true);
     const inspector = page.locator('.inspector-pane.is-docked-inspector');
     await expect(inspector).toHaveCount(0);
-    await expect(
-        page.locator('.icon-rail').getByRole('button', { name: 'Objects', exact: true }),
-    ).toHaveCount(0);
+    const openObjects = page
+        .locator('.icon-rail')
+        .getByRole('button', { name: 'Objects', exact: true });
+    await expect(openObjects).toBeVisible();
+    await openObjects.click();
+    await expect(inspector).toBeVisible();
+    await expect(page.getByTestId('schema-search')).toBeVisible();
     await setWorkspaceMode(page, 'Experimental');
     await expect(inspector.getByRole('heading', { name: 'Objects', exact: true })).toBeVisible();
     await page.getByText('events', { exact: true }).first().click();

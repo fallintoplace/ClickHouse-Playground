@@ -117,10 +117,9 @@ export function ObjectDetails({
                         </Button>
                     </div>
                 </div>
-                {((expert && table.engine.endsWith('MergeTree')) ||
-                    table.database === 'system') && (
+                {expert && (table.engine.endsWith('MergeTree') || table.database === 'system') && (
                     <div className="object-reference-actions">
-                        {expert && table.engine.endsWith('MergeTree') && (
+                        {table.engine.endsWith('MergeTree') && (
                             <Button
                                 variant="secondary"
                                 className="toolbar-small object-parts-action"

@@ -56,6 +56,41 @@ async function beginInCompactMode(page: Page) {
     await expect(page.getByTestId('run-button')).toBeEnabled();
 }
 
+test('Standard opens Objects from the rail and switches to AI in the inspector header', async ({
+    page,
+}) => {
+    await trust(page, 'Standard');
+
+    const rail = page.locator('.icon-rail');
+    const openObjects = rail.getByRole('button', { name: 'Objects', exact: true });
+    await expect(openObjects).toBeVisible();
+    await expect(rail.getByRole('button', { name: 'AI', exact: true })).toHaveCount(0);
+    await openObjects.click();
+
+    const inspector = page.locator('.inspector-pane.is-docked-inspector');
+    const switcher = inspector.getByRole('navigation', {
+        name: 'Workspace browser',
+        exact: true,
+    });
+    const objectsTab = switcher.getByRole('button', { name: 'Objects', exact: true });
+    const aiTab = switcher.getByRole('button', { name: 'AI', exact: true });
+    await expect(switcher).toBeVisible();
+    await expect(objectsTab).toHaveAttribute('aria-pressed', 'true');
+    await expect(aiTab).toHaveCount(1);
+    await expect(switcher.getByRole('button', { name: 'Reference', exact: true })).toHaveCount(0);
+    await expect(page.getByTestId('schema-search')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'View dependencies', exact: true })).toHaveCount(
+        0,
+    );
+
+    await aiTab.click();
+    await expect(aiTab).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('textbox', { name: 'Ask AI', exact: true })).toBeVisible();
+    await objectsTab.click();
+    await expect(objectsTab).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('schema-search')).toBeVisible();
+});
+
 test('Standard exposes assignment actions and can run a query without opening AI', async ({
     page,
 }) => {

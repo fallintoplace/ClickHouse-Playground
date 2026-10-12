@@ -30,7 +30,8 @@ import type { WorkspaceFeedback } from '../notifications/useWorkspaceNotificatio
 import type { Copy } from '../../../ui/copy';
 import {
     inspectorMoreNavigation,
-    PRIMARY_INSPECTOR_NAVIGATION,
+    primaryInspectorNavigation,
+    type PrimaryInspectorDestination,
     type SecondaryInspectorDestination,
 } from './inspector-navigation';
 
@@ -130,6 +131,81 @@ function panelTitle(inspector: Inspector, copy: Copy['common']): string {
     }
 }
 
+function PrimaryInspectorTab({
+    item,
+    copy,
+    selected,
+    onSelect,
+}: {
+    item: PrimaryInspectorDestination;
+    copy: Copy['common'];
+    selected: boolean;
+    onSelect: (inspector: Inspector) => void;
+}) {
+    return (
+        <button
+            type="button"
+            className={item.id === 'assistant' ? 'is-assistant-tab' : undefined}
+            aria-label={copy[item.copyKey]}
+            aria-pressed={selected}
+            onClick={() => onSelect(item.id)}
+        >
+            <Icon name={item.icon} />
+            <span>{copy[item.copyKey]}</span>
+        </button>
+    );
+}
+
+function InspectorPaneHeading({
+    title,
+    copy,
+    inspector,
+    expert,
+    docked,
+    primaryNavigation,
+    onSelect,
+    onClose,
+}: {
+    title: string;
+    copy: Copy['common'];
+    inspector: Inspector;
+    expert: boolean;
+    docked: boolean;
+    primaryNavigation: readonly PrimaryInspectorDestination[];
+    onSelect: (inspector: Inspector) => void;
+    onClose?: () => void;
+}) {
+    return (
+        <header className="inspector-header">
+            {docked && !expert ? (
+                <nav className="inspector-header-switch" aria-label={copy.workspaceBrowser}>
+                    {primaryNavigation.map(item => (
+                        <PrimaryInspectorTab
+                            key={item.id}
+                            item={item}
+                            copy={copy}
+                            selected={inspector === item.id}
+                            onSelect={onSelect}
+                        />
+                    ))}
+                </nav>
+            ) : (
+                <h2>{title}</h2>
+            )}
+            {docked && (
+                <Button
+                    variant="ghost"
+                    className="icon-only"
+                    aria-label="Close inspector"
+                    onClick={onClose}
+                >
+                    <Icon name="close" />
+                </Button>
+            )}
+        </header>
+    );
+}
+
 export function InspectorPane({
     comparisonProfiles,
     comparisonPipelines,
@@ -215,16 +291,6 @@ export function InspectorPane({
     }, [revisionsDocumentId, currentRevision, firstRevisionNumber]);
     const selectedRevision =
         revisions.find(revision => revision.revision === selectedRevisionNumber) ?? revisions[0];
-    const closeButton = docked && (
-        <Button
-            variant="ghost"
-            className="icon-only"
-            aria-label="Close inspector"
-            onClick={onClose}
-        >
-            <Icon name="close" />
-        </Button>
-    );
     const title = panelTitle(inspector, copy);
     let assistantServerVersion: string | undefined;
 
@@ -244,31 +310,36 @@ export function InspectorPane({
         setInspector('reference');
     };
     const clearReferenceTarget = useCallback(() => setReferenceTarget(undefined), []);
-    const moreItems = inspectorMoreNavigation(expert, Boolean(run));
+    const isExpert = Boolean(expert);
+    const primaryNavigation = primaryInspectorNavigation(isExpert);
+    const moreItems = inspectorMoreNavigation(isExpert, Boolean(run));
+    const selectPrimaryInspector = (next: Inspector) => {
+        if (next === 'reference') setReferenceTarget(undefined);
+        setInspector(next);
+    };
 
     return (
         <aside className={cx('inspector-pane', docked && 'is-docked-inspector')}>
-            <header className="inspector-header">
-                <h2>{title}</h2>
-                {closeButton}
-            </header>
-            {expert && docked && (
+            <InspectorPaneHeading
+                title={title}
+                copy={copy}
+                inspector={inspector}
+                expert={isExpert}
+                docked={docked}
+                primaryNavigation={primaryNavigation}
+                onSelect={selectPrimaryInspector}
+                onClose={onClose}
+            />
+            {isExpert && docked && (
                 <nav className="inspector-tabs is-browser-tabs" aria-label={copy.workspaceBrowser}>
-                    {PRIMARY_INSPECTOR_NAVIGATION.map(item => (
-                        <button
+                    {primaryNavigation.map(item => (
+                        <PrimaryInspectorTab
                             key={item.id}
-                            type="button"
-                            className={item.id === 'assistant' ? 'is-assistant-tab' : undefined}
-                            aria-label={copy[item.copyKey]}
-                            aria-pressed={inspector === item.id}
-                            onClick={() => {
-                                if (item.id === 'reference') setReferenceTarget(undefined);
-                                setInspector(item.id);
-                            }}
-                        >
-                            <Icon name={item.icon} />
-                            <span>{copy[item.copyKey]}</span>
-                        </button>
+                            item={item}
+                            copy={copy}
+                            selected={inspector === item.id}
+                            onSelect={selectPrimaryInspector}
+                        />
                     ))}
                     <InspectorMoreMenu
                         copy={copy}
@@ -292,7 +363,7 @@ export function InspectorPane({
                         key={connection.id}
                         copy={copy}
                         connection={connection}
-                        expert={expert}
+                        expert={isExpert}
                         schema={schema}
                         schemaLoading={schemaLoading}
                         schemaLoadingMore={schemaLoadingMore}

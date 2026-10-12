@@ -25,7 +25,7 @@ export type SecondaryInspectorDestination = Readonly<{
 type InspectorNavigationDestination = PrimaryInspectorDestination | SecondaryInspectorDestination;
 
 export const INSPECTOR_NAVIGATION: readonly InspectorNavigationDestination[] = [
-    { group: 'primary', id: 'schema', icon: 'schema', copyKey: 'objects', expertOnly: true },
+    { group: 'primary', id: 'schema', icon: 'schema', copyKey: 'objects' },
     {
         group: 'primary',
         id: 'reference',
@@ -80,8 +80,12 @@ export function primaryInspectorNavigation(
     return PRIMARY_INSPECTOR_NAVIGATION.filter(item => !item.expertOnly || expert);
 }
 
+export function inspectorRailNavigation(expert: boolean): readonly PrimaryInspectorDestination[] {
+    return primaryInspectorNavigation(expert).filter(item => expert || item.id === 'schema');
+}
+
 export function canOpenInspector(inspector: Inspector, expert: boolean): boolean {
-    return expert || inspector === 'assistant';
+    return expert || inspector === 'assistant' || inspector === 'schema';
 }
 
 export const EXPERT_BROWSE_NAVIGATION = INSPECTOR_NAVIGATION.filter(
