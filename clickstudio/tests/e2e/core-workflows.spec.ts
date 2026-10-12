@@ -14,6 +14,7 @@ import {
     useAdvancedMode,
 } from './helpers.js';
 import { test, expect, type Page } from '@playwright/test';
+import { chooseChartOption } from './chart-control-helpers.js';
 
 declare global {
     interface Window {
@@ -2197,7 +2198,8 @@ test('Single-row numeric results render as a number and expose supported chart t
     ).toHaveCount(0);
     await expect(results.locator('.result-table-toolbar')).toHaveCount(0);
     await expect(results.locator('.results-table-tools')).toBeEmpty();
-    await expect(results.getByLabel('Type').locator('option')).toHaveText([
+    await results.getByLabel('Type').click();
+    await expect(results.getByRole('option')).toHaveText([
         'Number',
         'Line',
         'Bar',
@@ -2231,13 +2233,15 @@ test('Scatter charts plot the selected numeric axes', async ({ page }) => {
     await trust(page);
     const results = await runQuery(page);
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();
-    await results.getByLabel('Type').selectOption('scatter');
+    await chooseChartOption(page, results.getByLabel('Type'), 'scatter');
     await expect(results.locator('.chart-canvas svg[role="img"]')).toHaveAttribute(
         'aria-label',
         /scatter chart/,
     );
     await expect(results.locator('.chart-point')).toHaveCount(3);
-    await expect(results.getByLabel('X measure').locator('option:enabled')).toHaveCount(1);
+    await results.getByLabel('X measure').click();
+    await expect(results.locator('[role="option"]:not([aria-disabled="true"])')).toHaveCount(1);
+    await page.keyboard.press('Escape');
     await expect(results.locator('.chart-footer')).toContainText('3 plotted points');
 });
 
@@ -2266,7 +2270,7 @@ test('Heatmaps retain observed groups and leave missing cells blank', async ({ p
     await trust(page);
     const results = await runQuery(page);
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();
-    await results.getByLabel('Type').selectOption('heatmap');
+    await chooseChartOption(page, results.getByLabel('Type'), 'heatmap');
     await expect(results.locator('.heatmap-grid')).toBeVisible();
     await expect(
         results.locator('.heatmap-cell[aria-label="Tue, 2026-09-21 01:00:00: no returned row"]'),

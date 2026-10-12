@@ -253,7 +253,6 @@ export function prepareChartView({
             x,
         });
 
-    const chartTitle = chart.title && chart.title !== 'Query result' ? chart.title : undefined;
     const chartAriaLabel = chartText(chartCopy.chartComparing, {
         type: chartTypeLabel(chartKind, chartCopy).toLocaleLowerCase(),
         x: result.columns[xIndex]?.name ?? '',
@@ -287,7 +286,6 @@ export function prepareChartView({
         chartXTicks,
     };
     return {
-        chartTitle,
         chartKind,
         chartRows,
         result,

@@ -5,11 +5,11 @@ import type { CandlestickConfig } from '../../../../../shared/queries/results/ch
 import type { Result } from '../../../../../shared/queries/results/types';
 import type { Draft } from '../../../editor/drafts/workspace-state';
 import type { Copy } from '../../../../ui/copy';
+import { SelectControl } from '../../../../ui/components/SelectControl';
 import { ChartPopover, ChartToolbar } from '../ChartToolbar';
 import { chartKindOptions, chartText, chartTypeLabel, seriesColor } from '../chart-helpers';
 
 export function renderChartControls({
-    chartTitle,
     chartKind,
     result,
     chartCopy,
@@ -25,7 +25,6 @@ export function renderChartControls({
     numericIndexes,
     availableMeasures,
 }: {
-    chartTitle: string | undefined;
     chartKind: Exclude<ChartKind, 'table'>;
     result: Result;
     chartCopy: Copy['chart'];
@@ -42,14 +41,16 @@ export function renderChartControls({
     availableMeasures: number[];
 }) {
     return (
-        <ChartToolbar title={chartTitle}>
+        <ChartToolbar>
             <label className="chart-control-field">
                 <span className="chart-control-label">{chartCopy.type}</span>
-                <select
+                <SelectControl
+                    className="chart-select"
+                    label={chartCopy.type}
                     value={chartKind}
-                    onChange={event => {
+                    onChange={value => {
                         const option = chartKindOptions.find(
-                            candidate => candidate.value === event.target.value,
+                            candidate => candidate.value === value,
                         );
                         if (!option) return;
                         if (option.value === 'candlestick') {
@@ -83,27 +84,25 @@ export function renderChartControls({
                                     : [yIndex],
                         });
                     }}
-                >
-                    {chartKindOptions.map(option => (
-                        <option
-                            key={option.value}
-                            value={option.value}
-                            disabled={option.value === 'candlestick' && !canChooseCandlestick}
-                        >
-                            {chartTypeLabel(option.value, chartCopy)}
-                        </option>
-                    ))}
-                </select>
+                    options={chartKindOptions.map(option => ({
+                        value: option.value,
+                        label: chartTypeLabel(option.value, chartCopy),
+                        disabled: option.value === 'candlestick' && !canChooseCandlestick,
+                    }))}
+                />
             </label>
             {chartKind !== 'number' && (
                 <label className="chart-control-field">
                     <span className="chart-control-label">
                         {chartKind === 'scatter' ? chartCopy.xAxisMeasure : chartCopy.xAxis}
                     </span>
-                    <select
-                        value={xIndex}
-                        onChange={event => {
-                            const nextX = Number(event.target.value);
+                    <SelectControl
+                        className="chart-select"
+                        label={chartKind === 'scatter' ? chartCopy.xAxisMeasure : chartCopy.xAxis}
+                        value={String(xIndex)}
+                        searchable={result.columns.length >= 8}
+                        onChange={value => {
+                            const nextX = Number(value);
                             const nextGroupCandidate =
                                 chartKind === 'heatmap' && nextX === groupByIndex
                                     ? result.columns.findIndex(
@@ -123,42 +122,32 @@ export function renderChartControls({
                                 ),
                             });
                         }}
-                    >
-                        {result.columns.map((column, index) => (
-                            <option
-                                value={index}
-                                key={index}
-                                disabled={
-                                    chartKind === 'scatter'
-                                        ? !numericIndexes.includes(index) || index === yIndex
-                                        : index === yIndex || index === groupByIndex
-                                }
-                            >
-                                {column.name}
-                            </option>
-                        ))}
-                    </select>
+                        options={result.columns.map((column, index) => ({
+                            value: String(index),
+                            label: column.name,
+                            disabled:
+                                chartKind === 'scatter'
+                                    ? !numericIndexes.includes(index) || index === yIndex
+                                    : index === yIndex || index === groupByIndex,
+                        }))}
+                    />
                 </label>
             )}
             {chartKind === 'heatmap' && (
                 <label className="chart-control-field">
                     <span className="chart-control-label">{chartCopy.yAxis}</span>
-                    <select
-                        value={groupByIndex ?? -1}
-                        onChange={event =>
-                            onChart({ ...chart, groupBy: Number(event.target.value) })
-                        }
-                    >
-                        {result.columns.map((column, index) => (
-                            <option
-                                value={index}
-                                key={index}
-                                disabled={index === xIndex || index === yIndex}
-                            >
-                                {column.name}
-                            </option>
-                        ))}
-                    </select>
+                    <SelectControl
+                        className="chart-select"
+                        label={chartCopy.yAxis}
+                        value={String(groupByIndex ?? -1)}
+                        searchable={result.columns.length >= 8}
+                        onChange={value => onChart({ ...chart, groupBy: Number(value) })}
+                        options={result.columns.map((column, index) => ({
+                            value: String(index),
+                            label: column.name,
+                            disabled: index === xIndex || index === yIndex,
+                        }))}
+                    />
                 </label>
             )}
             {chartKind === 'line' || chartKind === 'bar' ? (
@@ -227,20 +216,18 @@ export function renderChartControls({
             ) : (
                 <label className="chart-control-field">
                     <span className="chart-control-label">{chartCopy.measure}</span>
-                    <select
-                        value={yIndex}
-                        onChange={event => onChart({ ...chart, ys: [Number(event.target.value)] })}
-                    >
-                        {numericIndexes.map(index => (
-                            <option
-                                value={index}
-                                key={index}
-                                disabled={index === xIndex || index === groupByIndex}
-                            >
-                                {result.columns[index]?.name}
-                            </option>
-                        ))}
-                    </select>
+                    <SelectControl
+                        className="chart-select"
+                        label={chartCopy.measure}
+                        value={String(yIndex)}
+                        searchable={numericIndexes.length >= 8}
+                        onChange={value => onChart({ ...chart, ys: [Number(value)] })}
+                        options={numericIndexes.map(index => ({
+                            value: String(index),
+                            label: result.columns[index]?.name ?? '',
+                            disabled: index === xIndex || index === groupByIndex,
+                        }))}
+                    />
                 </label>
             )}
         </ChartToolbar>

@@ -1,6 +1,7 @@
 import { test, expect, type Locator } from '@playwright/test';
 import { runButton, trust } from './helpers.js';
 import { mockWritableWorkspace } from './import-helpers.js';
+import { chooseChartOption } from './chart-control-helpers.js';
 
 test.beforeEach(async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -271,7 +272,7 @@ test('Light heatmaps keep zero, null, missing, and saturated values readable wit
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'succeeded');
     const results = page.getByRole('region', { name: 'Query results', exact: true });
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();
-    await results.getByLabel('Type').selectOption('heatmap');
+    await chooseChartOption(page, results.getByLabel('Type'), 'heatmap');
     await expect(results.locator('.heatmap-cell')).toHaveCount(6);
     await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
 

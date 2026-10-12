@@ -1,6 +1,7 @@
 import { setWorkspaceMode, runButton, trust } from './helpers.js';
 import { expect, test, type Locator } from '@playwright/test';
 import type { Result } from '../../src/shared/queries/results/types.js';
+import { chooseChartOption } from './chart-control-helpers.js';
 
 const eventRows = [
     ['PushEvent', 573_100_000],
@@ -100,9 +101,11 @@ for (const fixture of [
         const results = page.getByRole('region', { name: 'Query results', exact: true });
         await results.getByRole('tab', { name: 'Chart', exact: true }).click();
         if (!fixture.rowCount)
-            await results
-                .getByRole('combobox', { name: 'Type', exact: true })
-                .selectOption(fixture.kind);
+            await chooseChartOption(
+                page,
+                results.getByRole('combobox', { name: 'Type', exact: true }),
+                fixture.kind,
+            );
         await page.getByRole('button', { name: 'Ask AI', exact: true }).click();
         const plot = results.locator('.chart-category-plot');
         const marks = plot.locator(fixture.kind === 'line' ? '.chart-point' : '.chart-bar');
@@ -306,7 +309,11 @@ for (const fixture of [
         const results = page.getByRole('region', { name: 'Query results', exact: true });
         await results.getByRole('tab', { name: 'Chart', exact: true }).click();
         if (fixture.kind === 'line')
-            await results.getByRole('combobox', { name: 'Type', exact: true }).selectOption('line');
+            await chooseChartOption(
+                page,
+                results.getByRole('combobox', { name: 'Type', exact: true }),
+                'line',
+            );
 
         const plot = results.locator('.chart-category-plot');
         await expect(plot).toBeVisible();
@@ -406,7 +413,7 @@ for (const xType of ['DateTime', 'Float64']) {
         await results.getByRole('tab', { name: 'Chart', exact: true }).click();
         const type = results.getByRole('combobox', { name: 'Type', exact: true });
         for (const kind of ['line', 'bar']) {
-            await type.selectOption(kind);
+            await chooseChartOption(page, type, kind);
             await expect(
                 results.locator(kind === 'bar' ? '.chart-bar' : '.chart-point'),
             ).toHaveCount(rows.length);
@@ -497,7 +504,11 @@ test('Dense fitted bars show every series without delayed animation or oversized
     await runButton(page).click();
     const results = page.getByRole('region', { name: 'Query results', exact: true });
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();
-    await results.getByRole('combobox', { name: 'Type', exact: true }).selectOption('bar');
+    await chooseChartOption(
+        page,
+        results.getByRole('combobox', { name: 'Type', exact: true }),
+        'bar',
+    );
     await expect(results.locator('.chart-bar--static')).toHaveCount(1800);
     await expectPlotFits(results);
     expect(

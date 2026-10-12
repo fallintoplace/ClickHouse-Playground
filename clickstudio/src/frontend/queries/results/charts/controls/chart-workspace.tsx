@@ -9,7 +9,6 @@ import { renderChartControls } from './chart-controls';
 import { HeatmapGrid } from '../types/HeatmapGrid';
 
 export function renderChartWorkspace({
-    chartTitle,
     chartKind,
     result,
     chartCopy,
@@ -242,7 +241,6 @@ export function renderChartWorkspace({
                 return (
                     <div ref={ref} className="chart-workspace animate-enter">
                         {renderChartControls({
-                            chartTitle,
                             chartKind,
                             result,
                             chartCopy,

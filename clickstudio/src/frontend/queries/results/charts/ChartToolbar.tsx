@@ -99,7 +99,7 @@ export function ChartPopover({
                     positionPopover(element, button.current);
                     (
                         element.querySelector<HTMLElement>(
-                            'input:not(:disabled), select:not(:disabled)',
+                            '[role="combobox"]:not([aria-disabled="true"]), input:not(:disabled, [type="search"]), select:not(:disabled)',
                         ) ?? element
                     ).focus({ preventScroll: true });
                 }}
@@ -121,10 +121,9 @@ export function ChartPopover({
     );
 }
 
-export function ChartToolbar({ title, children }: { title?: string; children: ReactNode }) {
+export function ChartToolbar({ children }: { children: ReactNode }) {
     return (
         <div className="chart-toolbar">
-            {title && <h3 title={title}>{title}</h3>}
             <div className="chart-controls">{children}</div>
         </div>
     );

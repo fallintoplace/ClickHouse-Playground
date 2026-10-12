@@ -2,6 +2,8 @@ import type { CandlestickConfig } from '../../../../../shared/queries/results/ch
 import type { Result } from '../../../../../shared/queries/results/types';
 import type { Draft } from '../../../editor/drafts/workspace-state';
 import type { Copy } from '../../../../ui/copy';
+import { SelectControl } from '../../../../ui/components/SelectControl';
+import type { SelectControlOption } from '../../../../ui/components/SelectControl';
 import { CandlestickChart } from './CandlestickChart';
 import { ChartPopover, ChartToolbar } from '../ChartToolbar';
 import { ScrollEdgeFrame } from '../../../../ui/components/ScrollEdgeShadows';
@@ -52,40 +54,16 @@ export function renderCandlestickChart({
                 : { ys: numericIndexes.slice(0, 1) }),
         });
     };
-    const candleColumns = (selected: number | undefined) => (
-        <>
-            <option value="">—</option>
-            {numericIndexes.map(index => (
-                <option
-                    value={index}
-                    key={index}
-                    disabled={
-                        index !== selected &&
-                        [candle.open, candle.high, candle.low, candle.close].includes(index)
-                    }
-                >
-                    {result.columns[index]?.name}
-                </option>
-            ))}
-        </>
-    );
-    const optionalColumns = (selected: number | undefined) => (
-        <>
-            <option value="">—</option>
-            {numericIndexes.map(index => (
-                <option
-                    value={index}
-                    key={index}
-                    disabled={
-                        index !== selected &&
-                        [candle.open, candle.high, candle.low, candle.close].includes(index)
-                    }
-                >
-                    {result.columns[index]?.name}
-                </option>
-            ))}
-        </>
-    );
+    const candleColumns = (selected: number | undefined): SelectControlOption[] => [
+        { value: '', label: '—' },
+        ...numericIndexes.map(index => ({
+            value: String(index),
+            label: result.columns[index]?.name ?? '',
+            disabled:
+                index !== selected &&
+                [candle.open, candle.high, candle.low, candle.close].includes(index),
+        })),
+    ];
     return renderCandlestickControls({
         chart,
         chartCopy,
@@ -97,7 +75,7 @@ export function renderCandlestickChart({
         result,
         patchCandle,
         candleColumns,
-        optionalColumns,
+        optionalColumns: candleColumns,
         activeCandleValid,
     });
 }
@@ -128,54 +106,51 @@ function renderCandlestickControls({
         field: 'open' | 'high' | 'low' | 'close' | 'bid' | 'ask' | 'spread' | 'quoteActivity',
         value: string,
     ) => void;
-    candleColumns: (selected: number | undefined) => import('react').ReactElement;
-    optionalColumns: (selected: number | undefined) => import('react').ReactElement;
+    candleColumns: (selected: number | undefined) => SelectControlOption[];
+    optionalColumns: (selected: number | undefined) => SelectControlOption[];
     activeCandleValid: boolean;
 }) {
     return (
         <ScrollEdgeFrame<HTMLDivElement> className="chart-workspace-frame">
             {ref => (
                 <div ref={ref} className="chart-workspace animate-enter">
-                    <ChartToolbar title={chart.title !== 'Query result' ? chart.title : undefined}>
-                        <label>
-                            {chartCopy.type}
-                            <select
+                    <ChartToolbar>
+                        <label className="chart-control-field">
+                            <span className="chart-control-label">{chartCopy.type}</span>
+                            <SelectControl
+                                className="chart-select"
+                                label={chartCopy.type}
                                 value="candlestick"
-                                onChange={event => updateKind(event.target.value)}
-                            >
-                                {chartKindOptions.map(option => (
-                                    <option
-                                        key={option.value}
-                                        value={option.value}
-                                        disabled={
-                                            option.value === 'candlestick' && !canChooseCandlestick
-                                        }
-                                    >
-                                        {chartTypeLabel(option.value, chartCopy)}
-                                    </option>
-                                ))}
-                            </select>
+                                onChange={updateKind}
+                                options={chartKindOptions.map(option => ({
+                                    value: option.value,
+                                    label: chartTypeLabel(option.value, chartCopy),
+                                    disabled:
+                                        option.value === 'candlestick' && !canChooseCandlestick,
+                                }))}
+                            />
                         </label>
-                        <label>
-                            {chartCopy.xAxis}
-                            <select
-                                value={candleX}
-                                onChange={event =>
+                        <label className="chart-control-field">
+                            <span className="chart-control-label">{chartCopy.xAxis}</span>
+                            <SelectControl
+                                className="chart-select"
+                                label={chartCopy.xAxis}
+                                value={String(candleX)}
+                                searchable={result.columns.length >= 8}
+                                onChange={value =>
                                     onChart({
                                         ...chart,
                                         kind: 'candlestick',
-                                        x: Number(event.target.value),
+                                        x: Number(value),
                                         ys: [],
                                         candlestick: { ...candle },
                                     })
                                 }
-                            >
-                                {result.columns.map((column, index) => (
-                                    <option value={index} key={index}>
-                                        {column.name}
-                                    </option>
-                                ))}
-                            </select>
+                                options={result.columns.map((column, index) => ({
+                                    value: String(index),
+                                    label: column.name,
+                                }))}
+                            />
                         </label>
                         <ChartPopover
                             label={chartCopy.setup}
@@ -183,19 +158,26 @@ function renderCandlestickControls({
                             trigger={chartCopy.setup}
                         >
                             <div className="chart-setup-fields">
-                                {(['open', 'high', 'low', 'close'] as const).map(field => (
-                                    <label key={field}>
-                                        {chartCopy[`${field}Label`]}
-                                        <select
-                                            value={candle[field] ?? ''}
-                                            onChange={event =>
-                                                patchCandle(field, event.target.value)
-                                            }
-                                        >
-                                            {candleColumns(candle[field])}
-                                        </select>
-                                    </label>
-                                ))}
+                                {(['open', 'high', 'low', 'close'] as const).map(field => {
+                                    const options = candleColumns(candle[field]);
+                                    return (
+                                        <label key={field}>
+                                            {chartCopy[`${field}Label`]}
+                                            <SelectControl
+                                                className="chart-select"
+                                                label={chartCopy[`${field}Label`]}
+                                                value={
+                                                    candle[field] === undefined
+                                                        ? ''
+                                                        : String(candle[field])
+                                                }
+                                                searchable={options.length >= 9}
+                                                onChange={value => patchCandle(field, value)}
+                                                options={options}
+                                            />
+                                        </label>
+                                    );
+                                })}
                                 {(['bid', 'ask', 'spread', 'quoteActivity'] as const).map(field => {
                                     const getFieldLabel = () => {
                                         switch (field) {
@@ -210,17 +192,23 @@ function renderCandlestickControls({
                                                 return chartCopy.quoteActivity;
                                         }
                                     };
+                                    const options = optionalColumns(candle[field]);
+                                    const label = getFieldLabel();
                                     return (
                                         <label key={field}>
-                                            {getFieldLabel()}
-                                            <select
-                                                value={candle[field] ?? ''}
-                                                onChange={event =>
-                                                    patchCandle(field, event.target.value)
+                                            {label}
+                                            <SelectControl
+                                                className="chart-select"
+                                                label={label}
+                                                value={
+                                                    candle[field] === undefined
+                                                        ? ''
+                                                        : String(candle[field])
                                                 }
-                                            >
-                                                {optionalColumns(candle[field])}
-                                            </select>
+                                                searchable={options.length >= 9}
+                                                onChange={value => patchCandle(field, value)}
+                                                options={options}
+                                            />
                                         </label>
                                     );
                                 })}

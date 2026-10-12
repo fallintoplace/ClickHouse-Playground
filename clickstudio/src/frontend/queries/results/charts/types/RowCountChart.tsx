@@ -12,6 +12,7 @@ import type { Result } from '../../../../../shared/queries/results/types';
 import type { Draft } from '../../../editor/drafts/workspace-state';
 import type { Copy } from '../../../../ui/copy';
 import { ScrollEdgeFrame } from '../../../../ui/components/ScrollEdgeShadows';
+import { SelectControl } from '../../../../ui/components/SelectControl';
 import { ChartToolbar } from '../ChartToolbar';
 import { ChartAxisLabels } from '../ChartAxisLabels';
 import {
@@ -132,18 +133,6 @@ export function RowCountChart({
             !['Query result', generatedTitle, suggestion.config.title].includes(chart.title)
                 ? chart.title
                 : undefined;
-        const getSuggestionReason = () => {
-            if (timeAxis) {
-                if (groupByIndex === undefined) {
-                    return copy.rowsOverTime;
-                }
-
-                return chartText(copy.rowsOverTimeBy, { dimension: groupName });
-            }
-
-            return chartText(copy.rowsBy, { dimension: dimensionName });
-        };
-        const title = customTitle ?? getSuggestionReason();
         let timeUnit: string;
 
         switch (countData?.unit) {
@@ -177,9 +166,9 @@ export function RowCountChart({
         } else {
             chartAriaLabel = chartText(copy.rowsBy, { dimension: dimensionName });
         }
-        return { title, customTitle, timeUnit, chartAriaLabel };
+        return { customTitle, timeUnit, chartAriaLabel };
     };
-    const { title, customTitle, timeUnit, chartAriaLabel } = describeRowCountChart();
+    const { customTitle, timeUnit, chartAriaLabel } = describeRowCountChart();
     const renderChartSvg = createRowCountSvgRenderer({
         viewportWidth,
         viewportHeight,
@@ -270,7 +259,6 @@ export function RowCountChart({
                 return (
                     <div ref={ref} className="chart-workspace animate-enter">
                         <RowCountChartToolbar
-                            title={title}
                             result={result}
                             chart={chart}
                             copy={copy}
@@ -321,7 +309,6 @@ export function RowCountChart({
 }
 
 function RowCountChartToolbar({
-    title,
     result,
     chart,
     copy,
@@ -333,7 +320,6 @@ function RowCountChartToolbar({
     customTitle,
     onChart,
 }: {
-    title: string;
     result: Result;
     chart: Draft['chart'];
     copy: Copy['chart'];
@@ -346,14 +332,16 @@ function RowCountChartToolbar({
     onChart: (chart: Draft['chart']) => void;
 }) {
     return (
-        <ChartToolbar title={title}>
+        <ChartToolbar>
             <label className="chart-control-field">
                 <span className="chart-control-label">{copy.xAxis}</span>
-                <select
-                    aria-label={copy.xAxis}
-                    value={xIndex}
-                    onChange={event => {
-                        const nextX = Number(event.target.value);
+                <SelectControl
+                    className="chart-select"
+                    label={copy.xAxis}
+                    value={String(xIndex)}
+                    searchable={dimensions.length >= 8}
+                    onChange={value => {
+                        const nextX = Number(value);
                         const nextTime = temporalType(result.columns[nextX]?.type ?? '');
                         const nextGroupBy = nextTime
                             ? (groupByIndex ??
@@ -383,23 +371,22 @@ function RowCountChartToolbar({
                             title: customTitle ?? nextTitle,
                         });
                     }}
-                >
-                    {dimensions.map(index => (
-                        <option key={index} value={index}>
-                            {result.columns[index]?.name}
-                        </option>
-                    ))}
-                </select>
+                    options={dimensions.map(index => ({
+                        value: String(index),
+                        label: result.columns[index]?.name ?? '',
+                    }))}
+                />
             </label>
             {timeAxis && breakdowns.length > 0 && (
                 <label className="chart-control-field">
                     <span className="chart-control-label">{copy.breakdownBy}</span>
-                    <select
-                        aria-label={copy.breakdownBy}
-                        value={groupByIndex ?? ''}
-                        onChange={event => {
-                            const nextGroupBy =
-                                event.target.value === '' ? undefined : Number(event.target.value);
+                    <SelectControl
+                        className="chart-select"
+                        label={copy.breakdownBy}
+                        value={groupByIndex === undefined ? '' : String(groupByIndex)}
+                        searchable={breakdowns.length >= 8}
+                        onChange={value => {
+                            const nextGroupBy = value === '' ? undefined : Number(value);
                             onChart({
                                 ...chart,
                                 kind: 'line',
@@ -413,14 +400,14 @@ function RowCountChartToolbar({
                                         : `Rows over time by ${result.columns[nextGroupBy]?.name}`),
                             });
                         }}
-                    >
-                        <option value="">{copy.allRows}</option>
-                        {breakdowns.map(index => (
-                            <option key={index} value={index}>
-                                {result.columns[index]?.name}
-                            </option>
-                        ))}
-                    </select>
+                        options={[
+                            { value: '', label: copy.allRows },
+                            ...breakdowns.map(index => ({
+                                value: String(index),
+                                label: result.columns[index]?.name ?? '',
+                            })),
+                        ]}
+                    />
                 </label>
             )}
             <span className="chart-row-count-type">

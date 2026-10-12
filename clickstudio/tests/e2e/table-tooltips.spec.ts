@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { openWorkspacePanel, replaceSql, runButton, trust } from './helpers.js';
 import { chooseExistingTable, mockWritableWorkspace, schema } from './import-helpers.js';
+import { chooseChartOption } from './chart-control-helpers.js';
 
 test('Result tooltips follow clipping and new result data without covering controls', async ({
     page,
@@ -198,7 +199,7 @@ test('Heatmaps keep native context and suppress redundant axis titles', async ({
     await runButton(page).click();
     const results = page.getByRole('region', { name: 'Query results', exact: true });
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();
-    await results.getByLabel('Type').selectOption('heatmap');
+    await chooseChartOption(page, results.getByLabel('Type'), 'heatmap');
     const table = results.locator('.heatmap-grid');
     await expect(table.locator('.heatmap-row-label').first()).toHaveAttribute('title', '');
     const cell = table.getByLabel('Morning, Mon: 5', { exact: true });

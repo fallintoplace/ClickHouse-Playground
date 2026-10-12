@@ -4,6 +4,7 @@ import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
 import type { Result } from '../../src/shared/queries/results/types.js';
 import { GEO_HELP_CITIES } from '../../src/frontend/help/previews/help-demos.js';
+import { chooseChartOption } from './chart-control-helpers.js';
 
 const cityOrder = [
     'San Francisco',
@@ -123,9 +124,11 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const)
             const results = page.getByRole('region', { name: 'Query results', exact: true });
             await results.getByRole('tab', { name: 'Chart', exact: true }).click();
             if (fixture.name !== 'row-count lines over time')
-                await results
-                    .getByRole('combobox', { name: 'Type', exact: true })
-                    .selectOption('line');
+                await chooseChartOption(
+                    page,
+                    results.getByRole('combobox', { name: 'Type', exact: true }),
+                    'line',
+                );
             const lines = results.locator('.chart-line');
             await expect(lines).toHaveCount(fixture.lines);
             await expect(results.locator('.chart-point')).toHaveCount(fixture.points);

@@ -1,6 +1,7 @@
 import { setWorkspaceMode, runButton, trust } from './helpers.js';
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import type { Result } from '../../src/shared/queries/results/types.js';
+import { chooseChartOption } from './chart-control-helpers.js';
 
 test.beforeEach(async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -179,16 +180,18 @@ for (const mode of ['Standard', 'Experimental'])
             }
 
             await page.setViewportSize({ width: 1440, height: 1000 });
-            await results.getByRole('combobox', { name: 'Type', exact: true }).selectOption('line');
+            await chooseChartOption(
+                page,
+                results.getByRole('combobox', { name: 'Type', exact: true }),
+                'line',
+            );
             await expect(results.locator('.chart-line')).toHaveCount(5);
             expect(runs).toBe(1);
             expect(errors).toEqual([]);
         });
     }
 
-test('Many long measure names stay scrollable in the dropdown without growing the toolbar', async ({
-    page,
-}) => {
+test('Long chart columns can be searched without growing the toolbar', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     const names = Array.from(
         { length: 60 },
@@ -208,6 +211,16 @@ test('Many long measure names stay scrollable in the dropdown without growing th
     const toolbar = results.locator('.chart-toolbar');
     await expectToolbarFits(toolbar);
     const before = await toolbar.boundingBox();
+    const xAxis = toolbar.getByRole('combobox', { name: 'X axis', exact: true });
+    await xAxis.click();
+    const search = results.getByRole('searchbox', { name: 'Search x axis', exact: true });
+    await search.fill(names.at(-1)!);
+    await expect(results.getByRole('option')).toHaveCount(1);
+    await expect(results.getByRole('option')).toHaveText(names.at(-1)!);
+    await results.getByRole('option').click();
+    await expect(xAxis).toHaveAttribute('data-value', String(names.length));
+    await expectToolbarFits(toolbar);
+    await expect(search).toBeHidden();
     await toolbar.getByRole('button', { name: 'Measures', exact: true }).click();
     const popup = results.getByRole('dialog', { name: 'Measures', exact: true });
     await expectPopoverFits(page, popup);
@@ -239,7 +252,11 @@ test('Short numeric line charts show every X-axis label that fits', async ({ pag
         'X axis',
         'Measures',
     ]);
-    await toolbar.getByRole('combobox', { name: 'Type', exact: true }).selectOption('line');
+    await chooseChartOption(
+        page,
+        toolbar.getByRole('combobox', { name: 'Type', exact: true }),
+        'line',
+    );
     await expect(results.locator('.chart-x-labels tspan')).toHaveText(['0', '1', '2', '3', '4']);
     await expectToolbarFits(toolbar);
 });
@@ -264,32 +281,46 @@ test('Candlestick mappings open under Setup and keep their selections', async ({
     });
     const results = await openChart(page);
     const toolbar = results.locator('.chart-toolbar');
-    await expect(toolbar.getByRole('combobox', { name: 'Type', exact: true })).toHaveValue(
+    await expect(toolbar.getByRole('combobox', { name: 'Type', exact: true })).toHaveAttribute(
+        'data-value',
         'candlestick',
     );
-    await expect(results.locator('.chart-setup-fields select').first()).toBeHidden();
+    await expect(results.locator('.chart-setup-fields .chart-select-trigger').first()).toBeHidden();
     await toolbar.getByRole('button', { name: 'Setup', exact: true }).press('Enter');
     const popup = results.getByRole('dialog', { name: 'Setup', exact: true });
-    await expect(popup.getByRole('combobox', { name: 'Open', exact: true })).toBeFocused();
-    await expect(popup.getByRole('combobox', { name: 'Open', exact: true })).toHaveValue('1');
+    const open = popup.getByRole('combobox', { name: 'Open', exact: true });
+    await expect(open).toBeFocused();
+    await expect(open).toHaveAttribute('data-value', '1');
+    const high = popup.getByRole('combobox', { name: 'High', exact: true });
+    await high.click();
     await expect(
-        popup.getByRole('combobox', { name: 'High', exact: true }).locator('option[value="1"]'),
-    ).toHaveAttribute('disabled', '');
-    await popup.getByRole('combobox', { name: 'BID', exact: true }).selectOption('5');
-    await popup.getByRole('combobox', { name: 'ASK', exact: true }).selectOption('6');
-    await popup
-        .getByRole('combobox', { name: 'Average spread (bps)', exact: true })
-        .selectOption('7');
-    await popup.getByRole('combobox', { name: 'Quote updates', exact: true }).selectOption('8');
+        results.locator('[role="option"][data-value="1"][aria-disabled="true"]'),
+    ).toBeVisible();
+    await page.keyboard.press('Escape');
+    await chooseChartOption(page, popup.getByRole('combobox', { name: 'BID', exact: true }), '5');
+    await chooseChartOption(page, popup.getByRole('combobox', { name: 'ASK', exact: true }), '6');
+    await chooseChartOption(
+        page,
+        popup.getByRole('combobox', { name: 'Average spread (bps)', exact: true }),
+        '7',
+    );
+    await chooseChartOption(
+        page,
+        popup.getByRole('combobox', { name: 'Quote updates', exact: true }),
+        '8',
+    );
     await page.keyboard.press('Escape');
     await expect(popup).toBeHidden();
     await expect(toolbar.getByRole('button', { name: 'Setup', exact: true })).toBeFocused();
     await expect(results.locator('.market-candle-body')).toHaveCount(2);
     await toolbar.getByRole('button', { name: 'Setup', exact: true }).click();
-    await expect(popup.getByRole('combobox', { name: 'BID', exact: true })).toHaveValue('5');
-    await expect(popup.getByRole('combobox', { name: 'Quote updates', exact: true })).toHaveValue(
-        '8',
+    await expect(popup.getByRole('combobox', { name: 'BID', exact: true })).toHaveAttribute(
+        'data-value',
+        '5',
     );
+    await expect(
+        popup.getByRole('combobox', { name: 'Quote updates', exact: true }),
+    ).toHaveAttribute('data-value', '8');
     await page.setViewportSize({ width: 900, height: 800 });
     await expect(popup).toBeHidden();
     await expectToolbarFits(toolbar);
@@ -313,18 +344,18 @@ test('Row-count charts use the compact toolbar and keep their grouping controls 
     });
     const results = await openChart(page);
     const toolbar = results.locator('.chart-toolbar');
-    await expect(toolbar.getByRole('heading')).toHaveText('Rows over time by service');
+    await expect(toolbar.getByRole('heading')).toHaveCount(0);
     await expect(toolbar.locator('.eyebrow')).toHaveCount(0);
-    await toolbar.getByLabel('Break down by', { exact: true }).selectOption('');
-    await expect(toolbar.getByRole('heading')).toHaveText('Rows over time');
-    await toolbar.getByLabel('X axis', { exact: true }).selectOption('1');
-    await expect(toolbar.getByRole('heading')).toHaveText('Rows by service');
+    await chooseChartOption(page, toolbar.getByLabel('Break down by', { exact: true }), '');
+    await expect(toolbar.getByRole('heading')).toHaveCount(0);
+    await chooseChartOption(page, toolbar.getByLabel('X axis', { exact: true }), '1');
+    await expect(toolbar.getByRole('heading')).toHaveCount(0);
     await expect(results.locator('.chart-bar')).toHaveCount(2);
     await page.setViewportSize({ width: 900, height: 800 });
     await expectToolbarFits(toolbar);
 });
 
-test('Custom chart titles remain inline without the details popup', async ({ page }) => {
+test('Custom chart titles stay out of the toolbar without the details popup', async ({ page }) => {
     const title = 'Events across European cities';
     await page.addInitScript(
         title =>
@@ -356,8 +387,17 @@ test('Custom chart titles remain inline without the details popup', async ({ pag
         ],
     });
     const results = await openChart(page);
-    await expect(results.locator('.chart-toolbar h3')).toHaveText(title);
-    await expect(results.locator('.chart-toolbar h3')).toHaveAttribute('title', title);
+    await expect(results.locator('.chart-toolbar h3')).toHaveCount(0);
+    await expect
+        .poll(() =>
+            page.evaluate(() => {
+                const workspace = JSON.parse(
+                    localStorage.getItem('clickstudio:workspace:demo:v1') ?? '{}',
+                );
+                return workspace.tabs?.[0]?.chart?.title;
+            }),
+        )
+        .toBe(title);
     await expect
         .poll(() =>
             results
@@ -440,14 +480,18 @@ test('Scatter sampling stays visible without the details popup', async ({ page }
         rows: Array.from({ length: 350 }, (_, index) => [index, index * 2]),
     });
     const results = await openChart(page);
-    await results.getByRole('combobox', { name: 'Type', exact: true }).selectOption('scatter');
+    await chooseChartOption(
+        page,
+        results.getByRole('combobox', { name: 'Type', exact: true }),
+        'scatter',
+    );
     await expect(results.locator('.chart-point')).toHaveCount(240);
     await expect(results.locator('.chart-footer')).toContainText(
         '240 plotted points · 240 sampled rows from 350 retained rows',
     );
 });
 
-test('Row-count custom titles survive axis and breakdown changes', async ({ page }) => {
+test('Row-count custom titles stay saved after axis and breakdown changes', async ({ page }) => {
     const title = 'Traffic across services';
     await page.addInitScript(
         title =>
@@ -480,12 +524,30 @@ test('Row-count custom titles survive axis and breakdown changes', async ({ page
     });
     const results = await openChart(page);
     const toolbar = results.locator('.chart-toolbar');
-    await expect(toolbar.getByRole('heading')).toHaveText(title);
-    await toolbar.getByRole('combobox', { name: 'Break down by', exact: true }).selectOption('');
-    await expect(toolbar.getByRole('heading')).toHaveText(title);
-    await toolbar.getByRole('combobox', { name: 'X axis', exact: true }).selectOption('1');
+    await expect(toolbar.getByRole('heading')).toHaveCount(0);
+    await chooseChartOption(
+        page,
+        toolbar.getByRole('combobox', { name: 'Break down by', exact: true }),
+        '',
+    );
+    await expect(toolbar.getByRole('heading')).toHaveCount(0);
+    await chooseChartOption(
+        page,
+        toolbar.getByRole('combobox', { name: 'X axis', exact: true }),
+        '1',
+    );
     await expect(results.locator('.chart-bar')).toHaveCount(2);
-    await expect(toolbar.getByRole('heading')).toHaveText(title);
+    await expect(toolbar.getByRole('heading')).toHaveCount(0);
+    await expect
+        .poll(() =>
+            page.evaluate(() => {
+                const workspace = JSON.parse(
+                    localStorage.getItem('clickstudio:workspace:demo:v1') ?? '{}',
+                );
+                return workspace.tabs?.[0]?.chart?.title;
+            }),
+        )
+        .toBe(title);
 });
 
 test('Changing chart types keeps the type selector mounted and focused', async ({ page }) => {
@@ -506,8 +568,8 @@ test('Changing chart types keeps the type selector mounted and focused', async (
     await type.focus();
 
     for (const kind of ['bar', 'candlestick', 'line', 'bar']) {
-        await type.selectOption(kind);
-        await expect(type).toHaveValue(kind);
+        await chooseChartOption(page, type, kind);
+        await expect(type).toHaveAttribute('data-value', kind);
         await expect(type).toBeFocused();
         expect(await original!.evaluate(element => element.isConnected)).toBe(true);
     }
