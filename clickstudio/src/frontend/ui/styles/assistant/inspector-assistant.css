@@ -2666,6 +2666,67 @@
 :root[data-theme="click-light"] :is(.object-tree-label, .reference-result-copy) small {
   color: color-mix(in srgb, var(--explorer-row-accent) 84%, var(--text));
 }
+
+:root[data-theme="click-light"]
+  .inspector-pane:has(> .inspector-content.is-assistant-content)
+  > .inspector-header {
+  border-bottom-color: color-mix(in srgb, var(--accent) 20%, var(--line));
+  background: color-mix(in srgb, var(--accent-action) 16%, var(--panel));
+}
+
+:root[data-theme="click-light"]
+  .inspector-pane:has(> .inspector-content.is-assistant-content)
+  > .inspector-header
+  h2 {
+  color: var(--accent-strong);
+}
+
+:root[data-theme="click-light"]
+  .inspector-tabs.is-browser-tabs
+  > .is-assistant-tab[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--line));
+  background: color-mix(in srgb, var(--accent-action) 28%, var(--panel));
+  color: var(--accent-strong);
+}
+
+:root[data-theme="click-light"] .inspector-content.is-assistant-content {
+  background: var(--panel);
+}
+
+:root[data-theme="click-light"] .assistant-user-message {
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--line));
+  border-inline-start: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--accent-action) 14%, var(--panel));
+}
+
+:root[data-theme="click-light"] .assistant-user-message > span {
+  color: var(--accent-strong);
+  font-weight: var(--font-weight-emphasis);
+}
+
+:root[data-theme="click-light"] .assistant-answer-markdown {
+  color: var(--text);
+}
+
+:root[data-theme="click-light"] .assistant-chat-composer {
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--line));
+  background: var(--panel);
+}
+
+:root[data-theme="click-light"] .assistant-chat-composer:has(.field-textarea:focus) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-action) 38%, transparent);
+}
+
+:root[data-theme="click-light"] .sql-proposal-review-status.is-accepted {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: var(--radius-label);
+  background: color-mix(in srgb, var(--green) 10%, var(--panel));
+  font-weight: var(--font-weight-emphasis);
+}
+
 /* Responsive and motion states */
 
 @media (max-width: 1120px) {
