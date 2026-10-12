@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { Run, Script } from '../../../shared/queries/execution/types';
-import { Button, cx } from '../../ui/components/primitives';
+import { cx } from '../../ui/components/primitives';
 import { Icon } from '../../ui/components/icons';
 import { statementOutcome } from './statement-outcome';
 
@@ -25,7 +25,6 @@ function statementDetails(statement: ResultStatement, run?: Run) {
         return `${statementOutcome(run)} · ${Math.round(run.elapsedMs)} ms`;
     return `${status.charAt(0).toUpperCase()}${status.slice(1).replace(/_/g, ' ')}`;
 }
-
 function StatementCardContent({
     statement,
     index,
@@ -334,35 +333,5 @@ export function ScriptResultsSelector({
                 })}
             </div>
         </span>
-    );
-}
-
-export function ScriptCancelAction({
-    script,
-    onCancel,
-    disabled,
-    afterCurrentStatement,
-}: {
-    script: Script;
-    onCancel: () => void;
-    disabled: boolean;
-    afterCurrentStatement: boolean;
-}) {
-    if (script.status !== 'running') return null;
-    if (script.cancelled)
-        return (
-            <span className="script-cancel-status" role="status">
-                {afterCurrentStatement ? 'Stopping after this query…' : 'Cancelling script…'}
-            </span>
-        );
-    return (
-        <Button
-            variant="danger"
-            className="script-cancel-button"
-            onClick={onCancel}
-            disabled={disabled}
-        >
-            {afterCurrentStatement ? 'Stop after current statement' : 'Cancel script'}
-        </Button>
     );
 }

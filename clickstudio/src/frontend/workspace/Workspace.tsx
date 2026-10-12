@@ -165,6 +165,11 @@ export function Workspace({
                 inspector,
                 demoMode,
                 executionPending: Boolean(pendingExecution.execution),
+                executionStopRequested: Boolean(
+                    pendingExecution.execution?.scriptId &&
+                        script?.id === pendingExecution.execution.scriptId &&
+                        script.cancelled,
+                ),
                 cancelling,
                 draftFeedback: model.draftFeedback,
                 editorProposal: model.assistant.editorProposal,
@@ -221,7 +226,6 @@ export function Workspace({
                 execution: pendingExecution.execution,
                 assistantBusy: model.assistant.assistantBusy,
                 retainedExecutionResult: pendingExecution.retainedExecutionResult,
-                cancelling,
                 experience,
                 readFeedback:
                     model.scriptReadFeedback ??
@@ -278,7 +282,6 @@ export function Workspace({
                     setSelectedScriptResult(active.id, '');
                     setView('results');
                 },
-                onCancel: () => void cancel(),
                 onPage: setPage,
                 onPatch: patch,
                 onLoadProfile: () => void perform(loadProfile, 'save'),

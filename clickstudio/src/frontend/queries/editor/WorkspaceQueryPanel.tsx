@@ -42,6 +42,7 @@ export type WorkspaceQueryPanelState = Readonly<{
     inspector: Inspector;
     demoMode: boolean;
     executionPending: boolean;
+    executionStopRequested: boolean;
     cancelling: boolean;
     draftFeedback: readonly DraftFeedback[];
     editorProposal?: ReturnType<typeof pendingEditorProposal>;
@@ -121,16 +122,21 @@ export function WorkspaceQueryPanel({
         Boolean(busy) ||
         unsupportedParameters ||
         (runRequiresScript && !connection.manifest?.scripts.available);
-    const executionCanCancel = state.executionPending && busy !== 'run' && busy !== 'script';
-    const cancelButtonActive = executionCanCancel || state.cancelling;
+    const executionCanCancel =
+        state.executionPending &&
+        !state.executionStopRequested &&
+        busy !== 'run' &&
+        busy !== 'script';
+    const cancelButtonActive =
+        executionCanCancel || state.cancelling || state.executionStopRequested;
     const runTitle = runRequiresScript
         ? actions.runActionTitle(connection.manifest?.scripts, 'script')
         : undefined;
     const standardFormatter = nativeParserStatus === 'ready' ? 'wasm' : 'builtin';
     let runButtonLabel: string;
 
-    if (state.cancelling) {
-        runButtonLabel = 'Cancelling…';
+    if (state.cancelling || state.executionStopRequested) {
+        runButtonLabel = 'Stopping…';
     } else if (executionCanCancel) {
         runButtonLabel = copy.common.cancel;
     } else if (busy === 'run' || busy === 'script') {
@@ -147,7 +153,11 @@ export function WorkspaceQueryPanel({
             aria-label={runButtonLabel}
             title={cancelButtonActive ? runButtonLabel : runTitle}
             onClick={() => (executionCanCancel ? actions.onCancel() : void runSql())}
-            disabled={state.cancelling || (!executionCanCancel && runDisabled)}
+            disabled={
+                state.cancelling ||
+                state.executionStopRequested ||
+                (!executionCanCancel && runDisabled)
+            }
         >
             <Icon name={cancelButtonActive ? 'stop' : 'play'} />
             {runButtonLabel}

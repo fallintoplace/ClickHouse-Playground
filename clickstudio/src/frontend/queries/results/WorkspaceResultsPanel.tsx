@@ -9,7 +9,6 @@ import type { Copy, ExperienceLevel } from '../../ui/copy';
 import type { BusyAction, Connected, ResultsView } from '../../workspace/workspace-types';
 import type { Draft } from '../editor/drafts/workspace-state';
 import type { FailedQueryError } from '../../workspace/workspace-helpers';
-import { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../database/connections/cloud-connection';
 import type { WorkspacePanelController } from '../../workspace/layout/panels/useWorkspacePanels';
 import type { WorkspaceViewState } from '../../workspace/layout/useWorkspaceViewState';
 import { ChartView, GeoView, InsightsView, ResultGrid } from './ResultViews';
@@ -21,7 +20,6 @@ import { SqlFlowView } from '../inspection/diagrams/SqlFlowView';
 import { Button, cx, Spinner } from '../../ui/components/primitives';
 import { Icon } from '../../ui/components/icons';
 import {
-    ScriptCancelAction,
     ScriptResultsSelector,
     ScriptRunningResults,
 } from './ScriptResultsSelector';
@@ -53,7 +51,6 @@ export type WorkspaceResultsPanelState = Readonly<{
     assistantBusy: boolean;
     execution?: Readonly<{ sql: string; runId?: string; scriptId?: string }>;
     retainedExecutionResult?: Readonly<{ run: Run; page: ResultPage; pageIndex: number }>;
-    cancelling: boolean;
     experience: ExperienceLevel;
     readFeedback?: WorkspaceFeedback;
 }>;
@@ -62,7 +59,6 @@ export type WorkspaceResultsPanelActions = Readonly<{
     onSelectView: (view: ResultsView) => void;
     onSelectScriptRun: (runId: string) => void;
     onSelectScriptError: () => void;
-    onCancel: () => void;
     onPage: (page: number) => void;
     onPatch: (values: Partial<Draft>) => void;
     onLoadProfile: () => void;
@@ -612,7 +608,6 @@ function renderResultsHeader({
         run,
         script,
         history,
-        cancelling,
         connection,
         assistantBusy,
         busy,
@@ -664,14 +659,6 @@ function renderResultsHeader({
                 />
             </div>
             <div className="results-actions">
-                {headerView === 'results' && script && (
-                    <ScriptCancelAction
-                        script={script}
-                        onCancel={actions.onCancel}
-                        disabled={cancelling}
-                        afterCurrentStatement={connection.id === CLICKHOUSE_CLOUD_CONNECTION_ID}
-                    />
-                )}
                 <div
                     ref={setTableToolbar}
                     className="results-table-tools"
