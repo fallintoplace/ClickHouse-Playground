@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { RunService, boundResult } from '../../.core-build/src/backend/queries/execution/runs.js';
+import {
+    RunService,
+    boundResult,
+    isReceipt,
+} from '../../.core-build/src/backend/queries/execution/runs.js';
 import { DEFAULT_LIMITS } from '../../.core-build/src/shared/queries/execution/settings.js';
 import { fixture, owner, other, viewer, until, columns, connection } from './helpers.mjs';
 test('Lifecycle retains typed evidence and actual identity', async () => {
@@ -25,10 +29,10 @@ test('Duplicate request executes once', async () => {
 test('Submitting a run does not scan saved run or receipt records', async () => {
     const f = fixture(),
         list = f.store.list.bind(f.store);
-    f.store.list = bucket => {
+    f.store.list = (bucket, guard) => {
         if (bucket === 'runs' || bucket === 'receipts')
             throw new Error(`Submission loaded ${bucket}`);
-        return list(bucket);
+        return list(bucket, guard);
     };
     let run;
     try {
@@ -327,8 +331,11 @@ test('Old scripts and receipts survive restart and the former script capacity', 
     f.store.put('scripts', script.id, { ...done, createdAt: old });
     const receiptKey = f.store
         .keys('receipts')
-        .find(key => f.store.get('receipts', key).resourceId === script.id);
-    f.store.put('receipts', receiptKey, { ...f.store.get('receipts', receiptKey), at: old });
+        .find(key => f.store.get('receipts', key, isReceipt).resourceId === script.id);
+    f.store.put('receipts', receiptKey, {
+        ...f.store.get('receipts', receiptKey, isReceipt),
+        at: old,
+    });
     for (let i = 0; i < 200; i++)
         f.store.put('scripts', `saved-${i}`, { ...done, id: `saved-${i}`, createdAt: old });
     const restarted = new RunService(f.store, f.driver, f.authorize);
@@ -336,7 +343,7 @@ test('Old scripts and receipts survive restart and the former script capacity', 
     const next = restarted.submitScript(owner, f.request({ sql: 'SELECT 2' }));
     await until(() => restarted.getScript(owner, next.id).status !== 'running');
     assert.equal(f.store.count('scripts'), 202);
-    assert.ok(f.store.get('receipts', receiptKey));
+    assert.ok(f.store.get('receipts', receiptKey, isReceipt));
     assert.equal(f.calls.length, 2);
 });
 test('Continue-on-error scripts do not hide a failed statement', async () => {
@@ -415,11 +422,11 @@ test('Old deleted-run receipts still prevent replay after restart', async () => 
     f.runs.remove(owner, run.id);
     const receiptKey = f.store.keys('receipts')[0];
     f.store.put('receipts', receiptKey, {
-        ...f.store.get('receipts', receiptKey),
+        ...f.store.get('receipts', receiptKey, isReceipt),
         at: '2000-01-01T00:00:00.000Z',
     });
     const restarted = new RunService(f.store, f.driver, f.authorize);
-    assert.ok(f.store.get('receipts', receiptKey));
+    assert.ok(f.store.get('receipts', receiptKey, isReceipt));
     assert.throws(() => restarted.submit(owner, input), { code: 'RETIRED_REQUEST' });
     assert.equal(f.calls.length, 1);
 });

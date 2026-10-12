@@ -1,4 +1,4 @@
-import { isRecord } from '../../../shared/common/values';
+import { isRecord } from '../../../shared/common/values.js';
 
 export const WORKSPACE_PANEL_IDS = ['query', 'results'] as const;
 export type WorkspacePanelId = (typeof WORKSPACE_PANEL_IDS)[number];

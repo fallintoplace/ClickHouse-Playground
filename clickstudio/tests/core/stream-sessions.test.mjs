@@ -5,10 +5,16 @@ import { collectCompactStream } from '../../.core-build/src/backend/database/cli
 import { SessionService } from '../../.core-build/src/backend/system/login/sessions.js';
 import { DEFAULT_LIMITS } from '../../.core-build/src/shared/queries/execution/settings.js';
 import { FileStore, MemoryStore, audit } from '../../.core-build/src/backend/system/store.js';
+import { isRecord } from '../../.core-build/src/shared/common/values.js';
 import { mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 const header = '["id","text"]\n["UInt64","String"]\n';
+
+function isNumericDocument(value) {
+    return isRecord(value) && Number.isFinite(value.v);
+}
+
 test('Compact streaming preserves large integer strings and UTF-8 across byte boundaries', async () => {
     const buffer = Buffer.from(header + '["18446744073709551615","árvíztűrő"]\n');
     const output = await collectCompactStream(
@@ -167,13 +173,13 @@ test('File storage is atomic, private, and independent of returned object mutati
     try {
         const store = new FileStore(path);
         store.put('docs', 'one', { v: 1 });
-        const read = store.get('docs', 'one');
+        const read = store.get('docs', 'one', isNumericDocument);
         read.v = 2;
-        assert.equal(store.get('docs', 'one').v, 1);
+        assert.equal(store.get('docs', 'one', isNumericDocument).v, 1);
         assert.equal(statSync(join(path, 'docs', 'one.json')).mode & 0o777, 0o600);
         store.put('docs', 'one', { v: 3 });
-        assert.equal(store.list('docs').length, 1);
-        assert.equal(store.get('docs', 'one').v, 3);
+        assert.equal(store.list('docs', isNumericDocument).length, 1);
+        assert.equal(store.get('docs', 'one', isNumericDocument).v, 3);
     } finally {
         rmSync(path, { recursive: true, force: true });
     }
@@ -202,7 +208,9 @@ test('Storage keys reject filesystem traversal', () => {
     try {
         const store = new FileStore(path);
         assert.throws(() => store.put('../outside', 'x', {}), { code: 'INVALID_STORAGE_KEY' });
-        assert.throws(() => store.get('docs', '../../outside'), { code: 'INVALID_STORAGE_KEY' });
+        assert.throws(() => store.get('docs', '../../outside', isNumericDocument), {
+            code: 'INVALID_STORAGE_KEY',
+        });
     } finally {
         rmSync(path, { recursive: true, force: true });
     }
@@ -213,7 +221,7 @@ test('Corrupt durable state is surfaced, never silently replaced', () => {
         const store = new FileStore(path);
         store.put('docs', 'one', {});
         writeFileSync(join(path, 'docs', 'one.json'), 'broken');
-        assert.throws(() => store.get('docs', 'one'));
+        assert.throws(() => store.get('docs', 'one', isNumericDocument));
     } finally {
         rmSync(path, { recursive: true, force: true });
     }

@@ -144,7 +144,7 @@ export function parseCsv(
             'CSV_WIDTH',
             `CSV row ${index + 2} has the wrong number of fields`,
         );
-        const parsed: Record<string, Json> = {};
+        const parsed: Record<string, Json> = Object.create(null);
         for (const [columnIndex, column] of columns.entries()) {
             const field = record[columnIndex];
             requireImport(

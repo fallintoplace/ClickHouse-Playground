@@ -90,6 +90,11 @@
   border-color: var(--focus-color);
 }
 
+:root[data-theme="click-light"] .assistant-chat-composer:has(.field-textarea:focus) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-action) 38%, transparent);
+}
+
 .assistant-chat-history-item:focus-within .assistant-chat-row-actions {
   opacity: 1;
   pointer-events: auto;

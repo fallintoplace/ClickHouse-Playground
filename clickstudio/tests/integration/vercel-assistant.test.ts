@@ -125,10 +125,10 @@ test('Vercel Fix with AI sends failure context without a saved run and returns a
         if (String(input).endsWith('/responses/input_tokens'))
             return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
         const payload = jsonRecord(jsonValue(String(init?.body)), 'OpenAI request');
-        const input = arrayValue(payload.input, 'OpenAI input').map(item =>
+        const messages = arrayValue(payload.input, 'OpenAI input').map(item =>
             jsonRecord(item, 'OpenAI message'),
         );
-        const content = arrayValue(input[0]?.content, 'OpenAI message content').map(item =>
+        const content = arrayValue(messages[0]?.content, 'OpenAI message content').map(item =>
             jsonRecord(item, 'OpenAI content item'),
         );
         const current = jsonRecord(
@@ -538,10 +538,10 @@ test('Vercel assistant returns a full table copy when the source is present', as
         if (String(input).endsWith('/responses/input_tokens'))
             return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
         const payload = jsonRecord(jsonValue(String(init?.body)), 'OpenAI request');
-        const input = arrayValue(payload.input, 'OpenAI input').map(item =>
+        const messages = arrayValue(payload.input, 'OpenAI input').map(item =>
             jsonRecord(item, 'OpenAI message'),
         );
-        const contentItems = arrayValue(input[0]?.content, 'OpenAI message content').map(item =>
+        const contentItems = arrayValue(messages[0]?.content, 'OpenAI message content').map(item =>
             jsonRecord(item, 'OpenAI content item'),
         );
         const supplied = jsonRecord(

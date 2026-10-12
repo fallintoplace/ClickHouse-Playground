@@ -11,13 +11,15 @@ async function replaceSql(page: Page, sql: string) {
 
 async function editorState(page: Page) {
     return page.locator('.cm-editor').evaluate(async root => {
-        const source = window.opener ?? window;
+        // Detached CodeMirror nodes retain the opener's realm after adoption into the popup.
+        const source: typeof window = window.opener ?? window;
         const url = source.performance
             .getEntriesByType('resource')
             .find((entry: PerformanceEntry) => entry.name.includes('/@codemirror_view.js'))?.name;
         if (!url) throw new Error('Editor module was not loaded');
         const { EditorView }: typeof import('@codemirror/view') = await import(url);
-        if (!(root instanceof HTMLElement)) throw new Error('Editor root is not an HTML element');
+        if (!(root instanceof source.HTMLElement))
+            throw new Error('Editor root is not an HTML element');
         const editor = EditorView.findFromDOM(root);
         if (!editor) throw new Error('Editor view is not attached to its root');
         return {
@@ -33,7 +35,8 @@ async function editorState(page: Page) {
 }
 async function editorDiagnostics(page: Page) {
     return page.locator('.cm-editor').evaluate(async root => {
-        const resources = performance.getEntriesByType('resource');
+        const source: typeof window = window.opener ?? window;
+        const resources = source.performance.getEntriesByType('resource');
         const moduleUrl = (name: string) => {
             const url = resources.find(entry => entry.name.includes(name))?.name;
             if (!url) throw new Error(`${name} was not loaded`);
@@ -45,7 +48,8 @@ async function editorDiagnostics(page: Page) {
         const { forEachDiagnostic }: typeof import('@codemirror/lint') = await import(
             moduleUrl('/@codemirror_lint.js')
         );
-        if (!(root instanceof HTMLElement)) throw new Error('Editor root is not an HTML element');
+        if (!(root instanceof source.HTMLElement))
+            throw new Error('Editor root is not an HTML element');
         const editor = EditorView.findFromDOM(root);
         if (!editor) throw new Error('Editor view is not attached to its root');
         const diagnostics: Array<{ from: number; source: string | undefined }> = [];
@@ -58,7 +62,7 @@ async function editorDiagnostics(page: Page) {
 async function selectRange(page: Page, anchor: number, head = anchor) {
     await page.locator('.cm-editor').evaluate(
         async (root, selection) => {
-            const source = window.opener ?? window;
+            const source: typeof window = window.opener ?? window;
             const url = source.performance
                 .getEntriesByType('resource')
                 .find((entry: PerformanceEntry) =>
@@ -66,7 +70,7 @@ async function selectRange(page: Page, anchor: number, head = anchor) {
                 )?.name;
             if (!url) throw new Error('Editor module was not loaded');
             const { EditorView }: typeof import('@codemirror/view') = await import(url);
-            if (!(root instanceof HTMLElement))
+            if (!(root instanceof source.HTMLElement))
                 throw new Error('Editor root is not an HTML element');
             const editor = EditorView.findFromDOM(root);
             if (!editor) throw new Error('Editor view is not attached to its root');

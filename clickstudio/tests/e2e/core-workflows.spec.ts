@@ -18,6 +18,8 @@ import {
 } from './helpers.js';
 import { test, expect, type Page } from '@playwright/test';
 import { chooseChartOption } from './chart-control-helpers.js';
+import { DEFAULT_LIMITS } from '../../src/shared/queries/execution/settings.js';
+import type { Run } from '../../src/shared/queries/execution/types.js';
 
 declare global {
     interface Window {
@@ -216,12 +218,9 @@ test('Result view and page stay with their draft run', async ({ page }) => {
                 sql: input.sql,
                 kind: 'query',
                 parameters: input.parameters ?? {},
-                limits: input.limits ?? {
-                    rows: 5000,
-                    bytes: 2000000,
-                    seconds: 30,
-                    memory: 536870912,
-                    threads: 4,
+                limits: {
+                    ...DEFAULT_LIMITS,
+                    ...jsonRecord(input.limits ?? {}, 'Run request limits'),
                 },
                 tags: input.tags ?? {},
                 status: 'succeeded',
@@ -2250,15 +2249,13 @@ test('Scatter charts plot the selected numeric axes', async ({ page }) => {
         /scatter chart/,
     );
     await expect(results.locator('.chart-point')).toHaveCount(3);
-    const xMeasure = results.getByRole('combobox', { name: 'X measure', exact: true });
-    await xMeasure.click();
+    await expect(results.getByRole('combobox', { name: 'X measure', exact: true })).toHaveCount(0);
     await expect(
-        xMeasure
-            .locator('xpath=..')
-            .locator('.chart-select-listbox')
-            .locator('[role="option"]:not([aria-disabled="true"])'),
-    ).toHaveCount(1);
-    await page.keyboard.press('Escape');
+        results
+            .locator('.chart-control-field')
+            .filter({ hasText: 'X measure' })
+            .locator('.chart-select-static'),
+    ).toHaveText('distance');
     await expect(results.locator('.chart-footer')).toContainText('3 plotted points');
 });
 
@@ -2384,13 +2381,30 @@ test('Refreshing run history replaces the visible list with the latest response'
     page,
 }) => {
     let refreshed = false;
-    const run = {
+    const run: Run = {
+        dataSource: 'fixture',
         id: 'history-refresh-run',
-        status: 'succeeded',
+        queryId: 'history-refresh-query',
+        owner: 'local-owner',
+        connectionId: 'demo',
         sql: 'SELECT refreshed_history_entry',
+        kind: 'query',
+        parameters: {},
+        limits: DEFAULT_LIMITS,
+        tags: {},
+        status: 'succeeded',
         createdAt: '2026-09-23T00:00:00.000Z',
         elapsedMs: 12,
         rowCount: 7,
+        bytes: 56,
+        columns: [],
+        warnings: [],
+        sequence: 1,
+        resultState: 'unavailable',
+        requestedBy: 'local-owner',
+        executedAs: 'fixture-reader',
+        permissionSnapshot: { readonly: true, role: 'viewer' },
+        retryPolicy: 'never',
     };
     await page.route(/\/api\/runs\?connectionId=demo$/, route =>
         route.fulfill({ json: refreshed ? [run] : [] }),

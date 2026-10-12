@@ -1299,7 +1299,7 @@ export class BrowserWorkspaceApi {
         options: RequestOptions,
     ): Promise<unknown> {
         const sql = typeof body.sql === 'string' ? body.sql : '';
-        const parameters = stringRecord(body.parameters);
+        const parameters = stringRecord(body.parameters ?? {});
         if (parts[1] === PLAYGROUND_CONNECTION_ID) {
             if (Object.keys(parameters).length)
                 throw new Error(
@@ -1374,7 +1374,7 @@ export class BrowserWorkspaceApi {
                 crypto.randomUUID(),
                 statement.sql,
                 'query',
-                stringRecord(body.parameters),
+                stringRecord(body.parameters ?? {}),
                 { sourceFrom: sourceFrom + statement.from, sourceTo: sourceFrom + statement.to },
             );
             return { ...statement, runId: run.id, status: 'succeeded' as const };
@@ -1703,7 +1703,7 @@ export class BrowserWorkspaceApi {
             body.kind === 'analyze'
                 ? body.kind
                 : 'query';
-        const parameters = stringRecord(body.parameters);
+        const parameters = stringRecord(body.parameters ?? {});
         if (body.connectionId === PLAYGROUND_CONNECTION_ID) {
             if (Object.keys(parameters).length)
                 throw new Error(

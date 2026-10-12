@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import cloudApi from '../../api/cloud.js';
 import * as cloud from '../../src/frontend/database/connections/cloud-connection.js';
 import { BrowserWorkspaceApi } from '../../src/frontend/api/browser-workspace.js';
-import { jsonRecord, jsonValue, responseErrorCode } from '../helpers/type-guards.js';
+import { jsonRecord, jsonValue, responseErrorCode, stringValue } from '../helpers/type-guards.js';
+import { cloudConnectionTest } from '../helpers/cloud-fixtures.js';
 
 const credentials = {
     host: 'service.clickhouse.cloud:8443',
@@ -11,12 +12,111 @@ const credentials = {
     username: 'reader',
     password: 'fixture-password',
 };
-const tested = {
-    host: credentials.host,
-    serverVersion: '25.1',
-    queryLogSource: 'query_log',
-    traceLogSource: 'symbolized',
+const tested = cloudConnectionTest();
+const result: cloud.CloudQueryResult = {
+    queryId: 'query-id',
+    columns: [],
+    rows: [],
+    elapsedMs: 1,
+    bytes: 0,
+    truncated: false,
 };
+const importJob: cloud.CloudImportJob = {
+    id: 'import-id',
+    connectionId: 'clickhouse-cloud',
+    table: 'default.events',
+    queryId: 'import-id',
+    rows: 2,
+    createdAt: '2026-10-10T12:00:00Z',
+    status: 'succeeded',
+};
+const metadata = {
+    database: 'default',
+    observedAt: '2026-10-10T12:00:00Z',
+    source: 'clickhouse',
+    notes: [],
+    truncated: false,
+} as const;
+const responses: Record<string, unknown> = {
+    test: tested,
+    run: result,
+    schema: {
+        connectionId: 'clickhouse-cloud',
+        fetchedAt: '2026-10-10T12:00:00Z',
+        tables: [],
+        columns: [],
+        warnings: [],
+        truncated: false,
+    } satisfies Awaited<ReturnType<typeof cloud.loadClickHouseCloudSchema>>,
+    'query-tree': [],
+    progress: {},
+    cancel: { cancelled: true, queryId: 'query-id' },
+    profile: [],
+    pipeline: [],
+    flamegraph: {
+        queryId: 'query-id',
+        series: {},
+        samples: { CPU: 0, Real: 0 },
+        symbolizedSamples: 0,
+        truncated: false,
+    } satisfies Awaited<ReturnType<typeof cloud.loadClickHouseCloudFlamegraph>>,
+    'documentation-search': [],
+    'documentation-entry': {
+        name: 'sum',
+        type: 'Function',
+        description: 'Sum of the values.',
+        serverVersion: '25.1',
+        origin: 'native',
+    } satisfies Awaited<ReturnType<typeof cloud.loadClickHouseCloudDocumentationEntry>>,
+    'table-parts': {
+        database: 'default',
+        table: 'events',
+        parts: [],
+        totalParts: '0',
+        activeParts: '0',
+        inactiveParts: '0',
+        truncated: false,
+        measuredAt: '2026-10-10T12:00:00Z',
+        totals: { rows: '0', marks: '0', compressedBytes: '0', uncompressedBytes: '0' },
+    } satisfies Awaited<ReturnType<typeof cloud.loadClickHouseCloudTableParts>>,
+    'table-permissions': { create: true, insert: true, drop: true },
+    'create-table': {
+        database: 'default',
+        table: 'events',
+        columns: [{ name: 'value', type: 'String' }],
+        orderBy: 'tuple()',
+        queryId: 'query-id',
+    } satisfies Awaited<ReturnType<typeof cloud.createClickHouseCloudTable>>,
+    'drop-table': { database: 'default', table: 'events', queryId: 'query-id' },
+    'import-status': importJob,
+    workload: {
+        connectionId: 'clickhouse-cloud',
+        minutes: 60,
+        scope: 'local-user',
+        queryLogSource: 'query_log',
+        families: [],
+        points: [],
+        truncated: false,
+    } satisfies Awaited<ReturnType<typeof cloud.loadClickHouseCloudWorkload>>,
+    replication: {
+        connectionId: 'clickhouse-cloud',
+        scope: 'local-node',
+        capabilities: { replicas: true, queue: true },
+        replicas: [],
+        queue: [],
+        truncated: false,
+    } satisfies Awaited<ReturnType<typeof cloud.loadClickHouseCloudReplication>>,
+};
+
+function responseFor(body: Record<string, unknown>): unknown {
+    if (body.action === 'native-explorer') {
+        if (body.kind === 'lineage') return { ...metadata, kind: 'lineage', nodes: [], edges: [] };
+        return { ...metadata, kind: body.kind, table: body.table, items: [] };
+    }
+    const action = stringValue(body.action, 'Cloud action');
+    assert.ok(Object.hasOwn(responses, action), `Missing fixture for ${action}`);
+    return responses[action];
+}
 
 test('Browser Cloud workspace forwards table permission targets and returns individual rights', async t => {
     const requests: Record<string, unknown>[] = [];
@@ -47,10 +147,11 @@ test('Browser Cloud workspace forwards table permission targets and returns indi
 test('Cloud wrappers preserve action spellings and their JSON request fields', async t => {
     const requests: unknown[] = [];
     t.mock.method(globalThis, 'fetch', async (_url: unknown, options?: RequestInit) => {
-        requests.push(jsonValue(String(options?.body)));
+        const body = jsonRecord(jsonValue(String(options?.body)), 'Cloud request body');
+        requests.push(body);
         assert.equal(options?.method, 'POST');
         assert.equal(options?.credentials, 'same-origin');
-        return Response.json(tested);
+        return Response.json(responseFor(body));
     });
     t.after(() => cloud.disconnectClickHouseCloud());
     await cloud.connectClickHouseCloud(credentials);
@@ -148,7 +249,12 @@ test('Local Cloud sessions continue to omit credentials from JSON and multipart 
     const requests: Array<{ url: unknown; options?: RequestInit }> = [];
     t.mock.method(globalThis, 'fetch', async (url: unknown, options?: RequestInit) => {
         requests.push({ url, options });
-        return Response.json(tested);
+        if (options?.method === 'DELETE') return new Response(null, { status: 204 });
+        if (String(url).endsWith('/cloud/session')) return Response.json(tested);
+        if (options?.body instanceof FormData) return Response.json(importJob);
+        return Response.json(
+            responseFor(jsonRecord(jsonValue(String(options?.body)), 'Cloud request body')),
+        );
     });
     t.after(() => cloud.disconnectClickHouseCloud());
     await cloud.connectClickHouseCloud(credentials, true);

@@ -152,7 +152,7 @@ for (const mode of ['beginner', 'expert']) {
             ]);
             await expect(transcript.locator('.assistant-user-message').first()).toHaveCSS(
                 'border-top-width',
-                '0px',
+                theme === 'Light' ? '1px' : '0px',
             );
             for (const width of [1440, 900]) {
                 await page.setViewportSize({ width, height: 900 });
@@ -845,7 +845,7 @@ for (const theme of ['Dark', 'Light']) {
         await expect(deletions).toHaveCSS('background-color', expectedRemoved);
         await expect(review(page).locator('.cm-changedLineGutter').first()).toHaveCSS(
             'background-color',
-            'rgb(33, 191, 150)',
+            theme === 'Dark' ? 'rgb(33, 191, 150)' : 'rgb(0, 122, 69)',
         );
         await expect(review(page).locator('.cm-deletedLineGutter').first()).toHaveCSS(
             'background-color',

@@ -356,6 +356,9 @@
     font-variant-ligatures: none;
     font-variant-numeric: tabular-nums;
   }
+  :root[data-theme="click-light"] .data-table {
+    --result-text: color-mix(in srgb, var(--green) 90%, var(--text));
+  }
   .data-table th {
     position: sticky;
     z-index: var(--z-local-raised);

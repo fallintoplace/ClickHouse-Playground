@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ArtifactService } from '../../.core-build/src/backend/queries/saved-queries/documents.js';
 import { MonitorService } from '../../.core-build/src/backend/queries/monitoring/monitors.js';
+import { isQueryDocument } from '../../.core-build/src/shared/queries/saved-queries/validation.js';
 import { fixture, owner, other, until } from './helpers.mjs';
 async function ready() {
     const f = fixture(),
@@ -44,12 +45,57 @@ test('Legacy chart types normalize to table and unknown types are rejected', asy
             }),
         { code: 'CHART_CONFIG' },
     );
-    const stored = f.store.get('documents', f.doc.id);
-    stored.chart.kind = 'area';
+    const stored = f.store.get('documents', f.doc.id, isQueryDocument);
+    for (const kind of ['pie', 'area', 'stacked']) {
+        stored.chart.kind = kind;
+        f.store.put('documents', stored.id, stored);
+        f.store.put('revisions', `${stored.id}-${stored.revision}`, stored);
+        assert.equal(f.a.get(owner, stored.id).chart.kind, 'table');
+        assert.equal(f.a.get(owner, stored.id, stored.revision).chart.kind, 'table');
+        assert.equal(
+            f.a.list(owner).find(document => document.id === stored.id).chart.kind,
+            'table',
+        );
+        assert.equal(f.a.revisions(owner, stored.id)[0].chart.kind, 'table');
+    }
+    stored.chart.kind = 'unknown';
+    f.store.put('revisions', `${stored.id}-${stored.revision}`, stored);
+    assert.throws(() => f.a.get(owner, stored.id, stored.revision), {
+        code: 'REVISION_NOT_FOUND',
+    });
+    assert.deepEqual(f.a.revisions(owner, stored.id), []);
     f.store.put('documents', stored.id, stored);
-    assert.equal(f.a.get(owner, stored.id).chart.kind, 'table');
-    assert.equal(f.a.list(owner).find(document => document.id === stored.id).chart.kind, 'table');
-    assert.equal(f.a.revisions(owner, stored.id)[0].chart.kind, 'table');
+    assert.throws(() => f.a.get(owner, stored.id), { code: 'NOT_FOUND' });
+    assert.equal(
+        f.a.list(owner).some(document => document.id === stored.id),
+        false,
+    );
+});
+test('Persisted legacy documents can run while ownership and chart validation remain enforced', async t => {
+    const f = await ready();
+    t.after(() => f.runs.close());
+    f.runs.trust(other, 'local', true);
+    const stored = f.store.get('documents', f.doc.id, isQueryDocument);
+    for (const kind of ['pie', 'area', 'stacked']) {
+        stored.chart.kind = kind;
+        f.store.put('documents', stored.id, stored);
+        assert.equal(isQueryDocument(stored), false);
+        const opened = f.a.get(owner, stored.id);
+        assert.equal(opened.chart.kind, 'table');
+        const run = f.runs.submit(owner, f.request({ documentId: opened.id, sql: opened.sql }));
+        await f.runs.wait(owner, run.id);
+        assert.equal(f.runs.get(owner, run.id).status, 'succeeded');
+        assert.throws(() => f.a.get(other, stored.id), { code: 'NOT_FOUND' });
+        assert.throws(() => f.runs.submit(other, f.request({ documentId: stored.id })), {
+            code: 'NOT_FOUND',
+        });
+    }
+    stored.chart.kind = 'unknown';
+    f.store.put('documents', stored.id, stored);
+    assert.throws(() => f.a.get(owner, stored.id), { code: 'NOT_FOUND' });
+    assert.throws(() => f.runs.submit(owner, f.request({ documentId: stored.id })), {
+        code: 'NOT_FOUND',
+    });
 });
 test('All supported chart kinds survive saving and reading a document', async t => {
     const f = await ready();
@@ -189,7 +235,7 @@ test('Expired publications release capacity and the same evidence can be republi
     assert.throws(() => f.a.publish(owner, blocked.id, blocked.revision), {
         code: 'PUBLICATION_CAPACITY',
     });
-    for (const publication of f.store.list('published')) {
+    for (const publication of f.a.publications(owner)) {
         publication.expiresAt = '2000-01-01T00:00:00Z';
         f.store.put('published', publication.id, publication);
     }

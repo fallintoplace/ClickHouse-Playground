@@ -292,9 +292,8 @@ test('Candlestick mappings open under Setup and keep their selections', async ({
     const high = popup.getByRole('combobox', { name: 'High', exact: true });
     await high.click();
     const highOptions = high.locator('xpath=..').locator('.chart-select-listbox');
-    await expect(
-        highOptions.locator('[role="option"][data-value="1"][aria-disabled="true"]'),
-    ).toBeVisible();
+    await expect(highOptions.getByRole('option', { name: 'high', exact: true })).toBeVisible();
+    await expect(highOptions.locator('[role="option"][data-value="1"]')).toHaveCount(0);
     await page.keyboard.press('Escape');
     await chooseChartOption(page, popup.getByRole('combobox', { name: 'BID', exact: true }), '5');
     await chooseChartOption(page, popup.getByRole('combobox', { name: 'ASK', exact: true }), '6');

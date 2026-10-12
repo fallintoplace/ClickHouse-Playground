@@ -1,13 +1,16 @@
 import { test, expect } from '@playwright/test';
+import type { Manifest } from '../../src/shared/database/connections/types.js';
+import type { Connected } from '../../src/frontend/workspace/workspace-types.js';
+import { DEFAULT_LIMITS } from '../../src/shared/queries/execution/settings.js';
 
 test('Connection review tests capabilities before trust and can retest after restart', async ({
     page,
 }) => {
     let trusted = false;
-    let manifest: Record<string, unknown> | undefined;
+    let manifest: Manifest | undefined;
     let tests = 0;
     let trusts = 0;
-    const connection = () => ({
+    const connection = (): Connected => ({
         dataSource: 'clickhouse',
         id: 'live',
         name: 'Analytics',
@@ -15,7 +18,7 @@ test('Connection review tests capabilities before trust and can retest after res
         database: 'analytics',
         username: 'reader',
         readonly: true,
-        limits: { rows: 5000, seconds: 30 },
+        limits: { ...DEFAULT_LIMITS },
         trusted,
         manifest,
     });

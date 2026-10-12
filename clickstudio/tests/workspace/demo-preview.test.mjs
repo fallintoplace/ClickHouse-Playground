@@ -20,6 +20,22 @@ test('Static preview scripts keep semicolons inside strings and comments', async
         assert.equal(sql.slice(statement.from, statement.to), statement.sql);
 });
 
+test('Browser query endpoints accept omitted parameters and reject malformed maps', async () => {
+    const api = new BrowserWorkspaceApi();
+    const body = { connectionId: 'demo', sql: 'SELECT 1' };
+    for (const path of ['/runs', '/scripts', '/connections/demo/query-tree']) {
+        await assert.doesNotReject(api.request(path, { method: 'POST', body }));
+        await assert.doesNotReject(
+            api.request(path, { method: 'POST', body: { ...body, parameters: { value: '1' } } }),
+        );
+        for (const parameters of [42, 'value', [], { value: 1 }])
+            await assert.rejects(
+                api.request(path, { method: 'POST', body: { ...body, parameters } }),
+                /Expected string values/,
+            );
+    }
+});
+
 test('New offline examples reopen with fixture rows matching their result columns', async () => {
     const api = new BrowserWorkspaceApi();
     const documents = await api.request('/documents?connectionId=demo');

@@ -3,6 +3,19 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { MemoryStore } from '../../.core-build/src/backend/system/store.js';
 import { RunService } from '../../.core-build/src/backend/queries/execution/runs.js';
 import { DEFAULT_LIMITS } from '../../.core-build/src/shared/queries/execution/settings.js';
+import { isOptionalString, isRecord } from '../../.core-build/src/shared/common/values.js';
+
+export function isAuditEvent(value) {
+    return (
+        isRecord(value) &&
+        ['id', 'at', 'owner', 'action', 'resourceId'].every(
+            key => typeof value[key] === 'string',
+        ) &&
+        ['allowed', 'denied', 'failed'].includes(value.outcome) &&
+        isOptionalString(value.ruleId)
+    );
+}
+
 export const owner = { id: 'local-owner', role: 'owner' };
 export const other = { id: 'other-owner', role: 'owner' };
 export const viewer = { id: 'local-owner', role: 'viewer' };

@@ -15,7 +15,18 @@ import type { ApiError } from '../../src/shared/common/errors.js';
 import type { Connection } from '../../src/shared/database/connections/types.js';
 import type { ResultPage } from '../../src/shared/queries/results/types.js';
 import type { Run } from '../../src/shared/queries/execution/types.js';
-import { isRecord } from '../../src/shared/common/values.js';
+import {
+    isFiniteNumber,
+    isOptionalString,
+    isRecord,
+    isSafeInteger,
+    isStringArray,
+} from '../../src/shared/common/values.js';
+import {
+    RUN_KINDS,
+    RUN_RESULT_STATES,
+    RUN_STATUSES,
+} from '../../src/shared/queries/execution/status.js';
 import { isConnected, isResultPage } from '../../src/frontend/api/response-guards.js';
 import { isRun } from '../../src/frontend/queries/execution/events.js';
 import {
@@ -97,10 +108,75 @@ class McpFixtureDriver extends DemoDriver {
         if (this.cancelFails) throw new Error('Cannot confirm remote cancellation');
     }
 }
+type RunSummary = Pick<
+    Run,
+    | 'id'
+    | 'queryId'
+    | 'connectionId'
+    | 'dataSource'
+    | 'kind'
+    | 'status'
+    | 'createdAt'
+    | 'startedAt'
+    | 'finishedAt'
+    | 'elapsedMs'
+    | 'rowCount'
+    | 'bytes'
+    | 'limits'
+    | 'progress'
+    | 'resultState'
+    | 'serverVersion'
+    | 'warnings'
+    | 'error'
+>;
+
+function isApiError(value: unknown): value is ApiError {
+    return (
+        isRecord(value) &&
+        typeof value.code === 'string' &&
+        typeof value.message === 'string' &&
+        isOptionalString(value.remediation) &&
+        (value.position === undefined || isFiniteNumber(value.position))
+    );
+}
+
+function isRunSummary(value: unknown): value is RunSummary {
+    if (!isRecord(value)) return false;
+    const { limits, progress } = value;
+    return (
+        typeof value.id === 'string' &&
+        typeof value.queryId === 'string' &&
+        typeof value.connectionId === 'string' &&
+        (value.dataSource === 'clickhouse' || value.dataSource === 'fixture') &&
+        RUN_KINDS.some(kind => kind === value.kind) &&
+        RUN_STATUSES.some(status => status === value.status) &&
+        typeof value.createdAt === 'string' &&
+        isOptionalString(value.startedAt) &&
+        isOptionalString(value.finishedAt) &&
+        isFiniteNumber(value.elapsedMs) &&
+        isFiniteNumber(value.rowCount) &&
+        isFiniteNumber(value.bytes) &&
+        isRecord(limits) &&
+        ['rows', 'bytes', 'seconds', 'memory', 'threads'].every(key =>
+            isSafeInteger(limits[key]),
+        ) &&
+        (progress === undefined ||
+            (isRecord(progress) &&
+                typeof progress.readRows === 'string' &&
+                typeof progress.readBytes === 'string' &&
+                isFiniteNumber(progress.elapsedMs) &&
+                isOptionalString(progress.memory))) &&
+        RUN_RESULT_STATES.some(state => state === value.resultState) &&
+        isOptionalString(value.serverVersion) &&
+        isStringArray(value.warnings) &&
+        (value.error === undefined || isApiError(value.error))
+    );
+}
+
 interface Output {
     clientRequestId?: string;
     connections?: Array<Connection & { trusted: boolean }>;
-    run?: Run;
+    run?: RunSummary;
     runId?: string;
     result?: ResultPage;
     error?: ApiError;
@@ -113,13 +189,10 @@ function isOutput(value: unknown): value is Output {
         (value.clientRequestId === undefined || typeof value.clientRequestId === 'string') &&
         (value.connections === undefined ||
             (Array.isArray(value.connections) && value.connections.every(isConnected))) &&
-        (value.run === undefined || isRun(value.run)) &&
+        (value.run === undefined || isRunSummary(value.run)) &&
         (value.runId === undefined || typeof value.runId === 'string') &&
         (value.result === undefined || isResultPage(value.result)) &&
-        (value.error === undefined ||
-            (isRecord(value.error) &&
-                typeof value.error.code === 'string' &&
-                typeof value.error.message === 'string')) &&
+        (value.error === undefined || isApiError(value.error)) &&
         (value.cancellationRequested === undefined ||
             typeof value.cancellationRequested === 'boolean')
     );

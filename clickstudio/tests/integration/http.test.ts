@@ -17,7 +17,7 @@ import type {
 import { isQueryDocument } from '../../src/shared/queries/saved-queries/validation.js';
 import type { ReferenceCategory } from '../../src/shared/database/reference/reference.js';
 import { isRun } from '../../src/frontend/queries/execution/events.js';
-import { apiResponses } from '../../src/frontend/api/response-guards.js';
+import * as apiResponses from '../../src/frontend/api/response-guards.js';
 import {
     arrayValue,
     decodeArray,
@@ -566,9 +566,7 @@ test('Ask AI uses a validated Playground server version supplied by the browser'
                     clarification: null,
                     findings: [],
                 },
-                completeness: 'complete',
-                columns: [],
-                rows: [],
+                responseId: 'fixture-server-version',
             };
         },
     };
@@ -612,9 +610,7 @@ test('Ask AI uses browser Cloud schema and run evidence without resolving a loca
                     clarification: null,
                     findings: [],
                 },
-                completeness: 'complete',
-                columns: [],
-                rows: [],
+                responseId: 'fixture-cloud-context',
             };
         },
     };

@@ -75,7 +75,7 @@ export interface PreparedContext {
     proposalId?: string;
 }
 
-function isPreparedContext(value: unknown): value is PreparedContext {
+export function isPreparedContext(value: unknown): value is PreparedContext {
     if (!isRecord(value) || !isRecord(value.payload)) return false;
     const { payload } = value;
     return (

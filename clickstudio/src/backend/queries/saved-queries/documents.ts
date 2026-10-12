@@ -19,6 +19,8 @@ import { hash, audit, MemoryStore, type Store } from '../../system/store.js';
 import { choice, integer, record, stringMap, text } from '../../system/requests/validation.js';
 import { boundResult, type RunService } from '../execution/runs.js';
 import { MAX_CHART_SERIES } from '../../../shared/queries/results/results.js';
+import { isStoredQueryDocument, LEGACY_CHART_KINDS } from './stored-document.js';
+import type { StoredQueryDocument } from './stored-document.js';
 interface Share {
     id: string;
     owner: string;
@@ -30,7 +32,6 @@ const DOCUMENT_KINDS = [
     'snippet',
     'metric',
 ] as const satisfies readonly QueryDocument['kind'][];
-const LEGACY_CHART_KINDS = ['area', 'stacked', 'pie'] as const;
 function isShare(value: unknown): value is Share {
     return (
         isRecord(value) &&
@@ -83,7 +84,7 @@ export class ArtifactService {
     ) {}
     list(p: Principal, includeTrash = false, connectionId?: string): QueryDocument[] {
         return this.store
-            .list('documents', isQueryDocument)
+            .list('documents', isStoredQueryDocument)
             .filter(
                 d =>
                     d.owner === p.id &&
@@ -92,22 +93,22 @@ export class ArtifactService {
             )
             .map(document => this.normalizeDocument(document));
     }
-    private normalizeDocument(document: QueryDocument): QueryDocument {
+    private normalizeDocument(document: StoredQueryDocument): QueryDocument {
         return { ...document, chart: parseChart(document.chart) };
     }
     get(p: Principal, id: string, revision?: number): QueryDocument {
-        const current = this.store.get('documents', id, isQueryDocument);
+        const current = this.store.get('documents', id, isStoredQueryDocument);
         requireThat(current, 404, 'NOT_FOUND', 'Document not found');
         mustOwn(p, current.owner);
         if (revision === undefined) return this.normalizeDocument(current);
-        const historical = this.store.get('revisions', `${id}-${revision}`, isQueryDocument);
+        const historical = this.store.get('revisions', `${id}-${revision}`, isStoredQueryDocument);
         requireThat(historical, 404, 'REVISION_NOT_FOUND', 'Revision not found');
         return this.normalizeDocument(historical);
     }
     revisions(p: Principal, id: string): QueryDocument[] {
         this.get(p, id);
         return this.store
-            .list('revisions', isQueryDocument)
+            .list('revisions', isStoredQueryDocument)
             .filter(d => d.id === id)
             .sort((a, b) => b.revision - a.revision)
             .map(document => this.normalizeDocument(document));
@@ -507,7 +508,7 @@ export class ArtifactService {
         // Validate the complete bundle in isolation before changing durable state. This avoids
         // partial imports on validation errors; filesystem failures are still not transactions.
         const staged = new MemoryStore();
-        for (const current of this.store.list('documents', isQueryDocument))
+        for (const current of this.store.list('documents', isStoredQueryDocument))
             staged.put('documents', current.id, current);
         const staging = new ArtifactService(staged, this.runs, this.authorizeConnection);
         const documents = v.documents.map(raw => {

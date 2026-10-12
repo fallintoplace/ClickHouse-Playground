@@ -10,6 +10,7 @@ import {
     AssistantService,
     ASSISTANT_REQUEST_TIMEOUT_MS,
     buildContext,
+    isPreparedContext,
     MAX_ASSISTANT_CONVERSATION_MESSAGES,
     validateAssistantConversation,
     validateImage,
@@ -22,6 +23,7 @@ import {
 import { ASSISTANT_ACTIONS } from '../../.core-build/src/shared/assistant/actions.js';
 import { selectAssistantReferenceDocs } from '../../.core-build/src/shared/database/reference/catalog.js';
 import { MemoryStore, hash } from '../../.core-build/src/backend/system/store.js';
+import { isRecord } from '../../.core-build/src/shared/common/values.js';
 import {
     exportCsv,
     chartNumber,
@@ -29,7 +31,17 @@ import {
     sampleChartRows,
     MAX_CHART_RENDER_POINTS,
 } from '../../.core-build/src/shared/queries/results/results.js';
-import { owner, other, schema } from './helpers.mjs';
+import { isAuditEvent, owner, other, schema } from './helpers.mjs';
+
+function isLegacyUsage(value) {
+    return (
+        isRecord(value) &&
+        typeof value.day === 'string' &&
+        Number.isSafeInteger(value.calls) &&
+        Number.isSafeInteger(value.inputBytes)
+    );
+}
+
 const proposal = {
     sql: 'SELECT 1',
     summary: 'A proposal',
@@ -535,11 +547,11 @@ test('Cancelling before model dispatch leaves context cancelled without a model 
     });
 
     assert.equal(f.calls, 0);
-    assert.equal(f.store.get('ai-contexts', c.id).state, 'cancelled');
+    assert.equal(f.store.get('ai-contexts', c.id, isPreparedContext).state, 'cancelled');
     assert.equal(f.store.count('proposals'), 0);
     assert.ok(
         f.store
-            .list('audit')
+            .list('audit', isAuditEvent)
             .some(event => event.action === 'ai.cancel-context' && event.resourceId === c.id),
     );
 });
@@ -574,7 +586,7 @@ test('Cancelling an in-flight model request aborts it and records the cancelled 
 
     assert.equal(calls, 1);
     assert.equal(receivedSignal.aborted, true);
-    assert.equal(store.get('ai-contexts', c.id).state, 'cancelled');
+    assert.equal(store.get('ai-contexts', c.id, isPreparedContext).state, 'cancelled');
     assert.equal(store.count('proposals'), 0);
 });
 test('Assistant generation continues beyond 45 seconds and stops at the extended deadline', async t => {
@@ -607,13 +619,13 @@ test('Assistant generation continues beyond 45 seconds and stops at the extended
     const rejected = assert.rejects(ai.propose(owner, context.id, true), { code: 'AI_TIMEOUT' });
     t.mock.timers.tick(45_000);
     assert.equal(receivedSignal.aborted, false);
-    assert.equal(store.get('ai-contexts', context.id).state, 'running');
+    assert.equal(store.get('ai-contexts', context.id, isPreparedContext).state, 'running');
     t.mock.timers.tick(134_999);
     assert.equal(receivedSignal.aborted, false);
     t.mock.timers.tick(1);
     await rejected;
     assert.equal(receivedSignal.aborted, true);
-    assert.equal(store.get('ai-contexts', context.id).state, 'failed');
+    assert.equal(store.get('ai-contexts', context.id, isPreparedContext).state, 'failed');
     assert.equal(store.count('proposals'), 0);
 });
 test('Assistant deadline leaves headroom within the hosted function duration', () => {
@@ -645,7 +657,7 @@ test('A late model response after cancellation cannot create a proposal', async 
 
     await assert.rejects(pending, { name: 'AbortError' });
 
-    assert.equal(store.get('ai-contexts', c.id).state, 'cancelled');
+    assert.equal(store.get('ai-contexts', c.id, isPreparedContext).state, 'cancelled');
     assert.equal(store.count('proposals'), 0);
 });
 test('Sending twice returns the same proposal and makes one model request', async () => {
@@ -665,7 +677,7 @@ test('Assistant accepts more than twenty proposals for one user', async () => {
     }
 
     assert.equal(f.calls, 21);
-    assert.equal(f.store.list('ai-usage').length, 0);
+    assert.equal(f.store.count('ai-usage'), 0);
 });
 test('Assistant ignores legacy daily usage records when preparing a proposal', async () => {
     const f = aiFixture();
@@ -679,7 +691,7 @@ test('Assistant ignores legacy daily usage records when preparing a proposal', a
     await f.ai.propose(owner, context.id, true);
 
     assert.equal(f.calls, 1);
-    assert.equal(f.store.get('ai-usage', hash(owner.id)).calls, 20);
+    assert.equal(f.store.get('ai-usage', hash(owner.id), isLegacyUsage).calls, 20);
 });
 test('Assistant accepts multiple valid image requests beyond five MB total', async () => {
     const f = aiFixture(),
@@ -757,7 +769,7 @@ test('Accepting proposal records a decision, never creates a run', async () => {
         c = f.ai.prepare(owner, f.input),
         p = await f.ai.propose(owner, c.id, true);
     f.ai.decide(owner, p.id, 'accepted', 'local', 'SELECT 2');
-    assert.equal(f.store.list('runs').length, 0);
+    assert.equal(f.store.count('runs'), 0);
 });
 test('Prepared contexts accept supported actions and reject unknown actions', () => {
     const f = aiFixture();
@@ -1044,7 +1056,7 @@ test('Write SQL proposals can be applied to the draft without running them', asy
         const p = await f.ai.propose(owner, c.id, true);
         assert.equal(p.quality.status, 'pass');
         f.ai.decide(owner, p.id, 'accepted', 'local', 'SELECT 2');
-        assert.equal(f.store.list('runs').length, 0);
+        assert.equal(f.store.count('runs'), 0);
     }
 });
 test('AssistantService grounds generated SQL against the prepared schema', async () => {

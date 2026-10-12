@@ -6,7 +6,7 @@ import {
     createTableSql,
 } from '../../.core-build/src/backend/database/tables/create-table.js';
 import { MemoryStore } from '../../.core-build/src/backend/system/store.js';
-import { owner, viewer } from './helpers.mjs';
+import { isAuditEvent, owner, viewer } from './helpers.mjs';
 
 const columns = [
     { name: 'id', type: 'UInt64' },
@@ -148,6 +148,6 @@ test('Successful table creation uses the selected database and records an audit 
     assert.equal(result.table, 'events');
     assert.deepEqual(calls[0].slice(0, 4), ['local', 'analytics.events', columns, 'id']);
     assert.match(calls[0][4], /^clickstudio-create-table-/);
-    assert.equal(store.list('audit')[0].action, 'table.create');
-    assert.equal(store.list('audit')[0].resourceId, 'analytics.events');
+    assert.equal(store.list('audit', isAuditEvent)[0].action, 'table.create');
+    assert.equal(store.list('audit', isAuditEvent)[0].resourceId, 'analytics.events');
 });

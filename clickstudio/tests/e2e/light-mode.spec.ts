@@ -329,7 +329,7 @@ test('Mounted candlesticks update their marks and labels when the theme changes'
     await expect(up).toHaveCSS('fill', 'rgb(53, 233, 120)');
     await expect(down).toHaveCSS('fill', 'rgb(255, 107, 117)');
     await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
-    await expect(up).toHaveCSS('fill', 'rgb(0, 107, 64)');
+    await expect(up).toHaveCSS('fill', 'rgb(0, 122, 69)');
     await expect(down).toHaveCSS('fill', 'rgb(197, 34, 67)');
     await expect(page.locator('.market-axis text').first()).toHaveCSS('fill', 'rgb(69, 89, 116)');
     await expect(page.locator('.market-bid-line')).toHaveCSS('stroke', 'rgb(98, 55, 25)');

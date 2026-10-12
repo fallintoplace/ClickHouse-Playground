@@ -18,7 +18,7 @@ import type {
 } from '../../../shared/queries/execution/types.js';
 import type { Result, ResultPage } from '../../../shared/queries/results/types.js';
 import { isRecord } from '../../../shared/common/values.js';
-import { isQueryDocument } from '../../../shared/queries/saved-queries/validation.js';
+import { isStoredQueryDocument } from '../saved-queries/stored-document.js';
 import { isResult, isRun, isScript } from '../../../shared/queries/execution/validation.js';
 import { splitSql } from '../../../shared/sql/sql.js';
 import { AppError, asError, requireThat } from '../../system/requests/errors.js';
@@ -74,7 +74,7 @@ function isStoredResult(value: unknown): value is Result & { expiresAt?: string 
     );
 }
 
-function isReceipt(value: unknown): value is Receipt {
+export function isReceipt(value: unknown): value is Receipt {
     return (
         isRecord(value) &&
         typeof value.id === 'string' &&
@@ -207,7 +207,7 @@ export class RunService {
             );
         }
         if (request.documentId) {
-            const document = this.store.get('documents', request.documentId, isQueryDocument);
+            const document = this.store.get('documents', request.documentId, isStoredQueryDocument);
             requireThat(
                 document && !document.deletedAt,
                 404,

@@ -5,11 +5,10 @@ import {
     connectClickHouseCloud,
     disconnectClickHouseCloud,
 } from '../../src/frontend/database/connections/cloud-connection.js';
+import { cloudConnectionTest } from '../helpers/cloud-fixtures.js';
 
 test('Cloud connections advertise their query budget while inspector requests keep their larger row cap', async t => {
-    t.mock.method(globalThis, 'fetch', async () =>
-        Response.json({ host: 'service.clickhouse.cloud:8443', serverVersion: '25.1' }),
-    );
+    t.mock.method(globalThis, 'fetch', async () => Response.json(cloudConnectionTest()));
     t.after(() => disconnectClickHouseCloud());
     const connection = await connectClickHouseCloud({
         host: 'service.clickhouse.cloud:8443',

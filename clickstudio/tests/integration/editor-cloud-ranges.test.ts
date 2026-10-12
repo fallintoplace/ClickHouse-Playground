@@ -5,6 +5,7 @@ import * as cloud from '../../src/frontend/database/connections/cloud-connection
 import { BrowserWorkspaceApi } from '../../src/frontend/api/browser-workspace.js';
 import { isRun, isScript } from '../../src/frontend/queries/execution/events.js';
 import { decodeValue, jsonRecord, jsonValue } from '../helpers/type-guards.js';
+import { cloudConnectionTest } from '../helpers/cloud-fixtures.js';
 
 const credentials = {
     host: 'service.clickhouse.cloud:8443',
@@ -12,12 +13,7 @@ const credentials = {
     username: 'reader',
     password: 'fixture-password',
 };
-const tested = {
-    host: credentials.host,
-    serverVersion: '25.1',
-    queryLogSource: 'query_log',
-    traceLogSource: 'symbolized',
-};
+const tested = cloudConnectionTest();
 const result = {
     columns: [{ name: 'value', type: 'UInt64' }],
     rows: [['1']],
