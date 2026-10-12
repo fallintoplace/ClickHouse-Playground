@@ -743,7 +743,7 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
                         aria-label="Stop assistant response"
                         title="Stop generating"
                     >
-                        <Icon name="stop" />
+                        <Icon name="close" />
                     </Button>
                 );
             }
