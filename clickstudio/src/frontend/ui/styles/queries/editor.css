@@ -527,11 +527,11 @@
     justify-content: center;
   }
   .sql-ai-button {
-    color: var(--violet);
+    color: var(--accent);
   }
   .sql-ai-button[aria-pressed="true"] {
-    border-color: color-mix(in srgb, var(--violet) 25%, transparent);
-    background: color-mix(in srgb, var(--violet) 8%, transparent);
+    border-color: var(--active-border);
+    background: var(--active-surface);
   }
   .save-revision-button {
     min-height: 34px;

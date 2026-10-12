@@ -61,12 +61,6 @@
     color: var(--accent);
     box-shadow: var(--active-inset);
   }
-  .inspector-tabs.is-browser-tabs > button.is-assistant-tab[aria-pressed="true"] {
-    border-color: color-mix(in srgb, var(--violet) 36%, var(--line));
-    background: color-mix(in srgb, var(--violet) 10%, var(--panel));
-    color: var(--violet);
-    box-shadow: var(--active-inset);
-  }
   .inspector-tabs.is-browser-tabs {
     container-type: inline-size;
     align-items: center;
@@ -1893,10 +1887,10 @@
     height: 29px;
     flex: none;
     place-items: center;
-    border: 1px solid color-mix(in srgb, var(--violet) 21%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
     border-radius: var(--radius-panel);
-    background: color-mix(in srgb, var(--violet) 7%, transparent);
-    color: var(--violet);
+    background: color-mix(in srgb, var(--accent-mark) 22%, transparent);
+    color: var(--accent);
   }
   .assistant-glyph svg {
     width: 15px;

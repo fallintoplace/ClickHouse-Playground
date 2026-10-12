@@ -634,11 +634,7 @@
     box-shadow: var(--active-inset);
   }
   .rail-icon-button.is-accent {
-    color: var(--violet);
-  }
-  .rail-icon-button.is-accent.is-active {
-    border-color: color-mix(in srgb, var(--violet) 35%, var(--line));
-    background: color-mix(in srgb, var(--violet) 10%, var(--panel));
+    color: var(--accent);
   }
   .rail-icon-muted {
     margin-top: 3px;

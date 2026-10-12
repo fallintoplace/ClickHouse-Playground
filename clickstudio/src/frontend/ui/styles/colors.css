@@ -179,11 +179,6 @@
   --editor-selection: color-mix(in srgb, var(--accent-action) 34%, transparent);
 }
 
-:root[data-theme="click-light"] .chart-workspace {
-  --accent: #2563eb;
-  --accent-strong: #1d4ed8;
-}
-
 .object-explorer-section {
   --explorer-signal: var(--signal-accent);
   --explorer-database: var(--accent);

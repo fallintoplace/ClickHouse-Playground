@@ -53,7 +53,13 @@ export function prepareScatterAxes({
     categoricalAxis: boolean;
     plotSeries: {
         columnIndex: number;
-        color: 'var(--accent)' | 'var(--green)' | 'var(--amber)' | 'var(--red)' | 'var(--violet)';
+        color:
+            | 'var(--accent)'
+            | 'var(--accent-mark)'
+            | 'var(--green)'
+            | 'var(--amber)'
+            | 'var(--red)'
+            | 'var(--violet)';
         points: { label: string; value: number | null; index: number }[];
     }[];
     x: (index: number) => number;

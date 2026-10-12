@@ -34,7 +34,7 @@ export function chartKindIsAvailable(
 }
 
 const chartColors = [
-    'var(--accent)',
+    'var(--accent-mark)',
     'var(--green)',
     'var(--amber)',
     'var(--red)',
