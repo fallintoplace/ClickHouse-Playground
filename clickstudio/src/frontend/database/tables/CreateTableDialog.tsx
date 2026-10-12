@@ -286,21 +286,18 @@ export function CreateTableDialog({ connection, databases, onClose, onCreated }:
             onClick={event => {
                 if (event.target === dialog.current && !busy) onClose();
             }}
-            className="create-table-dialog m-auto max-w-none overflow-hidden rounded-2xl border border-[var(--line-bright)] bg-[var(--panel)] p-0 text-[var(--text)] shadow-[var(--shadow-dialog)]"
+            className="table-action-dialog create-table-dialog m-auto max-w-none overflow-hidden rounded-2xl border border-[var(--line-bright)] bg-[var(--panel)] p-0 text-[var(--text)] shadow-[var(--shadow-dialog)]"
         >
-            <form onSubmit={event => void create(event)} className="create-table-form">
-                <header className="create-table-header flex items-start justify-between gap-5 border-b border-[var(--line)] px-5 py-4 sm:px-7">
-                    <div>
-                        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--muted)]">
-                            ClickHouse
-                        </span>
-                        <h2
-                            id="create-table-title"
-                            className="mt-1 text-lg font-semibold tracking-tight"
-                        >
+            <form
+                onSubmit={event => void create(event)}
+                className="table-action-dialog-layout create-table-form"
+            >
+                <header className="table-action-dialog-header create-table-header">
+                    <div className="min-w-0">
+                        <h2 id="create-table-title" className="table-action-dialog-title">
                             New table
                         </h2>
-                        <p className="mt-1 text-xs text-[var(--text-soft)]">
+                        <p className="table-action-dialog-description">
                             Create an empty MergeTree table in{' '}
                             <code>{database || 'a database'}</code>.
                         </p>
@@ -310,15 +307,15 @@ export function CreateTableDialog({ connection, databases, onClose, onCreated }:
                         aria-label="Close new table"
                         disabled={busy}
                         onClick={onClose}
-                        className="create-table-close rounded-lg border border-[var(--line)] px-3 py-2 text-xs text-[var(--text-soft)] disabled:opacity-40"
+                        className="table-action-dialog-close"
                     >
-                        Close
+                        <Icon name="close" />
                     </button>
                 </header>
 
                 <CreateTableContent model={contentModel} />
 
-                <footer className="create-table-footer flex justify-end gap-2 border-t border-[var(--line)] bg-[var(--page)] px-5 py-3 sm:px-7">
+                <footer className="table-action-dialog-footer create-table-footer">
                     {!created && !canCreate && !busy && (
                         <p className="create-table-submit-help">{createDisabledReason}</p>
                     )}
@@ -326,7 +323,7 @@ export function CreateTableDialog({ connection, databases, onClose, onCreated }:
                         <button
                             type="button"
                             onClick={onClose}
-                            className="create-table-button rounded-lg bg-[var(--accent-action)] px-4 py-2 text-xs font-semibold text-[var(--accent-ink)]"
+                            className="table-action-dialog-button table-action-dialog-primary create-table-button bg-[var(--accent-action)] text-[var(--accent-ink)]"
                         >
                             Done
                         </button>
@@ -334,7 +331,7 @@ export function CreateTableDialog({ connection, databases, onClose, onCreated }:
                         <button
                             type="submit"
                             disabled={busy || !canCreate}
-                            className="create-table-button rounded-lg bg-[var(--accent-action)] px-4 py-2 text-xs font-semibold text-[var(--accent-ink)] disabled:cursor-not-allowed disabled:opacity-40"
+                            className="table-action-dialog-button table-action-dialog-primary create-table-button bg-[var(--accent-action)] text-[var(--accent-ink)] disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             {busy ? 'Creating…' : 'Create table'}
                         </button>
@@ -398,7 +395,7 @@ function CreateTableContent({ model }: { model: CreateTableContentModel }) {
         error,
     } = model;
     return (
-        <main className="create-table-content min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5 sm:px-7">
+        <main className="create-table-content table-action-dialog-content min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3 sm:px-5 sm:py-4">
             {!created && (
                 <>
                     {renderDatabasePicker(model)}
@@ -454,8 +451,7 @@ function CreateTableContent({ model }: { model: CreateTableContentModel }) {
                             <Icon name="chevron" />
                         </span>
                         <span id="create-table-sorting-help" className="create-table-help">
-                            Used to organize data for queries. The first column is selected by
-                            default.
+                            Organizes data for queries. Defaults to the first column.
                         </span>
                     </label>
                     <p className="create-table-supported-types">
@@ -490,7 +486,7 @@ function renderTableColumns({
     updateColumn,
 }: Pick<CreateTableContentModel, 'setColumns' | 'columns' | 'updateColumn'>) {
     return (
-        <section aria-label="Table columns" className="create-table-columns space-y-2">
+        <section aria-label="Table columns" className="create-table-columns space-y-1.5">
             <div className="flex items-center justify-between">
                 <h3 className="text-xs font-semibold">Columns</h3>
                 <button
@@ -513,7 +509,7 @@ function renderTableColumns({
             {columns.map((column, index) => (
                 <div
                     key={index}
-                    className={`create-table-column-row grid grid-cols-[minmax(0,1fr)_minmax(8rem,.8fr)_auto] gap-2 rounded-lg border border-[var(--line)] bg-[var(--page)] p-3${column.generatedId ? ' has-generated-id' : ''}`}
+                    className={`create-table-column-row grid grid-cols-[minmax(0,1fr)_minmax(8rem,.8fr)_auto] gap-2 rounded-lg border border-[var(--line)] bg-[var(--page)] p-2${column.generatedId ? ' has-generated-id' : ''}`}
                 >
                     <label className="create-table-column-field">
                         <span className="create-table-column-label">Name</span>

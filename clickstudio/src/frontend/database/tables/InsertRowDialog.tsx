@@ -11,6 +11,7 @@ import {
 } from 'react';
 import type { SchemaColumn, SchemaTable } from '../../../shared/database/schema/types';
 import { api, apiResponses, message, post, RequestError } from '../../api/client';
+import { Icon } from '../../ui/components/icons';
 import {
     checkClickHouseCloudImport,
     CLICKHOUSE_CLOUD_CONNECTION_ID,
@@ -567,21 +568,15 @@ function renderInsertRowDialog({
             onClick={event => {
                 if (event.target === dialog.current && canClose) close();
             }}
-            className="m-auto max-h-[min(90vh,800px)] w-[min(760px,calc(100vw-2rem))] max-w-none overflow-hidden rounded-2xl border border-[var(--line-bright)] bg-[var(--panel)] p-0 text-[var(--text)] shadow-[var(--shadow-dialog)]"
+            className="table-action-dialog m-auto max-h-[min(90dvh,800px)] w-[min(760px,calc(100vw-2rem))] max-w-none overflow-hidden rounded-2xl border border-[var(--line-bright)] bg-[var(--panel)] p-0 text-[var(--text)] shadow-[var(--shadow-dialog)]"
         >
-            <div className="flex max-h-[min(90vh,800px)] flex-col">
-                <header className="flex items-start justify-between gap-5 border-b border-[var(--line)] px-5 py-4 sm:px-7">
-                    <div>
-                        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--muted)]">
-                            ClickHouse
-                        </span>
-                        <h2
-                            id="insert-row-title"
-                            className="mt-1 text-lg font-semibold tracking-tight"
-                        >
+            <div className="table-action-dialog-layout">
+                <header className="table-action-dialog-header">
+                    <div className="min-w-0">
+                        <h2 id="insert-row-title" className="table-action-dialog-title">
                             Insert row
                         </h2>
-                        <p className="mt-1 text-xs text-[var(--text-soft)]">
+                        <p className="table-action-dialog-description">
                             Add one row to <code>{name}</code>.
                         </p>
                     </div>
@@ -590,12 +585,12 @@ function renderInsertRowDialog({
                         aria-label="Close insert row"
                         disabled={!canClose}
                         onClick={close}
-                        className="rounded-lg border border-[var(--line)] px-3 py-2 text-xs text-[var(--text-soft)] disabled:opacity-40"
+                        className="table-action-dialog-close"
                     >
-                        Close
+                        <Icon name="close" />
                     </button>
                 </header>
-                <main className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5 sm:px-7">
+                <main className="table-action-dialog-content min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3 sm:px-5 sm:py-4">
                     {loading && (
                         <p role="status" className="text-sm text-[var(--text-soft)]">
                             Checking insert access…
@@ -621,7 +616,7 @@ function renderInsertRowDialog({
                         <form
                             id="insert-row-form"
                             onSubmit={event => void reviewRow(event)}
-                            className="space-y-3"
+                            className="space-y-2"
                         >
                             <p className="text-xs text-[var(--muted)]">
                                 Required columns are included. Leave defaulted or nullable columns
@@ -632,13 +627,13 @@ function renderInsertRowDialog({
                                 return (
                                     <div
                                         key={column.name}
-                                        className="grid gap-2 rounded-lg border border-[var(--line)] bg-[var(--page)] p-3 sm:grid-cols-[minmax(9rem,.8fr)_minmax(0,1.5fr)] sm:items-center"
+                                        className="insert-row-column grid gap-2 rounded-lg border border-[var(--line)] bg-[var(--page)] p-2 sm:grid-cols-[minmax(9rem,.8fr)_minmax(0,1.5fr)] sm:items-center"
                                     >
                                         <div className="min-w-0">
                                             <strong className="block truncate text-xs">
                                                 {column.name}
                                             </strong>
-                                            <code className="text-[10px] text-[var(--muted)]">
+                                            <code className="font-sans text-[11px] text-[var(--muted)]">
                                                 {column.type}
                                                 {column.defaultKind
                                                     ? ` · ${column.defaultKind}`
@@ -672,7 +667,7 @@ function renderInsertRowDialog({
                                                     }))
                                                 }
                                                 placeholder={optional ? 'Use default' : 'Value'}
-                                                className="min-h-9 min-w-0 flex-1 rounded-md border border-[var(--line)] bg-[var(--panel)] px-2.5 font-mono text-xs disabled:opacity-45"
+                                                className="insert-row-column-value min-h-8 min-w-0 flex-1 rounded-md border border-[var(--line)] bg-[var(--panel)] px-2.5 font-mono text-xs disabled:opacity-45"
                                             />
                                         </div>
                                     </div>
@@ -754,7 +749,7 @@ function renderInsertRowDialog({
                         </p>
                     )}
                 </main>
-                <footer className="flex justify-end gap-2 border-t border-[var(--line)] bg-[var(--page)] px-5 py-3 sm:px-7">
+                <footer className="table-action-dialog-footer">
                     {step === 'edit' && allowed && (
                         <button
                             type="submit"
@@ -765,7 +760,7 @@ function renderInsertRowDialog({
                                 !writableColumns.length ||
                                 !Object.keys(row).length
                             }
-                            className="rounded-lg bg-[var(--accent-action)] px-4 py-2 text-xs font-semibold text-[var(--accent-ink)] disabled:cursor-not-allowed disabled:opacity-40"
+                            className="table-action-dialog-button table-action-dialog-primary bg-[var(--accent-action)] text-[var(--accent-ink)] disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             {busy ? 'Preparing…' : 'Review row'}
                         </button>
@@ -776,7 +771,7 @@ function renderInsertRowDialog({
                                 type="button"
                                 disabled={busy}
                                 onClick={() => setStep('edit')}
-                                className="rounded-lg border border-[var(--line)] px-3 py-2 text-xs disabled:opacity-40"
+                                className="table-action-dialog-button table-action-dialog-secondary disabled:opacity-40"
                             >
                                 Back
                             </button>
@@ -784,7 +779,7 @@ function renderInsertRowDialog({
                                 type="button"
                                 disabled={busy}
                                 onClick={() => void insertRow()}
-                                className="rounded-lg bg-[var(--accent-action)] px-4 py-2 text-xs font-semibold text-[var(--accent-ink)] disabled:cursor-not-allowed disabled:opacity-40"
+                                className="table-action-dialog-button table-action-dialog-primary bg-[var(--accent-action)] text-[var(--accent-ink)] disabled:cursor-not-allowed disabled:opacity-40"
                             >
                                 {busy ? 'Inserting…' : 'Insert row'}
                             </button>
@@ -795,7 +790,7 @@ function renderInsertRowDialog({
                             type="button"
                             onClick={close}
                             disabled={busy}
-                            className="rounded-lg bg-[var(--accent-action)] px-4 py-2 text-xs font-semibold text-[var(--accent-ink)] disabled:opacity-40"
+                            className="table-action-dialog-button table-action-dialog-primary bg-[var(--accent-action)] text-[var(--accent-ink)] disabled:opacity-40"
                         >
                             Done
                         </button>
