@@ -10,7 +10,11 @@ import type { Result } from '../../../shared/queries/results/types';
 import type { Schema } from '../../../shared/database/schema/types';
 import { isFrontendDemoPreview, message, post } from '../../api/client';
 import { useAssistantChats } from '../chat/useAssistantChats';
-import { pendingEditorProposal, type AssistantChatTurn } from '../chat/assistant-chat-state';
+import {
+    pendingEditorProposal,
+    type AssistantChat,
+    type AssistantChatTurn,
+} from '../chat/assistant-chat-state';
 import {
     checkpoint,
     type Draft,
@@ -145,147 +149,44 @@ type ActiveAssistantRequest = {
     controller: AbortController;
 };
 
-export function useDefaultAssistantRunContext(
-    runId: string | undefined,
-    includeRun: boolean,
-    assistantBusy: boolean,
-    setIncludeRun: (include: boolean) => void,
-) {
-    const defaultedRunIdRef = useRef<string | undefined>(undefined);
-    useEffect(() => {
-        if (!runId) {
-            defaultedRunIdRef.current = undefined;
-            if (includeRun) setIncludeRun(false);
-            return;
-        }
-        if (assistantBusy || defaultedRunIdRef.current === runId) return;
-        defaultedRunIdRef.current = runId;
-        setIncludeRun(true);
-    }, [assistantBusy, includeRun, runId, setIncludeRun]);
-}
-
-export function useWorkspaceAssistant({
-    active,
-    activeRunId,
-    connectionId,
-    trusted,
-    workspaceRef,
-    setWorkspace,
-}: {
+type AssistantSqlRequestContext = {
     active: Draft;
     activeRunId?: string;
     connectionId: string;
     trusted: boolean;
-    workspaceRef: { current: WorkspaceState };
-    setWorkspace: Dispatch<SetStateAction<WorkspaceState>>;
-}) {
+    activeChat: AssistantChat;
+    includeRun: boolean;
+    assistantQuestion: string;
+    requestsRef: { current: Map<string, ActiveAssistantRequest> };
+    beginAssistantRequest: (
+        chatId: string,
+        turnId: string,
+        phase: AssistantPhase,
+    ) => ActiveAssistantRequest;
+    finishAssistantRequest: (chatId: string, request: ActiveAssistantRequest) => void;
+    setAssistantError: (error: string, chatId?: string) => void;
+    setQuestionDrafts: Dispatch<SetStateAction<Record<string, string>>>;
+    setActivities: Dispatch<SetStateAction<Record<string, AssistantActivity>>>;
+    updateChat: ReturnType<typeof useAssistantChats>['updateChat'];
+};
+
+function createAssistantSqlRequestHandler(context: AssistantSqlRequestContext) {
     const {
-        chats: assistantChats,
+        active,
+        activeRunId,
+        connectionId,
+        trusted,
         activeChat,
-        storageError: assistantChatStorageError,
+        includeRun,
+        assistantQuestion,
+        requestsRef,
+        beginAssistantRequest,
+        finishAssistantRequest,
+        setAssistantError,
+        setQuestionDrafts,
+        setActivities,
         updateChat,
-        selectChat,
-        renameChat,
-        createChat,
-        deleteChat,
-    } = useAssistantChats(connectionId);
-    const [questionDrafts, setQuestionDrafts] = useState<Record<string, string>>({});
-    const [activities, setActivities] = useState<Record<string, AssistantActivity>>({});
-    const [assistantErrors, setAssistantErrors] = useState<Record<string, string>>({});
-    const [includeRun, setIncludeRunState] = useState(false);
-    const requestsRef = useRef(new Map<string, ActiveAssistantRequest>());
-    const assistantQuestion = questionDrafts[activeChat.id] ?? '';
-    const activity = activities[activeChat.id];
-    const assistantBusy = Boolean(activity);
-    const assistantPhase = activity?.phase;
-    const assistantCancelable = assistantBusy && assistantPhase !== 'deciding';
-    const assistantError = assistantErrors[activeChat.id] ?? '';
-    const setAssistantError = (error: string, chatId = activeChat.id) =>
-        setAssistantErrors(current => ({ ...current, [chatId]: error }));
-
-    const beginAssistantRequest = (chatId: string, turnId: string, phase: AssistantPhase) => {
-        const request = { turnId, phase, controller: new AbortController() };
-        requestsRef.current.set(chatId, request);
-        setActivities(current => ({ ...current, [chatId]: { turnId, phase } }));
-        return request;
-    };
-
-    const finishAssistantRequest = (chatId: string, request: ActiveAssistantRequest) => {
-        if (requestsRef.current.get(chatId) !== request) return;
-        requestsRef.current.delete(chatId);
-        setActivities(current => {
-            const next = { ...current };
-            delete next[chatId];
-            return next;
-        });
-    };
-
-    const cancelAssistantRequest = (chatId: string) => {
-        const request = requestsRef.current.get(chatId);
-        if (!request) return false;
-        finishAssistantRequest(chatId, request);
-        request.controller.abort();
-        updateChat(chatId, chat => ({
-            ...chat,
-            updatedAt: new Date().toISOString(),
-            turns: chat.turns.map(turn =>
-                turn.id === request.turnId && turn.status === 'pending'
-                    ? {
-                          ...turn,
-                          status: 'cancelled',
-                          error: 'Request cancelled.',
-                      }
-                    : turn,
-            ),
-        }));
-        return true;
-    };
-    useEffect(() => {
-        const requests = requestsRef.current;
-        return () => {
-            for (const request of requests.values()) request.controller.abort();
-            requests.clear();
-        };
-    }, []);
-
-    const changeAssistantQuestion = (question: string) => {
-        setQuestionDrafts(current => ({ ...current, [activeChat.id]: question }));
-        setAssistantError('');
-    };
-
-    const setIncludeRun = (include: boolean) => {
-        if (include === includeRun) return;
-        setIncludeRunState(include);
-        setAssistantError('');
-    };
-
-    const newAssistantChat = () => {
-        const chatId = createChat(Boolean(assistantQuestion.trim()));
-        setAssistantError('', chatId);
-        return chatId;
-    };
-
-    const selectAssistantChat = (chatId: string) => {
-        if (chatId === activeChat.id) return;
-        selectChat(chatId);
-    };
-
-    const deleteAssistantChat = (chatId: string) => {
-        cancelAssistantRequest(chatId);
-        deleteChat(chatId);
-        if (assistantChats.length === 1 && activeRunId) setIncludeRunState(true);
-        setQuestionDrafts(current => {
-            const next = { ...current };
-            delete next[chatId];
-            return next;
-        });
-        setAssistantErrors(current => {
-            const next = { ...current };
-            delete next[chatId];
-            return next;
-        });
-    };
-
+    } = context;
     const requestAssistantSql = async (
         schema?: Schema,
         serverVersion?: string,
@@ -446,6 +347,166 @@ export function useWorkspaceAssistant({
             finishAssistantRequest(chatId, request);
         }
     };
+    return requestAssistantSql;
+}
+
+export function useDefaultAssistantRunContext(
+    runId: string | undefined,
+    includeRun: boolean,
+    assistantBusy: boolean,
+    setIncludeRun: (include: boolean) => void,
+) {
+    const defaultedRunIdRef = useRef<string | undefined>(undefined);
+    useEffect(() => {
+        if (!runId) {
+            defaultedRunIdRef.current = undefined;
+            if (includeRun) setIncludeRun(false);
+            return;
+        }
+        if (assistantBusy || defaultedRunIdRef.current === runId) return;
+        defaultedRunIdRef.current = runId;
+        setIncludeRun(true);
+    }, [assistantBusy, includeRun, runId, setIncludeRun]);
+}
+
+export function useWorkspaceAssistant({
+    active,
+    activeRunId,
+    connectionId,
+    trusted,
+    workspaceRef,
+    setWorkspace,
+}: {
+    active: Draft;
+    activeRunId?: string;
+    connectionId: string;
+    trusted: boolean;
+    workspaceRef: { current: WorkspaceState };
+    setWorkspace: Dispatch<SetStateAction<WorkspaceState>>;
+}) {
+    const {
+        chats: assistantChats,
+        activeChat,
+        storageError: assistantChatStorageError,
+        updateChat,
+        selectChat,
+        renameChat,
+        createChat,
+        deleteChat,
+    } = useAssistantChats(connectionId);
+    const [questionDrafts, setQuestionDrafts] = useState<Record<string, string>>({});
+    const [activities, setActivities] = useState<Record<string, AssistantActivity>>({});
+    const [assistantErrors, setAssistantErrors] = useState<Record<string, string>>({});
+    const [includeRun, setIncludeRunState] = useState(false);
+    const requestsRef = useRef(new Map<string, ActiveAssistantRequest>());
+    const assistantQuestion = questionDrafts[activeChat.id] ?? '';
+    const activity = activities[activeChat.id];
+    const assistantBusy = Boolean(activity);
+    const assistantPhase = activity?.phase;
+    const assistantCancelable = assistantBusy && assistantPhase !== 'deciding';
+    const assistantError = assistantErrors[activeChat.id] ?? '';
+    const setAssistantError = (error: string, chatId = activeChat.id) =>
+        setAssistantErrors(current => ({ ...current, [chatId]: error }));
+
+    const beginAssistantRequest = (chatId: string, turnId: string, phase: AssistantPhase) => {
+        const request = { turnId, phase, controller: new AbortController() };
+        requestsRef.current.set(chatId, request);
+        setActivities(current => ({ ...current, [chatId]: { turnId, phase } }));
+        return request;
+    };
+
+    const finishAssistantRequest = (chatId: string, request: ActiveAssistantRequest) => {
+        if (requestsRef.current.get(chatId) !== request) return;
+        requestsRef.current.delete(chatId);
+        setActivities(current => {
+            const next = { ...current };
+            delete next[chatId];
+            return next;
+        });
+    };
+
+    const cancelAssistantRequest = (chatId: string) => {
+        const request = requestsRef.current.get(chatId);
+        if (!request) return false;
+        finishAssistantRequest(chatId, request);
+        request.controller.abort();
+        updateChat(chatId, chat => ({
+            ...chat,
+            updatedAt: new Date().toISOString(),
+            turns: chat.turns.map(turn =>
+                turn.id === request.turnId && turn.status === 'pending'
+                    ? {
+                          ...turn,
+                          status: 'cancelled',
+                          error: 'Request cancelled.',
+                      }
+                    : turn,
+            ),
+        }));
+        return true;
+    };
+    useEffect(() => {
+        const requests = requestsRef.current;
+        return () => {
+            for (const request of requests.values()) request.controller.abort();
+            requests.clear();
+        };
+    }, []);
+
+    const changeAssistantQuestion = (question: string) => {
+        setQuestionDrafts(current => ({ ...current, [activeChat.id]: question }));
+        setAssistantError('');
+    };
+
+    const setIncludeRun = (include: boolean) => {
+        if (include === includeRun) return;
+        setIncludeRunState(include);
+        setAssistantError('');
+    };
+
+    const newAssistantChat = () => {
+        const chatId = createChat(Boolean(assistantQuestion.trim()));
+        setAssistantError('', chatId);
+        return chatId;
+    };
+
+    const selectAssistantChat = (chatId: string) => {
+        if (chatId === activeChat.id) return;
+        selectChat(chatId);
+    };
+
+    const deleteAssistantChat = (chatId: string) => {
+        cancelAssistantRequest(chatId);
+        deleteChat(chatId);
+        if (assistantChats.length === 1 && activeRunId) setIncludeRunState(true);
+        setQuestionDrafts(current => {
+            const next = { ...current };
+            delete next[chatId];
+            return next;
+        });
+        setAssistantErrors(current => {
+            const next = { ...current };
+            delete next[chatId];
+            return next;
+        });
+    };
+
+    const requestAssistantSql = createAssistantSqlRequestHandler({
+        active,
+        activeRunId,
+        connectionId,
+        trusted,
+        activeChat,
+        includeRun,
+        assistantQuestion,
+        requestsRef,
+        beginAssistantRequest,
+        finishAssistantRequest,
+        setAssistantError,
+        setQuestionDrafts,
+        setActivities,
+        updateChat,
+    });
 
     const decideAssistantProposal = async (turnId: string, decision: ProposalDecisionAction) => {
         if (requestsRef.current.has(activeChat.id)) return;

@@ -153,50 +153,22 @@ export function InsertRowDialog({ connectionId, table, columns, onClose, onInser
         };
     }, [step, job, busy, name, reportSuccess]);
 
-    async function reviewRow(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        if (!allowed || loading || busy || Object.keys(row).length === 0) return;
-        setBusy(true);
-        setError('');
-        let nextPreview: Preview | undefined;
-        try {
-            if (cloudConnection) {
-                setMapping({
-                    id: crypto.randomUUID(),
-                    deduplicationToken: crypto.randomUUID(),
-                    table: name,
-                    rowCount: 1,
-                    fields: Object.fromEntries(Object.keys(row).map(column => [column, column])),
-                });
-                setStep('review');
-                return;
-            }
-            nextPreview = await post<Preview>('/imports/preview', {
-                name: `${table.name}-row.json`,
-                source: JSON.stringify([row]),
-                format: 'json',
-            });
-            const nextMapping = await post<Mapping>(
-                `/imports/${encodeURIComponent(nextPreview.id)}/mapping`,
-                {
-                    connectionId,
-                    table: name,
-                    fields: Object.fromEntries(Object.keys(row).map(column => [column, column])),
-                },
-            );
-            setPreview(nextPreview);
-            setMapping(nextMapping);
-            setStep('review');
-        } catch (caught) {
-            if (nextPreview)
-                void api(`/imports/${encodeURIComponent(nextPreview.id)}`, {
-                    method: 'DELETE',
-                }).catch(() => undefined);
-            setError(message(caught));
-        } finally {
-            setBusy(false);
-        }
-    }
+    const reviewRow = (event: FormEvent<HTMLFormElement>) =>
+        reviewInsertRow(event, {
+            allowed,
+            loading,
+            busy,
+            row,
+            cloudConnection,
+            name,
+            tableName: table.name,
+            connectionId,
+            setBusy,
+            setError,
+            setStep,
+            setMapping,
+            setPreview,
+        });
 
     async function insertRow() {
         if (!mapping || busy) return;
@@ -345,14 +317,7 @@ export function InsertRowDialog({ connectionId, table, columns, onClose, onInser
         });
     }
 
-    function close() {
-        if (busy || job?.status === 'running') return;
-        if (preview && job?.status !== 'unknown')
-            void api(`/imports/${encodeURIComponent(preview.id)}`, { method: 'DELETE' }).catch(
-                () => undefined,
-            );
-        onClose();
-    }
+    const close = () => closeInsertRowDialog({ busy, job, preview, onClose });
 
     const canClose = !busy && job?.status !== 'running';
     return renderInsertRowDialog({
@@ -383,6 +348,128 @@ export function InsertRowDialog({ connectionId, table, columns, onClose, onInser
     });
 }
 
+type InsertRowDialogRenderProps = {
+    dialog: import('react').RefObject<HTMLDialogElement | null>;
+    canClose: boolean;
+    close: () => void;
+    name: string;
+    loading: boolean;
+    setupError: string;
+    allowed: boolean;
+    step: Step;
+    reviewRow: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+    writableColumns: SchemaColumn[];
+    included: Record<string, boolean>;
+    setIncluded: import('react').Dispatch<import('react').SetStateAction<Record<string, boolean>>>;
+    values: Record<string, string>;
+    setValues: import('react').Dispatch<import('react').SetStateAction<Record<string, string>>>;
+    row: { [k: string]: string };
+    job: ImportJob | undefined;
+    retryAttempted: boolean;
+    busy: boolean;
+    reconcile: () => Promise<void>;
+    confirmInserted: () => Promise<void>;
+    retryUnknown: () => Promise<void>;
+    error: string;
+    setStep: import('react').Dispatch<import('react').SetStateAction<Step>>;
+    insertRow: () => Promise<void>;
+};
+
+type ReviewInsertRowContext = {
+    allowed: boolean;
+    loading: boolean;
+    busy: boolean;
+    row: Record<string, string>;
+    cloudConnection: boolean;
+    name: string;
+    tableName: string;
+    connectionId: string;
+    setBusy: import('react').Dispatch<import('react').SetStateAction<boolean>>;
+    setError: import('react').Dispatch<import('react').SetStateAction<string>>;
+    setStep: import('react').Dispatch<import('react').SetStateAction<Step>>;
+    setMapping: import('react').Dispatch<import('react').SetStateAction<Mapping | undefined>>;
+    setPreview: import('react').Dispatch<import('react').SetStateAction<Preview | undefined>>;
+};
+
+function closeInsertRowDialog({
+    busy,
+    job,
+    preview,
+    onClose,
+}: {
+    busy: boolean;
+    job: ImportJob | undefined;
+    preview: Preview | undefined;
+    onClose: () => void;
+}) {
+    if (busy || job?.status === 'running') return;
+    if (preview && job?.status !== 'unknown')
+        void api(`/imports/${encodeURIComponent(preview.id)}`, { method: 'DELETE' }).catch(
+            () => undefined,
+        );
+    onClose();
+}
+
+async function reviewInsertRow(event: FormEvent<HTMLFormElement>, context: ReviewInsertRowContext) {
+    const {
+        allowed,
+        loading,
+        busy,
+        row,
+        cloudConnection,
+        name,
+        tableName,
+        connectionId,
+        setBusy,
+        setError,
+        setStep,
+        setMapping,
+        setPreview,
+    } = context;
+    event.preventDefault();
+    if (!allowed || loading || busy || Object.keys(row).length === 0) return;
+    setBusy(true);
+    setError('');
+    let nextPreview: Preview | undefined;
+    try {
+        if (cloudConnection) {
+            setMapping({
+                id: crypto.randomUUID(),
+                deduplicationToken: crypto.randomUUID(),
+                table: name,
+                rowCount: 1,
+                fields: Object.fromEntries(Object.keys(row).map(column => [column, column])),
+            });
+            setStep('review');
+            return;
+        }
+        nextPreview = await post<Preview>('/imports/preview', {
+            name: `${tableName}-row.json`,
+            source: JSON.stringify([row]),
+            format: 'json',
+        });
+        const nextMapping = await post<Mapping>(
+            `/imports/${encodeURIComponent(nextPreview.id)}/mapping`,
+            {
+                connectionId,
+                table: name,
+                fields: Object.fromEntries(Object.keys(row).map(column => [column, column])),
+            },
+        );
+        setPreview(nextPreview);
+        setMapping(nextMapping);
+        setStep('review');
+    } catch (caught) {
+        if (nextPreview)
+            void api(`/imports/${encodeURIComponent(nextPreview.id)}`, {
+                method: 'DELETE',
+            }).catch(() => undefined);
+        setError(message(caught));
+    } finally {
+        setBusy(false);
+    }
+}
+
 function renderInsertRowDialog({
     dialog,
     canClose,
@@ -408,32 +495,7 @@ function renderInsertRowDialog({
     error,
     setStep,
     insertRow,
-}: {
-    dialog: import('react').RefObject<HTMLDialogElement | null>;
-    canClose: boolean;
-    close: () => void;
-    name: string;
-    loading: boolean;
-    setupError: string;
-    allowed: boolean;
-    step: Step;
-    reviewRow: (event: FormEvent<HTMLFormElement>) => Promise<void>;
-    writableColumns: SchemaColumn[];
-    included: Record<string, boolean>;
-    setIncluded: import('react').Dispatch<import('react').SetStateAction<Record<string, boolean>>>;
-    values: Record<string, string>;
-    setValues: import('react').Dispatch<import('react').SetStateAction<Record<string, string>>>;
-    row: { [k: string]: string };
-    job: ImportJob | undefined;
-    retryAttempted: boolean;
-    busy: boolean;
-    reconcile: () => Promise<void>;
-    confirmInserted: () => Promise<void>;
-    retryUnknown: () => Promise<void>;
-    error: string;
-    setStep: import('react').Dispatch<import('react').SetStateAction<Step>>;
-    insertRow: () => Promise<void>;
-}) {
+}: InsertRowDialogRenderProps) {
     const getInsertStatusMessage = (job: ImportJob) => {
         switch (job.status) {
             case 'succeeded':

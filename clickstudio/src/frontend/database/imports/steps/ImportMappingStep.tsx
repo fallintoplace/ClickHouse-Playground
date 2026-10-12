@@ -10,42 +10,7 @@ import { Icon } from '../../../ui/components/icons';
 import { ImportNewTableForm } from '../preview/ImportNewTableForm';
 import { ImportColumnMapping } from '../preview/ImportColumnMapping';
 
-export function ImportMappingStep({
-    preview,
-    importAnotherFile,
-    busy,
-    browserCloudImport,
-    selectedDestinationChoice,
-    availableTargets,
-    setDestinationChoice,
-    changeTarget,
-    lastExistingTarget,
-    target,
-    createTableDatabase,
-    setCreateTableDatabase,
-    setError,
-    importableDatabases,
-    createTableAlreadyExists,
-    createTableName,
-    setCreateTableName,
-    hasCreateIdColumn,
-    generateId,
-    setGenerateId,
-    createColumns,
-    updateCreateColumn,
-    createColumnTypes,
-    creatingTable,
-    mappedColumnCount,
-    skippedColumnCount,
-    destinationColumns,
-    destinationNames,
-    liveMappingIssue,
-    fields,
-    setFields,
-    setMapping,
-    duplicateDestinations,
-    sampleColumns,
-}: {
+type ImportMappingStepProps = {
     preview: ImportPreview;
     importAnotherFile: () => void;
     busy: ReturnType<typeof useImportWizardController>['busy'];
@@ -84,7 +49,44 @@ export function ImportMappingStep({
     setMapping: ReturnType<typeof useImportWizardController>['setMapping'];
     duplicateDestinations: ReturnType<typeof useImportWizardController>['duplicateDestinations'];
     sampleColumns: ReturnType<typeof useImportWizardController>['sampleColumns'];
-}) {
+};
+
+export function ImportMappingStep({
+    preview,
+    importAnotherFile,
+    busy,
+    browserCloudImport,
+    selectedDestinationChoice,
+    availableTargets,
+    setDestinationChoice,
+    changeTarget,
+    lastExistingTarget,
+    target,
+    createTableDatabase,
+    setCreateTableDatabase,
+    setError,
+    importableDatabases,
+    createTableAlreadyExists,
+    createTableName,
+    setCreateTableName,
+    hasCreateIdColumn,
+    generateId,
+    setGenerateId,
+    createColumns,
+    updateCreateColumn,
+    createColumnTypes,
+    creatingTable,
+    mappedColumnCount,
+    skippedColumnCount,
+    destinationColumns,
+    destinationNames,
+    liveMappingIssue,
+    fields,
+    setFields,
+    setMapping,
+    duplicateDestinations,
+    sampleColumns,
+}: ImportMappingStepProps) {
     const getDestinationHeading = () => {
         if (browserCloudImport) {
             if (selectedDestinationChoice === 'existing') {

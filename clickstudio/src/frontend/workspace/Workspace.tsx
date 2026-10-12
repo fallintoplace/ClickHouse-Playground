@@ -327,8 +327,8 @@ function renderWorkspaceLayout({
     model: ReturnType<typeof useWorkspaceController>;
 }) {
     const { active } = model.tabs;
+    const { run } = model.evidence;
 
-    const { run, eventState } = model.evidence;
     let serverLabel = 'ClickHouse version unavailable';
     if (connection.dataSource === 'fixture') {
         serverLabel = 'Sample data';
@@ -350,10 +350,6 @@ function renderWorkspaceLayout({
         setExportOpen,
         workspace,
         detachedEditor,
-        helpPanelOpen,
-        setObservabilityOpen,
-        trusted,
-        openNewDraft,
         startBlankSql,
         panels,
         outputVisible,
@@ -363,17 +359,6 @@ function renderWorkspaceLayout({
         visibleResultsView,
         emptySqlActionRef,
         setDrawerOpen,
-        observabilityOpen,
-        importOpen,
-        importedReveal,
-        exportOpen,
-        exportCurrentQuery,
-        exportCurrentCsv,
-        restoreRevisionConfirmation,
-        setRestoreRevisionConfirmation,
-        restoreDocumentRevision,
-        viewState,
-        openHelp,
     } = model;
 
     return (
@@ -561,6 +546,67 @@ function renderWorkspaceLayout({
                     />
                 )}
             </div>
+            {renderWorkspaceOverlays({
+                experience,
+                copy,
+                connection,
+                connectionLabel,
+                demoMode,
+                model,
+                queryPanel,
+                serverLabel,
+            })}
+        </div>
+    );
+}
+
+function renderWorkspaceOverlays({
+    experience,
+    copy,
+    connection,
+    connectionLabel,
+    demoMode,
+    model,
+    queryPanel,
+    serverLabel,
+}: {
+    experience: WorkspaceProps['experience'];
+    copy: WorkspaceProps['copy'];
+    connection: WorkspaceProps['connection'];
+    connectionLabel: WorkspaceProps['connectionLabel'];
+    demoMode: WorkspaceProps['demoMode'];
+    model: ReturnType<typeof useWorkspaceController>;
+    queryPanel: import('react').ReactElement;
+    serverLabel: string;
+}) {
+    const { active } = model.tabs;
+    const { run, eventState } = model.evidence;
+    const {
+        trusted,
+        setObservabilityOpen,
+        observabilityOpen,
+        importOpen,
+        setImportOpen,
+        importedReveal,
+        openNewDraft,
+        exportOpen,
+        setExportOpen,
+        exportCurrentQuery,
+        exportCurrentCsv,
+        restoreRevisionConfirmation,
+        setRestoreRevisionConfirmation,
+        restoreDocumentRevision,
+        failedQueryError,
+        viewState,
+        pendingExecution,
+        script,
+        showInspector,
+        helpPanelOpen,
+        openHelp,
+        detachedEditor,
+    } = model;
+    return (
+        <>
             {observabilityOpen && (
                 <OverlayPortal>
                     <ObservabilityExplorer
@@ -653,7 +699,7 @@ function renderWorkspaceLayout({
                 }
             />
             {detachedEditor.detached && createPortal(queryPanel, detachedEditor.detached.container)}
-        </div>
+        </>
     );
 }
 

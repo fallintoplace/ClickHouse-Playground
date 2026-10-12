@@ -35,6 +35,87 @@ import {
 import type { Copy } from '../../../ui/copy';
 import { ScrollEdgeFrame } from '../../../ui/components/ScrollEdgeShadows';
 
+type PipelineGraphProps = {
+    pipeline: ProfilePipeline;
+    heading?: string;
+    subheading?: string;
+    graphKind?: PipelineGraphKind;
+    onSelectNode?: (node: ProfilePipelineNode) => void;
+    renderSelection?: (node: ProfilePipelineNode) => ReactNode;
+    initialSelectedId?: string;
+    copy?: Copy['common'];
+};
+
+type PipelineGraphViewportProps = {
+    setGraphViewport: (element: HTMLDivElement | null) => void;
+    viewportLabel: string;
+    graphWidth: number;
+    zoom: number;
+    graphHeight: number;
+    labels: ReturnType<typeof graphLabels>;
+    gridId: string;
+    ambientId: string;
+    markerId: string;
+    activeMarkerId: string;
+    layout: GraphLayout;
+    focusedGraph: { nodeIds: Set<string>; edgeIds: Set<string> } | undefined;
+    runtime: boolean;
+    selected: ProfilePipelineNode | undefined;
+    graphKind: PipelineGraphKind;
+    copy: Copy['common'] | undefined;
+    terminology: ReturnType<typeof graphLabels>['terminology'];
+    chooseNode: (node: ProfilePipelineNode) => void;
+    onNodeKeyDown: (event: KeyboardEvent<SVGGElement>, node: ProfilePipelineNode) => void;
+};
+
+function graphTitle(
+    graphKind: PipelineGraphKind,
+    runtime: boolean,
+    source: ProfilePipeline['source'],
+    terminology: ReturnType<typeof graphLabels>['terminology'],
+) {
+    if (graphKind === 'index-analysis' || runtime) return terminology.graph;
+    if (source === 'explain_pipeline') return 'CLICKHOUSE OPERATOR PLAN';
+    return 'ESTIMATED QUERY SHAPE';
+}
+
+function graphDescription(
+    graphKind: PipelineGraphKind,
+    runtime: boolean,
+    source: ProfilePipeline['source'],
+    copy: Copy['common'] | undefined,
+) {
+    if (graphKind === 'index-analysis')
+        return (
+            copy?.indexAnalysisDescription ??
+            'ClickHouse-reported index checks with parts and granules retained.'
+        );
+    if (runtime)
+        return copy?.runtimeGraphDescription ?? 'Measured execution stages from EXPLAIN ANALYZE.';
+    if (source === 'explain_pipeline')
+        return (
+            copy?.pipelineGraphDescription ?? 'Planned topology · runtime counters are run-level'
+        );
+    return 'Estimated from SQL structure';
+}
+
+function graphTruncationMessage(graphKind: PipelineGraphKind, copy: Copy['common'] | undefined) {
+    switch (graphKind) {
+        case 'sql-flow':
+            return (
+                copy?.sqlFlowTruncatedWarning ??
+                'This query is large. The graph shows a bounded set of SQL stages.'
+            );
+        case 'index-analysis':
+            return copy?.planTruncated ?? 'The index output is large. Some checks are hidden.';
+        default:
+            return (
+                copy?.pipelineGraphTruncated ??
+                'This plan is large. The graph shows a bounded set of operators.'
+            );
+    }
+}
+
 export function PipelineGraph({
     pipeline,
     heading,
@@ -44,16 +125,7 @@ export function PipelineGraph({
     renderSelection,
     initialSelectedId,
     copy,
-}: {
-    pipeline: ProfilePipeline;
-    heading?: string;
-    subheading?: string;
-    graphKind?: PipelineGraphKind;
-    onSelectNode?: (node: ProfilePipelineNode) => void;
-    renderSelection?: (node: ProfilePipelineNode) => ReactNode;
-    initialSelectedId?: string;
-    copy?: Copy['common'];
-}) {
+}: PipelineGraphProps) {
     const runtime = graphKind === 'runtime';
     const layout = useMemo(() => layoutPipeline(pipeline), [pipeline]);
     const firstNodeId =
@@ -175,69 +247,9 @@ export function PipelineGraph({
 
     if (!pipeline.nodes.length) return <div className="pipeline-graph-empty">{labels.empty}</div>;
 
-    const getGraphTitle = () => {
-        if (graphKind === 'index-analysis' || runtime) {
-            return terminology.graph;
-        }
-
-        if (pipeline.source === 'explain_pipeline') {
-            return 'CLICKHOUSE OPERATOR PLAN';
-        }
-
-        return 'ESTIMATED QUERY SHAPE';
-    };
-    const getGraphDescription = () => {
-        if (graphKind === 'index-analysis') {
-            return (
-                copy?.indexAnalysisDescription ??
-                'ClickHouse-reported index checks with parts and granules retained.'
-            );
-        }
-
-        if (runtime) {
-            return (
-                copy?.runtimeGraphDescription ?? 'Measured execution stages from EXPLAIN ANALYZE.'
-            );
-        }
-
-        if (pipeline.source === 'explain_pipeline') {
-            return (
-                copy?.pipelineGraphDescription ??
-                'Planned topology · runtime counters are run-level'
-            );
-        }
-
-        return 'Estimated from SQL structure';
-    };
-    const getTruncationMessage = () => {
-        switch (graphKind) {
-            case 'sql-flow':
-                return (
-                    copy?.sqlFlowTruncatedWarning ??
-                    'This query is large. The graph shows a bounded set of SQL stages.'
-                );
-
-            case 'index-analysis':
-                return copy?.planTruncated ?? 'The index output is large. Some checks are hidden.';
-
-            default:
-                return (
-                    copy?.pipelineGraphTruncated ??
-                    'This plan is large. The graph shows a bounded set of operators.'
-                );
-        }
-    };
-    const getSelectedStatus = (selected: ProfilePipelineNode) => {
-        if (graphKind === 'sql-flow') {
-            return sqlFlowNodeStatus(selected.status, copy);
-        }
-
-        if (selected.status === 'planned') {
-            return copy?.plannedStatus ?? selected.status;
-        }
-
-        return selected.status;
-    };
+    const title = graphTitle(graphKind, runtime, pipeline.source, terminology);
+    const description = graphDescription(graphKind, runtime, pipeline.source, copy);
+    const truncationMessage = graphTruncationMessage(graphKind, copy);
     return (
         <div
             className={`pipeline-graph-card grid gap-3 rounded-xl border p-3${runtime ? ' is-runtime-graph' : ''}`}
@@ -247,7 +259,7 @@ export function PipelineGraph({
             {graphKind !== 'explain-plan' && (
                 <div className="pipeline-graph-heading">
                     <div>
-                        <span className="eyebrow">{heading ?? getGraphTitle()}</span>
+                        <span className="eyebrow">{heading ?? title}</span>
                         <strong>
                             {(graphKind === 'index-analysis'
                                 ? pipeline.nodes.filter(node => node.kind === 'filter').length
@@ -257,12 +269,12 @@ export function PipelineGraph({
                             {connectionLabel}
                         </strong>
                     </div>
-                    <small>{subheading ?? getGraphDescription()}</small>
+                    <small>{subheading ?? description}</small>
                 </div>
             )}
             {pipeline.truncated && graphKind !== 'explain-plan' && (
                 <p className="pipeline-graph-warning" role="status">
-                    {getTruncationMessage()}
+                    {truncationMessage}
                 </p>
             )}
             <div
@@ -334,60 +346,89 @@ export function PipelineGraph({
                 onNodeKeyDown,
             })}
             {selected && (
-                <div
-                    className={`pipeline-node-inspector${graphKind === 'explain-plan' ? ' is-plan' : ''}${graphKind === 'index-analysis' ? ' is-index-analysis' : ''}`}
-                    aria-live="polite"
-                    aria-label={terminology.details}
-                >
-                    <div className="pipeline-node-inspector-main">
-                        <span className="eyebrow">{terminology.selected.toUpperCase()}</span>
-                        <strong>
-                            {graphKind === 'sql-flow'
-                                ? sqlFlowNodeLabel(selected, copy)
-                                : selected.label}
-                        </strong>
-                        {graphKind === 'explain-plan' || graphKind === 'index-analysis' ? (
-                            renderSelection?.(selected)
-                        ) : (
-                            <>
-                                <small>
-                                    {graphKind === 'sql-flow'
-                                        ? sqlFlowNodeKind(selected.kind, copy)
-                                        : selected.kind}{' '}
-                                    <i>·</i> {getSelectedStatus(selected)}
-                                </small>
-                                {sqlFlowNodeDetail(
-                                    selected,
-                                    graphKind === 'sql-flow' ? copy : undefined,
-                                ) &&
-                                    sqlFlowNodeDetail(
-                                        selected,
-                                        graphKind === 'sql-flow' ? copy : undefined,
-                                    ) !== selected.label && (
-                                        <p>
-                                            {sqlFlowNodeDetail(
-                                                selected,
-                                                graphKind === 'sql-flow' ? copy : undefined,
-                                            )}
-                                        </p>
-                                    )}
-                            </>
-                        )}
-                    </div>
-                    {graphKind !== 'explain-plan' &&
-                        graphKind !== 'index-analysis' &&
-                        renderPipelineNodeFacts({
-                            selected,
-                            copy,
-                            graphKind,
-                            incomingCount,
-                            outgoingCount,
-                            runtime,
-                        })}
-                </div>
+                <PipelineNodeInspector
+                    selected={selected}
+                    graphKind={graphKind}
+                    terminology={terminology}
+                    copy={copy}
+                    renderSelection={renderSelection}
+                    incomingCount={incomingCount}
+                    outgoingCount={outgoingCount}
+                    runtime={runtime}
+                />
             )}
         </div>
     );
+}
+
+function PipelineNodeInspector({
+    selected,
+    graphKind,
+    terminology,
+    copy,
+    renderSelection,
+    incomingCount,
+    outgoingCount,
+    runtime,
+}: {
+    selected: ProfilePipelineNode;
+    graphKind: PipelineGraphKind;
+    terminology: ReturnType<typeof graphLabels>['terminology'];
+    copy: Copy['common'] | undefined;
+    renderSelection?: (node: ProfilePipelineNode) => ReactNode;
+    incomingCount: number;
+    outgoingCount: number;
+    runtime: boolean;
+}) {
+    const detail = sqlFlowNodeDetail(selected, graphKind === 'sql-flow' ? copy : undefined);
+    const status = pipelineNodeStatus(graphKind, selected, copy);
+    return (
+        <div
+            className={`pipeline-node-inspector${graphKind === 'explain-plan' ? ' is-plan' : ''}${graphKind === 'index-analysis' ? ' is-index-analysis' : ''}`}
+            aria-live="polite"
+            aria-label={terminology.details}
+        >
+            <div className="pipeline-node-inspector-main">
+                <span className="eyebrow">{terminology.selected.toUpperCase()}</span>
+                <strong>
+                    {graphKind === 'sql-flow' ? sqlFlowNodeLabel(selected, copy) : selected.label}
+                </strong>
+                {graphKind === 'explain-plan' || graphKind === 'index-analysis' ? (
+                    renderSelection?.(selected)
+                ) : (
+                    <>
+                        <small>
+                            {graphKind === 'sql-flow'
+                                ? sqlFlowNodeKind(selected.kind, copy)
+                                : selected.kind}{' '}
+                            <i>·</i> {status}
+                        </small>
+                        {detail && detail !== selected.label && <p>{detail}</p>}
+                    </>
+                )}
+            </div>
+            {graphKind !== 'explain-plan' &&
+                graphKind !== 'index-analysis' &&
+                renderPipelineNodeFacts({
+                    selected,
+                    copy,
+                    graphKind,
+                    incomingCount,
+                    outgoingCount,
+                    runtime,
+                })}
+        </div>
+    );
+}
+
+function pipelineNodeStatus(
+    graphKind: PipelineGraphKind,
+    selected: ProfilePipelineNode,
+    copy: Copy['common'] | undefined,
+) {
+    if (graphKind === 'sql-flow') return sqlFlowNodeStatus(selected.status, copy);
+    if (selected.status === 'planned') return copy?.plannedStatus ?? selected.status;
+    return selected.status;
 }
 
 function renderPipelineNodeFacts({
@@ -512,27 +553,7 @@ function renderPipelineGraphViewport({
     terminology,
     chooseNode,
     onNodeKeyDown,
-}: {
-    setGraphViewport: (element: HTMLDivElement | null) => void;
-    viewportLabel: string;
-    graphWidth: number;
-    zoom: number;
-    graphHeight: number;
-    labels: ReturnType<typeof graphLabels>;
-    gridId: string;
-    ambientId: string;
-    markerId: string;
-    activeMarkerId: string;
-    layout: GraphLayout;
-    focusedGraph: { nodeIds: Set<string>; edgeIds: Set<string> } | undefined;
-    runtime: boolean;
-    selected: ProfilePipelineNode | undefined;
-    graphKind: PipelineGraphKind;
-    copy: Copy['common'] | undefined;
-    terminology: { graph: string; item: string; selected: string; action: string; details: string };
-    chooseNode: (node: ProfilePipelineNode) => void;
-    onNodeKeyDown: (event: KeyboardEvent<SVGGElement>, node: ProfilePipelineNode) => void;
-}) {
+}: PipelineGraphViewportProps) {
     return (
         <ScrollEdgeFrame<HTMLDivElement>
             className="pipeline-graph-viewport-frame"

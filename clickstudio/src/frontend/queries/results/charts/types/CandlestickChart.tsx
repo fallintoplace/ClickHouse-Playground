@@ -14,7 +14,7 @@ import {
     scaleUtc,
     select,
 } from 'd3';
-import type { Selection, ScaleTime } from 'd3';
+import type { Selection, ScaleLinear, ScaleTime } from 'd3';
 import {
     chartNumber,
     chartTimestamp,
@@ -142,6 +142,148 @@ function aggregateForDisplay(input: Candle[], maximum = MAX_CHART_RENDER_POINTS 
 
 function labelFor(columns: Column[], index: number | undefined, fallback: string) {
     return index === undefined ? fallback : (columns[index]?.name ?? fallback);
+}
+
+interface CandlestickDrawingProps {
+    svgRef: import('react').RefObject<SVGSVGElement | null>;
+    candles: Candle[];
+    windowRange: [number, number] | undefined;
+    copy: Props['copy'];
+    setWindowRange: import('react').Dispatch<
+        import('react').SetStateAction<[number, number] | undefined>
+    >;
+    setRangePreset: import('react').Dispatch<
+        import('react').SetStateAction<'1d' | '3d' | 'all' | 'custom'>
+    >;
+}
+
+function drawCandlestickAxes({
+    root,
+    xScale,
+    price,
+    copy,
+    gridColor,
+    textColor,
+    mono,
+    priceFormatter,
+    dateFormat,
+}: {
+    root: Selection<SVGGElement, unknown, null, undefined>;
+    xScale: ScaleTime<number, number, never>;
+    price: ScaleLinear<number, number, never>;
+    copy: Props['copy'];
+    gridColor: string;
+    textColor: string;
+    mono: string;
+    priceFormatter: Intl.NumberFormat;
+    dateFormat: Intl.DateTimeFormat;
+}) {
+    const priceAxis = root
+        .append('g')
+        .attr('class', 'market-axis')
+        .attr('transform', `translate(${LEFT},0)`)
+        .call(
+            axisLeft(price)
+                .ticks(6)
+                .tickSize(-(RIGHT - LEFT))
+                .tickFormat(value => priceFormatter.format(Number(value))),
+        );
+    priceAxis.select('.domain').remove();
+    priceAxis
+        .selectAll('.tick line')
+        .attr('stroke', gridColor)
+        .attr('stroke-dasharray', '3 5')
+        .attr('opacity', 0.7);
+    priceAxis
+        .selectAll('.tick text')
+        .attr('fill', textColor)
+        .attr('font-family', mono)
+        .attr('font-size', 11)
+        .attr('dx', -7);
+    const xAxis = root
+        .append('g')
+        .attr('class', 'market-axis')
+        .attr('transform', `translate(0,${PRICE_BOTTOM})`)
+        .call(
+            axisBottom(xScale)
+                .ticks(8)
+                .tickFormat(value => dateFormat.format(value as Date))
+                .tickSize(0),
+        );
+    xAxis.select('.domain').attr('stroke', gridColor);
+    xAxis
+        .selectAll('.tick text')
+        .attr('fill', textColor)
+        .attr('font-family', mono)
+        .attr('font-size', 10)
+        .attr('dy', 14);
+    root.append('text')
+        .attr('class', 'market-pane-label')
+        .attr('x', LEFT)
+        .attr('y', 22)
+        .text(copy.priceLabel);
+}
+
+function drawCandleNavigator({
+    root,
+    candles,
+    fullDomain,
+    domain,
+    bidAskColor,
+    setWindowRange,
+    setRangePreset,
+}: Pick<CandlestickDrawingProps, 'setWindowRange' | 'setRangePreset'> & {
+    root: Selection<SVGGElement, unknown, null, undefined>;
+    candles: Candle[];
+    fullDomain: [Date, Date];
+    domain: [Date, Date];
+    bidAskColor: string;
+}) {
+    const overview = scaleUtc().domain(fullDomain).range([LEFT, RIGHT]);
+    const navigatorY = scaleLinear()
+        .domain(extent(candles, candle => candle.close) as [number, number])
+        .nice()
+        .range([NAV_BOTTOM, NAV_TOP]);
+    const navigatorLine = line<Candle>()
+        .x(candle => overview(new Date(candle.time)))
+        .y(candle => navigatorY(candle.close))
+        .curve(curveMonotoneX);
+    root.append('path')
+        .datum(candles)
+        .attr('class', 'market-navigator-line')
+        .attr('d', navigatorLine)
+        .attr('fill', 'none')
+        .attr('stroke', bidAskColor)
+        .attr('stroke-width', 1.5);
+    const brush = brushX()
+        .extent([
+            [LEFT, NAV_TOP - 5],
+            [RIGHT, NAV_BOTTOM + 5],
+        ])
+        .on('end', event => {
+            if (!event.sourceEvent) return;
+            if (!event.selection) {
+                setWindowRange(undefined);
+                setRangePreset('all');
+                return;
+            }
+            const selection = event.selection as [number, number];
+            const next: [number, number] = [
+                overview.invert(selection[0]).getTime(),
+                overview.invert(selection[1]).getTime(),
+            ];
+            setWindowRange(next);
+            setRangePreset('custom');
+        });
+    const brushGroup = root.append('g').attr('class', 'market-brush').call(brush);
+    const initialSelection = domain.map(value => overview(value)) as [number, number];
+    brushGroup.call(brush.move, initialSelection);
+    brushGroup
+        .selectAll('.selection')
+        .attr('fill', bidAskColor)
+        .attr('fill-opacity', 0.13)
+        .attr('stroke', bidAskColor);
+    brushGroup.selectAll('.handle').attr('fill', bidAskColor).attr('stroke', bidAskColor);
 }
 
 export function CandlestickChart({ result, config, x, copy }: Props) {
@@ -278,18 +420,7 @@ function useCandlestickDrawing({
     copy,
     setWindowRange,
     setRangePreset,
-}: {
-    svgRef: import('react').RefObject<SVGSVGElement | null>;
-    candles: Candle[];
-    windowRange: [number, number] | undefined;
-    copy: Props['copy'];
-    setWindowRange: import('react').Dispatch<
-        import('react').SetStateAction<[number, number] | undefined>
-    >;
-    setRangePreset: import('react').Dispatch<
-        import('react').SetStateAction<'1d' | '3d' | 'all' | 'custom'>
-    >;
-}) {
+}: CandlestickDrawingProps) {
     useEffect(() => {
         const svgElement = svgRef.current;
         if (!svgElement || !candles.length) return;
@@ -339,27 +470,6 @@ function useCandlestickDrawing({
             maximumSignificantDigits: 8,
         });
         const spreadFormatter = new Intl.NumberFormat('en', { maximumFractionDigits: 3 });
-        const priceTicks = axisLeft(price)
-            .ticks(6)
-            .tickSize(-(RIGHT - LEFT))
-            .tickFormat(value => priceFormatter.format(Number(value)));
-        const priceAxis = root
-            .append('g')
-            .attr('class', 'market-axis')
-            .attr('transform', `translate(${LEFT},0)`)
-            .call(priceTicks);
-        priceAxis.select('.domain').remove();
-        priceAxis
-            .selectAll('.tick line')
-            .attr('stroke', gridColor)
-            .attr('stroke-dasharray', '3 5')
-            .attr('opacity', 0.7);
-        priceAxis
-            .selectAll('.tick text')
-            .attr('fill', textColor)
-            .attr('font-family', mono)
-            .attr('font-size', 11)
-            .attr('dx', -7);
         const dateFormat = new Intl.DateTimeFormat('en', {
             month: 'short',
             day: '2-digit',
@@ -367,28 +477,17 @@ function useCandlestickDrawing({
             minute: '2-digit',
             timeZone: 'UTC',
         });
-        const xAxis = root
-            .append('g')
-            .attr('class', 'market-axis')
-            .attr('transform', `translate(0,${PRICE_BOTTOM})`)
-            .call(
-                axisBottom(xScale)
-                    .ticks(8)
-                    .tickFormat(value => dateFormat.format(value as Date))
-                    .tickSize(0),
-            );
-        xAxis.select('.domain').attr('stroke', gridColor);
-        xAxis
-            .selectAll('.tick text')
-            .attr('fill', textColor)
-            .attr('font-family', mono)
-            .attr('font-size', 10)
-            .attr('dy', 14);
-        root.append('text')
-            .attr('class', 'market-pane-label')
-            .attr('x', LEFT)
-            .attr('y', 22)
-            .text(copy.priceLabel);
+        drawCandlestickAxes({
+            root,
+            xScale,
+            price,
+            copy,
+            gridColor,
+            textColor,
+            mono,
+            priceFormatter,
+            dateFormat,
+        });
 
         const candleG = root.append('g').attr('class', 'market-candles');
         if (plotted.some(candle => candle.bid !== undefined && candle.ask !== undefined)) {
@@ -491,51 +590,15 @@ function useCandlestickDrawing({
             mono,
         });
 
-        const overview = scaleUtc().domain(fullDomain).range([LEFT, RIGHT]);
-        const navigatorY = scaleLinear()
-            .domain(extent(candles, candle => candle.close) as [number, number])
-            .nice()
-            .range([NAV_BOTTOM, NAV_TOP]);
-        const navigatorLine = line<Candle>()
-            .x(candle => overview(new Date(candle.time)))
-            .y(candle => navigatorY(candle.close))
-            .curve(curveMonotoneX);
-        root.append('path')
-            .datum(candles)
-            .attr('class', 'market-navigator-line')
-            .attr('d', navigatorLine)
-            .attr('fill', 'none')
-            .attr('stroke', bidAskColor)
-            .attr('stroke-width', 1.5);
-        const brush = brushX()
-            .extent([
-                [LEFT, NAV_TOP - 5],
-                [RIGHT, NAV_BOTTOM + 5],
-            ])
-            .on('end', event => {
-                if (!event.sourceEvent) return;
-                if (!event.selection) {
-                    setWindowRange(undefined);
-                    setRangePreset('all');
-                    return;
-                }
-                const selection = event.selection as [number, number];
-                const next: [number, number] = [
-                    overview.invert(selection[0]).getTime(),
-                    overview.invert(selection[1]).getTime(),
-                ];
-                setWindowRange(next);
-                setRangePreset('custom');
-            });
-        const brushGroup = root.append('g').attr('class', 'market-brush').call(brush);
-        const initialSelection = domain.map(value => overview(value)) as [number, number];
-        brushGroup.call(brush.move, initialSelection);
-        brushGroup
-            .selectAll('.selection')
-            .attr('fill', bidAskColor)
-            .attr('fill-opacity', 0.13)
-            .attr('stroke', bidAskColor);
-        brushGroup.selectAll('.handle').attr('fill', bidAskColor).attr('stroke', bidAskColor);
+        drawCandleNavigator({
+            root,
+            candles,
+            fullDomain,
+            domain,
+            bidAskColor,
+            setWindowRange,
+            setRangePreset,
+        });
 
         const interaction = root
             .append('rect')

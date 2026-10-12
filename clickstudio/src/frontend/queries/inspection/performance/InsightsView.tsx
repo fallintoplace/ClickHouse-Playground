@@ -17,6 +17,138 @@ import type { IconName } from '../../../ui/components/icons';
 import { ScrollEdgeFrame } from '../../../ui/components/ScrollEdgeShadows';
 import { useState } from 'react';
 
+function renderInsightSummary(profile: QueryProfile | undefined) {
+    if (profile?.insights.length) {
+        return (
+            <div className="insight-list">
+                {profile.insights.map(insight => (
+                    <article
+                        key={insight.id}
+                        className={`insight-card severity-${insight.severity}`}
+                    >
+                        <span className="insight-severity">{insight.severity}</span>
+                        <div>
+                            <strong>{insight.title}</strong>
+                            <p>{insight.description}</p>
+                        </div>
+                    </article>
+                ))}
+            </div>
+        );
+    }
+
+    if (profile) {
+        return (
+            <div className="profile-empty">
+                No deterministic issue was identified in the available evidence.
+            </div>
+        );
+    }
+
+    return (
+        <p className="profile-note">
+            Query log details can take a short time to appear after execution. Values marked
+            unavailable are not inferred.
+        </p>
+    );
+}
+
+function renderFlamegraphState({
+    flamegraphAvailable,
+    flamegraphCapability,
+    run,
+    flamegraph,
+    totalSamples,
+    selectedTraceType,
+    traceType,
+}: {
+    flamegraphAvailable: boolean;
+    flamegraphCapability?: Capability;
+    run: Run;
+    flamegraph?: FlamegraphSnapshot;
+    totalSamples: number;
+    selectedTraceType: FlamegraphTraceType | undefined;
+    traceType: FlamegraphTraceType;
+}) {
+    if (!flamegraphAvailable) {
+        return (
+            <div className="observability-state" role="status">
+                <strong>Profiler samples are unavailable for this connection.</strong>
+                <p>
+                    {flamegraphCapability?.reason ??
+                        'Test the connection to check access to system.trace_log symbol data.'}
+                </p>
+            </div>
+        );
+    }
+
+    if (!terminal(run)) {
+        return (
+            <div className="observability-state" role="status">
+                Wait for this execution to finish before loading its profile.
+            </div>
+        );
+    }
+
+    if (!flamegraph) {
+        return (
+            <div className="observability-state">
+                <strong>Inspect sampled ClickHouse call stacks for this run.</strong>
+                <p>
+                    Samples depend on the server’s trace-log sampling settings and may appear after
+                    a short flush delay.
+                </p>
+            </div>
+        );
+    }
+
+    if (totalSamples === 0) {
+        return (
+            <div className="observability-empty">
+                <span className="observability-empty-mark">⌁</span>
+                <strong>No profiler samples were recorded for this execution.</strong>
+                <p>ClickHouse may not have sampled this query during its run.</p>
+            </div>
+        );
+    }
+
+    if (flamegraph.symbolizedSamples === 0) {
+        return (
+            <div className="observability-empty">
+                <span className="observability-empty-mark">⌁</span>
+                <strong>Samples exist, but no symbolized stacks were recorded.</strong>
+                <p>
+                    Enable trace-log symbol collection on the ClickHouse server to render the call
+                    tree.
+                </p>
+            </div>
+        );
+    }
+
+    if (selectedTraceType && flamegraph.series[selectedTraceType]) {
+        return (
+            <>
+                <FlamegraphView
+                    key={`${run.id}:${selectedTraceType}`}
+                    series={flamegraph.series[selectedTraceType]!}
+                />
+                {flamegraph.truncated && (
+                    <p className="observability-footnote">
+                        The flamegraph was bounded to the most frequent sampled stacks.
+                    </p>
+                )}
+            </>
+        );
+    }
+
+    return (
+        <div className="observability-empty">
+            <strong>No {traceType === 'CPU' ? 'CPU' : 'wall-clock'} samples were recorded.</strong>
+            <p>Choose the other sample type if it is available.</p>
+        </div>
+    );
+}
+
 export function InsightsView({
     comparison,
     run,
@@ -91,132 +223,6 @@ export function InsightsView({
                     }
 
                     return 'Load ClickHouse pipeline';
-                };
-                const renderInsights = () => {
-                    if (profile?.insights.length) {
-                        return (
-                            <div className="insight-list">
-                                {profile.insights.map(insight => (
-                                    <article
-                                        key={insight.id}
-                                        className={`insight-card severity-${insight.severity}`}
-                                    >
-                                        <span className="insight-severity">{insight.severity}</span>
-                                        <div>
-                                            <strong>{insight.title}</strong>
-                                            <p>{insight.description}</p>
-                                        </div>
-                                    </article>
-                                ))}
-                            </div>
-                        );
-                    }
-
-                    if (profile) {
-                        return (
-                            <div className="profile-empty">
-                                No deterministic issue was identified in the available evidence.
-                            </div>
-                        );
-                    }
-
-                    return (
-                        <p className="profile-note">
-                            Query log details can take a short time to appear after execution.
-                            Values marked unavailable are not inferred.
-                        </p>
-                    );
-                };
-                const renderFlamegraph = () => {
-                    if (!flamegraphAvailable) {
-                        return (
-                            <div className="observability-state" role="status">
-                                <strong>
-                                    Profiler samples are unavailable for this connection.
-                                </strong>
-                                <p>
-                                    {flamegraphCapability?.reason ??
-                                        'Test the connection to check access to system.trace_log symbol data.'}
-                                </p>
-                            </div>
-                        );
-                    }
-
-                    if (!terminal(run)) {
-                        return (
-                            <div className="observability-state" role="status">
-                                Wait for this execution to finish before loading its profile.
-                            </div>
-                        );
-                    }
-
-                    if (!flamegraph) {
-                        return (
-                            <div className="observability-state">
-                                <strong>
-                                    Inspect sampled ClickHouse call stacks for this run.
-                                </strong>
-                                <p>
-                                    Samples depend on the server’s trace-log sampling settings and
-                                    may appear after a short flush delay.
-                                </p>
-                            </div>
-                        );
-                    }
-
-                    if (totalSamples === 0) {
-                        return (
-                            <div className="observability-empty">
-                                <span className="observability-empty-mark">⌁</span>
-                                <strong>
-                                    No profiler samples were recorded for this execution.
-                                </strong>
-                                <p>ClickHouse may not have sampled this query during its run.</p>
-                            </div>
-                        );
-                    }
-
-                    if (flamegraph.symbolizedSamples === 0) {
-                        return (
-                            <div className="observability-empty">
-                                <span className="observability-empty-mark">⌁</span>
-                                <strong>
-                                    Samples exist, but no symbolized stacks were recorded.
-                                </strong>
-                                <p>
-                                    Enable trace-log symbol collection on the ClickHouse server to
-                                    render the call tree.
-                                </p>
-                            </div>
-                        );
-                    }
-
-                    if (selectedTraceType && flamegraph.series[selectedTraceType]) {
-                        return (
-                            <>
-                                <FlamegraphView
-                                    key={`${run.id}:${selectedTraceType}`}
-                                    series={flamegraph.series[selectedTraceType]!}
-                                />
-                                {flamegraph.truncated && (
-                                    <p className="observability-footnote">
-                                        The flamegraph was bounded to the most frequent sampled
-                                        stacks.
-                                    </p>
-                                )}
-                            </>
-                        );
-                    }
-
-                    return (
-                        <div className="observability-empty">
-                            <strong>
-                                No {traceType === 'CPU' ? 'CPU' : 'wall-clock'} samples were
-                                recorded.
-                            </strong>
-                            <p>Choose the other sample type if it is available.</p>
-                        </div>
-                    );
                 };
                 return (
                     <div ref={ref} className="insights-view animate-enter">
@@ -360,7 +366,7 @@ export function InsightsView({
                                     </div>
                                 )}
                             </section>
-                            {renderInsights()}
+                            {renderInsightSummary(profile)}
                             {profile?.notice && <p className="profile-note">{profile.notice}</p>}
                         </div>
                         <section
@@ -411,7 +417,15 @@ export function InsightsView({
                                     </Button>
                                 )}
                             </div>
-                            {renderFlamegraph()}
+                            {renderFlamegraphState({
+                                flamegraphAvailable,
+                                flamegraphCapability,
+                                run,
+                                flamegraph,
+                                totalSamples,
+                                selectedTraceType,
+                                traceType,
+                            })}
                         </section>
                     </div>
                 );

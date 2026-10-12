@@ -295,9 +295,7 @@ export function ReferenceExplorer({
     });
 
     const isBundled = provider.kind === 'bundled' || resultsAreBundled;
-    const resultTitle = query
-        ? copy.referenceMatches.replace('{count}', results.length.toLocaleString())
-        : copy.referenceBrowse;
+    const resultTitle = referenceResultTitle(query, results.length, copy);
     const visibleResults = results.slice(0, visibleResultCount);
 
     return (
@@ -329,130 +327,178 @@ export function ReferenceExplorer({
                             onInsert,
                         })
                     ) : (
-                        <>
-                            {renderReferenceSearch({ query, setQuery, copy })}
-                            <div
-                                className="reference-categories"
-                                role="group"
-                                aria-label={copy.referenceCategories}
-                            >
-                                {REFERENCE_CATEGORIES.map(value => (
-                                    <button
-                                        key={value}
-                                        type="button"
-                                        aria-pressed={category === value}
-                                        onClick={() => setCategory(value)}
-                                    >
-                                        {copy[categoryCopy[value]]}
-                                    </button>
-                                ))}
-                            </div>
-                            <div className="reference-list-heading">
-                                <span>{resultTitle}</span>
-                                {!loading && <small>{results.length.toLocaleString()}</small>}
-                            </div>
-                            {error && (
-                                <div className="callout callout-error" role="alert">
-                                    {error}
-                                    <Button
-                                        variant="ghost"
-                                        className="toolbar-small"
-                                        onClick={() => setRetryToken(value => value + 1)}
-                                    >
-                                        {copy.referenceRetry}
-                                    </Button>
-                                </div>
-                            )}
-                            {loading && (
-                                <div className="inspector-empty">
-                                    <Spinner />
-                                    <p>{copy.loading}</p>
-                                </div>
-                            )}
-                            {!loading && !error && !results.length && (
-                                <div className="object-empty-search">
-                                    <strong>{copy.referenceNoMatches}</strong>
-                                    <span>{copy.referenceEmptyHint}</span>
-                                </div>
-                            )}
-                            {!loading && results.length > 0 && (
-                                <div
-                                    ref={resultListRef}
-                                    className="reference-results"
-                                    role="listbox"
-                                    aria-label={copy.referenceResults}
-                                    aria-activedescendant={
-                                        visibleResults[activeIndex]
-                                            ? `reference-option-${activeIndex}`
-                                            : undefined
-                                    }
-                                >
-                                    {visibleResults.map((entry, index) => {
-                                        const getEntryIcon = ():
-                                            'database' | 'table' | 'documents' | 'column' => {
-                                            if (entry.type === 'System Table') {
-                                                return 'table';
-                                            }
-
-                                            if (entry.type.includes('Engine')) {
-                                                return 'database';
-                                            }
-
-                                            if (entry.type.includes('Type')) {
-                                                return 'column';
-                                            }
-
-                                            return 'documents';
-                                        };
-                                        return (
-                                            <button
-                                                ref={
-                                                    canLoadMore &&
-                                                    index === visibleResults.length - 1
-                                                        ? lastVisibleResultRef
-                                                        : undefined
-                                                }
-                                                id={`reference-option-${index}`}
-                                                data-reference-index={index}
-                                                key={referenceId(entry)}
-                                                type="button"
-                                                role="option"
-                                                aria-selected={index === activeIndex}
-                                                className={cx(
-                                                    'reference-result',
-                                                    referenceResultTone(entry.type),
-                                                    index === activeIndex && 'is-active',
-                                                )}
-                                                onMouseEnter={() => setActiveIndex(index)}
-                                                onClick={() => {
-                                                    setActiveIndex(index);
-                                                    void openEntry(entry);
-                                                }}
-                                            >
-                                                <span className="reference-result-glyph">
-                                                    <Icon name={getEntryIcon()} />
-                                                </span>
-                                                <span className="reference-result-copy">
-                                                    <strong>
-                                                        {entry.type === 'System Table'
-                                                            ? `system.${entry.name}`
-                                                            : entry.name}
-                                                    </strong>
-                                                    <small>{entry.type}</small>
-                                                </span>
-                                                <span className="history-open">›</span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </>
+                        <ReferenceBrowseView
+                            copy={copy}
+                            query={query}
+                            setQuery={setQuery}
+                            category={category}
+                            setCategory={setCategory}
+                            resultTitle={resultTitle}
+                            results={results}
+                            visibleResults={visibleResults}
+                            loading={loading}
+                            error={error}
+                            retry={() => setRetryToken(value => value + 1)}
+                            resultListRef={resultListRef}
+                            activeIndex={activeIndex}
+                            setActiveIndex={setActiveIndex}
+                            canLoadMore={canLoadMore}
+                            lastVisibleResultRef={lastVisibleResultRef}
+                            openEntry={openEntry}
+                        />
                     )}
                     {renderReferenceSource({ isBundled, copy })}
                 </>
             )}
         </section>
     );
+}
+
+function referenceResultTitle(query: string, count: number, copy: ReferenceExplorerProps['copy']) {
+    return query
+        ? copy.referenceMatches.replace('{count}', count.toLocaleString())
+        : copy.referenceBrowse;
+}
+
+function ReferenceBrowseView({
+    copy,
+    query,
+    setQuery,
+    category,
+    setCategory,
+    resultTitle,
+    results,
+    visibleResults,
+    loading,
+    error,
+    retry,
+    resultListRef,
+    activeIndex,
+    setActiveIndex,
+    canLoadMore,
+    lastVisibleResultRef,
+    openEntry,
+}: {
+    copy: ReferenceExplorerProps['copy'];
+    query: string;
+    setQuery: import('react').Dispatch<import('react').SetStateAction<string>>;
+    category: ReferenceCategory;
+    setCategory: import('react').Dispatch<import('react').SetStateAction<ReferenceCategory>>;
+    resultTitle: string;
+    results: ClickHouseDocumentationSummary[];
+    visibleResults: ClickHouseDocumentationSummary[];
+    loading: boolean;
+    error: string;
+    retry: () => void;
+    resultListRef: import('react').RefObject<HTMLDivElement | null>;
+    activeIndex: number;
+    setActiveIndex: import('react').Dispatch<import('react').SetStateAction<number>>;
+    canLoadMore: boolean;
+    lastVisibleResultRef: import('react').RefObject<HTMLButtonElement | null>;
+    openEntry: (summary: ClickHouseDocumentationSummary) => Promise<void>;
+}) {
+    return (
+        <>
+            {renderReferenceSearch({ query, setQuery, copy })}
+            <div
+                className="reference-categories"
+                role="group"
+                aria-label={copy.referenceCategories}
+            >
+                {REFERENCE_CATEGORIES.map(value => (
+                    <button
+                        key={value}
+                        type="button"
+                        aria-pressed={category === value}
+                        onClick={() => setCategory(value)}
+                    >
+                        {copy[categoryCopy[value]]}
+                    </button>
+                ))}
+            </div>
+            <div className="reference-list-heading">
+                <span>{resultTitle}</span>
+                {!loading && <small>{results.length.toLocaleString()}</small>}
+            </div>
+            {error && (
+                <div className="callout callout-error" role="alert">
+                    {error}
+                    <Button variant="ghost" className="toolbar-small" onClick={retry}>
+                        {copy.referenceRetry}
+                    </Button>
+                </div>
+            )}
+            {loading && (
+                <div className="inspector-empty">
+                    <Spinner />
+                    <p>{copy.loading}</p>
+                </div>
+            )}
+            {!loading && !error && !results.length && (
+                <div className="object-empty-search">
+                    <strong>{copy.referenceNoMatches}</strong>
+                    <span>{copy.referenceEmptyHint}</span>
+                </div>
+            )}
+            {!loading && results.length > 0 && (
+                <div
+                    ref={resultListRef}
+                    className="reference-results"
+                    role="listbox"
+                    aria-label={copy.referenceResults}
+                    aria-activedescendant={
+                        visibleResults[activeIndex] ? `reference-option-${activeIndex}` : undefined
+                    }
+                >
+                    {visibleResults.map((entry, index) => (
+                        <button
+                            ref={
+                                canLoadMore && index === visibleResults.length - 1
+                                    ? lastVisibleResultRef
+                                    : undefined
+                            }
+                            id={`reference-option-${index}`}
+                            data-reference-index={index}
+                            key={referenceId(entry)}
+                            type="button"
+                            role="option"
+                            aria-selected={index === activeIndex}
+                            className={cx(
+                                'reference-result',
+                                referenceResultTone(entry.type),
+                                index === activeIndex && 'is-active',
+                            )}
+                            onMouseEnter={() => setActiveIndex(index)}
+                            onClick={() => {
+                                setActiveIndex(index);
+                                void openEntry(entry);
+                            }}
+                        >
+                            <span className="reference-result-glyph">
+                                <Icon name={referenceEntryIcon(entry.type)} />
+                            </span>
+                            <span className="reference-result-copy">
+                                <strong>
+                                    {entry.type === 'System Table'
+                                        ? `system.${entry.name}`
+                                        : entry.name}
+                                </strong>
+                                <small>{entry.type}</small>
+                            </span>
+                            <span className="history-open">›</span>
+                        </button>
+                    ))}
+                </div>
+            )}
+        </>
+    );
+}
+
+function referenceEntryIcon(type: string): 'database' | 'table' | 'documents' | 'column' {
+    if (type === 'System Table') return 'table';
+    if (type.includes('Engine')) return 'database';
+    if (type.includes('Type')) return 'column';
+    return 'documents';
 }
 
 function renderReferenceSearch({

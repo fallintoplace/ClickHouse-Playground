@@ -115,40 +115,13 @@ export default defineConfig([
             'react-hooks': reactHooks,
         },
         rules: {
-            complexity: ['error', 180],
-            'max-lines-per-function': [
-                'error',
-                { max: 400, skipBlankLines: true, skipComments: true },
-            ],
-            'react-hooks/rules-of-hooks': 'error',
-            'react-hooks/exhaustive-deps': 'error',
-        },
-    },
-    {
-        files: [
-            'src/frontend/assistant/proposals/assistant-proposal.ts',
-            'src/frontend/database/connections/selection.ts',
-            'src/frontend/queries/editor/tools.ts',
-            'src/frontend/queries/history/evidence.ts',
-            'src/frontend/queries/inspection/performance/explain-analyze.ts',
-            'src/frontend/queries/inspection/plans/explain-indexes.ts',
-            'src/frontend/queries/results/maps/geo.ts',
-            'src/frontend/queries/editor/parser/ast.ts',
-            'src/frontend/database/explorer/format.ts',
-            'src/frontend/database/explorer/objects/model.ts',
-            'src/frontend/database/connections/playground-values.ts',
-            'src/frontend/queries/inspection/diagrams/query-tree.ts',
-            'src/frontend/queries/history/comparison.ts',
-            'src/frontend/queries/execution/events.ts',
-            'src/frontend/ui/components/tree-model.ts',
-            'src/frontend/queries/saved-queries/draft-save.ts',
-        ],
-        rules: {
             complexity: ['error', 50],
             'max-lines-per-function': [
                 'error',
                 { max: 300, skipBlankLines: true, skipComments: true },
             ],
+            'react-hooks/rules-of-hooks': 'error',
+            'react-hooks/exhaustive-deps': 'error',
         },
     },
     {

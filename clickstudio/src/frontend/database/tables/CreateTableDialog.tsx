@@ -236,6 +236,40 @@ export function CreateTableDialog({ connection, databases, onClose, onCreated }:
         return { databaseHelp, tableHelp, createDisabledReason };
     };
     const { databaseHelp, tableHelp, createDisabledReason } = creationHelp();
+    const contentModel: CreateTableContentModel = {
+        databaseInputId,
+        databaseInput,
+        databaseTouched,
+        databaseIsValid,
+        databaseOptionsOpen,
+        databaseOptionsId,
+        highlightedDatabaseOption,
+        database,
+        setDatabaseOptionsOpen,
+        setDatabaseOptionsQuery,
+        setActiveDatabaseOption,
+        setDatabaseTouched,
+        setDatabase,
+        handleDatabaseKeyDown,
+        databaseOptions,
+        selectDatabase,
+        databaseHelp,
+        tableInput,
+        table,
+        setTable,
+        setTableTouched,
+        tableTouched,
+        tableIsValid,
+        tableHelp,
+        setColumns,
+        columns,
+        updateColumn,
+        orderBy,
+        setOrderBy,
+        created,
+        targetTable,
+        error,
+    };
 
     return (
         <dialog
@@ -278,111 +312,7 @@ export function CreateTableDialog({ connection, databases, onClose, onCreated }:
                     </button>
                 </header>
 
-                <main className="create-table-content min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5 sm:px-7">
-                    {!created && (
-                        <>
-                            {renderDatabasePicker({
-                                databaseInputId,
-                                databaseInput,
-                                databaseTouched,
-                                databaseIsValid,
-                                databaseOptionsOpen,
-                                databaseOptionsId,
-                                highlightedDatabaseOption,
-                                database,
-                                setDatabaseOptionsOpen,
-                                setDatabaseOptionsQuery,
-                                setActiveDatabaseOption,
-                                setDatabaseTouched,
-                                setDatabase,
-                                handleDatabaseKeyDown,
-                                databaseOptions,
-                                selectDatabase,
-                                databaseHelp,
-                            })}
-
-                            <label className="create-table-field">
-                                <span>Table name</span>
-                                <input
-                                    ref={tableInput}
-                                    aria-label="Table name"
-                                    aria-describedby="create-table-name-help create-table-target"
-                                    aria-invalid={tableTouched && !tableIsValid}
-                                    value={table}
-                                    onChange={event => setTable(event.target.value)}
-                                    onBlur={() => setTableTouched(true)}
-                                    required
-                                    maxLength={128}
-                                    pattern={identifierPatternAttribute}
-                                    placeholder="e.g. events"
-                                    className="create-table-control font-mono"
-                                />
-                                <span
-                                    id="create-table-name-help"
-                                    className={`create-table-help${tableTouched && !tableIsValid ? ' is-error' : ''}`}
-                                >
-                                    {tableHelp}
-                                </span>
-                                <span id="create-table-target" className="create-table-target">
-                                    <span>Destination</span>
-                                    <code>
-                                        {database.trim() || '<database>'}.
-                                        {table.trim() || '<table_name>'}
-                                    </code>
-                                </span>
-                            </label>
-
-                            {renderTableColumns({ setColumns, columns, updateColumn })}
-
-                            <label className="create-table-field">
-                                <span>Sorting key</span>
-                                <span className="create-table-select-wrap">
-                                    <select
-                                        aria-label="Sorting key"
-                                        aria-describedby="create-table-sorting-help"
-                                        value={orderBy}
-                                        onChange={event => setOrderBy(event.target.value)}
-                                        className="create-table-control create-table-select"
-                                    >
-                                        {columns.map((column, index) => (
-                                            <option
-                                                key={`${column.name}-${index}`}
-                                                value={column.name}
-                                            >
-                                                {column.name || `Column ${index + 1}`}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <Icon name="chevron" />
-                                </span>
-                                <span id="create-table-sorting-help" className="create-table-help">
-                                    Used to organize data for queries. The first column is selected
-                                    by default.
-                                </span>
-                            </label>
-                            <p className="create-table-supported-types">
-                                Available types: String, Bool, UInt64, Int64, Float64, Decimal(18,
-                                2), Date, DateTime, UUID.
-                            </p>
-                        </>
-                    )}
-                    {created && (
-                        <p
-                            role="status"
-                            className="rounded-xl border border-[var(--green)]/30 bg-[var(--green)]/5 p-4 text-sm"
-                        >
-                            Created <code>{targetTable}</code>.
-                        </p>
-                    )}
-                    {error && (
-                        <p
-                            role="alert"
-                            className="rounded-lg border border-[var(--red)]/30 bg-[var(--red)]/5 px-3 py-2.5 text-xs text-[var(--red)]"
-                        >
-                            {error}
-                        </p>
-                    )}
-                </main>
+                <CreateTableContent model={contentModel} />
 
                 <footer className="create-table-footer flex justify-end gap-2 border-t border-[var(--line)] bg-[var(--page)] px-5 py-3 sm:px-7">
                     {!created && !canCreate && !busy && (
@@ -408,6 +338,181 @@ export function CreateTableDialog({ connection, databases, onClose, onCreated }:
                 </footer>
             </form>
         </dialog>
+    );
+}
+
+type CreateTableContentModel = {
+    databaseInputId: string;
+    databaseInput: import('react').RefObject<HTMLInputElement | null>;
+    databaseTouched: boolean;
+    databaseIsValid: boolean;
+    databaseOptionsOpen: boolean;
+    databaseOptionsId: string;
+    highlightedDatabaseOption: number;
+    database: string;
+    setDatabaseOptionsOpen: import('react').Dispatch<import('react').SetStateAction<boolean>>;
+    setDatabaseOptionsQuery: import('react').Dispatch<import('react').SetStateAction<string>>;
+    setActiveDatabaseOption: import('react').Dispatch<import('react').SetStateAction<number>>;
+    setDatabaseTouched: import('react').Dispatch<import('react').SetStateAction<boolean>>;
+    setDatabase: import('react').Dispatch<import('react').SetStateAction<string>>;
+    handleDatabaseKeyDown: (event: ReactKeyboardEvent<HTMLInputElement>) => void;
+    databaseOptions: string[];
+    selectDatabase: (value: string) => void;
+    databaseHelp: string;
+    tableInput: import('react').RefObject<HTMLInputElement | null>;
+    table: string;
+    setTable: import('react').Dispatch<import('react').SetStateAction<string>>;
+    setTableTouched: import('react').Dispatch<import('react').SetStateAction<boolean>>;
+    tableTouched: boolean;
+    tableIsValid: boolean;
+    tableHelp: string;
+    setColumns: import('react').Dispatch<import('react').SetStateAction<CreateTableColumn[]>>;
+    columns: CreateTableColumn[];
+    updateColumn: (index: number, field: keyof CreateTableColumn, value: string) => void;
+    orderBy: string;
+    setOrderBy: import('react').Dispatch<import('react').SetStateAction<string>>;
+    created: boolean;
+    targetTable: string;
+    error: string;
+};
+
+function CreateTableContent({ model }: { model: CreateTableContentModel }) {
+    const {
+        databaseInputId,
+        databaseInput,
+        databaseTouched,
+        databaseIsValid,
+        databaseOptionsOpen,
+        databaseOptionsId,
+        highlightedDatabaseOption,
+        database,
+        setDatabaseOptionsOpen,
+        setDatabaseOptionsQuery,
+        setActiveDatabaseOption,
+        setDatabaseTouched,
+        setDatabase,
+        handleDatabaseKeyDown,
+        databaseOptions,
+        selectDatabase,
+        databaseHelp,
+        tableInput,
+        table,
+        setTable,
+        setTableTouched,
+        tableTouched,
+        tableIsValid,
+        tableHelp,
+        setColumns,
+        columns,
+        updateColumn,
+        orderBy,
+        setOrderBy,
+        created,
+        targetTable,
+        error,
+    } = model;
+    return (
+        <main className="create-table-content min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5 sm:px-7">
+            {!created && (
+                <>
+                    {renderDatabasePicker({
+                        databaseInputId,
+                        databaseInput,
+                        databaseTouched,
+                        databaseIsValid,
+                        databaseOptionsOpen,
+                        databaseOptionsId,
+                        highlightedDatabaseOption,
+                        database,
+                        setDatabaseOptionsOpen,
+                        setDatabaseOptionsQuery,
+                        setActiveDatabaseOption,
+                        setDatabaseTouched,
+                        setDatabase,
+                        handleDatabaseKeyDown,
+                        databaseOptions,
+                        selectDatabase,
+                        databaseHelp,
+                    })}
+
+                    <label className="create-table-field">
+                        <span>Table name</span>
+                        <input
+                            ref={tableInput}
+                            aria-label="Table name"
+                            aria-describedby="create-table-name-help create-table-target"
+                            aria-invalid={tableTouched && !tableIsValid}
+                            value={table}
+                            onChange={event => setTable(event.target.value)}
+                            onBlur={() => setTableTouched(true)}
+                            required
+                            maxLength={128}
+                            pattern={identifierPatternAttribute}
+                            placeholder="e.g. events"
+                            className="create-table-control font-mono"
+                        />
+                        <span
+                            id="create-table-name-help"
+                            className={`create-table-help${tableTouched && !tableIsValid ? ' is-error' : ''}`}
+                        >
+                            {tableHelp}
+                        </span>
+                        <span id="create-table-target" className="create-table-target">
+                            <span>Destination</span>
+                            <code>
+                                {database.trim() || '<database>'}.{table.trim() || '<table_name>'}
+                            </code>
+                        </span>
+                    </label>
+
+                    {renderTableColumns({ setColumns, columns, updateColumn })}
+
+                    <label className="create-table-field">
+                        <span>Sorting key</span>
+                        <span className="create-table-select-wrap">
+                            <select
+                                aria-label="Sorting key"
+                                aria-describedby="create-table-sorting-help"
+                                value={orderBy}
+                                onChange={event => setOrderBy(event.target.value)}
+                                className="create-table-control create-table-select"
+                            >
+                                {columns.map((column, index) => (
+                                    <option key={`${column.name}-${index}`} value={column.name}>
+                                        {column.name || `Column ${index + 1}`}
+                                    </option>
+                                ))}
+                            </select>
+                            <Icon name="chevron" />
+                        </span>
+                        <span id="create-table-sorting-help" className="create-table-help">
+                            Used to organize data for queries. The first column is selected by
+                            default.
+                        </span>
+                    </label>
+                    <p className="create-table-supported-types">
+                        Available types: String, Bool, UInt64, Int64, Float64, Decimal(18, 2), Date,
+                        DateTime, UUID.
+                    </p>
+                </>
+            )}
+            {created && (
+                <p
+                    role="status"
+                    className="rounded-xl border border-[var(--green)]/30 bg-[var(--green)]/5 p-4 text-sm"
+                >
+                    Created <code>{targetTable}</code>.
+                </p>
+            )}
+            {error && (
+                <p
+                    role="alert"
+                    className="rounded-lg border border-[var(--red)]/30 bg-[var(--red)]/5 px-3 py-2.5 text-xs text-[var(--red)]"
+                >
+                    {error}
+                </p>
+            )}
+        </main>
     );
 }
 
@@ -534,10 +639,7 @@ function renderDatabasePicker({
     handleDatabaseKeyDown: (event: ReactKeyboardEvent<HTMLInputElement>) => void;
     databaseOptions: string[];
     selectDatabase: (value: string) => void;
-    databaseHelp:
-        | 'Use letters, numbers, and underscores. Start with a letter or _.'
-        | 'Choose or type a database name.'
-        | 'Choose a database or type its name.';
+    databaseHelp: string;
 }) {
     return (
         <div className="create-table-field">

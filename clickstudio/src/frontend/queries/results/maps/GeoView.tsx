@@ -324,42 +324,69 @@ function MapCanvas({
                     </span>
                 </div>
             </div>
-            <div className="geo-detail-row">
-                <div className="geo-legend">
-                    <span className="geo-gradient" />
-                    <div>
-                        <strong>
-                            {measureIndex === undefined ? 'Features' : columns[measureIndex]?.name}
-                        </strong>
-                        <small>
-                            {measureIndex === undefined || !measures.length
-                                ? 'Uniform styling'
-                                : `${minimum.toLocaleString('en')} → ${maximum.toLocaleString('en')}`}
-                        </small>
-                    </div>
-                </div>
-                <div className="geo-selection">
-                    {selected ? (
-                        <>
-                            <div>
-                                <span className="eyebrow">SELECTED FEATURE</span>
-                                <strong>{selected.label}</strong>
-                            </div>
-                            <dl>
-                                {columns.slice(0, 6).map((column, index) => (
-                                    <div key={index}>
-                                        <dt>{column.name}</dt>
-                                        <dd>{displayValue(selected.row[index])}</dd>
-                                    </div>
-                                ))}
-                            </dl>
-                        </>
-                    ) : (
-                        <p>Select a point, line, or region to inspect its retained row.</p>
-                    )}
+            <GeoMapDetails
+                columns={columns}
+                measureIndex={measureIndex}
+                measures={measures}
+                minimum={minimum}
+                maximum={maximum}
+                selected={selected}
+            />
+        </>
+    );
+}
+
+function GeoMapDetails({
+    columns,
+    measureIndex,
+    measures,
+    minimum,
+    maximum,
+    selected,
+}: {
+    columns: Column[];
+    measureIndex: number | undefined;
+    measures: number[];
+    minimum: number;
+    maximum: number;
+    selected: GeoFeature | undefined;
+}) {
+    return (
+        <div className="geo-detail-row">
+            <div className="geo-legend">
+                <span className="geo-gradient" />
+                <div>
+                    <strong>
+                        {measureIndex === undefined ? 'Features' : columns[measureIndex]?.name}
+                    </strong>
+                    <small>
+                        {measureIndex === undefined || !measures.length
+                            ? 'Uniform styling'
+                            : `${minimum.toLocaleString('en')} → ${maximum.toLocaleString('en')}`}
+                    </small>
                 </div>
             </div>
-        </>
+            <div className="geo-selection">
+                {selected ? (
+                    <>
+                        <div>
+                            <span className="eyebrow">SELECTED FEATURE</span>
+                            <strong>{selected.label}</strong>
+                        </div>
+                        <dl>
+                            {columns.slice(0, 6).map((column, index) => (
+                                <div key={index}>
+                                    <dt>{column.name}</dt>
+                                    <dd>{displayValue(selected.row[index])}</dd>
+                                </div>
+                            ))}
+                        </dl>
+                    </>
+                ) : (
+                    <p>Select a point, line, or region to inspect its retained row.</p>
+                )}
+            </div>
+        </div>
     );
 }
 

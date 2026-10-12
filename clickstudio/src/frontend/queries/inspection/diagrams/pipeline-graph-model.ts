@@ -266,79 +266,102 @@ export function sqlFlowNodeDetail(node: ProfilePipelineNode, copy?: Copy['common
     return node.detail;
 }
 
+function graphLabel(value: string | undefined, fallback: string) {
+    return value ?? fallback;
+}
+
 export function graphLabels(kind: PipelineGraphKind, copy?: Copy['common']) {
     switch (kind) {
         case 'sql-flow':
             return {
                 terminology: {
-                    graph: copy?.sqlMap ?? 'SQL flow graph',
-                    item: copy?.sqlFlowStages ?? 'stages',
-                    selected: copy?.sqlFlowSelectedStage ?? 'Selected stage',
-                    action: copy?.sqlFlowInspectStage ?? 'Inspect stage',
-                    details: copy?.sqlFlowStageDetails ?? 'Selected stage details',
+                    graph: graphLabel(copy?.sqlMap, 'SQL flow graph'),
+                    item: graphLabel(copy?.sqlFlowStages, 'stages'),
+                    selected: graphLabel(copy?.sqlFlowSelectedStage, 'Selected stage'),
+                    action: graphLabel(copy?.sqlFlowInspectStage, 'Inspect stage'),
+                    details: graphLabel(copy?.sqlFlowStageDetails, 'Selected stage details'),
                 },
-                connection: copy?.sqlFlowConnections ?? 'connections',
-                viewport: copy?.sqlMap ?? 'Scrollable SQL flow graph',
-                svg: copy?.sqlFlowGraphHint ?? 'Click a stage to inspect it',
-                empty: copy?.sqlFlowNoStages ?? 'No SQL stages were found in this statement.',
+                connection: graphLabel(copy?.sqlFlowConnections, 'connections'),
+                viewport: graphLabel(copy?.sqlMap, 'Scrollable SQL flow graph'),
+                svg: graphLabel(copy?.sqlFlowGraphHint, 'Click a stage to inspect it'),
+                empty: graphLabel(
+                    copy?.sqlFlowNoStages,
+                    'No SQL stages were found in this statement.',
+                ),
             };
         case 'explain-plan':
             return {
                 terminology: {
-                    graph: copy?.logicalPlan ?? 'Logical query plan',
-                    item: copy?.planStep ?? 'steps',
-                    selected: copy?.planSelectedStep ?? 'Selected step',
-                    action: copy?.planInspectStep ?? 'Inspect step',
-                    details: copy?.planStepDetails ?? 'Selected plan step details',
+                    graph: graphLabel(copy?.logicalPlan, 'Logical query plan'),
+                    item: graphLabel(copy?.planStep, 'steps'),
+                    selected: graphLabel(copy?.planSelectedStep, 'Selected step'),
+                    action: graphLabel(copy?.planInspectStep, 'Inspect step'),
+                    details: graphLabel(copy?.planStepDetails, 'Selected plan step details'),
                 },
                 connection: 'connections',
-                viewport: `${copy?.logicalPlan ?? 'Logical query plan'} · ${copy?.planGraphView ?? 'Graph'}`,
-                svg: copy?.planGraphHint ?? 'Select a step to inspect its properties.',
-                empty: copy?.pipelineNoOutput ?? 'This pipeline did not return any operator nodes.',
+                viewport: `${graphLabel(copy?.logicalPlan, 'Logical query plan')} · ${graphLabel(copy?.planGraphView, 'Graph')}`,
+                svg: graphLabel(copy?.planGraphHint, 'Select a step to inspect its properties.'),
+                empty: graphLabel(
+                    copy?.pipelineNoOutput,
+                    'This pipeline did not return any operator nodes.',
+                ),
             };
         case 'index-analysis':
             return {
                 terminology: {
-                    graph: copy?.indexAnalysisGraph ?? 'Index pruning graph',
-                    item: copy?.indexAnalysisItem ?? 'index checks',
-                    selected: copy?.indexAnalysisSelected ?? 'Selected index',
-                    action: copy?.indexAnalysisInspect ?? 'Inspect index',
-                    details: copy?.indexAnalysisDetails ?? 'Selected index details',
+                    graph: graphLabel(copy?.indexAnalysisGraph, 'Index pruning graph'),
+                    item: graphLabel(copy?.indexAnalysisItem, 'index checks'),
+                    selected: graphLabel(copy?.indexAnalysisSelected, 'Selected index'),
+                    action: graphLabel(copy?.indexAnalysisInspect, 'Inspect index'),
+                    details: graphLabel(copy?.indexAnalysisDetails, 'Selected index details'),
                 },
                 connection: 'connections',
-                viewport: `${copy?.indexAnalysisGraph ?? 'Index pruning graph'} · ${copy?.planGraphView ?? 'Graph'}`,
-                svg:
-                    copy?.indexAnalysisHint ??
+                viewport: `${graphLabel(copy?.indexAnalysisGraph, 'Index pruning graph')} · ${graphLabel(copy?.planGraphView, 'Graph')}`,
+                svg: graphLabel(
+                    copy?.indexAnalysisHint,
                     'Select an index to inspect its condition and pruning counts.',
-                empty: copy?.pipelineNoOutput ?? 'This pipeline did not return any operator nodes.',
+                ),
+                empty: graphLabel(
+                    copy?.pipelineNoOutput,
+                    'This pipeline did not return any operator nodes.',
+                ),
             };
         case 'runtime':
             return {
                 terminology: {
-                    graph: copy?.runtimeGraph ?? 'Measured runtime',
-                    item: copy?.sqlFlowOperators ?? 'stages',
-                    selected: copy?.selectedOperator ?? 'Selected stage',
-                    action: copy?.inspectOperator ?? 'Inspect stage',
-                    details: copy?.selectedOperatorDetails ?? 'Selected runtime stage details',
+                    graph: graphLabel(copy?.runtimeGraph, 'Measured runtime'),
+                    item: graphLabel(copy?.sqlFlowOperators, 'stages'),
+                    selected: graphLabel(copy?.selectedOperator, 'Selected stage'),
+                    action: graphLabel(copy?.inspectOperator, 'Inspect stage'),
+                    details: graphLabel(
+                        copy?.selectedOperatorDetails,
+                        'Selected runtime stage details',
+                    ),
                 },
                 connection: 'connections',
-                viewport: `${copy?.runtimeGraph ?? 'Measured runtime'} · ${copy?.planGraphView ?? 'Graph'}`,
-                svg: copy?.pipelineGraphHint ?? 'Click an operator to inspect it',
-                empty: copy?.pipelineNoOutput ?? 'This pipeline did not return any operator nodes.',
+                viewport: `${graphLabel(copy?.runtimeGraph, 'Measured runtime')} · ${graphLabel(copy?.planGraphView, 'Graph')}`,
+                svg: graphLabel(copy?.pipelineGraphHint, 'Click an operator to inspect it'),
+                empty: graphLabel(
+                    copy?.pipelineNoOutput,
+                    'This pipeline did not return any operator nodes.',
+                ),
             };
         default:
             return {
                 terminology: {
-                    graph: copy?.pipelineGraph ?? 'Execution plan graph',
-                    item: copy?.sqlFlowOperators ?? 'operators',
-                    selected: copy?.selectedOperator ?? 'Selected operator',
-                    action: copy?.inspectOperator ?? 'Inspect operator',
-                    details: copy?.selectedOperatorDetails ?? 'Selected operator details',
+                    graph: graphLabel(copy?.pipelineGraph, 'Execution plan graph'),
+                    item: graphLabel(copy?.sqlFlowOperators, 'operators'),
+                    selected: graphLabel(copy?.selectedOperator, 'Selected operator'),
+                    action: graphLabel(copy?.inspectOperator, 'Inspect operator'),
+                    details: graphLabel(copy?.selectedOperatorDetails, 'Selected operator details'),
                 },
                 connection: 'connections',
                 viewport: 'Scrollable operator graph',
-                svg: copy?.pipelineGraphHint ?? 'Click an operator to inspect it',
-                empty: copy?.pipelineNoOutput ?? 'This pipeline did not return any operator nodes.',
+                svg: graphLabel(copy?.pipelineGraphHint, 'Click an operator to inspect it'),
+                empty: graphLabel(
+                    copy?.pipelineNoOutput,
+                    'This pipeline did not return any operator nodes.',
+                ),
             };
     }
 }

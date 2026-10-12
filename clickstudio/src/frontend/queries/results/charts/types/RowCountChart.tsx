@@ -279,94 +279,19 @@ export function RowCountChart({
                 };
                 return (
                     <div ref={ref} className="chart-workspace animate-enter">
-                        <ChartToolbar title={title}>
-                            <label>
-                                {copy.xAxis}
-                                <select
-                                    aria-label={copy.xAxis}
-                                    value={xIndex}
-                                    onChange={event => {
-                                        const nextX = Number(event.target.value);
-                                        const nextTime = temporalType(
-                                            result.columns[nextX]?.type ?? '',
-                                        );
-                                        const nextGroupBy = nextTime
-                                            ? (groupByIndex ??
-                                              dimensions.find(
-                                                  index =>
-                                                      index !== nextX &&
-                                                      !temporalType(
-                                                          result.columns[index]?.type ?? '',
-                                                      ),
-                                              ))
-                                            : undefined;
-                                        let nextTitle: string;
-
-                                        if (nextTime) {
-                                            if (nextGroupBy === undefined) {
-                                                nextTitle = 'Rows over time';
-                                            } else {
-                                                nextTitle = `Rows over time by ${result.columns[nextGroupBy]?.name}`;
-                                            }
-                                        } else {
-                                            nextTitle = `Rows by ${result.columns[nextX]?.name}`;
-                                        }
-                                        onChart({
-                                            ...chart,
-                                            kind: nextTime ? 'line' : 'bar',
-                                            x: nextX,
-                                            groupBy: nextGroupBy,
-                                            ys: [],
-                                            title: customTitle ?? nextTitle,
-                                        });
-                                    }}
-                                >
-                                    {dimensions.map(index => (
-                                        <option key={index} value={index}>
-                                            {result.columns[index]?.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                            {timeAxis && breakdowns.length > 0 && (
-                                <label>
-                                    {copy.breakdownBy}
-                                    <select
-                                        aria-label={copy.breakdownBy}
-                                        value={groupByIndex ?? ''}
-                                        onChange={event => {
-                                            const nextGroupBy =
-                                                event.target.value === ''
-                                                    ? undefined
-                                                    : Number(event.target.value);
-                                            onChart({
-                                                ...chart,
-                                                kind: 'line',
-                                                x: xIndex,
-                                                groupBy: nextGroupBy,
-                                                ys: [],
-                                                title:
-                                                    customTitle ??
-                                                    (nextGroupBy === undefined
-                                                        ? 'Rows over time'
-                                                        : `Rows over time by ${result.columns[nextGroupBy]?.name}`),
-                                            });
-                                        }}
-                                    >
-                                        <option value="">{copy.allRows}</option>
-                                        {breakdowns.map(index => (
-                                            <option key={index} value={index}>
-                                                {result.columns[index]?.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </label>
-                            )}
-                            <span className="chart-row-count-type">
-                                <span className="chart-legend-dot" />
-                                {copy.rowsLabel}
-                            </span>
-                        </ChartToolbar>
+                        <RowCountChartToolbar
+                            title={title}
+                            result={result}
+                            chart={chart}
+                            copy={copy}
+                            xIndex={xIndex}
+                            dimensions={dimensions}
+                            timeAxis={timeAxis}
+                            groupByIndex={groupByIndex}
+                            breakdowns={breakdowns}
+                            customTitle={customTitle}
+                            onChart={onChart}
+                        />
                         {renderChartContent()}
                         <div className="chart-footer">
                             <span className="chart-legend">
@@ -402,6 +327,117 @@ export function RowCountChart({
                 );
             }}
         </ScrollEdgeFrame>
+    );
+}
+
+function RowCountChartToolbar({
+    title,
+    result,
+    chart,
+    copy,
+    xIndex,
+    dimensions,
+    timeAxis,
+    groupByIndex,
+    breakdowns,
+    customTitle,
+    onChart,
+}: {
+    title: string;
+    result: Result;
+    chart: Draft['chart'];
+    copy: Copy['chart'];
+    xIndex: number;
+    dimensions: number[];
+    timeAxis: boolean;
+    groupByIndex: number | undefined;
+    breakdowns: number[];
+    customTitle: string | undefined;
+    onChart: (chart: Draft['chart']) => void;
+}) {
+    return (
+        <ChartToolbar title={title}>
+            <label>
+                {copy.xAxis}
+                <select
+                    aria-label={copy.xAxis}
+                    value={xIndex}
+                    onChange={event => {
+                        const nextX = Number(event.target.value);
+                        const nextTime = temporalType(result.columns[nextX]?.type ?? '');
+                        const nextGroupBy = nextTime
+                            ? (groupByIndex ??
+                              dimensions.find(
+                                  index =>
+                                      index !== nextX &&
+                                      !temporalType(result.columns[index]?.type ?? ''),
+                              ))
+                            : undefined;
+                        let nextTitle: string;
+
+                        if (nextTime) {
+                            if (nextGroupBy === undefined) {
+                                nextTitle = 'Rows over time';
+                            } else {
+                                nextTitle = `Rows over time by ${result.columns[nextGroupBy]?.name}`;
+                            }
+                        } else {
+                            nextTitle = `Rows by ${result.columns[nextX]?.name}`;
+                        }
+                        onChart({
+                            ...chart,
+                            kind: nextTime ? 'line' : 'bar',
+                            x: nextX,
+                            groupBy: nextGroupBy,
+                            ys: [],
+                            title: customTitle ?? nextTitle,
+                        });
+                    }}
+                >
+                    {dimensions.map(index => (
+                        <option key={index} value={index}>
+                            {result.columns[index]?.name}
+                        </option>
+                    ))}
+                </select>
+            </label>
+            {timeAxis && breakdowns.length > 0 && (
+                <label>
+                    {copy.breakdownBy}
+                    <select
+                        aria-label={copy.breakdownBy}
+                        value={groupByIndex ?? ''}
+                        onChange={event => {
+                            const nextGroupBy =
+                                event.target.value === '' ? undefined : Number(event.target.value);
+                            onChart({
+                                ...chart,
+                                kind: 'line',
+                                x: xIndex,
+                                groupBy: nextGroupBy,
+                                ys: [],
+                                title:
+                                    customTitle ??
+                                    (nextGroupBy === undefined
+                                        ? 'Rows over time'
+                                        : `Rows over time by ${result.columns[nextGroupBy]?.name}`),
+                            });
+                        }}
+                    >
+                        <option value="">{copy.allRows}</option>
+                        {breakdowns.map(index => (
+                            <option key={index} value={index}>
+                                {result.columns[index]?.name}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+            )}
+            <span className="chart-row-count-type">
+                <span className="chart-legend-dot" />
+                {copy.rowsLabel}
+            </span>
+        </ChartToolbar>
     );
 }
 

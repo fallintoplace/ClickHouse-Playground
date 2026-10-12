@@ -321,121 +321,25 @@ export function InspectorPane({
                         onInsert={onInsert}
                     />
                 )}
-                {inspector === 'history' && (
-                    <section className="inspector-section">
-                        <div className="schema-heading">
-                            <span>{copy.history.toUpperCase()}</span>
-                            {expert && (
-                                <RunComparisonLauncher
-                                    connectionId={connectionId}
-                                    trusted={trusted}
-                                    history={history}
-                                    initialRun={run}
-                                    profiles={comparisonProfiles}
-                                    pipelines={comparisonPipelines}
-                                    queryLogAvailable={
-                                        connection.manifest?.queryLog.available === true
-                                    }
-                                />
-                            )}
-                            <Button
-                                variant="ghost"
-                                className="toolbar-small"
-                                onClick={onRefreshHistory}
-                            >
-                                ↻ Refresh
-                            </Button>
-                        </div>
-                        <WorkspaceInlineNotice
-                            feedback={readFailureFeedback(
-                                'Couldn’t load query history. Try again.',
-                                historyError,
-                            )}
-                            onRetry={onRefreshHistory}
-                        />
-                        {history.length
-                            ? history.slice(0, 30).map(item => (
-                                  <button
-                                      type="button"
-                                      className="history-card"
-                                      key={item.id}
-                                      onClick={() => onOpenRun(item)}
-                                  >
-                                      <span
-                                          className={cx('run-state-mark', `state-${item.status}`)}
-                                      />
-                                      <span className="history-card-copy">
-                                          <strong>
-                                              {item.sql.replace(/\s+/g, ' ').slice(0, 58)}
-                                          </strong>
-                                          <small>
-                                              {new Date(item.createdAt).toLocaleString()} <i>·</i>{' '}
-                                              {Math.round(item.elapsedMs)} ms <i>·</i>{' '}
-                                              {item.rowCount.toLocaleString()} rows
-                                          </small>
-                                      </span>
-                                      <span className="history-open">↗</span>
-                                  </button>
-                              ))
-                            : !historyError && (
-                                  <div className="inspector-empty">
-                                      <Icon name="history" />
-                                      <strong>No runs yet</strong>
-                                      <p>Your recent ClickHouse executions appear here.</p>
-                                  </div>
-                              )}
-                    </section>
-                )}
-                {inspector === 'documents' && (
-                    <section className="inspector-section">
-                        <div className="schema-heading">
-                            <span>{copy.queries.toUpperCase()}</span>
-                            <Button
-                                variant="ghost"
-                                className="toolbar-small"
-                                onClick={onRefreshDocuments}
-                            >
-                                ↻ Refresh
-                            </Button>
-                        </div>
-                        <WorkspaceInlineNotice
-                            feedback={readFailureFeedback(
-                                'Couldn’t load saved queries. Try again.',
-                                documentsError,
-                            )}
-                            onRetry={onRefreshDocuments}
-                        />
-                        {visibleDocuments.length
-                            ? visibleDocuments.map(document => (
-                                  <button
-                                      type="button"
-                                      className="document-card"
-                                      key={document.id}
-                                      onClick={() => onOpenDocument(document)}
-                                  >
-                                      <span className="file-type-icon small">SQL</span>
-                                      <span>
-                                          <strong>{document.name}</strong>
-                                          <small>
-                                              revision {document.revision} ·{' '}
-                                              {new Date(document.updatedAt).toLocaleDateString()}
-                                          </small>
-                                      </span>
-                                      <span className="history-open">↗</span>
-                                  </button>
-                              ))
-                            : !documentsError && (
-                                  <div className="inspector-empty">
-                                      <Icon name="documents" />
-                                      <strong>Nothing saved yet</strong>
-                                      <p>
-                                          Save the current query to keep a named revision on this
-                                          connection.
-                                      </p>
-                                  </div>
-                              )}
-                    </section>
-                )}
+                <InspectorSavedViews
+                    copy={copy}
+                    inspector={inspector}
+                    connection={connection}
+                    connectionId={connectionId}
+                    trusted={trusted}
+                    expert={expert}
+                    history={history}
+                    historyError={historyError}
+                    documentsError={documentsError}
+                    visibleDocuments={visibleDocuments}
+                    run={run}
+                    comparisonProfiles={comparisonProfiles}
+                    comparisonPipelines={comparisonPipelines}
+                    onRefreshHistory={onRefreshHistory}
+                    onRefreshDocuments={onRefreshDocuments}
+                    onOpenRun={onOpenRun}
+                    onOpenDocument={onOpenDocument}
+                />
                 {inspector === 'revisions' &&
                     renderRevisionHistory({
                         revisionsDocumentId,
@@ -520,6 +424,158 @@ export function InspectorPane({
                 )}
             </div>
         </aside>
+    );
+}
+
+function InspectorSavedViews({
+    copy,
+    inspector,
+    connection,
+    connectionId,
+    trusted,
+    expert,
+    history,
+    historyError,
+    documentsError,
+    visibleDocuments,
+    run,
+    comparisonProfiles,
+    comparisonPipelines,
+    onRefreshHistory,
+    onRefreshDocuments,
+    onOpenRun,
+    onOpenDocument,
+}: Pick<
+    InspectorPaneProps,
+    | 'copy'
+    | 'inspector'
+    | 'connection'
+    | 'connectionId'
+    | 'trusted'
+    | 'expert'
+    | 'history'
+    | 'historyError'
+    | 'documentsError'
+    | 'run'
+    | 'comparisonProfiles'
+    | 'comparisonPipelines'
+    | 'onRefreshHistory'
+    | 'onRefreshDocuments'
+    | 'onOpenRun'
+    | 'onOpenDocument'
+> & { visibleDocuments: QueryDocument[] }) {
+    return (
+        <>
+            {inspector === 'history' && (
+                <section className="inspector-section">
+                    <div className="schema-heading">
+                        <span>{copy.history.toUpperCase()}</span>
+                        {expert && (
+                            <RunComparisonLauncher
+                                connectionId={connectionId}
+                                trusted={trusted}
+                                history={history}
+                                initialRun={run}
+                                profiles={comparisonProfiles}
+                                pipelines={comparisonPipelines}
+                                queryLogAvailable={connection.manifest?.queryLog.available === true}
+                            />
+                        )}
+                        <Button
+                            variant="ghost"
+                            className="toolbar-small"
+                            onClick={onRefreshHistory}
+                        >
+                            ↻ Refresh
+                        </Button>
+                    </div>
+                    <WorkspaceInlineNotice
+                        feedback={readFailureFeedback(
+                            'Couldn’t load query history. Try again.',
+                            historyError,
+                        )}
+                        onRetry={onRefreshHistory}
+                    />
+                    {history.length
+                        ? history.slice(0, 30).map(item => (
+                              <button
+                                  type="button"
+                                  className="history-card"
+                                  key={item.id}
+                                  onClick={() => onOpenRun(item)}
+                              >
+                                  <span className={cx('run-state-mark', `state-${item.status}`)} />
+                                  <span className="history-card-copy">
+                                      <strong>{item.sql.replace(/\s+/g, ' ').slice(0, 58)}</strong>
+                                      <small>
+                                          {new Date(item.createdAt).toLocaleString()} <i>·</i>{' '}
+                                          {Math.round(item.elapsedMs)} ms <i>·</i>{' '}
+                                          {item.rowCount.toLocaleString()} rows
+                                      </small>
+                                  </span>
+                                  <span className="history-open">↗</span>
+                              </button>
+                          ))
+                        : !historyError && (
+                              <div className="inspector-empty">
+                                  <Icon name="history" />
+                                  <strong>No runs yet</strong>
+                                  <p>Your recent ClickHouse executions appear here.</p>
+                              </div>
+                          )}
+                </section>
+            )}
+            {inspector === 'documents' && (
+                <section className="inspector-section">
+                    <div className="schema-heading">
+                        <span>{copy.queries.toUpperCase()}</span>
+                        <Button
+                            variant="ghost"
+                            className="toolbar-small"
+                            onClick={onRefreshDocuments}
+                        >
+                            ↻ Refresh
+                        </Button>
+                    </div>
+                    <WorkspaceInlineNotice
+                        feedback={readFailureFeedback(
+                            'Couldn’t load saved queries. Try again.',
+                            documentsError,
+                        )}
+                        onRetry={onRefreshDocuments}
+                    />
+                    {visibleDocuments.length
+                        ? visibleDocuments.map(document => (
+                              <button
+                                  type="button"
+                                  className="document-card"
+                                  key={document.id}
+                                  onClick={() => onOpenDocument(document)}
+                              >
+                                  <span className="file-type-icon small">SQL</span>
+                                  <span>
+                                      <strong>{document.name}</strong>
+                                      <small>
+                                          revision {document.revision} ·{' '}
+                                          {new Date(document.updatedAt).toLocaleDateString()}
+                                      </small>
+                                  </span>
+                                  <span className="history-open">↗</span>
+                              </button>
+                          ))
+                        : !documentsError && (
+                              <div className="inspector-empty">
+                                  <Icon name="documents" />
+                                  <strong>Nothing saved yet</strong>
+                                  <p>
+                                      Save the current query to keep a named revision on this
+                                      connection.
+                                  </p>
+                              </div>
+                          )}
+                </section>
+            )}
+        </>
     );
 }
 

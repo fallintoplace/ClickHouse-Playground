@@ -54,6 +54,15 @@ function failureErrorLocation(
     return failureLocation;
 }
 
+function unrecordedFailureStatement(script: Script | undefined, scriptResultSelected: boolean) {
+    const failedStatement = script?.statements.find(
+        statement => statement.status === 'failed' && statement.error,
+    );
+    return failedStatement && !failedStatement.runId && !scriptResultSelected
+        ? failedStatement
+        : undefined;
+}
+
 function workspaceFailureState(
     active: Draft,
     run: Run | undefined,
@@ -61,13 +70,7 @@ function workspaceFailureState(
     scriptResultSelected: boolean,
     failedQueryError: FailedQueryError | undefined,
 ) {
-    const failedScriptStatement = script?.statements.find(
-        statement => statement.status === 'failed' && statement.error,
-    );
-    const unrecordedScriptFailure =
-        failedScriptStatement && !failedScriptStatement.runId && !scriptResultSelected
-            ? failedScriptStatement
-            : undefined;
+    const unrecordedScriptFailure = unrecordedFailureStatement(script, scriptResultSelected);
     const failureError =
         failedQueryError?.error ??
         unrecordedScriptFailure?.error ??

@@ -1,4 +1,5 @@
 import { scaleLinear, scaleSqrt } from 'd3';
+import type { ScaleLinear, ScalePower } from 'd3';
 import { useEffect, useMemo, useState } from 'react';
 import type {
     WorkloadSnapshot,
@@ -38,15 +39,13 @@ function byteNumber(value: string) {
     }
 }
 
-export function WorkloadExplorer({
-    connectionId,
-    capability,
-    trusted,
-}: {
+type WorkloadExplorerProps = {
     connectionId: string;
     capability?: Capability;
     trusted: boolean;
-}) {
+};
+
+export function WorkloadExplorer({ connectionId, capability, trusted }: WorkloadExplorerProps) {
     const [minutes, setMinutes] = useState<WorkloadWindow>(60);
     const [snapshotState, setSnapshotState] = useState<{
         key: string;
@@ -187,99 +186,12 @@ export function WorkloadExplorer({
                             <strong>{totalErrors.toLocaleString()}</strong>
                         </article>
                     </div>
-                    <div className="workload-scatter-card">
-                        <div className="workload-section-heading">
-                            <div>
-                                <span className="eyebrow">RECENT EXECUTIONS</span>
-                                <strong>Duration vs. peak memory</strong>
-                            </div>
-                            <span className="workload-chart-legend">
-                                <i />
-                                Successful <i className="is-error" />
-                                Failed · Bubble size: rows read
-                            </span>
-                        </div>
-                        {snapshot.points.length ? (
-                            <ScrollEdgeFrame<HTMLDivElement> className="workload-scatter-frame">
-                                {ref => (
-                                    <div ref={ref} className="workload-scatter-scroll">
-                                        <svg
-                                            className="workload-scatter-svg"
-                                            viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                                            role="group"
-                                            aria-label="Recent query execution duration plotted against memory usage"
-                                        >
-                                            {chart.x.ticks(5).map(tick => (
-                                                <g key={`x-${tick}`} className="workload-axis">
-                                                    <line
-                                                        x1={chart.x(tick)}
-                                                        x2={chart.x(tick)}
-                                                        y1={margin.top}
-                                                        y2={chartHeight - margin.bottom}
-                                                    />
-                                                    <text
-                                                        x={chart.x(tick)}
-                                                        y={chartHeight - margin.bottom + 22}
-                                                        textAnchor="middle"
-                                                    >
-                                                        {Math.round(tick)} ms
-                                                    </text>
-                                                </g>
-                                            ))}
-                                            {chart.y.ticks(4).map(tick => (
-                                                <g key={`y-${tick}`} className="workload-axis">
-                                                    <line
-                                                        x1={margin.left}
-                                                        x2={chartWidth - margin.right}
-                                                        y1={chart.y(tick)}
-                                                        y2={chart.y(tick)}
-                                                    />
-                                                    <text
-                                                        x={margin.left - 10}
-                                                        y={chart.y(tick) + 3}
-                                                        textAnchor="end"
-                                                    >
-                                                        {formatBytes(tick)}
-                                                    </text>
-                                                </g>
-                                            ))}
-                                            {snapshot.points.map(point => {
-                                                const active =
-                                                    !selectedFamily ||
-                                                    point.hash === selectedFamily.hash;
-                                                return (
-                                                    <circle
-                                                        key={point.queryId}
-                                                        className={`workload-scatter-point${point.failed ? ' is-error' : ''}${active ? '' : ' is-muted'}`}
-                                                        cx={chart.x(point.durationMs)}
-                                                        cy={chart.y(byteNumber(point.memory))}
-                                                        r={chart.radius(byteNumber(point.readRows))}
-                                                        role="button"
-                                                        tabIndex={0}
-                                                        aria-label={`${point.failed ? 'Failed' : 'Successful'} query · ${point.durationMs} ms · ${formatBytes(point.memory)} peak memory · ${count(point.readRows)} rows read`}
-                                                        onClick={() => setSelectedHash(point.hash)}
-                                                        onKeyDown={event => {
-                                                            if (
-                                                                event.key === 'Enter' ||
-                                                                event.key === ' '
-                                                            )
-                                                                setSelectedHash(point.hash);
-                                                        }}
-                                                    >
-                                                        <title>{`${point.at} · ${point.durationMs} ms · ${formatBytes(point.memory)} · ${count(point.readRows)} rows read · ${point.queryId}`}</title>
-                                                    </circle>
-                                                );
-                                            })}
-                                        </svg>
-                                    </div>
-                                )}
-                            </ScrollEdgeFrame>
-                        ) : (
-                            <div className="observability-state">
-                                No query executions in this time window.
-                            </div>
-                        )}
-                    </div>
+                    <WorkloadScatterPlot
+                        snapshot={snapshot}
+                        chart={chart}
+                        selectedFamily={selectedFamily}
+                        onSelectFamily={setSelectedHash}
+                    />
                     <div className="workload-browser">
                         <section className="workload-family-list" aria-label="Query families">
                             <div className="workload-section-heading">
@@ -392,5 +304,113 @@ export function WorkloadExplorer({
                 </>
             )}
         </section>
+    );
+}
+
+type WorkloadChart = {
+    x: ScaleLinear<number, number, never>;
+    y: ScalePower<number, number, never>;
+    radius: ScalePower<number, number, never>;
+};
+
+function WorkloadScatterPlot({
+    snapshot,
+    chart,
+    selectedFamily,
+    onSelectFamily,
+}: {
+    snapshot: WorkloadSnapshot;
+    chart: WorkloadChart;
+    selectedFamily?: WorkloadSnapshot['families'][number];
+    onSelectFamily: (hash: string) => void;
+}) {
+    return (
+        <div className="workload-scatter-card">
+            <div className="workload-section-heading">
+                <div>
+                    <span className="eyebrow">RECENT EXECUTIONS</span>
+                    <strong>Duration vs. peak memory</strong>
+                </div>
+                <span className="workload-chart-legend">
+                    <i />
+                    Successful <i className="is-error" />
+                    Failed · Bubble size: rows read
+                </span>
+            </div>
+            {snapshot.points.length ? (
+                <ScrollEdgeFrame<HTMLDivElement> className="workload-scatter-frame">
+                    {ref => (
+                        <div ref={ref} className="workload-scatter-scroll">
+                            <svg
+                                className="workload-scatter-svg"
+                                viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                                role="group"
+                                aria-label="Recent query execution duration plotted against memory usage"
+                            >
+                                {chart.x.ticks(5).map(tick => (
+                                    <g key={`x-${tick}`} className="workload-axis">
+                                        <line
+                                            x1={chart.x(tick)}
+                                            x2={chart.x(tick)}
+                                            y1={margin.top}
+                                            y2={chartHeight - margin.bottom}
+                                        />
+                                        <text
+                                            x={chart.x(tick)}
+                                            y={chartHeight - margin.bottom + 22}
+                                            textAnchor="middle"
+                                        >
+                                            {Math.round(tick)} ms
+                                        </text>
+                                    </g>
+                                ))}
+                                {chart.y.ticks(4).map(tick => (
+                                    <g key={`y-${tick}`} className="workload-axis">
+                                        <line
+                                            x1={margin.left}
+                                            x2={chartWidth - margin.right}
+                                            y1={chart.y(tick)}
+                                            y2={chart.y(tick)}
+                                        />
+                                        <text
+                                            x={margin.left - 10}
+                                            y={chart.y(tick) + 3}
+                                            textAnchor="end"
+                                        >
+                                            {formatBytes(tick)}
+                                        </text>
+                                    </g>
+                                ))}
+                                {snapshot.points.map(point => {
+                                    const active =
+                                        !selectedFamily || point.hash === selectedFamily.hash;
+                                    return (
+                                        <circle
+                                            key={point.queryId}
+                                            className={`workload-scatter-point${point.failed ? ' is-error' : ''}${active ? '' : ' is-muted'}`}
+                                            cx={chart.x(point.durationMs)}
+                                            cy={chart.y(byteNumber(point.memory))}
+                                            r={chart.radius(byteNumber(point.readRows))}
+                                            role="button"
+                                            tabIndex={0}
+                                            aria-label={`${point.failed ? 'Failed' : 'Successful'} query · ${point.durationMs} ms · ${formatBytes(point.memory)} peak memory · ${count(point.readRows)} rows read`}
+                                            onClick={() => onSelectFamily(point.hash)}
+                                            onKeyDown={event => {
+                                                if (event.key === 'Enter' || event.key === ' ')
+                                                    onSelectFamily(point.hash);
+                                            }}
+                                        >
+                                            <title>{`${point.at} · ${point.durationMs} ms · ${formatBytes(point.memory)} · ${count(point.readRows)} rows read · ${point.queryId}`}</title>
+                                        </circle>
+                                    );
+                                })}
+                            </svg>
+                        </div>
+                    )}
+                </ScrollEdgeFrame>
+            ) : (
+                <div className="observability-state">No query executions in this time window.</div>
+            )}
+        </div>
     );
 }

@@ -6,6 +6,20 @@ import { Button, cx } from '../../../ui/components/ui';
 import { formatBytes, formatCount } from '../../../browser/format';
 import { Icon } from '../../../ui/components/icons';
 
+type ObjectDetailsProps = {
+    copy: Copy['common'];
+    selection: ExplorerSelection;
+    trusted: boolean;
+    expert: boolean;
+    copiedId?: string;
+    onClose?: () => void;
+    onInsert: (value: string) => void;
+    onCopy: (value: string, id: string) => void | Promise<void>;
+    onOpenSqlDraft: (name: string, sql: string, run: boolean, reuseExisting?: boolean) => void;
+    onOpenReference: (name: string, type: string) => void;
+    onOpenParts: (table: SchemaTable) => void;
+};
+
 export function ObjectDetails({
     copy,
     selection,
@@ -18,19 +32,7 @@ export function ObjectDetails({
     onOpenSqlDraft,
     onOpenReference,
     onOpenParts,
-}: {
-    copy: Copy['common'];
-    selection: ExplorerSelection;
-    trusted: boolean;
-    expert: boolean;
-    copiedId?: string;
-    onClose?: () => void;
-    onInsert: (value: string) => void;
-    onCopy: (value: string, id: string) => void | Promise<void>;
-    onOpenSqlDraft: (name: string, sql: string, run: boolean, reuseExisting?: boolean) => void;
-    onOpenReference: (name: string, type: string) => void;
-    onOpenParts: (table: SchemaTable) => void;
-}) {
+}: ObjectDetailsProps) {
     if (selection.kind === 'relation') {
         const { table, columns } = selection;
         const qualified = qualifiedTableName(table);

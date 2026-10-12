@@ -45,6 +45,17 @@ function writeConnectionToUrl(id: string) {
     window.history.replaceState(window.history.state, '', url);
 }
 
+function connectionStatusFor(
+    connection: Connected | undefined,
+    isCloudConnection: boolean,
+    connectionNeedsTest: boolean,
+): 'Connected · read/write' | 'Retest needed' | 'Read-only' | 'Review needed' | 'Test needed' {
+    if (isCloudConnection) return 'Connected · read/write';
+    if (connection?.trusted) return connectionNeedsTest ? 'Retest needed' : 'Read-only';
+    if (connection?.manifest) return 'Review needed';
+    return 'Test needed';
+}
+
 function cloudProfileDefaults(connection?: Connected): SavedCloudConnectionProfile | undefined {
     if (!connection) return undefined;
     try {
@@ -231,94 +242,31 @@ function App() {
 
     if (!session)
         return (
-            <main className="auth-screen">
-                <section className="auth-card animate-enter">
-                    <Brand />
-                    <span className="eyebrow mt-8">{copy.auth.privateWorkspace}</span>
-                    <h1>{sessionError ? copy.auth.unavailable : copy.auth.opening}</h1>
-                    {sessionError ? (
-                        <>
-                            <p>{sessionError}</p>
-                            <Button
-                                variant="primary"
-                                onClick={() => {
-                                    setSessionError('');
-                                    void loadSession().catch(error =>
-                                        setSessionError(message(error)),
-                                    );
-                                }}
-                            >
-                                {copy.auth.retry}
-                            </Button>
-                        </>
-                    ) : (
-                        <div className="splash-status">
-                            <Spinner />
-                            <p>{copy.auth.opening}</p>
-                        </div>
-                    )}
-                </section>
-            </main>
+            <SessionLoadingScreen
+                sessionError={sessionError}
+                onRetry={() => {
+                    setSessionError('');
+                    void loadSession().catch(error => setSessionError(message(error)));
+                }}
+            />
         );
     if (!session.principal)
         return (
-            <main className="auth-screen">
-                <form
-                    className="auth-card animate-enter"
-                    onSubmit={event => {
-                        event.preventDefault();
-                        void login();
-                    }}
-                >
-                    <Brand />
-                    <span className="eyebrow mt-8">{copy.auth.privateWorkspace}</span>
-                    <h1>{copy.auth.title}</h1>
-                    <p>{copy.auth.description}</p>
-                    <label className="field-label">
-                        {copy.auth.token}
-                        <input
-                            className="field-input mt-2"
-                            type="password"
-                            autoComplete="current-password"
-                            value={token}
-                            onChange={event => setToken(event.target.value)}
-                            autoFocus
-                        />
-                    </label>
-                    {sessionError && <div className="callout callout-error">{sessionError}</div>}
-                    <Button
-                        variant="primary"
-                        type="submit"
-                        disabled={busy || !token}
-                        className="mt-4 w-full"
-                    >
-                        {busy ? copy.auth.opening : copy.auth.open}
-                        <span className="button-arrow">↗</span>
-                    </Button>
-                    <div className="auth-footnote">
-                        <Icon name="lock" /> {copy.auth.credentialsNotice}
-                    </div>
-                </form>
-            </main>
+            <LoginScreen
+                sessionError={sessionError}
+                token={token}
+                busy={busy}
+                onTokenChange={setToken}
+                onLogin={() => void login()}
+            />
         );
 
     const connectionNeedsTest = Boolean(connection && !session.demo && !connection.manifest);
-    let connectionStatus:
-        'Connected · read/write' | 'Retest needed' | 'Read-only' | 'Review needed' | 'Test needed';
-
-    if (isCloudConnection) {
-        connectionStatus = 'Connected · read/write';
-    } else if (connection?.trusted) {
-        if (connectionNeedsTest) {
-            connectionStatus = 'Retest needed';
-        } else {
-            connectionStatus = 'Read-only';
-        }
-    } else if (connection?.manifest) {
-        connectionStatus = 'Review needed';
-    } else {
-        connectionStatus = 'Test needed';
-    }
+    const connectionStatus = connectionStatusFor(
+        connection,
+        isCloudConnection,
+        connectionNeedsTest,
+    );
 
     return (
         <div className="application" data-experience={experience}>
@@ -420,6 +368,92 @@ function App() {
                 />
             )}
         </div>
+    );
+}
+
+function SessionLoadingScreen({
+    sessionError,
+    onRetry,
+}: {
+    sessionError: string;
+    onRetry: () => void;
+}) {
+    return (
+        <main className="auth-screen">
+            <section className="auth-card animate-enter">
+                <Brand />
+                <span className="eyebrow mt-8">{copy.auth.privateWorkspace}</span>
+                <h1>{sessionError ? copy.auth.unavailable : copy.auth.opening}</h1>
+                {sessionError ? (
+                    <>
+                        <p>{sessionError}</p>
+                        <Button variant="primary" onClick={onRetry}>
+                            {copy.auth.retry}
+                        </Button>
+                    </>
+                ) : (
+                    <div className="splash-status">
+                        <Spinner />
+                        <p>{copy.auth.opening}</p>
+                    </div>
+                )}
+            </section>
+        </main>
+    );
+}
+
+function LoginScreen({
+    sessionError,
+    token,
+    busy,
+    onTokenChange,
+    onLogin,
+}: {
+    sessionError: string;
+    token: string;
+    busy: boolean;
+    onTokenChange: (token: string) => void;
+    onLogin: () => void;
+}) {
+    return (
+        <main className="auth-screen">
+            <form
+                className="auth-card animate-enter"
+                onSubmit={event => {
+                    event.preventDefault();
+                    onLogin();
+                }}
+            >
+                <Brand />
+                <span className="eyebrow mt-8">{copy.auth.privateWorkspace}</span>
+                <h1>{copy.auth.title}</h1>
+                <p>{copy.auth.description}</p>
+                <label className="field-label">
+                    {copy.auth.token}
+                    <input
+                        className="field-input mt-2"
+                        type="password"
+                        autoComplete="current-password"
+                        value={token}
+                        onChange={event => onTokenChange(event.target.value)}
+                        autoFocus
+                    />
+                </label>
+                {sessionError && <div className="callout callout-error">{sessionError}</div>}
+                <Button
+                    variant="primary"
+                    type="submit"
+                    disabled={busy || !token}
+                    className="mt-4 w-full"
+                >
+                    {busy ? copy.auth.opening : copy.auth.open}
+                    <span className="button-arrow">↗</span>
+                </Button>
+                <div className="auth-footnote">
+                    <Icon name="lock" /> {copy.auth.credentialsNotice}
+                </div>
+            </form>
+        </main>
     );
 }
 

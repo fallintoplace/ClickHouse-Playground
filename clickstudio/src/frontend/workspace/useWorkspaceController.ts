@@ -136,6 +136,130 @@ function useSchemaRefreshAfterDdl(
     return track;
 }
 
+function createWorkspaceConnectionActions({
+    connection,
+    connectionLabel,
+    trusted,
+    demoMode,
+    onRefreshConnections,
+    perform,
+    setError,
+}: {
+    connection: Connected;
+    connectionLabel: string;
+    trusted: boolean;
+    demoMode: boolean;
+    onRefreshConnections: WorkspaceProps['onRefreshConnections'];
+    perform: ReturnType<typeof useWorkspaceExecutionView>['perform'];
+    setError: ReturnType<typeof useWorkspaceUiState>['setError'];
+}) {
+    const trustConnection = () =>
+        perform(
+            async () => {
+                if (
+                    !trusted &&
+                    !demoMode &&
+                    !window.confirm(
+                        `Check these connection details before continuing:\n\nConnection: ${connectionLabel}\nServer: ${connection.host}\nDatabase: ${connection.database}\nUser: ${connection.username}\nAccess: read-only\n\nAllow read-only access so you can run queries?`,
+                    )
+                )
+                    return;
+                await post(`/connections/${encodeURIComponent(connection.id)}/trust`, {
+                    trusted: !trusted,
+                    confirmation: connection.id,
+                });
+                await onRefreshConnections();
+            },
+            'save',
+            caught =>
+                setError('Couldn’t update connection access. Check its details and try again.', {
+                    detail: message(caught),
+                }),
+        );
+    const testConnection = () =>
+        perform(
+            async () => {
+                await post<Connected>(`/connections/${encodeURIComponent(connection.id)}/test`);
+                await onRefreshConnections();
+            },
+            'save',
+            caught =>
+                setError('Couldn’t test the connection. Check its details and try again.', {
+                    detail: message(caught),
+                }),
+        );
+    return { trustConnection, testConnection };
+}
+
+function useWorkspacePanelEffects({
+    active,
+    inspector,
+    loadDocumentRevisions,
+    experience,
+    setCompactViewport,
+    setDrawerOpen,
+}: {
+    active: Draft;
+    inspector: Inspector;
+    loadDocumentRevisions: ReturnType<typeof useWorkspaceData>['loadDocumentRevisions'];
+    experience: ExperienceLevel;
+    setCompactViewport: ReturnType<typeof useWorkspaceUiState>['setCompactViewport'];
+    setDrawerOpen: ReturnType<typeof useWorkspaceUiState>['setDrawerOpen'];
+}) {
+    useEffect(() => {
+        if (inspector === 'revisions') void loadDocumentRevisions(active.serverId);
+    }, [active.serverId, inspector, loadDocumentRevisions]);
+
+    useEffect(() => {
+        const media = window.matchMedia('(max-width: 850px)');
+        const update = () => {
+            setCompactViewport(media.matches);
+            setDrawerOpen(experience === 'expert' && !media.matches);
+        };
+        update();
+        media.addEventListener('change', update);
+        return () => media.removeEventListener('change', update);
+    }, [experience, setCompactViewport, setDrawerOpen]);
+}
+
+function useWorkspaceDraftActions({
+    active,
+    setWorkspace,
+    workspaceRef,
+    clearDraftFeedbackInfo,
+}: {
+    active: Draft;
+    setWorkspace: Dispatch<SetStateAction<WorkspaceState>>;
+    workspaceRef: { current: WorkspaceState };
+    clearDraftFeedbackInfo: ReturnType<typeof useWorkspaceUiState>['clearDraftFeedbackInfo'];
+}) {
+    const update = useCallback(
+        (id: string, change: (draft: Draft) => Draft) =>
+            setWorkspace(current => workspaceWithUpdatedDraft(current, id, change)),
+        [setWorkspace],
+    );
+    const clearUnavailableRun = useCallback(
+        (runId: string) =>
+            update(active.id, draft =>
+                draft.activeRunId === runId ? { ...draft, activeRunId: undefined } : draft,
+            ),
+        [active.id, update],
+    );
+    const patch = useCallback(
+        (values: Partial<Draft>) => {
+            const draft = workspaceRef.current.tabs.find(item => item.id === active.id);
+            const contentChanged = Object.entries(values).some(
+                ([key, value]) =>
+                    key !== 'from' && key !== 'to' && value !== draft?.[key as keyof Draft],
+            );
+            update(active.id, draft => ({ ...draft, ...values }));
+            if (contentChanged) clearDraftFeedbackInfo(active.id);
+        },
+        [active.id, update, clearDraftFeedbackInfo, workspaceRef],
+    );
+    return { update, clearUnavailableRun, patch };
+}
+
 export function useWorkspaceController({
     connection,
     connectionLabel,
@@ -154,15 +278,7 @@ export function useWorkspaceController({
     workspaceRef.current = workspace;
     const tabs = useWorkspaceTabs(workspace, setWorkspace);
     const { active, finishTabRename: updateTabRename } = tabs;
-    const emptySqlActionRef = useRef<HTMLButtonElement>(null);
-    const previousTabCount = useRef(workspace.tabs.length);
-    useEffect(() => {
-        const closedLastTab = previousTabCount.current > 0 && workspace.tabs.length === 0;
-        previousTabCount.current = workspace.tabs.length;
-        if (!closedLastTab) return;
-        const frame = window.requestAnimationFrame(() => emptySqlActionRef.current?.focus());
-        return () => window.cancelAnimationFrame(frame);
-    }, [workspace.tabs.length]);
+    const emptySqlActionRef = useFocusEmptySqlAction(workspace.tabs.length);
     const activeRunId = active.activeRunId;
     const activeRunIdRef = useRef(activeRunId);
     activeRunIdRef.current = activeRunId;
@@ -253,45 +369,20 @@ export function useWorkspaceController({
         openInspectorDrawer: experience === 'expert',
     });
     const sqlExamples = useMemo(() => sqlExamplesFor(connection, schema), [connection, schema]);
-    useEffect(() => {
-        if (inspector === 'revisions') void loadDocumentRevisions(active.serverId);
-    }, [active.serverId, inspector, loadDocumentRevisions]);
-
-    useEffect(() => {
-        const media = window.matchMedia('(max-width: 850px)');
-        const update = () => {
-            setCompactViewport(media.matches);
-            setDrawerOpen(experience === 'expert' && !media.matches);
-        };
-        update();
-        media.addEventListener('change', update);
-        return () => media.removeEventListener('change', update);
-    }, [experience, setCompactViewport, setDrawerOpen]);
-
-    const update = useCallback(
-        (id: string, change: (draft: Draft) => Draft) =>
-            setWorkspace(current => workspaceWithUpdatedDraft(current, id, change)),
-        [],
-    );
-    const clearUnavailableRun = useCallback(
-        (runId: string) =>
-            update(active.id, draft =>
-                draft.activeRunId === runId ? { ...draft, activeRunId: undefined } : draft,
-            ),
-        [active.id, update],
-    );
-    const patch = useCallback(
-        (values: Partial<Draft>) => {
-            const draft = workspaceRef.current.tabs.find(item => item.id === active.id);
-            const contentChanged = Object.entries(values).some(
-                ([key, value]) =>
-                    key !== 'from' && key !== 'to' && value !== draft?.[key as keyof Draft],
-            );
-            update(active.id, draft => ({ ...draft, ...values }));
-            if (contentChanged) clearDraftFeedbackInfo(active.id);
-        },
-        [active.id, update, clearDraftFeedbackInfo, workspaceRef],
-    );
+    useWorkspacePanelEffects({
+        active,
+        inspector,
+        loadDocumentRevisions,
+        experience,
+        setCompactViewport,
+        setDrawerOpen,
+    });
+    const { update, clearUnavailableRun, patch } = useWorkspaceDraftActions({
+        active,
+        setWorkspace,
+        workspaceRef,
+        clearDraftFeedbackInfo,
+    });
     const formatActiveSql = useWorkspaceSqlFormatter(
         active,
         editor,
@@ -364,7 +455,7 @@ export function useWorkspaceController({
         panels: executionView.panels,
     });
 
-    const saveDraft = useWorkspaceDocumentSave({
+    const { saveDraft, finishTabRename, restoreDocumentRevision } = useWorkspaceDocumentActions({
         active,
         reviewingSql: Boolean(assistant.editorProposal),
         busy,
@@ -378,80 +469,27 @@ export function useWorkspaceController({
         loadDocumentRevisions,
         beginDraftFeedback,
         clearToast,
-        onFailure: (draft, caught, complete) =>
-            reportDocumentFailure(draft, 'save', caught, complete),
-    });
-
-    const finishTabRename = (
-        id: string,
-        value: string,
-        restoreFocus = false,
-        saveAfterRename = true,
-    ) => {
-        const renamedDraft = updateTabRename(id, value, restoreFocus);
-        if (saveAfterRename && renamedDraft) void saveDraft(renamedDraft);
-    };
-
-    const restoreDocumentRevision = createRevisionRestorer({
-        perform,
-        workspaceRef,
-        setRestoreRevisionConfirmation,
         update,
+        updateTabRename,
+        setRestoreRevisionConfirmation,
         data,
-        beginDraftFeedback,
-        clearToast,
         reportDocumentFailure,
     });
 
-    const loadSnapshot = useResultSnapshot({
+    useWorkspaceSnapshotState({
+        active,
         activeRunId,
+        activeRunIdRef,
+        exampleChartRunId,
+        setExampleChartRunId,
         run,
         snapshot,
         setSnapshotForRun,
-        onSnapshot: (runId, full) => {
-            setAssetReadFeedback(runId, undefined);
-            if (activeRunIdRef.current !== runId || workspaceRef.current.activeId !== active.id)
-                return;
-            const suggestion = recommendChart(full.columns, full.rows);
-            if (active.chart.kind === 'table' && suggestion.config.kind !== 'table')
-                patch({ chart: suggestion.config });
-        },
+        setAssetReadFeedback,
+        patch,
+        view,
+        workspaceRef,
     });
-
-    const reportSnapshotFailure = useSnapshotReadFailure(loadSnapshot, setAssetReadFeedback);
-
-    useEffect(() => {
-        if (
-            !exampleChartRunId ||
-            exampleChartRunId !== activeRunId ||
-            run?.id !== exampleChartRunId ||
-            !terminal(run)
-        )
-            return;
-        if (snapshot?.runId === exampleChartRunId || run.resultState !== 'reopenable') {
-            setExampleChartRunId(undefined);
-            return;
-        }
-        void loadSnapshot()
-            .catch(caught => reportSnapshotFailure(exampleChartRunId, caught))
-            .finally(() => {
-                setExampleChartRunId(current =>
-                    current === exampleChartRunId ? undefined : current,
-                );
-            });
-    }, [activeRunId, exampleChartRunId, loadSnapshot, run, reportSnapshotFailure, snapshot?.runId]);
-
-    useEffect(() => {
-        if (
-            !run ||
-            !['chart', 'map', 'indexes', 'plan', 'pipeline', 'runtime'].includes(view) ||
-            !terminal(run) ||
-            run.resultState !== 'reopenable' ||
-            snapshot?.runId === run.id
-        )
-            return;
-        void loadSnapshot().catch(caught => reportSnapshotFailure(run.id, caught));
-    }, [loadSnapshot, run, reportSnapshotFailure, snapshot?.runId, view]);
 
     const evidenceActions = createQueryEvidenceActions({
         activeRunId,
@@ -471,43 +509,16 @@ export function useWorkspaceController({
         if (next === 'pipeline') void perform(loadPipeline, 'save');
     };
 
-    const trustConnection = () =>
-        perform(
-            async () => {
-                if (
-                    !trusted &&
-                    !demoMode &&
-                    !window.confirm(
-                        `Check these connection details before continuing:\n\nConnection: ${connectionLabel}\nServer: ${connection.host}\nDatabase: ${connection.database}\nUser: ${connection.username}\nAccess: read-only\n\nAllow read-only access so you can run queries?`,
-                    )
-                )
-                    return;
-                await post(`/connections/${encodeURIComponent(connection.id)}/trust`, {
-                    trusted: !trusted,
-                    confirmation: connection.id,
-                });
-                await onRefreshConnections();
-            },
-            'save',
-            caught =>
-                setError('Couldn’t update connection access. Check its details and try again.', {
-                    detail: message(caught),
-                }),
-        );
+    const { trustConnection, testConnection } = createWorkspaceConnectionActions({
+        connection,
+        connectionLabel,
+        trusted,
+        demoMode,
+        onRefreshConnections,
+        perform,
+        setError,
+    });
     trustActionRef.current = trustConnection;
-
-    const testConnection = () =>
-        perform(
-            async () => {
-                await post<Connected>(`/connections/${encodeURIComponent(connection.id)}/test`);
-                await onRefreshConnections();
-            },
-            'save',
-            caught =>
-                setError('Couldn’t test the connection. Check its details and try again.', {
-                    detail: message(caught),
-                }),
-        );
     testConnectionActionRef.current = testConnection;
 
     const openDocument = (document: QueryDocument) => {
@@ -555,6 +566,171 @@ export function useWorkspaceController({
         executionView,
         resultActions,
     });
+}
+
+function useFocusEmptySqlAction(tabCount: number) {
+    const emptySqlActionRef = useRef<HTMLButtonElement>(null);
+    const previousTabCount = useRef(tabCount);
+    useEffect(() => {
+        const closedLastTab = previousTabCount.current > 0 && tabCount === 0;
+        previousTabCount.current = tabCount;
+        if (!closedLastTab) return;
+        const frame = window.requestAnimationFrame(() => emptySqlActionRef.current?.focus());
+        return () => window.cancelAnimationFrame(frame);
+    }, [tabCount]);
+    return emptySqlActionRef;
+}
+
+function useWorkspaceDocumentActions({
+    active,
+    busy,
+    reviewingSql,
+    connectionId,
+    workspaceRef,
+    inspectorRef,
+    perform,
+    updateDraft,
+    setSavingDraftIds,
+    setDocuments,
+    beginDraftFeedback,
+    clearToast,
+    loadDocumentRevisions,
+    update,
+    updateTabRename,
+    setRestoreRevisionConfirmation,
+    data,
+    reportDocumentFailure,
+}: Omit<Parameters<typeof useWorkspaceDocumentSave>[0], 'onFailure'> & {
+    update: (id: string, change: (draft: Draft) => Draft) => void;
+    updateTabRename: ReturnType<typeof useWorkspaceTabs>['finishTabRename'];
+    setRestoreRevisionConfirmation: ReturnType<
+        typeof useWorkspaceUiState
+    >['setRestoreRevisionConfirmation'];
+    data: ReturnType<typeof useWorkspaceData>;
+    reportDocumentFailure: ReturnType<typeof createDocumentFailureReporter>;
+}) {
+    const saveDraft = useWorkspaceDocumentSave({
+        active,
+        reviewingSql,
+        busy,
+        connectionId,
+        workspaceRef,
+        inspectorRef,
+        perform,
+        updateDraft,
+        setSavingDraftIds,
+        setDocuments,
+        loadDocumentRevisions,
+        beginDraftFeedback,
+        clearToast,
+        onFailure: (draft, caught, complete) =>
+            reportDocumentFailure(draft, 'save', caught, complete),
+    });
+    const finishTabRename = (
+        id: string,
+        value: string,
+        restoreFocus = false,
+        saveAfterRename = true,
+    ) => {
+        const renamedDraft = updateTabRename(id, value, restoreFocus);
+        if (saveAfterRename && renamedDraft) void saveDraft(renamedDraft);
+    };
+    const restoreDocumentRevision = createRevisionRestorer({
+        perform,
+        workspaceRef,
+        setRestoreRevisionConfirmation,
+        update,
+        data,
+        beginDraftFeedback,
+        clearToast,
+        reportDocumentFailure,
+    });
+    return { saveDraft, finishTabRename, restoreDocumentRevision };
+}
+
+function useWorkspaceSnapshotState({
+    active,
+    activeRunId,
+    activeRunIdRef,
+    exampleChartRunId,
+    setExampleChartRunId,
+    run,
+    snapshot,
+    setSnapshotForRun,
+    setAssetReadFeedback,
+    patch,
+    view,
+    workspaceRef,
+}: {
+    active: Draft;
+    activeRunId: string | undefined;
+    activeRunIdRef: { current: string | undefined };
+    exampleChartRunId: string | undefined;
+    setExampleChartRunId: Dispatch<SetStateAction<string | undefined>>;
+    run: Run | undefined;
+    snapshot: ReturnType<typeof useRunEvidence>['snapshot'];
+    setSnapshotForRun: ReturnType<typeof useRunEvidence>['setSnapshotForRun'];
+    setAssetReadFeedback: ReturnType<typeof useRunEvidence>['setAssetReadFeedback'];
+    patch: (values: Partial<Draft>) => void;
+    view: ResultsView;
+    workspaceRef: { current: WorkspaceState };
+}) {
+    const loadSnapshot = useResultSnapshot({
+        activeRunId,
+        run,
+        snapshot,
+        setSnapshotForRun,
+        onSnapshot: (runId, full) => {
+            setAssetReadFeedback(runId, undefined);
+            if (activeRunIdRef.current !== runId || workspaceRef.current.activeId !== active.id)
+                return;
+            const suggestion = recommendChart(full.columns, full.rows);
+            if (active.chart.kind === 'table' && suggestion.config.kind !== 'table')
+                patch({ chart: suggestion.config });
+        },
+    });
+    const reportSnapshotFailure = useSnapshotReadFailure(loadSnapshot, setAssetReadFeedback);
+
+    useEffect(() => {
+        if (
+            !exampleChartRunId ||
+            exampleChartRunId !== activeRunId ||
+            run?.id !== exampleChartRunId ||
+            !terminal(run)
+        )
+            return;
+        if (snapshot?.runId === exampleChartRunId || run.resultState !== 'reopenable') {
+            setExampleChartRunId(undefined);
+            return;
+        }
+        void loadSnapshot()
+            .catch(caught => reportSnapshotFailure(exampleChartRunId, caught))
+            .finally(() => {
+                setExampleChartRunId(current =>
+                    current === exampleChartRunId ? undefined : current,
+                );
+            });
+    }, [
+        activeRunId,
+        exampleChartRunId,
+        loadSnapshot,
+        run,
+        reportSnapshotFailure,
+        setExampleChartRunId,
+        snapshot?.runId,
+    ]);
+
+    useEffect(() => {
+        if (
+            !run ||
+            !['chart', 'map', 'indexes', 'plan', 'pipeline', 'runtime'].includes(view) ||
+            !terminal(run) ||
+            run.resultState !== 'reopenable' ||
+            snapshot?.runId === run.id
+        )
+            return;
+        void loadSnapshot().catch(caught => reportSnapshotFailure(run.id, caught));
+    }, [loadSnapshot, run, reportSnapshotFailure, snapshot?.runId, view]);
 }
 
 function useDismissVisibleDraftToast(

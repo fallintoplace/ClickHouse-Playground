@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import type { ProfilePipeline, QueryProfile } from '../../../shared/queries/inspection/types';
-import type { ResultPage } from '../../../shared/queries/results/types';
+import type { ApiError } from '../../../shared/common/errors';
+import type { Result, ResultPage } from '../../../shared/queries/results/types';
 import type { Run, Script } from '../../../shared/queries/execution/types';
 import type { FlamegraphSnapshot } from '../../../shared/queries/inspection/flamegraph';
 import type { NativeParseSnapshot, NativeParserStatus } from '../../../shared/sql/parser';
@@ -86,8 +87,6 @@ export function WorkspaceResultsPanel({
     const [tableToolbar, setTableToolbar] = useState<HTMLDivElement | null>(null);
     const [tableRowCount, setTableRowCount] = useState<HTMLSpanElement | null>(null);
     const {
-        active,
-        connection,
         copy,
         run,
         failedAttempt,
@@ -95,35 +94,11 @@ export function WorkspaceResultsPanel({
         history,
         page,
         resultPage,
-        profile,
-        pipeline,
-        flamegraph,
-        profilesByRun,
-        pipelinesByRun,
-        nativeParserStatus,
-        nativeParseSnapshot,
-        trusted,
-        busy,
         execution,
         retainedExecutionResult,
         experience,
     } = state;
-    const {
-        visibleResultsView,
-        retainedSnapshot,
-        explainPlan,
-        explainIndexAnalysis,
-        pipelineResult,
-        analyzeEvidence,
-        resultsPanelLabel,
-        snapshotChart,
-        sqlMapStatement,
-        sqlMapParseStatement,
-        queryTreeAvailable,
-        queryTreeUnavailableReason,
-        failureError,
-        failureSql,
-    } = viewState;
+    const { visibleResultsView, resultsPanelLabel, failureError } = viewState;
 
     const showPreviousResult = Boolean(
         execution && retainedExecutionResult && visibleResultsView === 'results',
@@ -203,230 +178,390 @@ export function WorkspaceResultsPanel({
                 hidden={panels.resultsCollapsed}
             >
                 {ref => (
-                    <div
-                        id="query-results-content"
-                        ref={ref}
-                        className={cx(
-                            'panel-content results-content',
-                            (showFailure ||
-                                ['insights', 'indexes', 'plan', 'pipeline', 'runtime'].includes(
-                                    visibleResultsView,
-                                )) &&
-                                'results-content-scrollable',
-                        )}
-                        hidden={panels.resultsCollapsed}
-                    >
-                        {visibleResultsView === 'sqlmap' && (
-                            <SqlFlowView
-                                copy={copy.common}
-                                sql={sqlMapStatement?.sql ?? active.sql}
-                                sourceOffset={sqlMapStatement?.from ?? 0}
-                                parseResult={sqlMapParseStatement?.result}
-                                parserStatus={nativeParserStatus}
-                                parseDurationMs={nativeParseSnapshot?.elapsedMs}
-                                connectionId={connection.id}
-                                parameters={active.parameters}
-                                analyzerAvailable={queryTreeAvailable}
-                                analyzerUnavailableReason={queryTreeUnavailableReason}
-                                onRevealRange={actions.onRevealRange}
-                            />
-                        )}
-                        {execution && !runningScript && visibleResultsView !== 'sqlmap' && (
-                            <div
-                                className={cx(
-                                    'result-execution-progress',
-                                    !showPreviousResult && 'is-initial',
-                                )}
-                                aria-busy="true"
-                            >
-                                <div className="result-execution-heading">
-                                    <Spinner size={16} />
-                                    <span role="status" aria-live="polite">
-                                        {copy.common.statusRunning}
-                                    </span>
-                                    <strong className="result-execution-query" title={active.name}>
-                                        {active.name}
-                                    </strong>
-                                </div>
-                                <pre className="result-execution-sql is-preview">
-                                    {executionSqlPreview}
-                                </pre>
-                                {execution.sql.length > 180 && (
-                                    <details className="result-execution-details">
-                                        <summary>{copy.common.expandQuery}</summary>
-                                        <pre className="result-execution-sql is-full">
-                                            {execution.sql}
-                                        </pre>
-                                    </details>
-                                )}
-                            </div>
-                        )}
-                        {showFailure && failureError ? (
-                            <QueryFailureNotice
-                                key={`${failureError.code}:${failureError.message}:${failureSql}`}
-                                error={failureError}
-                                sql={failureSql}
-                                copy={copy.common}
-                                errorRange={viewState.failureRange}
-                                location={viewState.failureLocation}
-                            />
-                        ) : (
-                            <>
-                                {resultsRun &&
-                                    visibleResultsView === 'results' &&
-                                    (!execution || showPreviousResult) && (
-                                        <ResultGrid
-                                            key={resultsRun.id}
-                                            run={resultsRun}
-                                            page={resultsPage}
-                                            pageIndex={resultsPageIndex}
-                                            loading={
-                                                !resultsPage &&
-                                                resultsRun.resultState === 'reopenable'
-                                            }
-                                            onPage={actions.onPage}
-                                            showPagination={!showPreviousResult}
-                                            obscured={showPreviousResult}
-                                            toolbarContainer={tableToolbar}
-                                            rowCountContainer={tableRowCount}
-                                            previousRunLabel={
-                                                previousSuccessfulResult
-                                                    ? copy.common.previousRun
-                                                    : undefined
-                                            }
-                                        />
-                                    )}
-                                {run && !rowsUnavailable && visibleResultsView === 'indexes' && (
-                                    <ExplainIndexesView
-                                        analysis={explainIndexAnalysis}
-                                        loading={
-                                            !retainedSnapshot && run.resultState === 'reopenable'
-                                        }
-                                        copy={copy.common}
-                                    />
-                                )}
-                                {run && !rowsUnavailable && visibleResultsView === 'plan' && (
-                                    <ExplainPlanView
-                                        plan={explainPlan}
-                                        loading={
-                                            !retainedSnapshot && run.resultState === 'reopenable'
-                                        }
-                                        copy={copy.common}
-                                    />
-                                )}
-                                {run &&
-                                    !rowsUnavailable &&
-                                    visibleResultsView === 'pipeline' &&
-                                    (pipelineResult ? (
-                                        <PipelineGraph
-                                            pipeline={pipelineResult}
-                                            copy={copy.common}
-                                            heading={copy.common.pipelineGraph}
-                                            subheading={copy.common.pipelineGraphDescription}
-                                        />
-                                    ) : (
-                                        <div className="pipeline-graph-empty" role="status">
-                                            {copy.common.pipelineNoOutput}
-                                        </div>
-                                    ))}
-                                {run && !rowsUnavailable && visibleResultsView === 'runtime' && (
-                                    <ExplainAnalyzeView
-                                        evidence={analyzeEvidence}
-                                        loading={
-                                            !retainedSnapshot && run.resultState === 'reopenable'
-                                        }
-                                        copy={copy.common}
-                                    />
-                                )}
-                                {run &&
-                                !rowsUnavailable &&
-                                visibleResultsView === 'chart' &&
-                                snapshotChart?.config.kind === 'table' ? (
-                                    <div className="chart-table-fallback">
-                                        <div className="chart-table-notice" role="status">
-                                            {copy.chart.fallbackNoMeasure}
-                                        </div>
-                                        <ResultGrid
-                                            key={`${run.id}-chart-table`}
-                                            run={run}
-                                            page={resultPage}
-                                            pageIndex={page}
-                                            loading={
-                                                !resultPage && run.resultState === 'reopenable'
-                                            }
-                                            onPage={actions.onPage}
-                                            toolbarContainer={tableToolbar}
-                                            rowCountContainer={tableRowCount}
-                                            previousRunLabel={
-                                                previousSuccessfulResult
-                                                    ? copy.common.previousRun
-                                                    : undefined
-                                            }
-                                        />
-                                    </div>
-                                ) : (
-                                    run &&
-                                    !rowsUnavailable &&
-                                    visibleResultsView === 'chart' && (
-                                        <ChartView
-                                            result={retainedSnapshot}
-                                            loading={
-                                                !retainedSnapshot &&
-                                                run.resultState === 'reopenable'
-                                            }
-                                            chart={active.chart}
-                                            onChart={chart => actions.onPatch({ chart })}
-                                            copy={copy}
-                                        />
-                                    )
-                                )}
-                                {run && !rowsUnavailable && visibleResultsView === 'map' && (
-                                    <GeoView
-                                        result={retainedSnapshot}
-                                        loading={
-                                            !retainedSnapshot && run.resultState === 'reopenable'
-                                        }
-                                    />
-                                )}
-                                {run && visibleResultsView === 'insights' && (
-                                    <InsightsView
-                                        comparison={{
-                                            connectionId: connection.id,
-                                            trusted,
-                                            history,
-                                            initialRun: run,
-                                            profiles: profilesByRun,
-                                            pipelines: pipelinesByRun,
-                                            queryLogAvailable:
-                                                connection.manifest?.queryLog.available === true,
-                                        }}
-                                        run={run}
-                                        profile={profile}
-                                        pipeline={pipeline}
-                                        pipelineAvailable={Boolean(
-                                            trusted && connection.manifest?.pipeline.available,
-                                        )}
-                                        flamegraph={flamegraph}
-                                        flamegraphCapability={
-                                            trusted
-                                                ? connection.manifest?.traceLog
-                                                : {
-                                                      available: false,
-                                                      reason: 'Trust this connection to inspect profiler samples.',
-                                                  }
-                                        }
-                                        onLoad={actions.onLoadProfile}
-                                        onLoadPipeline={actions.onLoadPipeline}
-                                        onLoadFlamegraph={actions.onLoadFlamegraph}
-                                        loading={busy === 'save'}
-                                    />
-                                )}
-                            </>
-                        )}
-                    </div>
+                    <WorkspaceResultsBody
+                        contentRef={ref}
+                        state={state}
+                        actions={actions}
+                        panels={panels}
+                        viewState={viewState}
+                        showFailure={showFailure}
+                        showPreviousResult={showPreviousResult}
+                        runningScript={runningScript}
+                        executionSqlPreview={executionSqlPreview}
+                        resultsRun={resultsRun}
+                        resultsPage={resultsPage}
+                        resultsPageIndex={resultsPageIndex}
+                        previousSuccessfulResult={previousSuccessfulResult}
+                        rowsUnavailable={rowsUnavailable}
+                        tableToolbar={tableToolbar}
+                        tableRowCount={tableRowCount}
+                    />
                 )}
             </ScrollEdgeFrame>
         </section>
+    );
+}
+
+type WorkspaceResultsBodyProps = {
+    contentRef: (element: HTMLDivElement | null) => void;
+    state: WorkspaceResultsPanelState;
+    actions: WorkspaceResultsPanelActions;
+    panels: WorkspacePanelController;
+    viewState: WorkspaceViewState;
+    showFailure: boolean;
+    showPreviousResult: boolean;
+    runningScript?: Script;
+    executionSqlPreview?: string;
+    resultsRun?: Run;
+    resultsPage?: ResultPage;
+    resultsPageIndex: number;
+    previousSuccessfulResult: boolean;
+    rowsUnavailable: boolean;
+    tableToolbar: HTMLDivElement | null;
+    tableRowCount: HTMLSpanElement | null;
+};
+
+function WorkspaceResultsBody({
+    contentRef,
+    state,
+    actions,
+    panels,
+    viewState,
+    showFailure,
+    showPreviousResult,
+    runningScript,
+    executionSqlPreview,
+    resultsRun,
+    resultsPage,
+    resultsPageIndex,
+    previousSuccessfulResult,
+    rowsUnavailable,
+    tableToolbar,
+    tableRowCount,
+}: WorkspaceResultsBodyProps) {
+    const { active, connection, copy, execution, nativeParserStatus, nativeParseSnapshot } = state;
+    const {
+        visibleResultsView,
+        failureError,
+        failureSql,
+        sqlMapStatement,
+        sqlMapParseStatement,
+        queryTreeAvailable,
+        queryTreeUnavailableReason,
+    } = viewState;
+    return (
+        <div
+            id="query-results-content"
+            ref={contentRef}
+            className={cx(
+                'panel-content results-content',
+                (showFailure ||
+                    ['insights', 'indexes', 'plan', 'pipeline', 'runtime'].includes(
+                        visibleResultsView,
+                    )) &&
+                    'results-content-scrollable',
+            )}
+            hidden={panels.resultsCollapsed}
+        >
+            {visibleResultsView === 'sqlmap' && (
+                <SqlFlowView
+                    copy={copy.common}
+                    sql={sqlMapStatement?.sql ?? active.sql}
+                    sourceOffset={sqlMapStatement?.from ?? 0}
+                    parseResult={sqlMapParseStatement?.result}
+                    parserStatus={nativeParserStatus}
+                    parseDurationMs={nativeParseSnapshot?.elapsedMs}
+                    connectionId={connection.id}
+                    parameters={active.parameters}
+                    analyzerAvailable={queryTreeAvailable}
+                    analyzerUnavailableReason={queryTreeUnavailableReason}
+                    onRevealRange={actions.onRevealRange}
+                />
+            )}
+            {execution && !runningScript && visibleResultsView !== 'sqlmap' && (
+                <div
+                    className={cx('result-execution-progress', !showPreviousResult && 'is-initial')}
+                    aria-busy="true"
+                >
+                    <div className="result-execution-heading">
+                        <Spinner size={16} />
+                        <span role="status" aria-live="polite">
+                            {copy.common.statusRunning}
+                        </span>
+                        <strong className="result-execution-query" title={active.name}>
+                            {active.name}
+                        </strong>
+                    </div>
+                    <pre className="result-execution-sql is-preview">{executionSqlPreview}</pre>
+                    {execution.sql.length > 180 && (
+                        <details className="result-execution-details">
+                            <summary>{copy.common.expandQuery}</summary>
+                            <pre className="result-execution-sql is-full">{execution.sql}</pre>
+                        </details>
+                    )}
+                </div>
+            )}
+            {showFailure && failureError ? (
+                <QueryFailureNotice
+                    key={`${failureError.code}:${failureError.message}:${failureSql}`}
+                    error={failureError}
+                    sql={failureSql}
+                    copy={copy.common}
+                    errorRange={viewState.failureRange}
+                    location={viewState.failureLocation}
+                />
+            ) : (
+                <>
+                    <WorkspaceResultView
+                        state={state}
+                        actions={actions}
+                        viewState={viewState}
+                        showPreviousResult={showPreviousResult}
+                        resultsRun={resultsRun}
+                        resultsPage={resultsPage}
+                        resultsPageIndex={resultsPageIndex}
+                        previousSuccessfulResult={previousSuccessfulResult}
+                        rowsUnavailable={rowsUnavailable}
+                        tableToolbar={tableToolbar}
+                        tableRowCount={tableRowCount}
+                    />
+                </>
+            )}
+        </div>
+    );
+}
+
+type WorkspaceResultViewProps = Pick<
+    WorkspaceResultsBodyProps,
+    | 'state'
+    | 'actions'
+    | 'viewState'
+    | 'showPreviousResult'
+    | 'resultsRun'
+    | 'resultsPage'
+    | 'resultsPageIndex'
+    | 'previousSuccessfulResult'
+    | 'rowsUnavailable'
+    | 'tableToolbar'
+    | 'tableRowCount'
+>;
+
+function WorkspaceResultView({
+    state,
+    actions,
+    viewState,
+    showPreviousResult,
+    resultsRun,
+    resultsPage,
+    resultsPageIndex,
+    previousSuccessfulResult,
+    rowsUnavailable,
+    tableToolbar,
+    tableRowCount,
+}: WorkspaceResultViewProps) {
+    const {
+        active,
+        connection,
+        copy,
+        run,
+        history,
+        page,
+        resultPage,
+        profile,
+        pipeline,
+        flamegraph,
+        profilesByRun,
+        pipelinesByRun,
+        trusted,
+        busy,
+    } = state;
+    const {
+        visibleResultsView,
+        retainedSnapshot,
+        explainPlan,
+        explainIndexAnalysis,
+        pipelineResult,
+        analyzeEvidence,
+        snapshotChart,
+    } = viewState;
+    switch (visibleResultsView) {
+        case 'results':
+            if (!resultsRun || (state.execution && !showPreviousResult)) return null;
+            return (
+                <ResultGrid
+                    key={resultsRun.id}
+                    run={resultsRun}
+                    page={resultsPage}
+                    pageIndex={resultsPageIndex}
+                    loading={!resultsPage && resultsRun.resultState === 'reopenable'}
+                    onPage={actions.onPage}
+                    showPagination={!showPreviousResult}
+                    obscured={showPreviousResult}
+                    toolbarContainer={tableToolbar}
+                    rowCountContainer={tableRowCount}
+                    previousRunLabel={
+                        previousSuccessfulResult ? copy.common.previousRun : undefined
+                    }
+                />
+            );
+        case 'indexes':
+            if (!run || rowsUnavailable) return null;
+            return (
+                <ExplainIndexesView
+                    analysis={explainIndexAnalysis}
+                    loading={!retainedSnapshot && run.resultState === 'reopenable'}
+                    copy={copy.common}
+                />
+            );
+        case 'plan':
+            if (!run || rowsUnavailable) return null;
+            return (
+                <ExplainPlanView
+                    plan={explainPlan}
+                    loading={!retainedSnapshot && run.resultState === 'reopenable'}
+                    copy={copy.common}
+                />
+            );
+        case 'pipeline':
+            if (!run || rowsUnavailable) return null;
+            return pipelineResult ? (
+                <PipelineGraph
+                    pipeline={pipelineResult}
+                    copy={copy.common}
+                    heading={copy.common.pipelineGraph}
+                    subheading={copy.common.pipelineGraphDescription}
+                />
+            ) : (
+                <div className="pipeline-graph-empty" role="status">
+                    {copy.common.pipelineNoOutput}
+                </div>
+            );
+        case 'runtime':
+            if (!run || rowsUnavailable) return null;
+            return (
+                <ExplainAnalyzeView
+                    evidence={analyzeEvidence}
+                    loading={!retainedSnapshot && run.resultState === 'reopenable'}
+                    copy={copy.common}
+                />
+            );
+        case 'chart':
+            return renderChartResult({
+                run,
+                rowsUnavailable,
+                snapshotChart,
+                resultPage,
+                page,
+                actions,
+                tableToolbar,
+                tableRowCount,
+                previousSuccessfulResult,
+                copy,
+                retainedSnapshot,
+                active,
+            });
+        case 'map':
+            if (!run || rowsUnavailable) return null;
+            return (
+                <GeoView
+                    result={retainedSnapshot}
+                    loading={!retainedSnapshot && run.resultState === 'reopenable'}
+                />
+            );
+        case 'insights':
+            if (!run) return null;
+            return (
+                <InsightsView
+                    comparison={{
+                        connectionId: connection.id,
+                        trusted,
+                        history,
+                        initialRun: run,
+                        profiles: profilesByRun,
+                        pipelines: pipelinesByRun,
+                        queryLogAvailable: connection.manifest?.queryLog.available === true,
+                    }}
+                    run={run}
+                    profile={profile}
+                    pipeline={pipeline}
+                    pipelineAvailable={Boolean(trusted && connection.manifest?.pipeline.available)}
+                    flamegraph={flamegraph}
+                    flamegraphCapability={
+                        trusted
+                            ? connection.manifest?.traceLog
+                            : {
+                                  available: false,
+                                  reason: 'Trust this connection to inspect profiler samples.',
+                              }
+                    }
+                    onLoad={actions.onLoadProfile}
+                    onLoadPipeline={actions.onLoadPipeline}
+                    onLoadFlamegraph={actions.onLoadFlamegraph}
+                    loading={busy === 'save'}
+                />
+            );
+        default:
+            return null;
+    }
+}
+
+function renderChartResult({
+    run,
+    rowsUnavailable,
+    snapshotChart,
+    resultPage,
+    page,
+    actions,
+    tableToolbar,
+    tableRowCount,
+    previousSuccessfulResult,
+    copy,
+    retainedSnapshot,
+    active,
+}: {
+    run: Run | undefined;
+    rowsUnavailable: boolean;
+    snapshotChart: WorkspaceViewState['snapshotChart'];
+    resultPage: ResultPage | undefined;
+    page: number;
+    actions: WorkspaceResultsPanelActions;
+    tableToolbar: HTMLDivElement | null;
+    tableRowCount: HTMLSpanElement | null;
+    previousSuccessfulResult: boolean;
+    copy: Copy;
+    retainedSnapshot: Result | undefined;
+    active: Draft;
+}) {
+    if (!run || rowsUnavailable) return null;
+    if (snapshotChart?.config.kind === 'table')
+        return (
+            <div className="chart-table-fallback">
+                <div className="chart-table-notice" role="status">
+                    {copy.chart.fallbackNoMeasure}
+                </div>
+                <ResultGrid
+                    key={`${run.id}-chart-table`}
+                    run={run}
+                    page={resultPage}
+                    pageIndex={page}
+                    loading={!resultPage && run.resultState === 'reopenable'}
+                    onPage={actions.onPage}
+                    toolbarContainer={tableToolbar}
+                    rowCountContainer={tableRowCount}
+                    previousRunLabel={
+                        previousSuccessfulResult ? copy.common.previousRun : undefined
+                    }
+                />
+            </div>
+        );
+    return (
+        <ChartView
+            result={retainedSnapshot}
+            loading={!retainedSnapshot && run.resultState === 'reopenable'}
+            chart={active.chart}
+            onChart={chart => actions.onPatch({ chart })}
+            copy={copy}
+        />
     );
 }
 
@@ -475,55 +610,20 @@ function renderResultsHeader({
     } = state;
     const headerView = showFailure ? 'results' : visibleResultsView;
     const headerPanelLabel = showFailure ? copy.common.queryResults : resultsPanelLabel;
-    const failedStatement = script?.statements.find(statement => statement.error);
     const showQueryCard = ['results', 'chart', 'insights'].includes(headerView);
     const querySql = showFailure ? failureSql : (execution?.sql ?? run?.sql);
-    let queryCard: ReactNode = null;
-    if (
-        showQueryCard &&
-        script &&
-        !failedAttempt &&
-        (!execution || execution.scriptId === script.id)
-    ) {
-        queryCard = (
-            <ScriptResultsSelector
-                key={script.id}
-                statements={script.statements}
-                runs={history}
-                activeRunId={run?.id}
-                onSelectRun={actions.onSelectScriptRun}
-                onSelectError={actions.onSelectScriptError}
-                errorSelected={
-                    showFailure &&
-                    viewState.failureError === failedStatement?.error &&
-                    !failedStatement?.runId
-                }
-            />
-        );
-    } else if (showQueryCard && querySql) {
-        const queryRun =
-            !showFailure && run?.sql === querySql && (!execution || execution.runId === run.id)
-                ? run
-                : undefined;
-        queryCard = (
-            <ScriptResultsSelector
-                key="single-query"
-                statements={[
-                    {
-                        sql: querySql,
-                        runId: queryRun?.id,
-                        status: showFailure ? 'failed' : (queryRun?.status ?? 'running'),
-                        error: showFailure ? viewState.failureError : undefined,
-                    },
-                ]}
-                runs={queryRun ? [queryRun] : []}
-                activeRunId={queryRun?.id}
-                onSelectRun={actions.onSelectScriptRun}
-                onSelectError={actions.onSelectScriptError}
-                errorSelected={showFailure}
-            />
-        );
-    }
+    const queryCard = renderResultsQueryCard({
+        showQueryCard,
+        showFailure,
+        querySql,
+        script,
+        failedAttempt,
+        execution,
+        run,
+        history,
+        actions,
+        failureError: viewState.failureError,
+    });
 
     return (
         <div className="results-header">
@@ -626,5 +726,75 @@ function renderResultsHeader({
                 )}
             </div>
         </div>
+    );
+}
+
+function renderResultsQueryCard({
+    showQueryCard,
+    showFailure,
+    querySql,
+    script,
+    failedAttempt,
+    execution,
+    run,
+    history,
+    actions,
+    failureError,
+}: {
+    showQueryCard: boolean;
+    showFailure: boolean;
+    querySql: string | undefined;
+    script: Script | undefined;
+    failedAttempt: FailedQueryError | undefined;
+    execution: WorkspaceResultsPanelState['execution'];
+    run: Run | undefined;
+    history: Run[];
+    actions: WorkspaceResultsPanelActions;
+    failureError: ApiError | undefined;
+}): ReactNode {
+    const failedStatement = script?.statements.find(statement => statement.error);
+    if (
+        showQueryCard &&
+        script &&
+        !failedAttempt &&
+        (!execution || execution.scriptId === script.id)
+    )
+        return (
+            <ScriptResultsSelector
+                key={script.id}
+                statements={script.statements}
+                runs={history}
+                activeRunId={run?.id}
+                onSelectRun={actions.onSelectScriptRun}
+                onSelectError={actions.onSelectScriptError}
+                errorSelected={
+                    showFailure &&
+                    failureError === failedStatement?.error &&
+                    !failedStatement?.runId
+                }
+            />
+        );
+    if (!showQueryCard || !querySql) return null;
+    const queryRun =
+        !showFailure && run?.sql === querySql && (!execution || execution.runId === run.id)
+            ? run
+            : undefined;
+    return (
+        <ScriptResultsSelector
+            key="single-query"
+            statements={[
+                {
+                    sql: querySql,
+                    runId: queryRun?.id,
+                    status: showFailure ? 'failed' : (queryRun?.status ?? 'running'),
+                    error: showFailure ? failureError : undefined,
+                },
+            ]}
+            runs={queryRun ? [queryRun] : []}
+            activeRunId={queryRun?.id}
+            onSelectRun={actions.onSelectScriptRun}
+            onSelectError={actions.onSelectScriptError}
+            errorSelected={showFailure}
+        />
     );
 }
