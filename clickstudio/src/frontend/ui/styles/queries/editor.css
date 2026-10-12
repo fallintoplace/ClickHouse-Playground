@@ -813,10 +813,11 @@
   background: var(--panel-raised);
 }
 
-.sql-editor .cm-editor .cm-tooltip.cm-tooltip-lint {
+.sql-editor .cm-editor .cm-tooltip:has(> .cm-tooltip-lint) {
   box-sizing: border-box;
   width: max-content;
-  max-width: min(560px, calc(100vw - 32px));
+  z-index: var(--z-tooltip);
+  max-width: min(460px, calc(100vw - 32px));
   max-height: min(184px, 34vh);
   overflow: auto;
   border: 1px solid var(--line-bright);
@@ -825,17 +826,21 @@
   color: var(--text);
   box-shadow: var(--shadow-popover);
 }
+.sql-editor-scroll-frame:has(.cm-tooltip-lint) {
+  z-index: var(--z-tooltip);
+}
 .sql-editor .cm-editor .cm-tooltip-lint .cm-diagnostic.cm-diagnostic-error {
   margin: 0;
-  padding: 11px 13px;
-  border-left: 2px solid color-mix(in srgb, var(--red) 78%, var(--panel-raised));
+  padding: 8px 11px;
+  border-left: 0;
   color: var(--text-soft);
-  font: 12px/1.55 var(--font-sans);
+  font: 10px/1.5 var(--font-sans);
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
 .sql-editor .cm-editor .cm-tooltip-lint .cm-diagnosticText::first-line {
   color: var(--text);
+  font-size: 11px;
   font-weight: 600;
 }
 .sql-editor .cm-editor .cm-tooltip-lint .cm-diagnosticText {
@@ -843,10 +848,9 @@
 }
 .sql-editor .cm-editor .cm-tooltip-lint .cm-diagnosticSource {
   display: block;
-  margin-top: 5px;
+  margin-top: 4px;
   color: var(--muted);
-  font: 10px/1.4 var(--font-sans);
-  letter-spacing: 0.01em;
+  font: 8px/1.4 var(--font-sans);
   opacity: 1;
 }
 

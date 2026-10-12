@@ -527,7 +527,6 @@
   }
   .result-failure-heading {
     display: flex;
-    padding-right: 68px;
     flex-wrap: wrap;
     align-items: center;
     gap: 8px 12px;
@@ -561,7 +560,7 @@
   }
   .result-failure-detail {
     max-width: 110ch;
-    margin: 12px 0 0;
+    margin: 8px 0 0;
     color: var(--text-soft);
     font: 13px/1.55 var(--font-mono);
     white-space: pre-wrap;
@@ -619,14 +618,11 @@
   }
   .result-failure-diagnostics {
     max-width: 920px;
-  }
-  .result-failure-diagnostics[open] {
-    margin-top: 12px;
+    min-width: 0;
+    margin: 4px 0 0 19px;
   }
   .result-failure-diagnostics summary {
-    position: absolute;
-    top: 18px;
-    right: 20px;
+    position: static;
     width: max-content;
     padding: 2px 0;
     border-radius: var(--radius-label);
@@ -634,8 +630,32 @@
     font: 12px/1.55 var(--font-sans);
     cursor: pointer;
   }
+  .result-failure-diagnostic-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    margin-top: 8px;
+  }
   .result-failure-diagnostics summary:hover {
     color: var(--text);
+  }
+  .result-failure-diagnostic-container {
+    max-width: 920px;
+    margin-top: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    background: var(--page);
+  }
+  .result-failure-diagnostic-container .result-failure-diagnostic-meta {
+    margin-top: 0;
+  }
+  .result-failure-diagnostic-container .result-execution-sql.is-full {
+    max-width: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
   }
   .result-execution-progress {
     display: grid;
@@ -983,10 +1003,6 @@
   }
   .result-failure {
     padding: 16px;
-  }
-  .result-failure-diagnostics summary {
-    top: 16px;
-    right: 16px;
   }
 }
 

@@ -45,19 +45,33 @@ export function QueryFailureNotice({
                         <span className="status-light is-error" aria-hidden="true" />
                         <h3>{title}</h3>
                     </div>
-                    {location && (
-                        <span className="result-failure-location">
-                            {copy.errorLocation
-                                .replace('{line}', String(location.line))
-                                .replace('{column}', String(location.column))}
-                        </span>
-                    )}
-                    <code className="result-failure-code">{error.code}</code>
                 </div>
                 {!diagnostic.syntax && diagnostic.message && (
                     <p className="result-failure-summary">{diagnostic.message}</p>
                 )}
             </div>
+            <details className="result-failure-diagnostics">
+                <summary>{copy.errorDetails}</summary>
+                <div className="result-failure-diagnostic-container">
+                    <div className="result-failure-diagnostic-meta">
+                        {location && (
+                            <span className="result-failure-location">
+                                {copy.errorLocation
+                                    .replace('{line}', String(location.line))
+                                    .replace('{column}', String(location.column))}
+                            </span>
+                        )}
+                        <code className="result-failure-code">{error.code}</code>
+                    </div>
+                    <pre className="result-failure-detail">{error.message}</pre>
+                    {sql && (
+                        <>
+                            <h3 className="result-failure-sql-label">{copy.failedSql}</h3>
+                            <pre className="result-execution-sql is-full">{sql}</pre>
+                        </>
+                    )}
+                </div>
+            </details>
             {sql && (
                 <>
                     <h3 className="result-failure-sql-label">{copy.failedSql}</h3>
@@ -84,18 +98,6 @@ export function QueryFailureNotice({
                     </pre>
                 </>
             )}
-            <details className="result-failure-diagnostics">
-                <summary>{copy.errorDetails}</summary>
-                <pre className="result-failure-detail">
-                    [{error.code}] {error.message}
-                </pre>
-                {sql && (
-                    <>
-                        <h3 className="result-failure-sql-label">{copy.failedSql}</h3>
-                        <pre className="result-execution-sql is-full">{sql}</pre>
-                    </>
-                )}
-            </details>
         </div>
     );
 }
