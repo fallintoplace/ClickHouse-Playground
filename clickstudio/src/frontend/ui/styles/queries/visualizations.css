@@ -2298,8 +2298,8 @@
   cursor: pointer;
 }
 
-.chart-select-trigger:hover,
-.chart-select-trigger[data-state="open"] {
+.chart-select-trigger:not(.chart-select-static):hover,
+.chart-select-trigger:not(.chart-select-static)[data-state="open"] {
   border-color: var(--active-border);
   background: var(--active-surface);
   color: var(--text);
@@ -2311,6 +2311,11 @@
   background: var(--panel-raised);
   color: var(--muted);
   cursor: not-allowed;
+}
+
+.chart-select-static,
+.chart-select-static:hover {
+  cursor: default;
 }
 
 .chart-select-value {

@@ -12,7 +12,7 @@ export function SelectControl({
     options,
     onChange,
     searchable = false,
-    hideDisabledOptions = false,
+    hideDisabledOptions = true,
     className = '',
 }: {
     label: string;
@@ -36,6 +36,11 @@ export function SelectControl({
     const availableOptions = hideDisabledOptions
         ? options.filter(option => !option.disabled)
         : options;
+    const singleOption =
+        availableOptions.length === 1 && !availableOptions[0]?.disabled
+            ? availableOptions[0]
+            : undefined;
+    const hasSingleOption = singleOption !== undefined;
     const visibleOptions = availableOptions.filter(option =>
         option.label.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()),
     );
@@ -113,9 +118,9 @@ export function SelectControl({
 
     useEffect(() => {
         const element = menu.current;
-        if (hasEnabledOptions || !element?.matches(':popover-open')) return;
+        if ((hasEnabledOptions && !hasSingleOption) || !element?.matches(':popover-open')) return;
         element.hidePopover();
-    }, [hasEnabledOptions]);
+    }, [hasEnabledOptions, hasSingleOption]);
 
     useEffect(() => {
         if (!open) return;
@@ -148,32 +153,41 @@ export function SelectControl({
                 className === 'chart-select' ? className : `chart-select ${className}`.trim()
             }
         >
-            <button
-                ref={trigger}
-                type="button"
-                className="chart-select-trigger"
-                disabled={!hasEnabledOptions}
-                role="combobox"
-                aria-label={label}
-                aria-haspopup="listbox"
-                aria-expanded={open}
-                aria-controls={`${id}-listbox`}
-                aria-activedescendant={open ? activeOptionId : undefined}
-                aria-valuetext={selected?.label ?? ''}
-                data-value={value}
-                data-state={open ? 'open' : 'closed'}
-                popoverTarget={id}
-                popoverTargetAction="toggle"
-                onKeyDown={event => {
-                    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-                        event.preventDefault();
-                        showMenu();
-                    }
-                }}
-            >
-                <span className="chart-select-value">{selected?.label ?? ''}</span>
-                <span className="chart-select-chevron" aria-hidden="true" />
-            </button>
+            {singleOption ? (
+                <span
+                    className="chart-select-trigger chart-select-static"
+                    title={singleOption.label}
+                >
+                    <span className="chart-select-value">{singleOption.label}</span>
+                </span>
+            ) : (
+                <button
+                    ref={trigger}
+                    type="button"
+                    className="chart-select-trigger"
+                    disabled={!hasEnabledOptions}
+                    role="combobox"
+                    aria-label={label}
+                    aria-haspopup="listbox"
+                    aria-expanded={open}
+                    aria-controls={`${id}-listbox`}
+                    aria-activedescendant={open ? activeOptionId : undefined}
+                    aria-valuetext={selected?.label ?? ''}
+                    data-value={value}
+                    data-state={open ? 'open' : 'closed'}
+                    popoverTarget={id}
+                    popoverTargetAction="toggle"
+                    onKeyDown={event => {
+                        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                            event.preventDefault();
+                            showMenu();
+                        }
+                    }}
+                >
+                    <span className="chart-select-value">{selected?.label ?? ''}</span>
+                    <span className="chart-select-chevron" aria-hidden="true" />
+                </button>
+            )}
             <div
                 ref={menu}
                 id={id}
