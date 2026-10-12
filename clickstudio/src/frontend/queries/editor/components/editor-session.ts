@@ -6,6 +6,7 @@ export type SqlEditorSession = {
     state: EditorState;
     scroll: ReturnType<EditorView['scrollSnapshot']>;
     appendedExtensions: Extension[];
+    showDiagnostics?: boolean;
 };
 export type SqlEditorSessions = Map<string, SqlEditorSession>;
 
@@ -48,10 +49,12 @@ export function restoreSqlEditorState(
 export function captureSqlEditorSession(
     editor: EditorView,
     appendedExtensions: Extension[],
+    showDiagnostics: boolean,
 ): SqlEditorSession {
     return {
         state: editor.state,
         scroll: editor.scrollSnapshot(),
         appendedExtensions,
+        showDiagnostics,
     };
 }

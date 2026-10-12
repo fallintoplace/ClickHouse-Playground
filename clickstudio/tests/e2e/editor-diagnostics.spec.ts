@@ -66,7 +66,8 @@ for (const mode of ['beginner', 'expert']) {
                     submissions++;
             });
             await replaceSql(page, sql!);
-            await expect(diagnosticMarker(page)).toHaveCount(1);
+            await page.waitForTimeout(400);
+            await expect(diagnosticMarker(page)).toHaveCount(0);
             await expect(page.getByRole('button', { name: /^\d+ SQL issues?$/ })).toHaveCount(0);
             await expect(page.locator('.cm-panel-lint')).toHaveCount(0);
             await expect(page.locator('.editor-surface > .workspace-inline-notice')).toHaveCount(0);
@@ -90,6 +91,7 @@ for (const mode of ['beginner', 'expert']) {
             }
             expect(submissions).toBe(0);
             await replaceSql(page, "SELECT 'unfinished'");
+            await page.waitForTimeout(400);
             await expect(diagnosticMarker(page)).toHaveCount(0);
             await expect(page.locator('.cm-panel-lint')).toHaveCount(0);
             await expect(page.getByTestId('query-failure')).toContainText(message!);
@@ -108,14 +110,23 @@ test('lexical diagnostics work with the native parser unavailable and recover th
     await page.route('**/api/editor/clickhouse-parser*', route => route.abort('failed'));
     await trust(page);
     await replaceSql(page, "SELECT 'unfinished");
+    await page.waitForTimeout(400);
+    await expect(diagnosticMarker(page)).toHaveCount(0);
+    await runButton(page).click();
+    await expect(page.getByTestId('query-failure')).toContainText(
+        'Unclosed quoted value or identifier',
+    );
     await expect(diagnosticMarker(page)).toHaveCount(1);
     await page.waitForTimeout(600); // Separate edits into distinct undo history groups.
     await page.locator('.cm-content').focus();
     await page.keyboard.insertText("'");
+    await page.waitForTimeout(400);
     await expect(diagnosticMarker(page)).toHaveCount(0);
     await page.keyboard.press('ControlOrMeta+z');
-    await expect(diagnosticMarker(page)).toHaveCount(1);
+    await page.waitForTimeout(400);
+    await expect(diagnosticMarker(page)).toHaveCount(0);
     await page.keyboard.press('ControlOrMeta+Shift+z');
+    await page.waitForTimeout(400);
     await expect(diagnosticMarker(page)).toHaveCount(0);
 });
 
@@ -268,7 +279,8 @@ test('a successful selected Run preserves diagnostics in the rest of the draft',
 }) => {
     await trust(page);
     await replaceSql(page, "SELECT 1;\nSELECT 'unfinished");
-    await expect(diagnosticMarker(page)).toHaveCount(1);
+    await page.waitForTimeout(400);
+    await expect(diagnosticMarker(page)).toHaveCount(0);
     await selectRange(page, 0, 8);
     await runSuccessfully(page);
     await expect(diagnosticMarker(page)).toHaveCount(1);
@@ -282,14 +294,17 @@ test('a malformed selection in valid Unicode SQL shows its attempt in Results an
     await trust(page);
     const sql = "-- 你好🙂\nSELECT 'unfinished';";
     await replaceSql(page, sql);
+    await page.waitForTimeout(400);
     await expect(diagnosticMarker(page)).toHaveCount(0);
     await selectRange(page, sql.indexOf('SELECT'), sql.lastIndexOf("'"));
     await runButton(page).click();
     await expect(page.getByTestId('query-failure')).toContainText('SQL_SYNTAX');
+    await expect(diagnosticMarker(page)).toHaveCount(1);
     await expect(page.locator('.cm-server-error-line')).toHaveCount(1);
     await expect(page.locator('.result-failure-location')).toContainText('Line 2, column 8');
     await expect(page.locator('.editor-surface > .workspace-inline-notice')).toHaveCount(0);
     await replaceSql(page, 'SELECT 2');
+    await page.waitForTimeout(400);
     await expect(diagnosticMarker(page)).toHaveCount(0);
     await expect(page.locator('.cm-server-error-line')).toHaveCount(0);
     await expect(page.getByTestId('query-failure')).toContainText(
@@ -304,11 +319,17 @@ test('diagnostics follow their draft through tab switches and detached editing',
 }) => {
     await trust(page);
     await replaceSql(page, "SELECT 'unfinished");
+    await page.waitForTimeout(400);
+    await expect(diagnosticMarker(page)).toHaveCount(0);
+    await runButton(page).click();
+    await expect(page.getByTestId('query-failure')).toContainText(
+        'Unclosed quoted value or identifier',
+    );
+    await expect(diagnosticMarker(page)).toHaveCount(1);
     const tabId = await page
         .getByRole('tab')
         .filter({ hasText: 'Getting started.sql' })
         .getAttribute('id');
-    await expect(diagnosticMarker(page)).toHaveCount(1);
     await openBlankSql(page);
     await expect(diagnosticMarker(page)).toHaveCount(0);
     await page.locator(`[id="${tabId}"]`).click();

@@ -43,6 +43,7 @@ import { useWorkspaceController, type WorkspaceProps } from './useWorkspaceContr
 import { createExampleDraft } from '../queries/execution/useWorkspaceExecution';
 import { useSqlEditorSessions } from '../queries/editor/components/useSqlEditorSessions';
 import { useWorkspaceDocumentSaveShortcut } from '../queries/saved-queries/useWorkspaceDocumentSave';
+import type { RunKind } from '../../shared/queries/execution/status';
 
 function openImportedSqlQuery(
     name: string,
@@ -134,6 +135,10 @@ export function Workspace({
         update,
         loadFlamegraph,
     } = model;
+    const runFromEditor = (kind?: RunKind, sqlOverride?: string) => {
+        editor.current?.showDiagnostics();
+        return execute(kind, sqlOverride);
+    };
 
     const inspectorProps = createInspectorProps({
         copy,
@@ -172,7 +177,7 @@ export function Workspace({
                 onOpenAssistant: () => showInspector('assistant'),
                 onSave: saveDraft,
                 onFormat: formatActiveSql,
-                onRun: execute,
+                onRun: runFromEditor,
                 onCancel: () => void cancel(),
                 runActionTitle,
                 onConnectionAction: () =>
@@ -848,7 +853,10 @@ function renderDocumentTabs({
                         }}
                         busy={Boolean(busy)}
                         unsupportedParameters={unsupportedParameters}
-                        onRunExplain={kind => void execute(kind)}
+                        onRunExplain={kind => {
+                            editor.current?.showDiagnostics();
+                            void execute(kind);
+                        }}
                         comparison={{
                             connectionId: connection.id,
                             trusted,

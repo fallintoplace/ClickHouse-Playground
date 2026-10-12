@@ -230,6 +230,7 @@ function completionSource(context: CompletionContext, index: SchemaIndex): Compl
     };
 }
 export interface EditorHandle {
+    showDiagnostics: () => void;
     insert: (text: string) => void;
     insertSnippet: (template: string) => boolean;
     focus: () => void;
@@ -261,6 +262,90 @@ export interface SqlEditorProps {
     onNativeParserStatus?: (status: NativeParserStatus) => void;
     onNativeParseSnapshot?: (snapshot?: NativeParseSnapshot) => void;
 }
+
+function useDiagnosticsRevealed(props: SqlEditorProps) {
+    const session = props.sessions.get(props.documentId);
+    const revealed = useRef(
+        Boolean(
+            session &&
+            session.state.doc.toString() === props.value &&
+            session.showDiagnostics === true,
+        ),
+    );
+    const documentId = useRef(props.documentId);
+    if (documentId.current !== props.documentId) {
+        documentId.current = props.documentId;
+        const nextSession = props.sessions.get(props.documentId);
+        revealed.current = Boolean(
+            nextSession &&
+            nextSession.state.doc.toString() === props.value &&
+            nextSession.showDiagnostics === true,
+        );
+    }
+    return revealed;
+}
+
+function applyEditorDiagnostics(
+    editor: EditorView,
+    props: SqlEditorProps,
+    native: readonly NativeDiagnostic[],
+    revealed: boolean,
+) {
+    const lexical = revealed
+        ? lexicalDiagnostic(editor.state.doc.toString(), editor.state.field(sqlLexicalContext))
+        : undefined;
+    const diagnostics: Diagnostic[] = revealed
+        ? native.map(item => ({
+              ...item,
+              severity: 'error' as const,
+              source: 'ClickHouse native parser',
+          }))
+        : [];
+    if (lexical) diagnostics.unshift(lexical);
+    const duplicateLexicalError =
+        lexical &&
+        props.error?.code === 'SQL_SYNTAX' &&
+        lexical.from === props.errorRange?.from &&
+        lexical.message === props.error.message;
+    const errorRange = !revealed || duplicateLexicalError ? undefined : props.errorRange;
+    const position = errorRange?.from;
+    const from =
+        position === undefined
+            ? undefined
+            : Math.max(0, Math.min(position, editor.state.doc.length));
+    const to =
+        from === undefined
+            ? undefined
+            : Math.max(from, Math.min(errorRange?.to ?? from + 1, editor.state.doc.length));
+    if (from !== undefined && to !== undefined) {
+        diagnostics.push({
+            from,
+            to,
+            severity: 'error',
+            message: props.error?.message ?? 'ClickHouse reported an error here.',
+            source: props.error?.code === 'SQL_SYNTAX' ? 'SQL selection' : 'ClickHouse server',
+        });
+        const decorations =
+            editor.state.doc.length > 0
+                ? [
+                      Decoration.line({ class: 'cm-server-error-line' }).range(
+                          editor.state.doc.lineAt(from).from,
+                      ),
+                      ...(to > from
+                          ? [Decoration.mark({ class: 'cm-server-error-token' }).range(from, to)]
+                          : []),
+                  ]
+                : [];
+        editor.dispatch({
+            effects: setServerErrorDecorations.of(Decoration.set(decorations, true)),
+        });
+    } else {
+        editor.dispatch({ effects: setServerErrorDecorations.of(Decoration.none) });
+    }
+    editor.dispatch(setDiagnostics(editor.state, diagnostics));
+    closeLintPanel(editor);
+}
+
 function snapshotEditor(editor: EditorView | undefined, fallback: SqlEditorProps) {
     const state = editor?.state;
     const selection = state?.selection.main;
@@ -292,6 +377,8 @@ type SqlEditorMountContext = {
     theme: RefBox<Compartment>;
     schemaIndexRef: RefBox<ReturnType<typeof indexSchema>>;
     nativeDiagnostics: RefBox<NativeDiagnostic[]>;
+    diagnosticsRevealed: RefBox<boolean>;
+    refreshDiagnostics: RefBox<() => void>;
     setScrollViewport: RefBox<RefCallback<HTMLElement> | null>;
     languageExtension: () => ReturnType<typeof sql>;
     themeExtension: () => ReturnType<typeof sqlEditorTheme>;
@@ -306,6 +393,8 @@ function useSqlEditorMount({
     theme,
     schemaIndexRef,
     nativeDiagnostics,
+    diagnosticsRevealed,
+    refreshDiagnostics,
     setScrollViewport,
     languageExtension,
     themeExtension,
@@ -395,8 +484,14 @@ function useSqlEditorMount({
                                     appendedExtensions.push(effect.value);
                         if (update.docChanged) {
                             nativeDiagnostics.current = [];
+                            diagnosticsRevealed.current = false;
+                            const session = current.current.sessions.get(
+                                current.current.documentId,
+                            );
+                            if (session) session.showDiagnostics = false;
                             invalidateNativeValidation();
                             current.current.onChange(update.state.doc.toString());
+                            queueMicrotask(() => refreshDiagnostics.current());
                         }
                         if (update.docChanged || update.selectionSet) {
                             const s = update.state.selection.main;
@@ -415,7 +510,11 @@ function useSqlEditorMount({
         });
         updateScrollViewport?.(editor.scrollDOM);
         return () => {
-            const captured = captureSqlEditorSession(editor, appendedExtensions);
+            const captured = captureSqlEditorSession(
+                editor,
+                appendedExtensions,
+                diagnosticsRevealed.current,
+            );
             if (restoredScroll && !scrollMeasured) captured.scroll = restoredScroll;
             p.sessions.set(p.documentId, captured);
             updateScrollViewport?.(null);
@@ -430,6 +529,8 @@ function useSqlEditorMount({
         theme,
         schemaIndexRef,
         nativeDiagnostics,
+        diagnosticsRevealed,
+        refreshDiagnostics,
         setScrollViewport,
         languageExtension,
         themeExtension,
@@ -446,6 +547,7 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
     const setScrollViewport = useRef<RefCallback<HTMLElement> | null>(null);
     const nativeDiagnostics = useRef<NativeDiagnostic[]>([]),
         validationRevision = useRef(0);
+    const diagnosticsRevealed = useDiagnosticsRevealed(props);
     current.current = props;
     const schemaIndex = useMemo(
             () => indexSchema(props.schema, props.database),
@@ -456,67 +558,15 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
     const applyDiagnostics = useCallback(() => {
         const editor = view.current;
         if (!editor) return;
-        const lexical = lexicalDiagnostic(
-            editor.state.doc.toString(),
-            editor.state.field(sqlLexicalContext),
+        applyEditorDiagnostics(
+            editor,
+            current.current,
+            nativeDiagnostics.current,
+            diagnosticsRevealed.current,
         );
-        const diagnostics: Diagnostic[] = nativeDiagnostics.current.map(item => ({
-            ...item,
-            severity: 'error' as const,
-            source: 'ClickHouse native parser',
-        }));
-        if (lexical) diagnostics.unshift(lexical);
-        const duplicateLexicalError =
-            lexical &&
-            current.current.error?.code === 'SQL_SYNTAX' &&
-            lexical.from === current.current.errorRange?.from &&
-            lexical.message === current.current.error.message;
-        const errorRange = duplicateLexicalError ? undefined : current.current.errorRange;
-        const position = errorRange?.from;
-        const from =
-            position === undefined
-                ? undefined
-                : Math.max(0, Math.min(position, editor.state.doc.length));
-        const to =
-            from === undefined
-                ? undefined
-                : Math.max(from, Math.min(errorRange?.to ?? from + 1, editor.state.doc.length));
-        if (from !== undefined && to !== undefined) {
-            diagnostics.push({
-                from,
-                to,
-                severity: 'error',
-                message: current.current.error?.message ?? 'ClickHouse reported an error here.',
-                source:
-                    current.current.error?.code === 'SQL_SYNTAX'
-                        ? 'SQL selection'
-                        : 'ClickHouse server',
-            });
-            const decorations =
-                editor.state.doc.length > 0
-                    ? [
-                          Decoration.line({ class: 'cm-server-error-line' }).range(
-                              editor.state.doc.lineAt(from).from,
-                          ),
-                          ...(to > from
-                              ? [
-                                    Decoration.mark({ class: 'cm-server-error-token' }).range(
-                                        from,
-                                        to,
-                                    ),
-                                ]
-                              : []),
-                      ]
-                    : [];
-            editor.dispatch({
-                effects: setServerErrorDecorations.of(Decoration.set(decorations, true)),
-            });
-        } else {
-            editor.dispatch({ effects: setServerErrorDecorations.of(Decoration.none) });
-        }
-        editor.dispatch(setDiagnostics(editor.state, diagnostics));
-        closeLintPanel(editor);
-    }, []);
+    }, [diagnosticsRevealed]);
+    const refreshDiagnostics = useRef(applyDiagnostics);
+    refreshDiagnostics.current = applyDiagnostics;
     const languageExtension = useCallback(() => sql({ dialect: clickhouse }), []);
     const invalidateNativeValidation = useCallback(() => {
         validationRevision.current++;
@@ -530,6 +580,8 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
         theme,
         schemaIndexRef,
         nativeDiagnostics,
+        diagnosticsRevealed,
+        refreshDiagnostics,
         setScrollViewport,
         languageExtension,
         themeExtension,
@@ -637,6 +689,12 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
     useImperativeHandle(
         ref,
         () => ({
+            showDiagnostics: () => {
+                diagnosticsRevealed.current = true;
+                const session = current.current.sessions.get(current.current.documentId);
+                if (session) session.showDiagnostics = true;
+                applyDiagnostics();
+            },
             insert: text => {
                 const v = view.current;
                 if (v) {
@@ -716,7 +774,7 @@ export const SqlEditor = forwardRef<EditorHandle, SqlEditorProps>(function SqlEd
             },
             snapshot: () => snapshotEditor(view.current, current.current),
         }),
-        [applyDiagnostics],
+        [applyDiagnostics, diagnosticsRevealed],
     );
     return (
         <ScrollEdgeFrame<HTMLElement> className="sql-editor-scroll-frame">
