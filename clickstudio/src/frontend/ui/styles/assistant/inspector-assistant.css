@@ -1393,9 +1393,14 @@
   }
   .assistant-user-message > span,
   .assistant-response-label {
-    color: var(--muted);
     font-size: var(--font-size-control);
     font-weight: var(--font-weight-medium);
+  }
+  .assistant-user-message > span {
+    color: var(--green);
+  }
+  .assistant-response-label {
+    color: var(--muted);
   }
   .assistant-user-message p {
     margin: 0;

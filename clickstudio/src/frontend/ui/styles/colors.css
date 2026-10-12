@@ -111,7 +111,7 @@
   --accent-action: #e0b68e;
   --accent-ink: #2d190e;
   --accent-mark: var(--accent-action);
-  --green: #006b40;
+  --green: #007a45;
   --signal-accent: var(--accent);
   --amber: #a34f00;
   --red: #c52243;
@@ -212,6 +212,7 @@
   }
 
   :root[data-theme="click-light"] .sql-proposal-review {
+    --sql-diff-added: var(--green);
     --sql-diff-added-background: #ccfff0;
     --sql-diff-removed-background: #ffe7e2;
   }
