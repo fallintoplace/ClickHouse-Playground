@@ -1807,9 +1807,19 @@
     white-space: nowrap;
   }
   .assistant-execution-step-chevron {
+    display: grid;
+    width: 16px;
+    height: 16px;
+    flex: none;
+    place-items: center;
     margin-left: auto;
     color: var(--muted);
     transition: transform 120ms ease;
+  }
+  .assistant-execution-step-chevron svg {
+    display: block;
+    width: 14px;
+    height: 14px;
   }
   .assistant-execution-step-details[open]
     > .assistant-execution-step-heading

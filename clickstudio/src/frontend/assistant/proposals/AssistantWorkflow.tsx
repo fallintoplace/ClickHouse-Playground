@@ -373,7 +373,7 @@ function AssistantExecutionOption({
                                     className="assistant-execution-step-chevron"
                                     aria-hidden="true"
                                 >
-                                    ⌄
+                                    <Icon name="chevron" />
                                 </span>
                             </summary>
                             <pre>
