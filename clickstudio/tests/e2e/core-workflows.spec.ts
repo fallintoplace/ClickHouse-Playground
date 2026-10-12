@@ -2197,14 +2197,7 @@ test('Single-row numeric results render as a number and expose supported chart t
     await expect(results.locator('.result-table-toolbar')).toHaveCount(0);
     await expect(results.locator('.results-table-tools')).toBeEmpty();
     await results.getByLabel('Type').click();
-    await expect(results.getByRole('option')).toHaveText([
-        'Number',
-        'Line',
-        'Bar',
-        'Scatter',
-        'Heatmap',
-        'Candlestick',
-    ]);
+    await expect(results.getByRole('option')).toHaveText(['Number', 'Line', 'Bar']);
 });
 
 test('Scatter charts plot the selected numeric axes', async ({ page }) => {

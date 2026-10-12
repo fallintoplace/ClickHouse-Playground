@@ -1,10 +1,37 @@
 import { CHART_KINDS } from '../../../../shared/queries/results/chart-types.js';
+import type { ChartKind } from '../../../../shared/queries/results/chart-types.js';
+import type { Result } from '../../../../shared/queries/results/types.js';
 import type { Draft } from '../../editor/drafts/workspace-state.js';
 import type { Copy } from '../../../ui/copy.js';
 
 export const chartKindOptions = CHART_KINDS.filter(kind => kind !== 'table').map(value => ({
     value,
 }));
+
+export function chartKindIsAvailable(
+    kind: Exclude<ChartKind, 'table'>,
+    result: Pick<Result, 'columns' | 'rows'>,
+    numericIndexes: number[],
+    canChooseCandlestick: boolean,
+) {
+    switch (kind) {
+        case 'number':
+            return result.rows.length === 1 && numericIndexes.length > 0;
+
+        case 'line':
+        case 'bar':
+            return numericIndexes.length > 0;
+
+        case 'scatter':
+            return numericIndexes.length >= 2;
+
+        case 'heatmap':
+            return result.columns.length >= 3 && numericIndexes.length > 0;
+
+        case 'candlestick':
+            return canChooseCandlestick;
+    }
+}
 
 const chartColors = [
     'var(--accent)',

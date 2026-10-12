@@ -7,7 +7,7 @@ import type { SelectControlOption } from '../../../../ui/components/SelectContro
 import { CandlestickChart } from './CandlestickChart';
 import { ChartPopover, ChartToolbar } from '../ChartToolbar';
 import { ScrollEdgeFrame } from '../../../../ui/components/ScrollEdgeShadows';
-import { chartKindOptions, chartTypeLabel } from '../chart-helpers';
+import { chartKindIsAvailable, chartKindOptions, chartTypeLabel } from '../chart-helpers';
 import type { prepareChartSelection } from '../controls/chart-selection';
 
 export function renderCandlestickChart({
@@ -44,8 +44,11 @@ export function renderCandlestickChart({
     };
     const updateKind = (value: string) => {
         const option = chartKindOptions.find(candidate => candidate.value === value);
-        if (!option) return;
-        if (option.value === 'candlestick' && !canChooseCandlestick) return;
+        if (
+            !option ||
+            !chartKindIsAvailable(option.value, result, numericIndexes, canChooseCandlestick)
+        )
+            return;
         onChart({
             ...chart,
             kind: option.value,
@@ -69,6 +72,7 @@ export function renderCandlestickChart({
         chartCopy,
         updateKind,
         canChooseCandlestick,
+        numericIndexes,
         candleX,
         onChart,
         candle,
@@ -85,6 +89,7 @@ function renderCandlestickControls({
     chartCopy,
     updateKind,
     canChooseCandlestick,
+    numericIndexes,
     candleX,
     onChart,
     candle,
@@ -98,6 +103,7 @@ function renderCandlestickControls({
     chartCopy: Copy['chart'];
     updateKind: (value: string) => void;
     canChooseCandlestick: boolean;
+    numericIndexes: number[];
     candleX: number;
     onChart: (chart: Draft['chart']) => void;
     candle: CandlestickConfig;
@@ -126,8 +132,12 @@ function renderCandlestickControls({
                                 options={chartKindOptions.map(option => ({
                                     value: option.value,
                                     label: chartTypeLabel(option.value, chartCopy),
-                                    disabled:
-                                        option.value === 'candlestick' && !canChooseCandlestick,
+                                    disabled: !chartKindIsAvailable(
+                                        option.value,
+                                        result,
+                                        numericIndexes,
+                                        canChooseCandlestick,
+                                    ),
                                 }))}
                             />
                         </label>

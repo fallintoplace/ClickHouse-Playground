@@ -7,7 +7,13 @@ import type { Draft } from '../../../editor/drafts/workspace-state';
 import type { Copy } from '../../../../ui/copy';
 import { SelectControl } from '../../../../ui/components/SelectControl';
 import { ChartPopover, ChartToolbar } from '../ChartToolbar';
-import { chartKindOptions, chartText, chartTypeLabel, seriesColor } from '../chart-helpers';
+import {
+    chartKindIsAvailable,
+    chartKindOptions,
+    chartText,
+    chartTypeLabel,
+    seriesColor,
+} from '../chart-helpers';
 
 export function renderChartControls({
     chartKind,
@@ -53,9 +59,17 @@ export function renderChartControls({
                         const option = chartKindOptions.find(
                             candidate => candidate.value === value,
                         );
-                        if (!option) return;
+                        if (
+                            !option ||
+                            !chartKindIsAvailable(
+                                option.value,
+                                result,
+                                numericIndexes,
+                                canChooseCandlestick,
+                            )
+                        )
+                            return;
                         if (option.value === 'candlestick') {
-                            if (!canChooseCandlestick) return;
                             onChart({
                                 ...chart,
                                 kind: 'candlestick',
@@ -88,7 +102,12 @@ export function renderChartControls({
                     options={chartKindOptions.map(option => ({
                         value: option.value,
                         label: chartTypeLabel(option.value, chartCopy),
-                        disabled: option.value === 'candlestick' && !canChooseCandlestick,
+                        disabled: !chartKindIsAvailable(
+                            option.value,
+                            result,
+                            numericIndexes,
+                            canChooseCandlestick,
+                        ),
                     }))}
                 />
             </label>
