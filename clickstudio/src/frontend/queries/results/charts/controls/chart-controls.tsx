@@ -153,68 +153,70 @@ export function renderChartControls({
                 </label>
             )}
             {chartKind === 'line' || chartKind === 'bar' ? (
-                <ChartPopover
-                    label={chartCopy.measures}
-                    closeLabel={chartCopy.closeControls}
-                    controlLabel={chartCopy.measures}
-                    trigger={
-                        <>
-                            <span
-                                className="chart-legend-dot"
-                                style={{
-                                    backgroundColor: seriesColor(0),
-                                    color: seriesColor(0),
-                                }}
-                            />
-                            <span
-                                className="chart-measure-summary"
-                                title={measureIndexes
-                                    .map(index => result.columns[index]?.name)
-                                    .join(', ')}
-                            >
-                                {result.columns[yIndex]?.name}
-                                {measureIndexes.length > 1 && ` +${measureIndexes.length - 1}`}
-                            </span>
-                        </>
-                    }
-                >
-                    <fieldset className="chart-measures">
-                        <legend>{chartCopy.measures}</legend>
-                        {availableMeasures.map(index => (
-                            <label key={index}>
-                                <input
-                                    type="checkbox"
-                                    checked={measureIndexes.includes(index)}
-                                    disabled={
-                                        measureIndexes.includes(index)
-                                            ? measureIndexes.length === 1
-                                            : measureIndexes.length >= MAX_CHART_SERIES
-                                    }
-                                    onChange={event => {
-                                        const next = event.target.checked
-                                            ? [...measureIndexes, index]
-                                            : measureIndexes.filter(value => value !== index);
-                                        onChart({
-                                            ...chart,
-                                            ys: next.slice(0, MAX_CHART_SERIES),
-                                        });
+                availableMeasures.length > 1 && (
+                    <ChartPopover
+                        label={chartCopy.measures}
+                        closeLabel={chartCopy.closeControls}
+                        controlLabel={chartCopy.measures}
+                        trigger={
+                            <>
+                                <span
+                                    className="chart-legend-dot"
+                                    style={{
+                                        backgroundColor: seriesColor(0),
+                                        color: seriesColor(0),
                                     }}
                                 />
                                 <span
-                                    style={
-                                        {
-                                            '--series-color': seriesColor(
-                                                Math.max(0, measureIndexes.indexOf(index)),
-                                            ),
-                                        } as CSSProperties
-                                    }
-                                />
-                                {result.columns[index]?.name}
-                            </label>
-                        ))}
-                    </fieldset>
-                    <p>{chartText(chartCopy.measureLimit, { count: MAX_CHART_SERIES })}</p>
-                </ChartPopover>
+                                    className="chart-measure-summary"
+                                    title={measureIndexes
+                                        .map(index => result.columns[index]?.name)
+                                        .join(', ')}
+                                >
+                                    {result.columns[yIndex]?.name}
+                                    {measureIndexes.length > 1 && ` +${measureIndexes.length - 1}`}
+                                </span>
+                            </>
+                        }
+                    >
+                        <fieldset className="chart-measures">
+                            <legend>{chartCopy.measures}</legend>
+                            {availableMeasures.map(index => (
+                                <label key={index}>
+                                    <input
+                                        type="checkbox"
+                                        checked={measureIndexes.includes(index)}
+                                        disabled={
+                                            measureIndexes.includes(index)
+                                                ? measureIndexes.length === 1
+                                                : measureIndexes.length >= MAX_CHART_SERIES
+                                        }
+                                        onChange={event => {
+                                            const next = event.target.checked
+                                                ? [...measureIndexes, index]
+                                                : measureIndexes.filter(value => value !== index);
+                                            onChart({
+                                                ...chart,
+                                                ys: next.slice(0, MAX_CHART_SERIES),
+                                            });
+                                        }}
+                                    />
+                                    <span
+                                        style={
+                                            {
+                                                '--series-color': seriesColor(
+                                                    Math.max(0, measureIndexes.indexOf(index)),
+                                                ),
+                                            } as CSSProperties
+                                        }
+                                    />
+                                    {result.columns[index]?.name}
+                                </label>
+                            ))}
+                        </fieldset>
+                        <p>{chartText(chartCopy.measureLimit, { count: MAX_CHART_SERIES })}</p>
+                    </ChartPopover>
+                )
             ) : (
                 <label className="chart-control-field">
                     <span className="chart-control-label">{chartCopy.measure}</span>
