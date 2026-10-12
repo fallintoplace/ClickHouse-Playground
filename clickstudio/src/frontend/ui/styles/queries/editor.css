@@ -708,34 +708,6 @@
   .sql-editor .cm-completionInfo {
     pointer-events: none;
   }
-  .sql-editor .cm-tooltip-lint {
-    box-sizing: border-box;
-    width: max-content;
-    max-width: min(560px, calc(100vw - 32px));
-    max-height: min(184px, 34vh);
-    overflow: auto;
-    border-color: color-mix(in srgb, var(--red) 28%, var(--line-bright));
-  }
-  .sql-editor .cm-tooltip-lint .cm-diagnostic {
-    margin: 0;
-    padding: 11px 13px;
-    border-left: 2px solid var(--red);
-    color: var(--text-soft);
-    font: 12px/1.55 var(--font-sans);
-    overflow-wrap: anywhere;
-    white-space: pre-wrap;
-  }
-  .sql-editor .cm-tooltip-lint .cm-diagnosticText::first-line {
-    color: var(--text);
-    font-weight: 600;
-  }
-  .sql-editor .cm-tooltip-lint .cm-diagnosticSource {
-    display: block;
-    margin-top: 5px;
-    color: var(--muted);
-    font: 10px/1.4 var(--font-sans);
-    letter-spacing: 0.01em;
-  }
   .sql-editor .cm-tooltip-autocomplete ul li[aria-selected] {
     background: color-mix(in srgb, var(--accent) 16%, var(--panel));
     color: var(--text);
@@ -839,6 +811,43 @@
 
 :root[data-theme="click-light"] :is(.editor-heading) {
   background: var(--panel-raised);
+}
+
+.sql-editor .cm-editor .cm-tooltip.cm-tooltip-lint {
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(560px, calc(100vw - 32px));
+  max-height: min(184px, 34vh);
+  overflow: auto;
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-popover);
+  background: var(--panel-raised);
+  color: var(--text);
+  box-shadow: var(--shadow-popover);
+}
+.sql-editor .cm-editor .cm-tooltip-lint .cm-diagnostic.cm-diagnostic-error {
+  margin: 0;
+  padding: 11px 13px;
+  border-left: 2px solid color-mix(in srgb, var(--red) 78%, var(--panel-raised));
+  color: var(--text-soft);
+  font: 12px/1.55 var(--font-sans);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.sql-editor .cm-editor .cm-tooltip-lint .cm-diagnosticText::first-line {
+  color: var(--text);
+  font-weight: 600;
+}
+.sql-editor .cm-editor .cm-tooltip-lint .cm-diagnosticText {
+  display: block;
+}
+.sql-editor .cm-editor .cm-tooltip-lint .cm-diagnosticSource {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font: 10px/1.4 var(--font-sans);
+  letter-spacing: 0.01em;
+  opacity: 1;
 }
 
 /* Responsive and motion states */
