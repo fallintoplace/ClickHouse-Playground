@@ -2659,7 +2659,7 @@ test('Ask AI shows a stop action while a response is in progress', async ({ page
     }
 });
 
-test('Ask AI keeps a custom conversation name after its first message and reload', async ({ page }) => {
+test('Custom AI chat name and answer survive reload', async ({ page }) => {
     await page.route('**/api/assistant/sql', async route => {
         const body = route.request().postDataJSON() as Record<string, unknown>;
         await route.fulfill({
