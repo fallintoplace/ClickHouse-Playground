@@ -67,6 +67,35 @@ export default defineConfig([
         },
     },
     {
+        files: ['**/*.{ts,tsx}'],
+        languageOptions: {
+            parserOptions: {
+                project: [
+                    './tsconfig.json',
+                    './tsconfig.server.json',
+                    './tsconfig.e2e.json',
+                    './tsconfig.eslint.json',
+                ],
+                tsconfigRootDir: import.meta.dirname,
+            },
+        },
+        rules: {
+            '@typescript-eslint/no-floating-promises': [
+                'error',
+                {
+                    allowForKnownSafeCalls: [
+                        {
+                            from: 'package',
+                            name: 'test',
+                            package: 'node:test',
+                        },
+                    ],
+                },
+            ],
+            '@typescript-eslint/no-misused-promises': 'error',
+        },
+    },
+    {
         files: [
             'src/backend/**/*.{ts,tsx}',
             'src/shared/**/*.{ts,tsx}',

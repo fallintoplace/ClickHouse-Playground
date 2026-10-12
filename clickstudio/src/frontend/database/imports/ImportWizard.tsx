@@ -276,7 +276,7 @@ export function ImportWizard({
                                             }
                                             openImportDestination();
                                         }}
-                                        onForget={forgetImport}
+                                        onForget={() => void forgetImport()}
                                     />
                                 )}
                         </>

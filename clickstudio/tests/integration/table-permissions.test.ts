@@ -7,22 +7,26 @@ import { loadConfig } from '../../src/backend/system/config.js';
 
 test('Local permission probes use the writer identity and preserve ClickHouse grant SQL', async t => {
     const requests: { query: string; authorization?: string; format: string | null }[] = [];
-    const server = createServer(async (req, res) => {
-        let query = '';
-        for await (const chunk of req) query += String(chunk);
-        const url = new URL(req.url!, 'http://localhost');
-        requests.push({
-            query,
-            authorization: req.headers.authorization,
-            format: url.searchParams.get('default_format'),
+    const server = createServer((req, res) => {
+        void (async () => {
+            let query = '';
+            for await (const chunk of req) query += String(chunk);
+            const url = new URL(req.url!, 'http://localhost');
+            requests.push({
+                query,
+                authorization: req.headers.authorization,
+                format: url.searchParams.get('default_format'),
+            });
+            let row: Record<string, unknown>;
+            if (query.startsWith('SELECT')) row = { readonly: 0, allow_ddl: 1 };
+            else if (query === 'SHOW GRANTS FINAL')
+                row = { grants: 'GRANT INSERT ON analytics.events TO writer' };
+            else row = { result: query.startsWith('CHECK GRANT INSERT') ? 1 : 0 };
+            res.setHeader('content-type', 'application/json');
+            res.end(JSON.stringify(row) + '\n');
+        })().catch(error => {
+            res.destroy(error instanceof Error ? error : new Error(String(error)));
         });
-        let row: Record<string, unknown>;
-        if (query.startsWith('SELECT')) row = { readonly: 0, allow_ddl: 1 };
-        else if (query === 'SHOW GRANTS FINAL')
-            row = { grants: 'GRANT INSERT ON analytics.events TO writer' };
-        else row = { result: query.startsWith('CHECK GRANT INSERT') ? 1 : 0 };
-        res.setHeader('content-type', 'application/json');
-        res.end(JSON.stringify(row) + '\n');
     });
     await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
     const config = loadConfig({
