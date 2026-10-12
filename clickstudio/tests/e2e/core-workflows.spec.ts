@@ -2659,7 +2659,7 @@ test('Ask AI shows a stop action while a response is in progress', async ({ page
     }
 });
 
-test('Ask AI keeps a custom conversation name after its first message', async ({ page }) => {
+test('Custom AI chat name and answer survive reload', async ({ page }) => {
     await page.route('**/api/assistant/sql', async route => {
         const body = route.request().postDataJSON() as Record<string, unknown>;
         await route.fulfill({
@@ -2700,6 +2700,12 @@ test('Ask AI keeps a custom conversation name after its first message', async ({
     await expect(
         page.getByRole('button', { name: 'Chat history: Flight lookup', exact: true }),
     ).toBeVisible();
+    await page.reload();
+    await page.getByTestId('open-ai').click();
+    await expect(
+        page.getByRole('button', { name: 'Chat history: Flight lookup', exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText('Custom title kept', { exact: true })).toBeVisible();
 });
 
 test('Scripts show each statement outcome and open that statement’s retained result', async ({
