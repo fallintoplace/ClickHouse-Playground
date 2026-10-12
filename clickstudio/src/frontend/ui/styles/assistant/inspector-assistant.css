@@ -2735,6 +2735,18 @@
   color: var(--text);
 }
 
+:root[data-theme="click-light"] .assistant-clarification {
+  border-inline-start-color: var(--accent-cyan);
+  background: color-mix(in srgb, var(--accent-cyan) 5%, var(--panel-raised));
+}
+
+:root[data-theme="click-light"] .assistant-clarification-label {
+  color: var(--accent-cyan);
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
 :root[data-theme="click-light"] .assistant-chat-composer {
   border-color: color-mix(in srgb, var(--accent) 22%, var(--line));
   background: var(--panel);
