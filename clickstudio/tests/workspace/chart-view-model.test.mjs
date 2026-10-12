@@ -699,7 +699,7 @@ test('Heatmaps stop preparing labels when their cell budget is exceeded', () => 
     assert.deepEqual(view.heatmapYLabels, []);
 });
 
-test('Chart summaries preserve custom titles', () => {
+test('Chart view keeps custom titles in the chart config', () => {
     const data = result(
         [
             ['x', 'UInt64'],
@@ -707,8 +707,8 @@ test('Chart summaries preserve custom titles', () => {
         ],
         [[1, 2]],
     );
-    assert.equal(prepare(data).chartTitle, undefined);
-    assert.equal(prepare(data, { title: 'Revenue' }).chartTitle, 'Revenue');
+    assert.equal(prepare(data).chart.title, 'Query result');
+    assert.equal(prepare(data, { title: 'Revenue' }).chart.title, 'Revenue');
 });
 
 test('Candlestick selection finds the time axis and rejects overlapping or invalid mappings', () => {

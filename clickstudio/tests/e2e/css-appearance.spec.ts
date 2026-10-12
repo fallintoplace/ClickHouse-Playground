@@ -103,12 +103,9 @@ for (const theme of ['Light', 'Dark']) {
             await results.getByRole('tab', { name: 'Chart', exact: true }).click();
             await expect(results.locator('.chart-toolbar')).toBeVisible();
             await expectReferenceStyles(page, info, 'compact-chart');
-            await results.getByRole('button', { name: 'Measures', exact: true }).click();
             await expect(
-                results.getByRole('dialog', { name: 'Measures', exact: true }),
-            ).toBeVisible();
-            await expectReferenceStyles(page, info, 'chart-measures');
-            await page.keyboard.press('Escape');
+                results.getByRole('button', { name: 'Measures', exact: true }),
+            ).toHaveCount(0);
             await expect(
                 results.getByRole('button', { name: 'Chart details', exact: true }),
             ).toHaveCount(0);

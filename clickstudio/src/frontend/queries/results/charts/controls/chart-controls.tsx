@@ -48,7 +48,7 @@ export function renderChartControls({
 }) {
     return (
         <ChartToolbar>
-            <label className="chart-control-field">
+            <div className="chart-control-field">
                 <span className="chart-control-label">{chartCopy.type}</span>
                 <SelectControl
                     className="chart-select"
@@ -110,9 +110,9 @@ export function renderChartControls({
                         ),
                     }))}
                 />
-            </label>
+            </div>
             {chartKind !== 'number' && (
-                <label className="chart-control-field">
+                <div className="chart-control-field">
                     <span className="chart-control-label">
                         {chartKind === 'scatter' ? chartCopy.xAxisMeasure : chartCopy.xAxis}
                     </span>
@@ -152,10 +152,10 @@ export function renderChartControls({
                                     : index === yIndex || index === groupByIndex,
                         }))}
                     />
-                </label>
+                </div>
             )}
             {chartKind === 'heatmap' && (
-                <label className="chart-control-field">
+                <div className="chart-control-field">
                     <span className="chart-control-label">{chartCopy.yAxis}</span>
                     <SelectControl
                         className="chart-select"
@@ -169,7 +169,7 @@ export function renderChartControls({
                             disabled: index === xIndex || index === yIndex,
                         }))}
                     />
-                </label>
+                </div>
             )}
             {chartKind === 'line' || chartKind === 'bar' ? (
                 availableMeasures.length > 1 && (
@@ -237,7 +237,7 @@ export function renderChartControls({
                     </ChartPopover>
                 )
             ) : (
-                <label className="chart-control-field">
+                <div className="chart-control-field">
                     <span className="chart-control-label">{chartCopy.measure}</span>
                     <SelectControl
                         className="chart-select"
@@ -251,7 +251,7 @@ export function renderChartControls({
                             disabled: index === xIndex || index === groupByIndex,
                         }))}
                     />
-                </label>
+                </div>
             )}
         </ChartToolbar>
     );

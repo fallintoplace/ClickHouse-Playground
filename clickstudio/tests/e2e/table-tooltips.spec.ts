@@ -199,7 +199,11 @@ test('Heatmaps keep native context and suppress redundant axis titles', async ({
     await runButton(page).click();
     const results = page.getByRole('region', { name: 'Query results', exact: true });
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();
-    await chooseChartOption(page, results.getByLabel('Type'), 'heatmap');
+    await chooseChartOption(
+        page,
+        results.getByRole('combobox', { name: 'Type', exact: true }),
+        'heatmap',
+    );
     const table = results.locator('.heatmap-grid');
     await expect(table.locator('.heatmap-row-label').first()).toHaveAttribute('title', '');
     const cell = table.getByLabel('Morning, Mon: 5', { exact: true });

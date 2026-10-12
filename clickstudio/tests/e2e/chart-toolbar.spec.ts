@@ -214,10 +214,11 @@ test('Long chart columns can be searched without growing the toolbar', async ({ 
     const xAxis = toolbar.getByRole('combobox', { name: 'X axis', exact: true });
     await xAxis.click();
     const search = results.getByRole('searchbox', { name: 'Search x axis', exact: true });
+    const options = xAxis.locator('xpath=..').locator('.chart-select-listbox').getByRole('option');
     await search.fill(names.at(-1)!);
-    await expect(results.getByRole('option')).toHaveCount(1);
-    await expect(results.getByRole('option')).toHaveText(names.at(-1)!);
-    await results.getByRole('option').click();
+    await expect(options).toHaveCount(1);
+    await expect(options).toHaveText(names.at(-1)!);
+    await options.click();
     await expect(xAxis).toHaveAttribute('data-value', String(names.length));
     await expectToolbarFits(toolbar);
     await expect(search).toBeHidden();
@@ -227,9 +228,9 @@ test('Long chart columns can be searched without growing the toolbar', async ({ 
     expect(
         await popup.evaluate(element => element.scrollWidth - element.clientWidth),
     ).toBeLessThanOrEqual(1);
-    await popup.getByLabel(names.at(-1)!, { exact: true }).check();
+    await popup.getByLabel(names.at(-2)!, { exact: true }).check();
     await expect(popup).toBeVisible();
-    await expect(results.locator('.chart-footer')).toContainText(names.at(-1)!);
+    await expect(results.locator('.chart-footer')).toContainText(names.at(-2)!);
     expect((await toolbar.boundingBox())!.height).toBe(before!.height);
     await page.setViewportSize({ width: 900, height: 800 });
     await expect(popup).toBeHidden();
@@ -247,11 +248,8 @@ test('Short numeric line charts show every X-axis label that fits', async ({ pag
     });
     const results = await openChart(page);
     const toolbar = results.locator('.chart-toolbar');
-    await expect(toolbar.locator('.chart-control-label')).toHaveText([
-        'Type',
-        'X axis',
-        'Measures',
-    ]);
+    await expect(toolbar.locator('.chart-control-label')).toHaveText(['Type', 'X axis']);
+    await expect(toolbar.getByRole('button', { name: 'Measures', exact: true })).toHaveCount(0);
     await chooseChartOption(
         page,
         toolbar.getByRole('combobox', { name: 'Type', exact: true }),
@@ -293,8 +291,9 @@ test('Candlestick mappings open under Setup and keep their selections', async ({
     await expect(open).toHaveAttribute('data-value', '1');
     const high = popup.getByRole('combobox', { name: 'High', exact: true });
     await high.click();
+    const highOptions = high.locator('xpath=..').locator('.chart-select-listbox');
     await expect(
-        results.locator('[role="option"][data-value="1"][aria-disabled="true"]'),
+        highOptions.locator('[role="option"][data-value="1"][aria-disabled="true"]'),
     ).toBeVisible();
     await page.keyboard.press('Escape');
     await chooseChartOption(page, popup.getByRole('combobox', { name: 'BID', exact: true }), '5');
@@ -346,9 +345,17 @@ test('Row-count charts use the compact toolbar and keep their grouping controls 
     const toolbar = results.locator('.chart-toolbar');
     await expect(toolbar.getByRole('heading')).toHaveCount(0);
     await expect(toolbar.locator('.eyebrow')).toHaveCount(0);
-    await chooseChartOption(page, toolbar.getByLabel('Break down by', { exact: true }), '');
+    await chooseChartOption(
+        page,
+        toolbar.getByRole('combobox', { name: 'Break down by', exact: true }),
+        '',
+    );
     await expect(toolbar.getByRole('heading')).toHaveCount(0);
-    await chooseChartOption(page, toolbar.getByLabel('X axis', { exact: true }), '1');
+    await chooseChartOption(
+        page,
+        toolbar.getByRole('combobox', { name: 'X axis', exact: true }),
+        '1',
+    );
     await expect(toolbar.getByRole('heading')).toHaveCount(0);
     await expect(results.locator('.chart-bar')).toHaveCount(2);
     await page.setViewportSize({ width: 900, height: 800 });

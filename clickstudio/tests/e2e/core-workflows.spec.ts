@@ -2196,8 +2196,11 @@ test('Single-row numeric results render as a number and expose supported chart t
     ).toHaveCount(0);
     await expect(results.locator('.result-table-toolbar')).toHaveCount(0);
     await expect(results.locator('.results-table-tools')).toBeEmpty();
-    await results.getByLabel('Type').click();
-    await expect(results.getByRole('option')).toHaveText(['Number', 'Line', 'Bar']);
+    const type = results.getByRole('combobox', { name: 'Type', exact: true });
+    await type.click();
+    await expect(
+        type.locator('xpath=..').locator('.chart-select-listbox').getByRole('option'),
+    ).toHaveText(['Number', 'Line', 'Bar']);
 });
 
 test('Scatter charts plot the selected numeric axes', async ({ page }) => {
@@ -2224,14 +2227,24 @@ test('Scatter charts plot the selected numeric axes', async ({ page }) => {
     await trust(page);
     const results = await runQuery(page);
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();
-    await chooseChartOption(page, results.getByLabel('Type'), 'scatter');
+    await chooseChartOption(
+        page,
+        results.getByRole('combobox', { name: 'Type', exact: true }),
+        'scatter',
+    );
     await expect(results.locator('.chart-canvas svg[role="img"]')).toHaveAttribute(
         'aria-label',
         /scatter chart/,
     );
     await expect(results.locator('.chart-point')).toHaveCount(3);
-    await results.getByLabel('X measure').click();
-    await expect(results.locator('[role="option"]:not([aria-disabled="true"])')).toHaveCount(1);
+    const xMeasure = results.getByRole('combobox', { name: 'X measure', exact: true });
+    await xMeasure.click();
+    await expect(
+        xMeasure
+            .locator('xpath=..')
+            .locator('.chart-select-listbox')
+            .locator('[role="option"]:not([aria-disabled="true"])'),
+    ).toHaveCount(1);
     await page.keyboard.press('Escape');
     await expect(results.locator('.chart-footer')).toContainText('3 plotted points');
 });
@@ -2261,7 +2274,11 @@ test('Heatmaps retain observed groups and leave missing cells blank', async ({ p
     await trust(page);
     const results = await runQuery(page);
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();
-    await chooseChartOption(page, results.getByLabel('Type'), 'heatmap');
+    await chooseChartOption(
+        page,
+        results.getByRole('combobox', { name: 'Type', exact: true }),
+        'heatmap',
+    );
     await expect(results.locator('.heatmap-grid')).toBeVisible();
     await expect(
         results.locator('.heatmap-cell[aria-label="Tue, 2026-09-21 01:00:00: no returned row"]'),

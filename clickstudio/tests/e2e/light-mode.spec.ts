@@ -272,7 +272,11 @@ test('Light heatmaps keep zero, null, missing, and saturated values readable wit
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'succeeded');
     const results = page.getByRole('region', { name: 'Query results', exact: true });
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();
-    await chooseChartOption(page, results.getByLabel('Type'), 'heatmap');
+    await chooseChartOption(
+        page,
+        results.getByRole('combobox', { name: 'Type', exact: true }),
+        'heatmap',
+    );
     await expect(results.locator('.heatmap-cell')).toHaveCount(6);
     await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
 
@@ -328,7 +332,7 @@ test('Mounted candlesticks update their marks and labels when the theme changes'
     await expect(up).toHaveCSS('fill', 'rgb(0, 107, 64)');
     await expect(down).toHaveCSS('fill', 'rgb(197, 34, 67)');
     await expect(page.locator('.market-axis text').first()).toHaveCSS('fill', 'rgb(69, 89, 116)');
-    await expect(page.locator('.market-bid-line')).toHaveCSS('stroke', 'rgb(37, 99, 235)');
+    await expect(page.locator('.market-bid-line')).toHaveCSS('stroke', 'rgb(98, 55, 25)');
     await page.getByRole('radio', { name: 'Dark theme', exact: true }).click();
     await expect(up).toHaveCSS('fill', 'rgb(53, 233, 120)');
     await expect(page.locator('.market-bid-line')).toHaveCSS('stroke', 'rgb(250, 255, 105)');

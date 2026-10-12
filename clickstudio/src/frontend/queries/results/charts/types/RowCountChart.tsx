@@ -333,7 +333,7 @@ function RowCountChartToolbar({
 }) {
     return (
         <ChartToolbar>
-            <label className="chart-control-field">
+            <div className="chart-control-field">
                 <span className="chart-control-label">{copy.xAxis}</span>
                 <SelectControl
                     className="chart-select"
@@ -376,9 +376,9 @@ function RowCountChartToolbar({
                         label: result.columns[index]?.name ?? '',
                     }))}
                 />
-            </label>
+            </div>
             {timeAxis && breakdowns.length > 0 && (
-                <label className="chart-control-field">
+                <div className="chart-control-field">
                     <span className="chart-control-label">{copy.breakdownBy}</span>
                     <SelectControl
                         className="chart-select"
@@ -408,7 +408,7 @@ function RowCountChartToolbar({
                             })),
                         ]}
                     />
-                </label>
+                </div>
             )}
             <span className="chart-row-count-type">
                 <span className="chart-legend-dot" />

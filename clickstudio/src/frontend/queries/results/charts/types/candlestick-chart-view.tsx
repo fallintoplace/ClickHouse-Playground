@@ -121,7 +121,7 @@ function renderCandlestickControls({
             {ref => (
                 <div ref={ref} className="chart-workspace animate-enter">
                     <ChartToolbar>
-                        <label className="chart-control-field">
+                        <div className="chart-control-field">
                             <span className="chart-control-label">{chartCopy.type}</span>
                             <SelectControl
                                 className="chart-select"
@@ -140,8 +140,8 @@ function renderCandlestickControls({
                                     ),
                                 }))}
                             />
-                        </label>
-                        <label className="chart-control-field">
+                        </div>
+                        <div className="chart-control-field">
                             <span className="chart-control-label">{chartCopy.xAxis}</span>
                             <SelectControl
                                 className="chart-select"
@@ -163,7 +163,7 @@ function renderCandlestickControls({
                                     label: column.name,
                                 }))}
                             />
-                        </label>
+                        </div>
                         <ChartPopover
                             label={chartCopy.setup}
                             closeLabel={chartCopy.closeControls}
@@ -173,8 +173,8 @@ function renderCandlestickControls({
                                 {(['open', 'high', 'low', 'close'] as const).map(field => {
                                     const options = candleColumns(candle[field]);
                                     return (
-                                        <label key={field}>
-                                            {chartCopy[`${field}Label`]}
+                                        <div className="chart-setup-field" key={field}>
+                                            <span>{chartCopy[`${field}Label`]}</span>
                                             <SelectControl
                                                 className="chart-select"
                                                 label={chartCopy[`${field}Label`]}
@@ -187,7 +187,7 @@ function renderCandlestickControls({
                                                 onChange={value => patchCandle(field, value)}
                                                 options={options}
                                             />
-                                        </label>
+                                        </div>
                                     );
                                 })}
                                 {(['bid', 'ask', 'spread', 'quoteActivity'] as const).map(field => {
@@ -207,8 +207,8 @@ function renderCandlestickControls({
                                     const options = optionalColumns(candle[field]);
                                     const label = getFieldLabel();
                                     return (
-                                        <label key={field}>
-                                            {label}
+                                        <div className="chart-setup-field" key={field}>
+                                            <span>{label}</span>
                                             <SelectControl
                                                 className="chart-select"
                                                 label={label}
@@ -221,7 +221,7 @@ function renderCandlestickControls({
                                                 onChange={value => patchCandle(field, value)}
                                                 options={options}
                                             />
-                                        </label>
+                                        </div>
                                     );
                                 })}
                             </div>

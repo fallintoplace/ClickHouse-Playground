@@ -1279,7 +1279,7 @@
     align-items: flex-end;
     gap: 8px;
   }
-  .chart-controls label {
+  .chart-controls .chart-control-field {
     display: grid;
     gap: 4px;
     color: var(--muted);
@@ -1297,7 +1297,7 @@
   .chart-toolbar .chart-controls {
     display: contents;
   }
-  .chart-toolbar .chart-controls label {
+  .chart-toolbar .chart-controls .chart-control-field {
     display: flex;
     min-width: 0;
     align-items: center;
@@ -1383,7 +1383,7 @@
     display: grid;
     gap: 6px;
   }
-  .chart-toolbar .chart-setup-fields label {
+  .chart-toolbar .chart-setup-field {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
@@ -2263,11 +2263,11 @@
   .chart-controls {
     width: 100%;
   }
-  .chart-controls label {
+  .chart-controls .chart-control-field {
     flex: 1;
     min-width: 75px;
   }
-  .chart-toolbar .chart-controls > label {
+  .chart-toolbar .chart-controls > .chart-control-field {
     flex: 0 1 auto;
   }
 }
