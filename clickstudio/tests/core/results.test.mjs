@@ -49,5 +49,6 @@ test('Heatmap stops scanning once the rendered grid exceeds its cell budget', ()
         4,
     );
     assert.equal(prepared.tooLarge, true);
-    assert.ok(prepared.xLabels.length * prepared.yLabels.length > 4);
+    assert.ok(prepared.xLabels.length * prepared.yLabels.length <= 4);
+    assert.equal(prepared.processedRows, 3);
 });

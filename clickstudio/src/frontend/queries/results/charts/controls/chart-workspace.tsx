@@ -72,14 +72,6 @@ export function renderChartWorkspace({
                             );
 
                         case 'heatmap':
-                            if (heatmapTooLarge) {
-                                return (
-                                    <div className="chart-empty">
-                                        {chartCopy.tooManyHeatmapLabels}
-                                    </div>
-                                );
-                            }
-
                             if (
                                 !heatmap ||
                                 groupByIndex === undefined ||
@@ -228,7 +220,11 @@ export function renderChartWorkspace({
                         case 'heatmap':
                             return chartText(chartCopy.populatedCells, {
                                 cells: formatCount(heatmap?.cells.size ?? 0),
-                                rows: formatCount(result.rows.length),
+                                rows: formatCount(
+                                    heatmapTooLarge
+                                        ? (heatmap?.processedRows ?? 0)
+                                        : result.rows.length,
+                                ),
                             });
 
                         case 'scatter':

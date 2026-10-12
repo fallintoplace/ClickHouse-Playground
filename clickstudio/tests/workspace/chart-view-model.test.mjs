@@ -677,7 +677,7 @@ test('Heatmaps keep returned NULL cells distinct from missing combinations', () 
     assert.equal(view.heatmap.present.has(heatmapCellKey('Mon', '11')), false);
 });
 
-test('Heatmaps stop preparing labels when their cell budget is exceeded', () => {
+test('Heatmaps keep a bounded partial grid when their cell budget is exceeded', () => {
     const rows = Array.from({ length: 1000 }, (_, index) => [`x${index}`, `y${index}`, index]);
     const view = prepare(
         result(
@@ -695,8 +695,10 @@ test('Heatmaps stop preparing labels when their cell budget is exceeded', () => 
         },
     );
     assert.equal(view.heatmapTooLarge, true);
-    assert.deepEqual(view.heatmapXLabels, []);
-    assert.deepEqual(view.heatmapYLabels, []);
+    assert.ok(view.heatmapXLabels.length > 0);
+    assert.ok(view.heatmapYLabels.length > 0);
+    assert.ok(view.heatmapXLabels.length * view.heatmapYLabels.length <= 1200);
+    assert.ok(view.heatmap?.processedRows < rows.length);
 });
 
 test('Chart view keeps custom titles in the chart config', () => {

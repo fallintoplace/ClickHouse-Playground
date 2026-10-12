@@ -1,5 +1,6 @@
 import { NativeTable } from '../../../../ui/components/NativeTable';
 import {
+    MAX_HEATMAP_CELLS,
     type HeatmapPreparation,
     heatmapCellKey,
 } from '../../../../../shared/queries/results/results';
@@ -121,10 +122,13 @@ export function HeatmapGrid({
                             measure: result.columns[yIndex]?.name ?? '',
                             rows: formatCount(heatmapYLabels.length),
                             columns: formatCount(heatmapXLabels.length),
-                            note:
-                                result.completeness === 'truncated'
-                                    ? chartCopy.heatmapTruncatedNote
-                                    : chartCopy.heatmapCompleteNote,
+                            note: heatmap.tooLarge
+                                ? chartText(chartCopy.heatmapCutoffNote, {
+                                      cells: formatCount(MAX_HEATMAP_CELLS),
+                                  })
+                                : result.completeness === 'truncated'
+                                  ? chartCopy.heatmapTruncatedNote
+                                  : chartCopy.heatmapCompleteNote,
                         })}
                     </div>
                 </div>

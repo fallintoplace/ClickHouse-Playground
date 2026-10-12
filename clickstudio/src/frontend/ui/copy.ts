@@ -518,8 +518,7 @@ export const copy = {
         chooseNumericColumn: 'Choose a numeric result column to show one value.',
         singleValue: 'SINGLE VALUE',
         exactResultValue: '1 retained row · exact result value',
-        tooManyHeatmapLabels:
-            'This result has too many row and column labels for a readable heatmap. Group it into a smaller grid first.',
+        heatmapCutoffNote: 'Showing a partial grid capped at {cells} cells.',
         heatmapNeedsDimensions: 'Heatmap needs two dimensions and one numeric measure.',
         heatmapTableAria: '{measure} by {groupBy} and {xAxis}',
         heatmapNotRetained: 'not retained',

@@ -217,12 +217,8 @@ export function prepareChartView({
         chartKind === 'heatmap' && groupByIndex !== undefined
             ? prepareHeatmap(result.rows, xIndex, groupByIndex, yIndex)
             : undefined;
-    const heatmapXLabels = heatmap?.tooLarge
-        ? []
-        : [...(heatmap?.xLabels ?? [])].sort(collator.compare);
-    const heatmapYLabels = heatmap?.tooLarge
-        ? []
-        : [...(heatmap?.yLabels ?? [])].sort(collator.compare);
+    const heatmapXLabels = [...(heatmap?.xLabels ?? [])].sort(collator.compare);
+    const heatmapYLabels = [...(heatmap?.yLabels ?? [])].sort(collator.compare);
     const heatmapMaximum = heatmap?.maximum ?? 0;
     const heatmapTooLarge = heatmap?.tooLarge ?? false;
     const compactNumber = new Intl.NumberFormat('en', {
