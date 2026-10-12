@@ -382,23 +382,7 @@ type CreateTableContentModel = {
 
 function CreateTableContent({ model }: { model: CreateTableContentModel }) {
     const {
-        databaseInputId,
-        databaseInput,
-        databaseTouched,
-        databaseIsValid,
-        databaseOptionsOpen,
-        databaseOptionsId,
-        highlightedDatabaseOption,
         database,
-        setDatabaseOptionsOpen,
-        setDatabaseOptionsQuery,
-        setActiveDatabaseOption,
-        setDatabaseTouched,
-        setDatabase,
-        handleDatabaseKeyDown,
-        databaseOptions,
-        selectDatabase,
-        databaseHelp,
         tableInput,
         table,
         setTable,
@@ -406,9 +390,7 @@ function CreateTableContent({ model }: { model: CreateTableContentModel }) {
         tableTouched,
         tableIsValid,
         tableHelp,
-        setColumns,
         columns,
-        updateColumn,
         orderBy,
         setOrderBy,
         created,
@@ -419,25 +401,7 @@ function CreateTableContent({ model }: { model: CreateTableContentModel }) {
         <main className="create-table-content min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5 sm:px-7">
             {!created && (
                 <>
-                    {renderDatabasePicker({
-                        databaseInputId,
-                        databaseInput,
-                        databaseTouched,
-                        databaseIsValid,
-                        databaseOptionsOpen,
-                        databaseOptionsId,
-                        highlightedDatabaseOption,
-                        database,
-                        setDatabaseOptionsOpen,
-                        setDatabaseOptionsQuery,
-                        setActiveDatabaseOption,
-                        setDatabaseTouched,
-                        setDatabase,
-                        handleDatabaseKeyDown,
-                        databaseOptions,
-                        selectDatabase,
-                        databaseHelp,
-                    })}
+                    {renderDatabasePicker(model)}
 
                     <label className="create-table-field">
                         <span>Table name</span>
@@ -469,7 +433,7 @@ function CreateTableContent({ model }: { model: CreateTableContentModel }) {
                         </span>
                     </label>
 
-                    {renderTableColumns({ setColumns, columns, updateColumn })}
+                    {renderTableColumns(model)}
 
                     <label className="create-table-field">
                         <span>Sorting key</span>
@@ -524,11 +488,7 @@ function renderTableColumns({
     setColumns,
     columns,
     updateColumn,
-}: {
-    setColumns: import('react').Dispatch<import('react').SetStateAction<CreateTableColumn[]>>;
-    columns: CreateTableColumn[];
-    updateColumn: (index: number, field: keyof CreateTableColumn, value: string) => void;
-}) {
+}: Pick<CreateTableContentModel, 'setColumns' | 'columns' | 'updateColumn'>) {
     return (
         <section aria-label="Table columns" className="create-table-columns space-y-2">
             <div className="flex items-center justify-between">
@@ -626,25 +586,26 @@ function renderDatabasePicker({
     databaseOptions,
     selectDatabase,
     databaseHelp,
-}: {
-    databaseInputId: string;
-    databaseInput: import('react').RefObject<HTMLInputElement | null>;
-    databaseTouched: boolean;
-    databaseIsValid: boolean;
-    databaseOptionsOpen: boolean;
-    databaseOptionsId: string;
-    highlightedDatabaseOption: number;
-    database: string;
-    setDatabaseOptionsOpen: import('react').Dispatch<import('react').SetStateAction<boolean>>;
-    setDatabaseOptionsQuery: import('react').Dispatch<import('react').SetStateAction<string>>;
-    setActiveDatabaseOption: import('react').Dispatch<import('react').SetStateAction<number>>;
-    setDatabaseTouched: import('react').Dispatch<import('react').SetStateAction<boolean>>;
-    setDatabase: import('react').Dispatch<import('react').SetStateAction<string>>;
-    handleDatabaseKeyDown: (event: ReactKeyboardEvent<HTMLInputElement>) => void;
-    databaseOptions: string[];
-    selectDatabase: (value: string) => void;
-    databaseHelp: string;
-}) {
+}: Pick<
+    CreateTableContentModel,
+    | 'databaseInputId'
+    | 'databaseInput'
+    | 'databaseTouched'
+    | 'databaseIsValid'
+    | 'databaseOptionsOpen'
+    | 'databaseOptionsId'
+    | 'highlightedDatabaseOption'
+    | 'database'
+    | 'setDatabaseOptionsOpen'
+    | 'setDatabaseOptionsQuery'
+    | 'setActiveDatabaseOption'
+    | 'setDatabaseTouched'
+    | 'setDatabase'
+    | 'handleDatabaseKeyDown'
+    | 'databaseOptions'
+    | 'selectDatabase'
+    | 'databaseHelp'
+>) {
     return (
         <div className="create-table-field">
             <label htmlFor={databaseInputId}>Database</label>

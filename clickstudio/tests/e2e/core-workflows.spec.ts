@@ -9,6 +9,7 @@ import {
     openStatementResults,
     openResultFilter,
     openWorkspacePanel,
+    replaceSql,
     runIdentity,
     runScript,
     runButton,
@@ -30,16 +31,6 @@ declare global {
         __pendingParserFormat?: number;
         __failParserWorker: () => void;
     }
-}
-
-async function replaceSql(page: Page, sql: string) {
-    const editor = page.locator('.cm-content');
-    await editor.focus();
-    await page.keyboard.press('ControlOrMeta+a');
-    await page.keyboard.insertText(sql);
-    await expect
-        .poll(async () => (await editor.innerText()).replace(/\s/g, ''))
-        .toContain(sql.replace(/\s/g, ''));
 }
 
 async function runQuery(page: Page) {

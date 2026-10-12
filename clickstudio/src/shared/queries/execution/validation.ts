@@ -26,7 +26,7 @@ function isColumn(value: unknown): value is Column {
     return isRecord(value) && typeof value.name === 'string' && typeof value.type === 'string';
 }
 
-function isLimits(value: unknown): value is Limits {
+export function isLimits(value: unknown): value is Limits {
     return (
         isRecord(value) &&
         isSafeInteger(value.rows) &&

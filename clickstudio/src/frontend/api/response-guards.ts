@@ -2,6 +2,7 @@ import {
     isFiniteNumber,
     isJson,
     isJsonRecord,
+    isOptionalString,
     isRecord,
     isSafeInteger,
     isStringArray,
@@ -16,8 +17,7 @@ import type {
 } from '../../shared/database/explorer/activity/workload.js';
 import {
     isQueryLogSource,
-    WORKLOAD_WINDOWS,
-    type WorkloadWindow,
+    isWorkloadWindow,
 } from '../../shared/database/explorer/activity/workload.js';
 import type {
     ReplicationCapabilities,
@@ -43,7 +43,6 @@ import type {
     MergeTreePart,
     MergeTreePartsSnapshot,
 } from '../../shared/database/explorer/storage/parts.js';
-import type { Schema } from '../../shared/database/schema/types.js';
 import { isSchema } from '../../shared/database/schema/schema.js';
 import type {
     ClickHouseDocumentationEntry,
@@ -51,10 +50,8 @@ import type {
 } from '../../shared/database/reference/types.js';
 import { IMPORT_JOB_STATUSES, type ImportJobStatus } from '../../shared/database/imports/status.js';
 import { IMPORT_FORMATS, type ImportFormat } from '../../shared/database/imports/limits.js';
-import { isResult, isRun, isScript } from '../../shared/queries/execution/validation.js';
-import type { Result, ResultPage } from '../../shared/queries/results/types.js';
-import type { Run, Script } from '../../shared/queries/execution/types.js';
-import type { QueryDocument } from '../../shared/queries/saved-queries/types.js';
+import { isLimits, isResult, isRun, isScript } from '../../shared/queries/execution/validation.js';
+import type { ResultPage } from '../../shared/queries/results/types.js';
 import { isQueryDocument } from '../../shared/queries/saved-queries/validation.js';
 import type { ProfilePipeline, QueryProfile } from '../../shared/queries/inspection/types.js';
 import type {
@@ -65,7 +62,6 @@ import {
     FLAMEGRAPH_TRACE_TYPES,
     isFlamegraphSource,
 } from '../../shared/queries/inspection/flamegraph.js';
-import type { Limits } from '../../shared/queries/execution/settings.js';
 import type { TablePermissions } from '../../shared/database/tables/permissions.js';
 import type {
     ImportJob,
@@ -74,7 +70,16 @@ import type {
 } from '../database/imports/state/import-wizard-model.js';
 import type { Connected, Session } from '../workspace/workspace-types.js';
 
-export { isStringArray };
+export {
+    isStringArray,
+    isRecord as isRecordResponse,
+    isJson as isJsonValue,
+    isSchema as isSchemaResponse,
+    isRun as isRunResponse,
+    isResult as isResultResponse,
+    isScript as isScriptResponse,
+    isQueryDocument as isQueryDocumentResponse,
+};
 
 export type ResponseGuard<T> = (value: unknown) => value is T;
 
@@ -88,13 +93,7 @@ export function arrayOf<T>(guard: ResponseGuard<T>): ResponseGuard<T[]> {
     return (value): value is T[] => isArrayOf(value, guard);
 }
 
-export function isRecordResponse(value: unknown): value is Record<string, unknown> {
-    return isRecord(value);
-}
-
-export function isRecordArrayResponse(value: unknown): value is Record<string, unknown>[] {
-    return Array.isArray(value) && value.every(isRecord);
-}
+export const isRecordArrayResponse = arrayOf(isRecord);
 
 function isImportFormat(value: unknown): value is ImportFormat {
     return IMPORT_FORMATS.some(format => format === value);
@@ -139,19 +138,19 @@ export function isImportJob(value: unknown): value is ImportJob {
     return (
         isRecord(value) &&
         typeof value.id === 'string' &&
-        (value.connectionId === undefined || typeof value.connectionId === 'string') &&
+        isOptionalString(value.connectionId) &&
         typeof value.table === 'string' &&
-        (value.queryId === undefined || typeof value.queryId === 'string') &&
-        (value.deduplicationToken === undefined || typeof value.deduplicationToken === 'string') &&
+        isOptionalString(value.queryId) &&
+        isOptionalString(value.deduplicationToken) &&
         isSafeInteger(value.rows) &&
-        (value.createdAt === undefined || typeof value.createdAt === 'string') &&
+        isOptionalString(value.createdAt) &&
         isImportJobStatus(value.status) &&
-        (value.error === undefined || typeof value.error === 'string') &&
+        isOptionalString(value.error) &&
         (value.reconciliationRequired === undefined ||
             typeof value.reconciliationRequired === 'boolean') &&
         (value.tableCreated === undefined || typeof value.tableCreated === 'boolean') &&
         (value.tableExists === undefined || typeof value.tableExists === 'boolean') &&
-        (value.reviewedAt === undefined || typeof value.reviewedAt === 'string') &&
+        isOptionalString(value.reviewedAt) &&
         (value.demoRows === undefined || isArrayOf(value.demoRows, isJsonRecord)) &&
         (value.demoPersisted === undefined || typeof value.demoPersisted === 'boolean')
     );
@@ -183,13 +182,13 @@ function isPipelineNode(value: unknown): value is Record<string, unknown> {
             'output',
             'stage',
         ].some(kind => kind === value.kind) &&
-        (value.detail === undefined || typeof value.detail === 'string') &&
+        isOptionalString(value.detail) &&
         ['measured', 'estimated', 'planned'].some(status => status === value.status) &&
         ['durationMs', 'parallelism', 'timePercent'].every(
             key => value[key] === undefined || isFiniteNumber(value[key]),
         ) &&
-        ['rows', 'bytes', 'inputRows', 'outputRows', 'inputBytes', 'outputBytes'].every(
-            key => value[key] === undefined || typeof value[key] === 'string',
+        ['rows', 'bytes', 'inputRows', 'outputRows', 'inputBytes', 'outputBytes'].every(key =>
+            isOptionalString(value[key]),
         )
     );
 }
@@ -199,7 +198,7 @@ function isPipelineEdge(value: unknown): value is Record<string, unknown> {
         isRecord(value) &&
         typeof value.source === 'string' &&
         typeof value.target === 'string' &&
-        (value.label === undefined || typeof value.label === 'string') &&
+        isOptionalString(value.label) &&
         (value.flow === undefined || isFiniteNumber(value.flow))
     );
 }
@@ -229,8 +228,8 @@ export function isQueryProfile(value: unknown): value is QueryProfile {
         typeof value.runId === 'string' &&
         isFiniteNumber(summary.durationMs) &&
         isFiniteNumber(summary.resultRows) &&
-        ['readRows', 'readBytes', 'resultBytes', 'memory'].every(
-            key => summary[key] === undefined || typeof summary[key] === 'string',
+        ['readRows', 'readBytes', 'resultBytes', 'memory'].every(key =>
+            isOptionalString(summary[key]),
         ) &&
         Array.isArray(value.insights) &&
         value.insights.every(
@@ -245,7 +244,7 @@ export function isQueryProfile(value: unknown): value is QueryProfile {
         ['queryLog', 'pipelineGraph', 'indexAnalysis', 'runtimePlan'].every(
             key => typeof capabilities[key] === 'boolean',
         ) &&
-        (value.traceUrl === undefined || typeof value.traceUrl === 'string') &&
+        isOptionalString(value.traceUrl) &&
         typeof value.notice === 'string'
     );
 }
@@ -255,7 +254,7 @@ function isFlamegraphFrame(value: unknown): value is Record<string, unknown> {
         isRecord(value) &&
         typeof value.id === 'string' &&
         typeof value.name === 'string' &&
-        (value.location === undefined || typeof value.location === 'string') &&
+        isOptionalString(value.location) &&
         isSafeInteger(value.samples) &&
         isSafeInteger(value.selfSamples) &&
         isArrayOf(value.children, isFlamegraphFrame)
@@ -286,18 +285,9 @@ export function isFlamegraphSnapshot(value: unknown): value is FlamegraphSnapsho
     );
 }
 
-function isLimits(value: unknown): value is Limits {
-    return (
-        isRecord(value) &&
-        ['rows', 'bytes', 'seconds', 'memory', 'threads'].every(key => isSafeInteger(value[key]))
-    );
-}
-
 function isCapability(value: unknown): value is Capability {
     return (
-        isRecord(value) &&
-        typeof value.available === 'boolean' &&
-        (value.reason === undefined || typeof value.reason === 'string')
+        isRecord(value) && typeof value.available === 'boolean' && isOptionalString(value.reason)
     );
 }
 
@@ -379,7 +369,7 @@ export function isClickHouseDocumentationSummary(
         isRecord(value) &&
         typeof value.name === 'string' &&
         typeof value.type === 'string' &&
-        (value.source === undefined || typeof value.source === 'string')
+        isOptionalString(value.source)
     );
 }
 
@@ -434,10 +424,6 @@ function isWorkloadPoint(value: unknown): value is WorkloadPoint {
         typeof value.readBytes === 'string' &&
         typeof value.failed === 'boolean'
     );
-}
-
-function isWorkloadWindow(value: unknown): value is WorkloadWindow {
-    return WORKLOAD_WINDOWS.some(minutes => minutes === value);
 }
 
 export function isWorkloadSnapshot(value: unknown): value is WorkloadSnapshot {
@@ -528,7 +514,7 @@ function isViewRefresh(value: unknown): value is ViewRefresh {
             'readRows',
             'writtenRows',
             'exception',
-        ].every(key => value[key] === undefined || typeof value[key] === 'string') &&
+        ].every(key => isOptionalString(value[key])) &&
         (value.progress === undefined || isFiniteNumber(value.progress))
     );
 }
@@ -545,8 +531,8 @@ function isLineageNode(value: unknown): value is LineageNode {
             ['incremental', 'refreshable', 'append-incremental', 'unknown'].some(
                 mode => mode === value.mode,
             )) &&
-        (value.schedule === undefined || typeof value.schedule === 'string') &&
-        (value.definition === undefined || typeof value.definition === 'string') &&
+        isOptionalString(value.schedule) &&
+        isOptionalString(value.definition) &&
         (value.definitionTruncated === undefined ||
             typeof value.definitionTruncated === 'boolean') &&
         (value.refresh === undefined || isViewRefresh(value.refresh))
@@ -582,9 +568,7 @@ function isMergeActivity(value: unknown): value is MergeActivity {
         typeof value.sourcePartsTruncated === 'boolean' &&
         (value.progress === undefined || isFiniteNumber(value.progress)) &&
         (value.elapsedSeconds === undefined || isFiniteNumber(value.elapsedSeconds)) &&
-        ['bytesRead', 'bytesWritten', 'memory'].every(
-            key => value[key] === undefined || typeof value[key] === 'string',
-        ) &&
+        ['bytesRead', 'bytesWritten', 'memory'].every(key => isOptionalString(value[key])) &&
         typeof value.isMutation === 'boolean'
     );
 }
@@ -595,7 +579,7 @@ function isMutationActivity(value: unknown): value is MutationActivity {
         typeof value.id === 'string' &&
         typeof value.command === 'string' &&
         ['createdAt', 'partsRemaining', 'latestFailure', 'latestFailureAt', 'failedPart'].every(
-            key => value[key] === undefined || typeof value[key] === 'string',
+            key => isOptionalString(value[key]),
         ) &&
         (value.done === undefined || typeof value.done === 'boolean')
     );
@@ -665,28 +649,4 @@ export function isMergeTreePartsSnapshot(value: unknown): value is MergeTreePart
         typeof value.measuredAt === 'string' &&
         isMergeTreePartTotals(value.totals)
     );
-}
-
-export function isSchemaResponse(value: unknown): value is Schema {
-    return isSchema(value);
-}
-
-export function isRunResponse(value: unknown): value is Run {
-    return isRun(value);
-}
-
-export function isResultResponse(value: unknown): value is Result {
-    return isResult(value);
-}
-
-export function isScriptResponse(value: unknown): value is Script {
-    return isScript(value);
-}
-
-export function isQueryDocumentResponse(value: unknown): value is QueryDocument {
-    return isQueryDocument(value);
-}
-
-export function isJsonValue(value: unknown): value is import('../../shared/common/values.js').Json {
-    return isJson(value);
 }

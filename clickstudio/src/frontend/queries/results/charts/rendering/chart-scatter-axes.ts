@@ -9,6 +9,7 @@ import {
     fitChartTicks,
     formatCount,
     type ChartAxisTick,
+    type ChartSeries,
 } from '../chart-helpers.js';
 
 export function prepareScatterAxes({
@@ -51,17 +52,7 @@ export function prepareScatterAxes({
     max: number;
     compactNumber: Intl.NumberFormat;
     categoricalAxis: boolean;
-    plotSeries: {
-        columnIndex: number;
-        color:
-            | 'var(--accent)'
-            | 'var(--accent-mark)'
-            | 'var(--green)'
-            | 'var(--amber)'
-            | 'var(--red)'
-            | 'var(--violet)';
-        points: { label: string; value: number | null; index: number }[];
-    }[];
+    plotSeries: ChartSeries[];
     x: (index: number) => number;
 }) {
     const scatterPoints = chartRows

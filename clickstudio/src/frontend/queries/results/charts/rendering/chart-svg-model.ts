@@ -1,8 +1,7 @@
 import type { ChartKind } from '../../../../../shared/queries/results/chart-types.js';
 import type { Result } from '../../../../../shared/queries/results/types.js';
 import type { Row } from '../../../../../shared/common/values.js';
-import type { chartText } from '../chart-helpers.js';
-import { type ChartAxisTick } from '../chart-helpers.js';
+import type { chartText, ChartAxisTick, ChartSeries } from '../chart-helpers.js';
 
 export type ChartSvgModel = {
     viewportWidth: number;
@@ -23,17 +22,7 @@ export type ChartSvgModel = {
     result: Result;
     xIndex: number;
     yIndex: number;
-    plotSeries: {
-        columnIndex: number;
-        color:
-            | 'var(--accent)'
-            | 'var(--accent-mark)'
-            | 'var(--green)'
-            | 'var(--amber)'
-            | 'var(--red)'
-            | 'var(--violet)';
-        points: { label: string; value: number | null; index: number }[];
-    }[];
+    plotSeries: ChartSeries[];
     x: (index: number) => number;
     y: (value: number) => number;
     barWidth: number;

@@ -1,34 +1,9 @@
 import { expect, type Locator, type Page, type Route } from '@playwright/test';
-import type { Schema } from '../../src/shared/database/schema/types.js';
 import type { CloudConnectionTest } from '../../src/frontend/database/connections/cloud-connection.js';
 import { arrayValue, jsonRecord, jsonValue } from '../helpers/type-guards.js';
+import { cloudSchema as previewCloudSchema } from '../helpers/cloud-fixtures.js';
 
-export const previewCloudSchema: Schema = {
-    connectionId: 'clickhouse-cloud',
-    fetchedAt: '2026-09-28T00:00:00.000Z',
-    databases: ['default'],
-    tables: [{ database: 'default', name: 'events', engine: 'MergeTree' }],
-    columns: [
-        {
-            database: 'default',
-            table: 'events',
-            name: 'day',
-            type: 'Date',
-            defaultKind: '',
-            comment: '',
-        },
-        {
-            database: 'default',
-            table: 'events',
-            name: 'events',
-            type: 'UInt64',
-            defaultKind: '',
-            comment: '',
-        },
-    ],
-    warnings: [],
-    truncated: false,
-};
+export { previewCloudSchema };
 
 const previewCloudConnectionTest: CloudConnectionTest = {
     host: 'service.region.provider.clickhouse.cloud:8443',

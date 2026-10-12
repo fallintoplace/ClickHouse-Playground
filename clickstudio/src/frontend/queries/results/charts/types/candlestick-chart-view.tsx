@@ -32,10 +32,7 @@ export function renderCandlestickChart({
         activeCandleValid,
     } = selection;
     const candle = activeCandle ?? {};
-    const patchCandle = (
-        field: 'open' | 'high' | 'low' | 'close' | 'bid' | 'ask' | 'spread' | 'quoteActivity',
-        value: string,
-    ) => {
+    const patchCandle = (field: keyof CandlestickConfig, value: string) => {
         const next = value === '' ? undefined : Number(value);
         const candlestick: CandlestickConfig = { ...candle };
         if (next === undefined) delete candlestick[field];
@@ -79,7 +76,6 @@ export function renderCandlestickChart({
         result,
         patchCandle,
         candleColumns,
-        optionalColumns: candleColumns,
         activeCandleValid,
     });
 }
@@ -96,7 +92,6 @@ function renderCandlestickControls({
     result,
     patchCandle,
     candleColumns,
-    optionalColumns,
     activeCandleValid,
 }: {
     chart: Draft['chart'];
@@ -108,14 +103,20 @@ function renderCandlestickControls({
     onChart: (chart: Draft['chart']) => void;
     candle: CandlestickConfig;
     result: Result;
-    patchCandle: (
-        field: 'open' | 'high' | 'low' | 'close' | 'bid' | 'ask' | 'spread' | 'quoteActivity',
-        value: string,
-    ) => void;
+    patchCandle: (field: keyof CandlestickConfig, value: string) => void;
     candleColumns: (selected: number | undefined) => SelectControlOption[];
-    optionalColumns: (selected: number | undefined) => SelectControlOption[];
     activeCandleValid: boolean;
 }) {
+    const fields = [
+        ['open', chartCopy.openLabel],
+        ['high', chartCopy.highLabel],
+        ['low', chartCopy.lowLabel],
+        ['close', chartCopy.closeLabel],
+        ['bid', 'BID'],
+        ['ask', 'ASK'],
+        ['spread', chartCopy.spreadBps],
+        ['quoteActivity', chartCopy.quoteActivity],
+    ] as const;
     return (
         <ScrollEdgeFrame<HTMLDivElement> className="chart-workspace-frame">
             {ref => (
@@ -170,42 +171,8 @@ function renderCandlestickControls({
                             trigger={chartCopy.setup}
                         >
                             <div className="chart-setup-fields">
-                                {(['open', 'high', 'low', 'close'] as const).map(field => {
+                                {fields.map(([field, label]) => {
                                     const options = candleColumns(candle[field]);
-                                    return (
-                                        <div className="chart-setup-field" key={field}>
-                                            <span>{chartCopy[`${field}Label`]}</span>
-                                            <SelectControl
-                                                className="chart-select"
-                                                label={chartCopy[`${field}Label`]}
-                                                value={
-                                                    candle[field] === undefined
-                                                        ? ''
-                                                        : String(candle[field])
-                                                }
-                                                searchable={options.length >= 9}
-                                                onChange={value => patchCandle(field, value)}
-                                                options={options}
-                                            />
-                                        </div>
-                                    );
-                                })}
-                                {(['bid', 'ask', 'spread', 'quoteActivity'] as const).map(field => {
-                                    const getFieldLabel = () => {
-                                        switch (field) {
-                                            case 'bid':
-                                            case 'ask':
-                                                return field.toUpperCase();
-
-                                            case 'spread':
-                                                return chartCopy.spreadBps;
-
-                                            default:
-                                                return chartCopy.quoteActivity;
-                                        }
-                                    };
-                                    const options = optionalColumns(candle[field]);
-                                    const label = getFieldLabel();
                                     return (
                                         <div className="chart-setup-field" key={field}>
                                             <span>{label}</span>

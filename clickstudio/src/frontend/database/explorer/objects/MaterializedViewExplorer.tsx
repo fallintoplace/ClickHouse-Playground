@@ -185,6 +185,26 @@ function NodeDetails({
 
         return 'No refresh telemetry available for this object.';
     };
+    const refreshDetails = refresh && (
+        <dl className="native-detail-list">
+            <dt>Last successful refresh</dt>
+            <dd>{nativeTime(refresh.lastSuccessAt)}</dd>
+            <dt>Last successful duration</dt>
+            <dd>
+                {refresh.lastSuccessDurationMs === undefined
+                    ? 'Unavailable'
+                    : `${nativeCount(refresh.lastSuccessDurationMs)} ms`}
+            </dd>
+            <dt>Latest attempt</dt>
+            <dd>{nativeTime(refresh.lastAttemptAt)}</dd>
+            <dt>Next refresh</dt>
+            <dd>{nativeTime(refresh.nextRefreshAt)}</dd>
+            <dt>{beginner ? 'Rows processed / stored' : 'Rows read / written'}</dt>
+            <dd>
+                {nativeCount(refresh.readRows)} / {nativeCount(refresh.writtenRows)}
+            </dd>
+        </dl>
+    );
     return (
         <aside
             className={`native-node-details${beginner ? ' is-beginner' : ''}`}
@@ -219,45 +239,10 @@ function NodeDetails({
                     {beginner ? (
                         <details className="native-refresh-details">
                             <summary>Refresh details</summary>
-                            <dl className="native-detail-list">
-                                <dt>Last successful refresh</dt>
-                                <dd>{nativeTime(refresh.lastSuccessAt)}</dd>
-                                <dt>Last successful duration</dt>
-                                <dd>
-                                    {refresh.lastSuccessDurationMs === undefined
-                                        ? 'Unavailable'
-                                        : `${nativeCount(refresh.lastSuccessDurationMs)} ms`}
-                                </dd>
-                                <dt>Latest attempt</dt>
-                                <dd>{nativeTime(refresh.lastAttemptAt)}</dd>
-                                <dt>Next refresh</dt>
-                                <dd>{nativeTime(refresh.nextRefreshAt)}</dd>
-                                <dt>Rows processed / stored</dt>
-                                <dd>
-                                    {nativeCount(refresh.readRows)} /{' '}
-                                    {nativeCount(refresh.writtenRows)}
-                                </dd>
-                            </dl>
+                            {refreshDetails}
                         </details>
                     ) : (
-                        <dl className="native-detail-list">
-                            <dt>Last successful refresh</dt>
-                            <dd>{nativeTime(refresh.lastSuccessAt)}</dd>
-                            <dt>Last successful duration</dt>
-                            <dd>
-                                {refresh.lastSuccessDurationMs === undefined
-                                    ? 'Unavailable'
-                                    : `${nativeCount(refresh.lastSuccessDurationMs)} ms`}
-                            </dd>
-                            <dt>Latest attempt</dt>
-                            <dd>{nativeTime(refresh.lastAttemptAt)}</dd>
-                            <dt>Next refresh</dt>
-                            <dd>{nativeTime(refresh.nextRefreshAt)}</dd>
-                            <dt>Rows read / written</dt>
-                            <dd>
-                                {nativeCount(refresh.readRows)} / {nativeCount(refresh.writtenRows)}
-                            </dd>
-                        </dl>
+                        refreshDetails
                     )}
                     {refresh.exception && <pre className="native-warning">{refresh.exception}</pre>}
                 </>

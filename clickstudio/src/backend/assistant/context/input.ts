@@ -5,7 +5,12 @@ import type { AssistantRepairContext } from '../../../shared/assistant/actions.j
 import { MAX_SQL_CHARS } from '../../../shared/queries/execution/limits.js';
 import { AppError } from '../../system/requests/errors.js';
 
-function field(value: unknown, name: string, max: number, allowEmpty = false): string {
+export function assistantInputText(
+    value: unknown,
+    name: string,
+    max: number,
+    allowEmpty = false,
+): string {
     if (typeof value !== 'string' || value.length > max || (!allowEmpty && !value.trim()))
         throw new AppError(
             400,
@@ -29,8 +34,8 @@ export function assistantRequestFrom(
     return {
         action,
         repair: {
-            sql: field(repair.sql, 'Failed SQL', MAX_SQL_CHARS),
-            error: field(repair.error, 'Query error', 3_000),
+            sql: assistantInputText(repair.sql, 'Failed SQL', MAX_SQL_CHARS),
+            error: assistantInputText(repair.error, 'Query error', 3_000),
         },
     };
 }
@@ -53,9 +58,9 @@ export function assistantSchemaFrom(value: unknown, connectionId: string): Schem
                 'Refresh the ClickHouse schema and try again.',
             );
         return {
-            database: field(raw.database, 'Schema database', 128),
-            name: field(raw.name, 'Schema table', 256),
-            engine: field(raw.engine ?? '', 'Schema engine', 128, true),
+            database: assistantInputText(raw.database, 'Schema database', 128),
+            name: assistantInputText(raw.name, 'Schema table', 256),
+            engine: assistantInputText(raw.engine ?? '', 'Schema engine', 128, true),
         };
     });
     const columns: SchemaColumn[] = value.columns.map(raw => {
@@ -66,10 +71,10 @@ export function assistantSchemaFrom(value: unknown, connectionId: string): Schem
                 'Refresh the ClickHouse schema and try again.',
             );
         return {
-            database: field(raw.database, 'Schema database', 128),
-            table: field(raw.table, 'Schema table', 256),
-            name: field(raw.name, 'Schema column', 256),
-            type: field(raw.type, 'Schema type', 2_048),
+            database: assistantInputText(raw.database, 'Schema database', 128),
+            table: assistantInputText(raw.table, 'Schema table', 256),
+            name: assistantInputText(raw.name, 'Schema column', 256),
+            type: assistantInputText(raw.type, 'Schema type', 2_048),
             defaultKind: '',
             comment: '',
         };
@@ -106,8 +111,8 @@ export function assistantResultFrom(value: unknown): Result | undefined {
                 'Select a valid retained result and try again.',
             );
         return {
-            name: field(column.name, 'Result column name', 256),
-            type: field(column.type, 'Result column type', 2_048),
+            name: assistantInputText(column.name, 'Result column name', 256),
+            type: assistantInputText(column.type, 'Result column type', 2_048),
         };
     });
     const rows = value.rows.map(row => {
@@ -120,11 +125,11 @@ export function assistantResultFrom(value: unknown): Result | undefined {
         return row;
     });
     return {
-        runId: field(value.runId, 'Result run ID', 200),
-        queryId: field(value.queryId, 'Result query ID', 200),
+        runId: assistantInputText(value.runId, 'Result run ID', 200),
+        queryId: assistantInputText(value.queryId, 'Result query ID', 200),
         columns,
         rows,
         completeness: value.completeness,
-        createdAt: field(value.createdAt, 'Result creation time', 128),
+        createdAt: assistantInputText(value.createdAt, 'Result creation time', 128),
     };
 }

@@ -1,38 +1,11 @@
 import { test, expect, type Page, type Download } from '@playwright/test';
 import type { Result } from '../../src/shared/queries/results/types.js';
-import type { Schema } from '../../src/shared/database/schema/types.js';
 import { PLAYGROUND_CONNECTION } from '../../src/shared/database/connections/playground.js';
 import type { CloudConnectionTest } from '../../src/frontend/database/connections/cloud-connection.js';
 import { trust } from './helpers.js';
 import { arrayValue, decodeValue, jsonRecord, stringValue } from '../helpers/type-guards.js';
 import { isResult } from '../../src/frontend/queries/execution/events.js';
-
-const cloudSchema: Schema = {
-    connectionId: 'clickhouse-cloud',
-    fetchedAt: '2026-09-28T00:00:00.000Z',
-    databases: ['default'],
-    tables: [{ database: 'default', name: 'events', engine: 'MergeTree' }],
-    columns: [
-        {
-            database: 'default',
-            table: 'events',
-            name: 'day',
-            type: 'Date',
-            defaultKind: '',
-            comment: '',
-        },
-        {
-            database: 'default',
-            table: 'events',
-            name: 'events',
-            type: 'UInt64',
-            defaultKind: '',
-            comment: '',
-        },
-    ],
-    warnings: [],
-    truncated: false,
-};
+import { cloudSchema } from '../helpers/cloud-fixtures.js';
 
 const cloudConnectionTest: CloudConnectionTest = {
     host: 'service.region.provider.clickhouse.cloud:8443',

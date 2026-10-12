@@ -43,6 +43,11 @@ const chartColors = [
 const chartLabelSegments = new Intl.Segmenter('en', { granularity: 'grapheme' });
 export const seriesColor = (index: number) => chartColors[index % chartColors.length]!;
 export type ChartPoint = { label: string; value: number | null; index: number };
+export type ChartSeries = {
+    columnIndex: number;
+    color: 'var(--accent)' | ReturnType<typeof seriesColor>;
+    points: ChartPoint[];
+};
 export type ChartAxisTick = {
     label: string;
     position: number;

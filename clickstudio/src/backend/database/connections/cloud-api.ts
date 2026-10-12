@@ -27,6 +27,7 @@ import {
 import { createClient } from '@clickhouse/client';
 import { randomUUID } from 'node:crypto';
 import { AppError } from '../../system/requests/errors.js';
+import { fail, json } from '../../system/requests/responses.js';
 import { cloudResultStreamQuery } from '../clickhouse/query-format.js';
 import { collectCompactStream } from '../clickhouse/result-stream.js';
 import { parseInput } from '../imports/imports.js';
@@ -172,14 +173,6 @@ function isExpectedColumns(
     );
 }
 
-function json(body: unknown, status = 200): Response {
-    return Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
-}
-
-function fail(code: string, message: string, status = 400) {
-    return json({ error: { code, message } }, status);
-}
-
 function validateCredentials(
     value: unknown,
 ): { credentials: CloudCredentials; url: string } | Response {
@@ -241,6 +234,19 @@ function makeClient(credentials: CloudCredentials, url: string, sessionId?: stri
     });
 }
 
+async function withCloudClient<T>(
+    credentials: CloudCredentials,
+    url: string,
+    operation: (client: ReturnType<typeof makeClient>) => Promise<T>,
+): Promise<T> {
+    const client = makeClient(credentials, url);
+    try {
+        return await operation(client);
+    } finally {
+        await client.close();
+    }
+}
+
 function safeError(error: unknown, password: string) {
     const raw = error instanceof Error ? error.message : 'ClickHouse request failed.';
     const message = password ? raw.split(password).join('[redacted]') : raw;
@@ -291,8 +297,7 @@ async function probe(client: ReturnType<typeof makeClient>, query: string) {
 }
 
 async function testConnection(credentials: CloudCredentials, url: string) {
-    const client = makeClient(credentials, url);
-    try {
+    return withCloudClient(credentials, url, async client => {
         const [
             rows,
             userQueryLog,
@@ -452,9 +457,7 @@ async function testConnection(credentials: CloudCredentials, url: string) {
                 ? { available: true }
                 : unavailable('ClickHouse query parameters are unavailable on this connection.'),
         };
-    } finally {
-        await client.close();
-    }
+    });
 }
 
 async function readSchema(
@@ -466,8 +469,7 @@ async function readSchema(
         columns: 0,
     },
 ): Promise<Schema> {
-    const client = makeClient(credentials, url);
-    try {
+    return withCloudClient(credentials, url, async client => {
         const pageParams = {
             database: credentials.database,
             databaseOffset: String(offsets.databases),
@@ -537,9 +539,7 @@ async function readSchema(
             pagination,
             truncated: Object.keys(pagination).length > 0,
         };
-    } finally {
-        await client.close();
-    }
+    });
 }
 
 async function createCloudTable(
@@ -753,8 +753,7 @@ async function runSql(
 }
 
 async function readCloudProgress(credentials: CloudCredentials, url: string, queryId: string) {
-    const client = makeClient(credentials, url);
-    try {
+    return withCloudClient(credentials, url, async client => {
         const row = (
             await queryRows<Record<string, unknown>>(
                 client,
@@ -772,14 +771,11 @@ async function readCloudProgress(credentials: CloudCredentials, url: string, que
             elapsedMs: Number.isFinite(elapsed) ? elapsed * 1000 : 0,
             memory: asString(row.memory || '0'),
         };
-    } finally {
-        await client.close();
-    }
+    });
 }
 
 async function cancelCloudQuery(credentials: CloudCredentials, url: string, queryId: string) {
-    const client = makeClient(credentials, url);
-    try {
+    return withCloudClient(credentials, url, async client => {
         const rows = await queryRows<Record<string, unknown>>(
             client,
             'KILL QUERY WHERE query_id = {queryId:String} AND user = {user:String} SYNC',
@@ -788,9 +784,7 @@ async function cancelCloudQuery(credentials: CloudCredentials, url: string, quer
             8,
         );
         return { cancelled: rows.some(row => Number(row.kill_status) === 1), queryId };
-    } finally {
-        await client.close();
-    }
+    });
 }
 
 async function cloudQueryTree(
@@ -799,17 +793,14 @@ async function cloudQueryTree(
     sql: string,
     parameters: Record<string, string>,
 ) {
-    const client = makeClient(credentials, url);
-    try {
+    return withCloudClient(credentials, url, async client => {
         const rows = await queryRows<Record<string, unknown>>(
             client,
             `EXPLAIN QUERY TREE\n${sql}`,
             parameters,
         );
         return rows.map(row => String(Object.values(row)[0] ?? '')).filter(Boolean);
-    } finally {
-        await client.close();
-    }
+    });
 }
 
 async function cloudQueryLogEvidence(
@@ -818,8 +809,7 @@ async function cloudQueryLogEvidence(
     queryId: string,
     source: QueryLogSource,
 ) {
-    const client = makeClient(credentials, url);
-    try {
+    return withCloudClient(credentials, url, async client => {
         return await queryRows<Record<string, unknown>>(
             client,
             `SELECT query_id, type, toString(query_duration_ms) AS query_duration_ms, toString(read_rows) AS read_rows, toString(read_bytes) AS read_bytes, toString(result_rows) AS result_rows, toString(result_bytes) AS result_bytes, toString(memory_usage) AS memory_usage, toString(exception_code) AS exception_code FROM system.${source} WHERE query_id = {queryId:String} AND user = {user:String} AND type IN ('QueryFinish', 'ExceptionWhileProcessing', 'ExceptionBeforeStart') ORDER BY event_time DESC LIMIT 10`,
@@ -827,9 +817,7 @@ async function cloudQueryLogEvidence(
             10_000,
             8,
         );
-    } finally {
-        await client.close();
-    }
+    });
 }
 
 async function cloudPipelineEvidence(
@@ -838,17 +826,14 @@ async function cloudPipelineEvidence(
     sql: string,
     parameters: Record<string, string>,
 ) {
-    const client = makeClient(credentials, url);
-    try {
+    return withCloudClient(credentials, url, async client => {
         const rows = await queryRows<Record<string, unknown>>(
             client,
             `EXPLAIN PIPELINE graph = 1, compact = 0\n${sql}`,
             parameters,
         );
         return rows.map(row => String(Object.values(row)[0] ?? '')).filter(Boolean);
-    } finally {
-        await client.close();
-    }
+    });
 }
 
 async function cloudFlamegraph(
@@ -859,8 +844,7 @@ async function cloudFlamegraph(
     endDate: string,
     source: FlamegraphSource,
 ) {
-    const client = makeClient(credentials, url);
-    try {
+    return withCloudClient(credentials, url, async client => {
         const rows = await queryRows<Record<string, unknown>>(
             client,
             flamegraphQuery(source),
@@ -869,9 +853,7 @@ async function cloudFlamegraph(
             12,
         );
         return parseFlamegraphRows(queryId, rows);
-    } finally {
-        await client.close();
-    }
+    });
 }
 
 async function cloudReferenceSearch(
@@ -886,8 +868,7 @@ async function cloudReferenceSearch(
             'DOCUMENTATION_CATEGORY',
             'Choose a valid ClickHouse reference category.',
         );
-    const client = makeClient(credentials, url);
-    try {
+    return withCloudClient(credentials, url, async client => {
         const built = buildReferenceSearchQuery(query, category, true);
         let rows: Omit<ClickHouseDocumentationSummary, 'origin'>[];
         try {
@@ -912,9 +893,7 @@ async function cloudReferenceSearch(
             );
         }
         return rows.map(row => ({ ...row, origin: 'native' }));
-    } finally {
-        await client.close();
-    }
+    });
 }
 
 async function cloudReferenceEntry(
@@ -924,9 +903,8 @@ async function cloudReferenceEntry(
     type: string,
     serverVersion: string,
 ): Promise<ClickHouseDocumentationEntry | undefined> {
-    const client = makeClient(credentials, url),
-        parameters = { name, type };
-    try {
+    return withCloudClient(credentials, url, async client => {
+        const parameters = { name, type };
         let rows: Omit<ClickHouseDocumentationEntry, 'origin'>[];
         try {
             rows = await queryRows(client, buildReferenceEntryQuery(true), parameters, 12_000, 10);
@@ -936,9 +914,7 @@ async function cloudReferenceEntry(
         }
         const row = rows[0];
         return row ? { ...row, serverVersion, origin: 'native' } : undefined;
-    } finally {
-        await client.close();
-    }
+    });
 }
 
 async function readWorkload(
@@ -947,9 +923,8 @@ async function readWorkload(
     minutes: WorkloadWindow,
     source: QueryLogSource,
 ) {
-    const client = makeClient(credentials, url);
-    const queryParams = { minutes: String(minutes), username: credentials.username };
-    try {
+    return withCloudClient(credentials, url, async client => {
+        const queryParams = { minutes: String(minutes), username: credentials.username };
         const [families, points] = await Promise.all([
             queryRows<Record<string, unknown>>(
                 client,
@@ -973,9 +948,7 @@ async function readWorkload(
             families,
             points,
         );
-    } finally {
-        await client.close();
-    }
+    });
 }
 
 async function readNativeExplorer(
@@ -983,14 +956,11 @@ async function readNativeExplorer(
     url: string,
     request: NativeExplorerRequest,
 ): Promise<NativeExplorerSnapshot> {
-    const client = makeClient(credentials, url);
-    try {
+    return withCloudClient(credentials, url, async client => {
         return await loadNativeExplorer(request, (query, queryParams) =>
             queryRows<Record<string, unknown>>(client, query, queryParams, 10_000, 8),
         );
-    } finally {
-        await client.close();
-    }
+    });
 }
 
 async function readTableParts(
@@ -999,9 +969,8 @@ async function readTableParts(
     database: string,
     table: string,
 ): Promise<MergeTreePartsSnapshot> {
-    const client = makeClient(credentials, url),
-        parameters = { database, table };
-    try {
+    return withCloudClient(credentials, url, async client => {
+        const parameters = { database, table };
         const target = (
             await queryRows<{ engine: string }>(
                 client,
@@ -1031,14 +1000,11 @@ async function readTableParts(
             8,
         );
         return parseMergeTreeParts(database, table, rows);
-    } finally {
-        await client.close();
-    }
+    });
 }
 
 async function readReplication(credentials: CloudCredentials, url: string) {
-    const client = makeClient(credentials, url);
-    try {
+    return withCloudClient(credentials, url, async client => {
         const [replicas, queue] = await Promise.all([
             queryRows<Record<string, unknown>>(client, replicationReplicasQuery(), {}, 22_000, 20)
                 .then(rows => ({ rows, available: true }))
@@ -1057,9 +1023,7 @@ async function readReplication(credentials: CloudCredentials, url: string) {
             replicas.rows,
             queue.rows,
         );
-    } finally {
-        await client.close();
-    }
+    });
 }
 
 function parseFormJson(form: FormData, key: string): unknown {

@@ -12,11 +12,13 @@ import {
 } from './assistant.js';
 import { evaluateProposal } from '../evaluation.js';
 import {
+    assistantInputText as field,
     assistantRequestFrom,
     assistantResultFrom as resultFrom,
     assistantSchemaFrom as schemaFrom,
 } from '../context/input.js';
 import { AppError } from '../../system/requests/errors.js';
+import { fail, json } from '../../system/requests/responses.js';
 import { OpenAIDriver } from '../openai-client.js';
 import { openaiServiceTier } from '../../system/config.js';
 import { isRecord } from '../../../shared/common/values.js';
@@ -25,24 +27,6 @@ const MAX_BODY_BYTES = 300_000;
 const MAX_REQUESTS_PER_DAY = 20;
 const MODEL = process.env.OPENAI_MODEL?.trim() || 'gpt-6-luna';
 const requestsByIp = new Map<string, { day: string; count: number }>();
-
-function json(body: unknown, status = 200): Response {
-    return Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
-}
-
-function fail(code: string, message: string, status = 400): Response {
-    return json({ error: { code, message } }, status);
-}
-
-function field(value: unknown, name: string, max: number, allowEmpty = false): string {
-    if (typeof value !== 'string' || value.length > max || (!allowEmpty && !value.trim()))
-        throw new AppError(
-            400,
-            'INVALID_REQUEST',
-            `${name} must be a string under ${max.toLocaleString()} characters.`,
-        );
-    return value;
-}
 
 function allowRequest(ip: string): boolean {
     const day = new Date().toISOString().slice(0, 10);

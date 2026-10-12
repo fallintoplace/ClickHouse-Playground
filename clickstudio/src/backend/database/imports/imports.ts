@@ -283,21 +283,7 @@ export class ImportService {
         mustOwn(principal, mapping.owner);
         const old = this.store.get('imports', mappingId, isImportJob);
         if (old) return old;
-        const unresolved = this.store
-            .list('imports', isImportJob)
-            .find(
-                job =>
-                    job.owner === principal.id &&
-                    job.connectionId === mapping.connectionId &&
-                    job.table === mapping.table &&
-                    (job.status === 'running' || (job.status === 'unknown' && !job.reviewedAt)),
-            );
-        requireThat(
-            !unresolved,
-            409,
-            'IMPORT_UNRESOLVED',
-            'Review or reconcile the previous import to this table before starting another write',
-        );
+        this.requireNoUnresolvedImport(principal, mapping);
         this.get(principal, mapping.inputId);
         requireThat(
             this.trusted(principal, mapping.connectionId) &&
@@ -322,21 +308,7 @@ export class ImportService {
         );
         const existing = this.store.get('imports', mappingId, isImportJob);
         if (existing) return existing;
-        const stillUnresolved = this.store
-            .list('imports', isImportJob)
-            .find(
-                job =>
-                    job.owner === principal.id &&
-                    job.connectionId === mapping.connectionId &&
-                    job.table === mapping.table &&
-                    (job.status === 'running' || (job.status === 'unknown' && !job.reviewedAt)),
-            );
-        requireThat(
-            !stillUnresolved,
-            409,
-            'IMPORT_UNRESOLVED',
-            'Review or reconcile the previous import to this table before starting another write',
-        );
+        this.requireNoUnresolvedImport(principal, mapping);
         const deduplicationToken = isImportDeduplicationToken(mapping.deduplicationToken)
             ? mapping.deduplicationToken
             : undefined;
@@ -370,6 +342,23 @@ export class ImportService {
         }
         this.store.put('imports', job.id, job);
         return job;
+    }
+    private requireNoUnresolvedImport(principal: Principal, mapping: Mapping) {
+        const unresolved = this.store
+            .list('imports', isImportJob)
+            .find(
+                job =>
+                    job.owner === principal.id &&
+                    job.connectionId === mapping.connectionId &&
+                    job.table === mapping.table &&
+                    (job.status === 'running' || (job.status === 'unknown' && !job.reviewedAt)),
+            );
+        requireThat(
+            !unresolved,
+            409,
+            'IMPORT_UNRESOLVED',
+            'Review or reconcile the previous import to this table before starting another write',
+        );
     }
     async reconcile(principal: Principal, id: string): Promise<ImportJob> {
         const job = this.getJob(principal, id);
