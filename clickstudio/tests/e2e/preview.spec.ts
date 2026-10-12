@@ -167,10 +167,12 @@ test('Footer shows version detection and keeps connection versions isolated in s
             .click();
         await expect(version).toHaveText('ClickHouse 26.6.1.2326');
         await page.locator('.connection-trigger').click();
-        await page
-            .getByRole('dialog', { name: 'Data source options' })
-            .getByRole('button', { name: /Sample data/ })
-            .click();
+        await expect(
+            page
+                .getByRole('dialog', { name: 'Data source options' })
+                .getByRole('button', { name: /Sample data/ }),
+        ).toHaveCount(0);
+        await page.goto('/experimental?connection=demo');
         await expect(version).toHaveText('Sample data');
     } finally {
         releaseVersion();
@@ -261,7 +263,7 @@ test('Static production preview loads the native parser and exports retained sam
     const wasmResponsePromise = page.waitForResponse(
         response => new URL(response.url()).pathname === '/assets/clickhouse-parser.wasm',
     );
-    await page.goto('/experimental');
+    await page.goto('/experimental?connection=demo');
 
     const wasmResponse = await wasmResponsePromise;
     expect(wasmResponse.status()).toBe(200);
@@ -271,12 +273,6 @@ test('Static production preview loads the native parser and exports retained sam
     await openWorkspacePanel(page, 'parser');
     await expect(page.getByText('Ready · local WebAssembly')).toBeVisible();
     await expect(page.getByText('Valid ClickHouse SQL')).toBeVisible();
-
-    await page.locator('.connection-trigger').click();
-    await page
-        .getByRole('dialog', { name: 'Data source options' })
-        .getByRole('button', { name: /Sample data/ })
-        .click();
 
     await page
         .getByRole('navigation', { name: 'Workspace browser' })
@@ -589,12 +585,7 @@ test('Charts filter opens a chart example in a new SQL tab without executing it'
 test('Static preview includes materialized views and storage activity in sample mode', async ({
     page,
 }) => {
-    await page.goto('/experimental');
-    await page.locator('.connection-trigger').click();
-    await page
-        .getByRole('dialog', { name: 'Data source options' })
-        .getByRole('button', { name: /Sample data/ })
-        .click();
+    await page.goto('/experimental?connection=demo');
     await page
         .getByRole('navigation', { name: 'Workspace browser' })
         .getByRole('button', { name: 'Objects' })

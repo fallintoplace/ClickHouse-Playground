@@ -16,6 +16,22 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const mode of ['Standard', 'Experimental']) {
+    test(`${mode} offers Playground without Sample data in the source picker`, async ({ page }) => {
+        await setWorkspaceMode(page, mode);
+        const trigger = page.locator('.connection-trigger');
+        const menu = page.getByRole('dialog', { name: 'Data source options' });
+        await trigger.click();
+        await expect(menu.getByRole('button', { name: /Sample data/ })).toHaveCount(0);
+        await menu.getByRole('button', { name: /ClickHouse Playground/ }).click();
+        await expect(menu).toBeHidden();
+        await expect(page).toHaveURL(/connection=playground/);
+        await trigger.click();
+        await expect(menu.getByRole('button', { name: /Sample data/ })).toHaveCount(0);
+        await expect(menu.getByRole('button', { name: /ClickHouse Playground/ })).toHaveAttribute(
+            'aria-pressed',
+            'true',
+        );
+    });
     test(`${mode} hides table write actions on the public Playground`, async ({ page }) => {
         await page.route('**/api/connections/playground/schema*', route =>
             route.fulfill({

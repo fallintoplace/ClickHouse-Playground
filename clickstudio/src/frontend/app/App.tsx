@@ -94,24 +94,10 @@ function App() {
     const sourceChoices = hasPreviewSourceSwitcher
         ? connections
               .filter(
-                  item =>
-                      item.id === 'demo' ||
-                      item.id === 'playground' ||
-                      item.id === CLICKHOUSE_CLOUD_CONNECTION_ID,
+                  item => item.id === 'playground' || item.id === CLICKHOUSE_CLOUD_CONNECTION_ID,
               )
               .sort((left, right) => {
-                  const rank = (id: string) => {
-                      switch (id) {
-                          case 'playground':
-                              return 0;
-
-                          case 'demo':
-                              return 1;
-
-                          default:
-                              return 2;
-                      }
-                  };
+                  const rank = (id: string) => (id === 'playground' ? 0 : 1);
                   return rank(left.id) - rank(right.id);
               })
         : otherConnections;
