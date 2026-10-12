@@ -1012,9 +1012,9 @@
   box-shadow: none;
 }
 
-:root[data-theme="click-light"] :is(.results-tabs button.is-active) {
+:root[data-theme="click-light"] :is(.results-tabs button[aria-selected="true"]) {
   border-color: var(--active-border);
-  background: var(--active-surface);
+  background: color-mix(in srgb, var(--accent-action) 82%, var(--panel));
   color: var(--text);
   box-shadow: none;
 }

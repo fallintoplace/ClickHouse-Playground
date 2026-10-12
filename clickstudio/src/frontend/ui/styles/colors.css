@@ -109,8 +109,10 @@
   --accent: #623719;
   --accent-strong: #4a2815;
   --accent-action: #e0b68e;
+  --caramel-strong: #a65f2d;
   --accent-ink: #2d190e;
-  --accent-mark: var(--accent-action);
+  --accent-mark: var(--caramel-strong);
+  --brand-accent: var(--caramel-strong);
   --green: #007a45;
   --signal-accent: var(--accent);
   --amber: #a34f00;
