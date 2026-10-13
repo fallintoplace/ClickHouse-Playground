@@ -754,6 +754,7 @@ test('Ask AI previews mixed writes and keeps UPDATE and DELETE alternatives sepa
     await expect(deleteAlternative.locator(':scope > summary')).toContainText(
         'ClickHouse mutations may finish asynchronously.',
     );
+    await page.getByTestId('assistant-alternatives').locator(':scope > summary').click();
     await alternative.locator(':scope > summary').click();
     await deleteAlternative.locator(':scope > summary').click();
     await expect(

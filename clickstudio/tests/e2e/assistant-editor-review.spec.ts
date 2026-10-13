@@ -5,7 +5,7 @@ import {
     trust,
     openStatementResults,
 } from './helpers.js';
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Locator } from '@playwright/test';
 import type { Proposal } from '../../src/shared/assistant/types.js';
 import { expectReferenceStyles } from './style-reference.js';
 
@@ -77,6 +77,11 @@ async function askForChanges(page: Page, summary = 'Updated query.') {
     await expect(
         page.locator('.assistant-panel').getByText(summary, { exact: true }),
     ).toBeVisible();
+}
+
+async function toggleAlternatives(target: Page | Locator) {
+    const group = target.getByTestId('assistant-alternatives').last();
+    if (await group.count()) await group.locator(':scope > summary').click();
 }
 
 async function storedDraft(page: Page) {
@@ -279,6 +284,7 @@ test('Script plan pages are independent and new proposals start on the first pag
     await plans.first().getByRole('button', { name: 'Next', exact: true }).click();
     await expect(plans.first().getByRole('navigation')).toContainText('6–10 of 11');
     await expect(plans.last()).not.toHaveAttribute('open', '');
+    await toggleAlternatives(page);
     await plans.last().locator(':scope > summary').click();
     await expect(plans.last().getByRole('navigation')).toContainText('1–5 of 11');
     await review(page).getByRole('button', { name: 'Accept SQL changes', exact: true }).click();
@@ -311,12 +317,15 @@ for (const mode of ['beginner', 'expert']) {
         await askForChanges(page);
         await expect(review(page)).toBeVisible();
         const alternativeCard = page.getByTestId('assistant-execution-option').last();
+        await expect(page.getByTestId('assistant-alternatives')).toHaveCount(0);
+        await expect(alternativeCard.locator(':scope > summary')).toBeVisible();
         await expect(alternativeCard).not.toHaveAttribute('open', '');
         await expect(alternativeCard.locator(':scope > summary')).toContainText('Other query');
         await expect(alternativeCard.locator('.assistant-execution-steps')).toBeHidden();
         await expect(
             alternativeCard.getByRole('button', { name: 'Open in SQL tab: Other query' }),
         ).toHaveCount(0);
+        await toggleAlternatives(page);
         await alternativeCard.locator(':scope > summary').click();
         const alternative = alternativeCard.getByRole('button', {
             name: 'Open in SQL tab: Other query',
@@ -405,6 +414,7 @@ test('Stored SQL checks do not block acceptance or opening alternatives', async 
     await expect(page.locator('.sql-proposal-review-message')).toHaveCount(0);
     const alternativeCard = page.getByTestId('assistant-execution-option').last();
     await expect(alternativeCard).not.toHaveAttribute('open', '');
+    await toggleAlternatives(page);
     await alternativeCard.locator(':scope > summary').click();
     await expect(
         alternativeCard.getByRole('button', { name: 'Open in SQL tab: Other query' }),
@@ -542,6 +552,7 @@ for (const decision of ['accepted', 'rejected'] as const) {
             name: 'Open in SQL tab: Another read',
             exact: true,
         });
+        await toggleAlternatives(oldCard);
         await oldCard
             .getByTestId('assistant-execution-option')
             .last()
@@ -563,6 +574,7 @@ for (const decision of ['accepted', 'rejected'] as const) {
         expect(runs).toHaveLength(0);
         await page.reload();
         await page.getByTestId('open-ai').click();
+        await toggleAlternatives(oldCard);
         await oldCard
             .getByTestId('assistant-execution-option')
             .last()
@@ -980,9 +992,9 @@ for (const action of ['review', 'explain'] as const)
     });
 
 for (const mode of ['beginner', 'expert'])
-    test(`Standalone SQL alternatives preserve the answer and open without a recommendation in ${mode}`, async ({
+    test(`Standalone SQL alternatives share one section and open without a recommendation in ${mode}`, async ({
         page,
-    }) => {
+    }, info) => {
         const summary = 'Here are three alternatives.';
         const alternatives = [2, 3, 4].map(value => ({
             title: `Option ${value}`,
@@ -1025,6 +1037,24 @@ for (const mode of ['beginner', 'expert'])
             await expect(details.getByText('All options return one row.')).toBeVisible();
             await expect(details.getByText('These queries have not run.')).toBeVisible();
         } else await expect(details).toHaveCount(0);
+        const group = page.getByTestId('assistant-alternatives');
+        await expect(group).toHaveCount(1);
+        await expect(group).not.toHaveAttribute('open', '');
+        await expect(group.locator(':scope > summary')).toHaveText('Alternatives3 options');
+        await expect(group.locator('.assistant-alternatives-content')).toBeHidden();
+        await group.screenshot({ path: info.outputPath('alternatives-collapsed.png') });
+        await toggleAlternatives(page);
+        await expect(group).toHaveAttribute('open', '');
+        await expect(group.getByTestId('assistant-execution-option')).toHaveCount(3);
+        await expect(
+            group.getByTestId('assistant-execution-option').locator(':scope > summary strong'),
+        ).toHaveText(['Option 2', 'Option 3', 'Option 4']);
+        await group.screenshot({ path: info.outputPath('alternatives-expanded-dark.png') });
+        await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
+        await group.screenshot({ path: info.outputPath('alternatives-expanded-light.png') });
+        await toggleAlternatives(page);
+        await expect(group.locator('.assistant-alternatives-content')).toBeHidden();
+        await toggleAlternatives(page);
         const option = page.getByTestId('assistant-execution-option').nth(1);
         await option.locator(':scope > summary').click();
         await option.getByRole('button', { name: 'Open in SQL tab: Option 3' }).click();

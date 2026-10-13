@@ -1803,6 +1803,16 @@
     gap: 6px;
     padding: 0 8px 8px;
   }
+  .assistant-alternatives-content {
+    display: grid;
+    min-width: 0;
+  }
+  .assistant-alternatives-content > .assistant-execution-option {
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    background: transparent;
+  }
   .assistant-execution-heading {
     display: flex;
     min-width: 0;

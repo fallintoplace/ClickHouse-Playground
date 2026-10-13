@@ -662,6 +662,17 @@ function AssistantOutput({
     const supportingDetailCount =
         proposal.assumptions.length + proposal.caveats.length + sources.length;
     const hasSupportingDetails = supportingDetailCount > 0;
+    const alternativeOptions = alternatives.map((option, index) => (
+        <AssistantExecutionOption
+            key={`${proposal.id}:alternative:${index}`}
+            title={option.title}
+            summary={option.summary}
+            sql={option.sql}
+            openDisabled={openDisabled}
+            onOpenSqlDraft={onOpenSqlDraft}
+            alternative
+        />
+    ));
     const getProposalLabel = () => {
         if (alternatives.length) {
             return 'Recommended option';
@@ -781,17 +792,34 @@ function AssistantOutput({
                             onOpenSqlDraft={onOpenSqlDraft}
                         />
                     )}
-                    {alternatives.map((option, index) => (
-                        <AssistantExecutionOption
-                            key={`${proposal.id}:alternative:${index}`}
-                            title={option.title}
-                            summary={option.summary}
-                            sql={option.sql}
-                            openDisabled={openDisabled}
-                            onOpenSqlDraft={onOpenSqlDraft}
-                            alternative
-                        />
-                    ))}
+                    {alternatives.length === 1 && alternativeOptions}
+                    {alternatives.length > 1 && (
+                        <details
+                            className="assistant-alternatives assistant-execution-option assistant-execution-option-collapsible"
+                            aria-label="Alternatives"
+                            data-testid="assistant-alternatives"
+                        >
+                            <summary className="assistant-execution-option-summary">
+                                <span className="assistant-execution-option-summary-main">
+                                    <span className="assistant-execution-option-summary-heading">
+                                        <strong>Alternatives</strong>
+                                    </span>
+                                </span>
+                                <span className="assistant-execution-count">
+                                    {alternatives.length} options
+                                </span>
+                                <span
+                                    className="assistant-execution-option-chevron"
+                                    aria-hidden="true"
+                                >
+                                    <Icon name="chevron" />
+                                </span>
+                            </summary>
+                            <div className="assistant-alternatives-content">
+                                {alternativeOptions}
+                            </div>
+                        </details>
+                    )}
                 </div>
             )}
         </div>
