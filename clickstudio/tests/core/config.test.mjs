@@ -50,7 +50,7 @@ test('Local startup includes the public ClickHouse Playground with bounded read-
     const connection = playground && publicProfile(playground);
     assert.equal(connection?.readonly, true);
     assert.equal(connection?.manifest?.import.available, false);
-    assert.equal(connection?.manifest?.scripts.available, false);
+    assert.equal(connection?.manifest?.scripts.available, true);
     assert.equal(connection?.manifest?.parameters.available, false);
 });
 test('The public ClickHouse Playground is not added to a shared server', () => {

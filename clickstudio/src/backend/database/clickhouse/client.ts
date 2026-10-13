@@ -329,12 +329,7 @@ export class ClickHouseDriver implements QueryDriver, ImportDriver, CreateTableD
                       available: true,
                       reason: 'Writes use the connection identity or optional writer credentials; ClickHouse permissions apply',
                   },
-            scripts: isPublicPlayground
-                ? {
-                      available: false,
-                      reason: 'Run one statement at a time on the public ClickHouse Playground.',
-                  }
-                : { available: true },
+            scripts: { available: true },
             parameters: isPublicPlayground
                 ? {
                       available: false,

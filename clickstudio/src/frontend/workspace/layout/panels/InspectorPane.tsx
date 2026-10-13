@@ -486,7 +486,6 @@ export function InspectorPane({
                         trusted={trusted}
                         onAskAI={() => onAskAI(schema, assistantServerVersion, connection.database)}
                         onCancelRequest={onCancelAssistantRequest}
-                        onOpenSqlDraft={(name, sql) => onOpenSqlDraft(name, sql, false)}
                     />
                 )}
             </div>

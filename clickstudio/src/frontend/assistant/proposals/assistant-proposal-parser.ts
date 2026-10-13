@@ -10,13 +10,16 @@ import type { AssistantAction, EvaluationStatus } from '../../../shared/assistan
 import type {
     AssistantSource,
     Proposal,
-    ProposalAlternative,
     ProposalContent,
     ProposalQuality,
     ProposalQualityCheck,
 } from '../../../shared/assistant/types.js';
 import { isRecord, isStringArray } from '../../../shared/common/values.js';
-import { assistantAnswerContent, assistantReplyText } from '../../../shared/assistant/answers.js';
+import { assistantReplyText } from '../../../shared/assistant/answers.js';
+import {
+    assistantReplyContent,
+    normalizeAssistantContent,
+} from '../../../shared/assistant/sql-replies.js';
 
 function isAssistantAction(value: unknown): value is AssistantAction {
     return typeof value === 'string' && ASSISTANT_ACTIONS.some(action => action === value);
@@ -67,22 +70,6 @@ function parseFindings(value: unknown): ProposalContent['findings'] | undefined 
         });
     }
     return findings;
-}
-
-function parseAlternatives(value: unknown): ProposalAlternative[] | undefined {
-    if (!Array.isArray(value)) return undefined;
-    const alternatives: ProposalAlternative[] = [];
-    for (const option of value) {
-        if (
-            !isRecord(option) ||
-            typeof option.title !== 'string' ||
-            typeof option.summary !== 'string' ||
-            typeof option.sql !== 'string'
-        )
-            return undefined;
-        alternatives.push({ title: option.title, summary: option.summary, sql: option.sql });
-    }
-    return alternatives;
 }
 
 function parseQuality(value: unknown): ProposalQuality | undefined {
@@ -141,9 +128,6 @@ export function parseAssistantProposal(value: unknown): Proposal | undefined {
 
     const findings = parseFindings(value.findings);
     if (!findings) return undefined;
-    const alternatives =
-        value.alternatives === undefined ? [] : parseAlternatives(value.alternatives);
-    if (!alternatives) return undefined;
     const sources = value.sources === undefined ? undefined : parseSources(value.sources);
     if (value.sources !== undefined && !sources) return undefined;
     const quality = value.quality === undefined ? undefined : parseQuality(value.quality);
@@ -161,9 +145,15 @@ export function parseAssistantProposal(value: unknown): Proposal | undefined {
         model: value.model,
         promptVersion: value.promptVersion,
         contextSummary: value.contextSummary,
-        sql: value.sql,
-        alternatives,
-        summary: value.summary,
+        ...normalizeAssistantContent({
+            sql: value.sql,
+            summary: value.summary,
+            assumptions: value.assumptions,
+            tables: value.tables,
+            caveats: value.caveats,
+            clarification: value.clarification,
+            findings,
+        }),
         assumptions: value.assumptions,
         tables: value.tables,
         caveats: value.caveats,
@@ -185,7 +175,7 @@ export function assistantReplyFrom(
     const answer = assistantReplyText(value);
     if (!answer) throw new Error('The assistant returned no reply. Try again.');
     return {
-        ...assistantAnswerContent(answer),
+        ...assistantReplyContent(value),
         ...request,
         owner: 'unparsed-response',
         createdAt: new Date().toISOString(),

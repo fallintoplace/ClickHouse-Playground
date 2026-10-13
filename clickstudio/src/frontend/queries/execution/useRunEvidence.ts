@@ -5,7 +5,7 @@ import type { Result, ResultPage } from '../../../shared/queries/results/types';
 import type { Run } from '../../../shared/queries/execution/types';
 import type { FlamegraphSnapshot } from '../../../shared/queries/inspection/flamegraph';
 import { parseRunEvent } from './execution-validation';
-import { api, apiResponses, isFrontendDemoPreview, message } from '../../api/client';
+import { api, apiResponses, isFrontendDemoPreview, message, RequestError } from '../../api/client';
 import { RetainedRunUnavailableError } from '../../api/browser-workspace-api';
 import { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../database/connections/cloud-connection';
 import { terminal } from './status';
@@ -76,7 +76,12 @@ export function useRunEvidence({
             })
             .catch(caught => {
                 if (cancelled) return;
-                if (caught instanceof RetainedRunUnavailableError) {
+                if (
+                    caught instanceof RetainedRunUnavailableError ||
+                    (caught instanceof RequestError &&
+                        caught.status === 404 &&
+                        caught.detail.code === 'NOT_FOUND')
+                ) {
                     onRunUnavailable(activeRunId);
                     return;
                 }

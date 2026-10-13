@@ -16,15 +16,8 @@ export interface AssistantSource {
     url: string;
 }
 
-export interface ProposalAlternative {
-    title: string;
-    summary: string;
-    sql: string;
-}
-
 export interface ProposalContent {
     sql: string | null;
-    alternatives?: ProposalAlternative[];
     summary: string;
     assumptions: string[];
     tables: string[];

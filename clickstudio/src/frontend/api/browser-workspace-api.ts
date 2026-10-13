@@ -12,6 +12,7 @@ import type { QueryDocument } from '../../shared/queries/saved-queries/types.js'
 import type { Result, ResultPage } from '../../shared/queries/results/types.js';
 import type { Run, Script } from '../../shared/queries/execution/types.js';
 import type { Schema } from '../../shared/database/schema/types.js';
+import type { Connection } from '../../shared/database/connections/types.js';
 import { splitSql } from '../../shared/sql/sql.js';
 import {
     explainPrefixLength,
@@ -27,6 +28,8 @@ import {
     PLAYGROUND_CONNECTION_ID,
     queryPlayground,
     queryPlaygroundQueryTree,
+    validatePlaygroundQuery,
+    PlaygroundError,
 } from '../database/connections/playground-client.js';
 import {
     cancelClickHouseCloudQuery,
@@ -110,7 +113,21 @@ export class RetainedRunUnavailableError extends Error {
     }
 }
 
+export class SavedQueryUnavailableError extends Error {
+    constructor() {
+        super('This saved query is no longer available in this browser.');
+        this.name = 'SavedQueryUnavailableError';
+    }
+}
+
 type RequestOptions = { method?: string; body?: unknown; signal?: AbortSignal };
+type ScriptRunContext = {
+    runId: string;
+    queryId: string;
+    startedAt: string;
+    sourceFrom: number;
+    target: Connection;
+};
 const demoQueryTree = [
     'QUERY id: 0',
     '  PROJECTION COLUMNS',
@@ -144,6 +161,7 @@ export class BrowserWorkspaceApi {
     private runs = new Map<string, Run>();
     private results = new Map<string, Result>();
     private scripts = new Map<string, Script>();
+    private scriptControllers = new Map<string, AbortController>();
     private documents = new Map<string, QueryDocument>();
     private revisions = new Map<string, QueryDocument[]>();
     private demoImportInputs = new Map<
@@ -189,7 +207,12 @@ export class BrowserWorkspaceApi {
     constructor() {
         this.restore();
         this.interruptRestoredCloudRuns();
-        this.interruptRestoredCloudScripts();
+        this.interruptScripts();
+        if (typeof window !== 'undefined')
+            window.addEventListener?.('pagehide', () => {
+                if (this.interruptScripts()) this.persist();
+                for (const controller of this.scriptControllers.values()) controller.abort();
+            });
         if (!this.runs.has(DEMO_PREVIEW_RUN_ID))
             this.addRun(DEMO_PREVIEW_RUN_ID, DEMO_PREVIEW_SQL, 'query', {});
         for (const starter of DEMO_PREVIEW_STARTERS) {
@@ -325,10 +348,13 @@ export class BrowserWorkspaceApi {
             }
     }
 
-    private interruptRestoredCloudScripts() {
+    private interruptScripts() {
+        let interrupted = false;
         for (const script of this.scripts.values()) {
             if (
-                script.connectionId !== CLICKHOUSE_CLOUD_CONNECTION_ID ||
+                ![CLICKHOUSE_CLOUD_CONNECTION_ID, PLAYGROUND_CONNECTION_ID].includes(
+                    script.connectionId,
+                ) ||
                 script.status !== 'running'
             )
                 continue;
@@ -353,7 +379,9 @@ export class BrowserWorkspaceApi {
                 }
             });
             this.scripts.set(script.id, { ...script, status: 'interrupted', statements });
+            interrupted = true;
         }
+        return interrupted;
     }
 
     private interruptRestoredCloudRuns() {
@@ -580,11 +608,14 @@ export class BrowserWorkspaceApi {
         }
     }
 
-    private async executeCloudScript(scriptId: string, sourceFrom: number) {
+    private async executeRemoteScript(scriptId: string, sourceFrom: number) {
         let script = this.scripts.get(scriptId);
-        const cloud = getClickHouseCloudConnection();
         if (!script) return;
-        if (!cloud) {
+        const target =
+            script.connectionId === PLAYGROUND_CONNECTION_ID
+                ? PLAYGROUND_CONNECTION
+                : getClickHouseCloudConnection();
+        if (!target) {
             const firstPending = script.statements.findIndex(
                 statement => statement.status === 'pending',
             );
@@ -610,6 +641,7 @@ export class BrowserWorkspaceApi {
             this.persist();
             return;
         }
+        const playground = target.id === PLAYGROUND_CONNECTION_ID;
 
         for (let index = 0; index < script.statements.length; index++) {
             script = this.scripts.get(scriptId);
@@ -636,91 +668,125 @@ export class BrowserWorkspaceApi {
             script = { ...script, statements: runningStatements };
             this.scripts.set(script.id, script);
             this.persist();
+            const controller = playground ? new AbortController() : undefined;
+            if (controller) this.scriptControllers.set(scriptId, controller);
 
             try {
-                const response = await runClickHouseCloudSql(statement.sql, script.id, { queryId });
-                const finishedAt = now();
-
-                const status = response.truncated ? ('truncated' as const) : ('succeeded' as const);
-                const run: Run = {
-                    dataSource: 'clickhouse',
-                    id: runId,
-                    queryId: response.queryId,
-                    owner,
-                    connectionId: CLICKHOUSE_CLOUD_CONNECTION_ID,
-                    sql: statement.sql,
-                    sourceFrom: sourceFrom + statement.from,
-                    sourceTo: sourceFrom + statement.to,
-                    kind: 'query',
-                    parameters: {},
-                    limits: { ...cloud.limits },
-                    tags: {
-                        workspace: 'clickstudio',
-                        source: 'ClickHouse Cloud',
-                        execution: 'Vercel function',
-                    },
-                    status,
-                    createdAt: startedAt,
-                    startedAt,
-                    finishedAt,
-                    elapsedMs: response.elapsedMs,
-                    rowCount: response.rows.length,
-                    ...(response.writtenRows === undefined
-                        ? {}
-                        : { writtenRows: response.writtenRows }),
-                    bytes: response.bytes,
-                    columns: response.columns,
-                    warnings: response.truncated
-                        ? ['The result reached the Cloud row or byte limit and may be incomplete.']
-                        : [],
-                    sequence: ++this.sequence,
-                    resultState: 'reopenable',
-                    requestedBy: owner,
-                    executedAs: cloud.username,
-                    permissionSnapshot: { readonly: cloud.readonly, role: 'ClickHouse Cloud user' },
-                    retryPolicy: 'never',
-                    serverVersion: cloud.manifest?.serverVersion,
-                };
-                const result: Result = {
-                    runId,
-                    queryId: response.queryId,
-                    columns: response.columns,
-                    rows: response.rows,
-                    completeness: response.truncated ? 'truncated' : 'complete',
-                    createdAt: finishedAt,
-                };
-                this.runs.set(run.id, run);
-                this.results.set(run.id, result);
-
+                const response = playground
+                    ? await queryPlayground(statement.sql, controller?.signal, { queryId })
+                    : await runClickHouseCloudSql(statement.sql, script.id, { queryId });
                 const current = this.scripts.get(scriptId);
-                if (!current) return;
+                if (!current || current.status === 'interrupted') return;
+                const run = this.retainScriptResult(
+                    statement,
+                    { runId, queryId, startedAt, sourceFrom, target },
+                    response,
+                );
                 const statements = [...current.statements];
                 statements[index] = {
                     ...statements[index]!,
                     runId: run.id,
-                    status,
+                    status: run.status,
                     error: undefined,
                 };
                 this.scripts.set(scriptId, { ...current, statements });
                 this.persist();
             } catch (caught) {
                 if (
-                    this.recordCloudScriptFailure(scriptId, index, caught, {
+                    this.recordScriptFailure(scriptId, index, caught, {
                         runId,
                         queryId,
                         startedAt,
                         sourceFrom,
-                        cloud,
+                        target,
                     })
                 )
                     return;
+            } finally {
+                this.scriptControllers.delete(scriptId);
             }
         }
 
-        this.finishCloudScript(scriptId);
+        this.finishScript(scriptId);
     }
 
-    private finishCloudScript(scriptId: string) {
+    private scriptRun(statement: Script['statements'][number], context: ScriptRunContext): Run {
+        const playground = context.target.id === PLAYGROUND_CONNECTION_ID;
+        return {
+            dataSource: 'clickhouse',
+            id: context.runId,
+            queryId: context.queryId,
+            owner,
+            connectionId: context.target.id,
+            sql: statement.sql,
+            sourceFrom: context.sourceFrom + statement.from,
+            sourceTo: context.sourceFrom + statement.to,
+            kind: 'query',
+            parameters: {},
+            limits: { ...context.target.limits },
+            tags: {
+                workspace: 'clickstudio',
+                source: playground ? 'ClickHouse SQL Playground' : 'ClickHouse Cloud',
+                execution: playground ? 'browser direct' : 'Vercel function',
+            },
+            status: 'running',
+            createdAt: context.startedAt,
+            startedAt: context.startedAt,
+            elapsedMs: 0,
+            rowCount: 0,
+            bytes: 0,
+            columns: [],
+            warnings: [],
+            sequence: ++this.sequence,
+            resultState: 'unavailable',
+            requestedBy: owner,
+            executedAs: context.target.username,
+            permissionSnapshot: {
+                readonly: context.target.readonly,
+                role: playground ? 'public demo' : 'ClickHouse Cloud user',
+            },
+            retryPolicy: 'never',
+            serverVersion: context.target.manifest?.serverVersion,
+        };
+    }
+
+    private retainScriptResult(
+        statement: Script['statements'][number],
+        context: ScriptRunContext,
+        response: Awaited<ReturnType<typeof runClickHouseCloudSql>>,
+    ): Run {
+        const finishedAt = now();
+        const limitWarning =
+            context.target.id === PLAYGROUND_CONNECTION_ID
+                ? 'The result reached the Playground row or byte limit and may be incomplete.'
+                : 'The result reached the Cloud row or byte limit and may be incomplete.';
+        const run: Run = {
+            ...this.scriptRun(statement, context),
+            queryId: response.queryId,
+            status: response.truncated ? 'truncated' : 'succeeded',
+            finishedAt,
+            elapsedMs: response.elapsedMs,
+            rowCount: response.rows.length,
+            ...(response.writtenRows === undefined ? {} : { writtenRows: response.writtenRows }),
+            bytes: response.bytes,
+            columns: response.columns,
+            warnings: response.truncated ? [limitWarning] : [],
+            resultState: 'reopenable',
+        };
+        const result: Result = {
+            runId: run.id,
+            queryId: response.queryId,
+            columns: response.columns,
+            rows: response.rows,
+            completeness: response.truncated ? 'truncated' : 'complete',
+            createdAt: finishedAt,
+        };
+        this.runs.set(run.id, run);
+        this.results.set(run.id, result);
+        return run;
+    }
+
+    private finishScript(scriptId: string) {
         const script = this.scripts.get(scriptId);
         if (!script) return;
         const successes = script.statements.filter(
@@ -754,73 +820,53 @@ export class BrowserWorkspaceApi {
         this.persist();
     }
 
-    private recordCloudScriptFailure(
+    private recordScriptFailure(
         scriptId: string,
         index: number,
         caught: unknown,
-        context: {
-            runId: string;
-            queryId: string;
-            startedAt: string;
-            sourceFrom: number;
-            cloud: NonNullable<ReturnType<typeof getClickHouseCloudConnection>>;
-        },
+        context: ScriptRunContext,
     ): boolean {
         const current = this.scripts.get(scriptId);
-        if (!current) return true;
-        const error: ApiError =
-            caught instanceof CloudRequestError
-                ? { code: caught.code, message: caught.message }
-                : {
-                      code: 'CLOUD_SCRIPT_STATEMENT',
-                      message:
-                          caught instanceof Error
-                              ? caught.message
-                              : 'ClickHouse could not run this statement.',
-                  };
+        if (!current || current.status === 'interrupted') return true;
+        let error: ApiError;
+        if (current.cancelled) error = { code: 'CANCELLED', message: 'Script execution stopped.' };
+        else if (caught instanceof CloudRequestError || caught instanceof PlaygroundError)
+            error = { code: caught.code, message: caught.message };
+        else
+            error = {
+                code: 'SCRIPT_STATEMENT',
+                message:
+                    caught instanceof Error
+                        ? caught.message
+                        : 'ClickHouse could not run this statement.',
+            };
         const statement = current.statements[index]!;
+        const playground = context.target.id === PLAYGROUND_CONNECTION_ID;
+        let status: Run['status'] = 'failed';
+        if (current.cancelled) status = 'cancelled';
+        else if (
+            error.code === 'PLAYGROUND_TIMEOUT' ||
+            /timeout|timed out|maximum execution time/i.test(error.message)
+        )
+            status = 'timed_out';
         const finishedAt = now();
         const location = sqlErrorRange(statement.sql, error);
         if (location) error.position = context.sourceFrom + statement.from + location.from;
         const run: Run = {
-            dataSource: 'clickhouse',
-            id: context.runId,
-            queryId: context.queryId,
-            owner,
-            connectionId: CLICKHOUSE_CLOUD_CONNECTION_ID,
-            sql: statement.sql,
-            sourceFrom: context.sourceFrom + statement.from,
-            sourceTo: context.sourceFrom + statement.to,
-            kind: 'query',
-            parameters: {},
-            limits: { ...context.cloud.limits },
-            tags: {
-                workspace: 'clickstudio',
-                source: 'ClickHouse Cloud',
-                execution: 'Vercel function',
-            },
-            status: 'failed',
-            createdAt: context.startedAt,
-            startedAt: context.startedAt,
+            ...this.scriptRun(statement, context),
+            status,
             finishedAt,
             elapsedMs: Math.max(0, Date.parse(finishedAt) - Date.parse(context.startedAt)),
-            rowCount: 0,
-            bytes: 0,
-            columns: [],
-            warnings: [],
-            sequence: ++this.sequence,
-            resultState: 'unavailable',
-            requestedBy: owner,
-            executedAs: context.cloud.username,
-            permissionSnapshot: { readonly: context.cloud.readonly, role: 'ClickHouse Cloud user' },
-            retryPolicy: 'never',
-            serverVersion: context.cloud.manifest?.serverVersion,
+            warnings:
+                playground && current.cancelled
+                    ? ['The request was closed; ClickHouse may still finish the active statement.']
+                    : [],
             error,
         };
         this.runs.set(run.id, run);
         const statements = [...current.statements];
-        statements[index] = { ...statement, runId: run.id, status: 'failed', error };
-        if (current.stopOnError)
+        statements[index] = { ...statement, runId: run.id, status, error };
+        if (current.stopOnError || current.cancelled)
             for (let later = index + 1; later < statements.length; later++)
                 if (statements[later]!.status === 'pending')
                     statements[later] = { ...statements[later]!, status: 'skipped' };
@@ -849,7 +895,7 @@ export class BrowserWorkspaceApi {
             statements,
         });
         this.persist();
-        return current.stopOnError;
+        return current.stopOnError || current.cancelled;
     }
 
     private demoSchema(): Schema {
@@ -1322,13 +1368,14 @@ export class BrowserWorkspaceApi {
     }
 
     private submitScript(body: ReturnType<typeof record>): Script {
-        if (body.connectionId === PLAYGROUND_CONNECTION_ID)
-            throw new Error('Run one statement at a time on ClickHouse Playground.');
         let sql: string;
 
         if (typeof body.sql === 'string') {
             sql = body.sql;
-        } else if (body.connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID) {
+        } else if (
+            body.connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID ||
+            body.connectionId === PLAYGROUND_CONNECTION_ID
+        ) {
             sql = '';
         } else {
             sql = DEMO_PREVIEW_SQL;
@@ -1336,8 +1383,12 @@ export class BrowserWorkspaceApi {
         const id = crypto.randomUUID();
         const statements = splitSql(sql);
         const sourceFrom = sourceRange(body).sourceFrom ?? 0;
-        if (body.connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID) {
-            if (!getClickHouseCloudConnection())
+        if (
+            body.connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID ||
+            body.connectionId === PLAYGROUND_CONNECTION_ID
+        ) {
+            const playground = body.connectionId === PLAYGROUND_CONNECTION_ID;
+            if (!playground && !getClickHouseCloudConnection())
                 throw new CloudRequestError(
                     'CLOUD_DISCONNECTED',
                     'Reconnect to ClickHouse Cloud before running a script.',
@@ -1349,14 +1400,21 @@ export class BrowserWorkspaceApi {
                 );
             if (statements.length === 0 || statements.length > MAX_SCRIPT_STATEMENTS)
                 throw new Error(`A script must contain 1–${MAX_SCRIPT_STATEMENTS} SQL statements.`);
-            if (Object.keys(record(body.parameters)).length)
+            if (Object.keys(stringRecord(body.parameters ?? {})).length)
                 throw new Error(
-                    'Remove query parameters before running a script on ClickHouse Cloud.',
+                    playground
+                        ? 'Remove query parameters before running a script on ClickHouse Playground.'
+                        : 'Remove query parameters before running a script on ClickHouse Cloud.',
                 );
+            if (playground) {
+                if (body.kind !== undefined && body.kind !== 'query')
+                    throw new Error('Explain one statement at a time.');
+                for (const statement of statements) validatePlaygroundQuery(statement.sql);
+            }
             const script: Script = {
                 id,
                 owner,
-                connectionId: CLICKHOUSE_CLOUD_CONNECTION_ID,
+                connectionId: body.connectionId,
                 sql,
                 createdAt: now(),
                 status: 'running',
@@ -1366,7 +1424,7 @@ export class BrowserWorkspaceApi {
             };
             this.scripts.set(id, script);
             this.persist();
-            void this.executeCloudScript(id, sourceFrom);
+            void this.executeRemoteScript(id, sourceFrom);
             return script;
         }
         const items = statements.map(statement => {
@@ -1400,7 +1458,9 @@ export class BrowserWorkspaceApi {
         if (action === 'cancel' && method === 'POST') {
             if (!script) throw new Error('This script is no longer available in this browser.');
             if (
-                script.connectionId !== CLICKHOUSE_CLOUD_CONNECTION_ID ||
+                ![CLICKHOUSE_CLOUD_CONNECTION_ID, PLAYGROUND_CONNECTION_ID].includes(
+                    script.connectionId,
+                ) ||
                 script.status !== 'running' ||
                 script.cancelled
             )
@@ -1408,6 +1468,7 @@ export class BrowserWorkspaceApi {
             const stopping = { ...script, cancelled: true };
             this.scripts.set(script.id, stopping);
             this.persist();
+            this.scriptControllers.get(script.id)?.abort();
             return stopping;
         }
         return (
@@ -1459,12 +1520,11 @@ export class BrowserWorkspaceApi {
                 return restored;
             }
         }
-        if (parts.length === 2)
-            return (
-                this.documents.get(id) ?? {
-                    error: { code: 'NOT_FOUND', message: 'Sample document not found.' },
-                }
-            );
+        if (parts.length === 2) {
+            const document = this.documents.get(id);
+            if (!document) throw new SavedQueryUnavailableError();
+            return document;
+        }
         return {};
     }
 

@@ -342,7 +342,6 @@ test('Vercel assistant accepts structured replies without enforcing an output fo
         const tables = Array.from({ length: count }, (_, index) => `default.table_${index}`);
         const content = {
             sql: null,
-            alternatives: [],
             summary: 'Review these tables.',
             assumptions: [],
             tables,
@@ -396,7 +395,6 @@ test('Vercel assistant preserves table lists beyond the previous limit', async t
             return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
         const content = {
             sql: null,
-            alternatives: [],
             summary: 'Review these tables.',
             assumptions: [],
             tables: Array.from({ length: 501 }, (_, index) => `default.table_${index}`),

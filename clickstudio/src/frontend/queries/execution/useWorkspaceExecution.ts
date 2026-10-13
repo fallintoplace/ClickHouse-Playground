@@ -9,7 +9,8 @@ import type { Run, Script } from '../../../shared/queries/execution/types';
 import type { RunKind } from '../../../shared/queries/execution/status';
 import { DEFAULT_LIMITS } from '../../../shared/queries/execution/settings';
 import { rememberRunIds } from '../saved-queries/draft-save-state';
-import { apiResponses, message, post } from '../../api/client';
+import { api, apiResponses, message, post, RequestError } from '../../api/client';
+import { SavedQueryUnavailableError } from '../../api/browser-workspace-api';
 import type { EditorHandle } from '../editor/components/SqlEditor';
 import { terminal } from './status';
 import type { Copy, ExperienceLevel } from '../../ui/copy';
@@ -557,10 +558,32 @@ function createDraftExecutor({
                         : Boolean(statement && isSchemaChangingSql(statement.sql)),
                 );
 
+                let documentId = draft.serverId;
+                if (documentId) {
+                    try {
+                        const document = await api(
+                            `/documents/${encodeURIComponent(documentId)}`,
+                            apiResponses.isQueryDocumentResponse,
+                        );
+                        if (document.deletedAt) documentId = undefined;
+                    } catch (caught) {
+                        if (
+                            !(caught instanceof SavedQueryUnavailableError) &&
+                            !(
+                                caught instanceof RequestError &&
+                                caught.status === 404 &&
+                                caught.detail.code === 'NOT_FOUND'
+                            )
+                        )
+                            throw caught;
+                        documentId = undefined;
+                    }
+                }
+
                 const payload = {
                     clientRequestId: crypto.randomUUID(),
                     connectionId: connection.id,
-                    documentId: draft.serverId,
+                    documentId,
                     sql: isScript ? sql : statement!.sql,
                     parameters: draft.parameters,
                     parentRunId: draft.parentRunId,

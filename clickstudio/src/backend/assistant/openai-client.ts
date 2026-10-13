@@ -11,6 +11,10 @@ import {
 import { AppError } from '../system/requests/errors.js';
 import type { AssistantSource, ProposalContent } from '../../shared/assistant/types.js';
 import { assistantAnswerContent } from '../../shared/assistant/answers.js';
+import {
+    assistantReplyContent,
+    normalizeAssistantContent,
+} from '../../shared/assistant/sql-replies.js';
 import type { OpenAIServiceTier } from '../system/config.js';
 const DEFAULT_MAX_INPUT_TOKENS = 48_000;
 
@@ -112,9 +116,9 @@ function responseContent(response: OpenAI.Responses.Response): ProposalContent {
         );
     if (!refusals.length) {
         try {
-            return validateProposal(JSON.parse(answer));
+            return normalizeAssistantContent(validateProposal(JSON.parse(answer)));
         } catch {
-            return assistantAnswerContent(answer);
+            return assistantReplyContent(answer);
         }
     }
     return assistantAnswerContent(answer);

@@ -1706,11 +1706,6 @@
     color: var(--muted);
     font-size: 9px;
   }
-  .assistant-execution-options {
-    display: grid;
-    min-width: 0;
-    gap: 7px;
-  }
   .assistant-execution-option {
     display: grid;
     min-width: 0;
@@ -1719,99 +1714,6 @@
     border: 1px solid var(--line);
     border-radius: var(--radius-panel);
     background: color-mix(in srgb, var(--page-raised) 68%, var(--panel));
-  }
-  .assistant-execution-option-collapsible {
-    gap: 0;
-    overflow: hidden;
-    padding: 0;
-  }
-  .assistant-execution-option-collapsible > summary {
-    display: grid;
-    min-width: 0;
-    grid-template-columns: minmax(0, 1fr) auto 16px;
-    align-items: center;
-    gap: 8px;
-    padding: 8px;
-    cursor: pointer;
-    list-style: none;
-  }
-  .assistant-execution-option-collapsible > summary::-webkit-details-marker {
-    display: none;
-  }
-  .assistant-execution-option-collapsible > summary:hover {
-    background: color-mix(in srgb, var(--panel-raised) 55%, transparent);
-  }
-  .assistant-execution-option-summary-main {
-    display: grid;
-    min-width: 0;
-    gap: 3px;
-  }
-  .assistant-execution-option-summary-heading {
-    display: flex;
-    min-width: 0;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 2px 8px;
-  }
-  .assistant-execution-option-summary-heading .eyebrow {
-    color: var(--muted);
-    font-size: 7px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-  }
-  .assistant-execution-option-summary-heading strong {
-    color: var(--text-soft);
-    font-size: 9px;
-    line-height: 1.4;
-  }
-  .assistant-execution-option-summary-description,
-  .assistant-execution-option-summary-status {
-    color: var(--muted);
-    font-size: 8px;
-    line-height: 1.45;
-  }
-  .assistant-execution-option-summary-status {
-    color: var(--amber);
-  }
-  .assistant-execution-option-summary-main .assistant-execution-warning {
-    color: var(--amber);
-    font-size: 8px;
-    line-height: 1.45;
-  }
-  .assistant-execution-option-chevron {
-    display: grid;
-    width: 16px;
-    height: 16px;
-    flex: none;
-    place-items: center;
-    color: var(--muted);
-    transition: transform 120ms ease;
-  }
-  .assistant-execution-option-chevron svg {
-    display: block;
-    width: 14px;
-    height: 14px;
-  }
-  .assistant-execution-option-collapsible[open]
-    > .assistant-execution-option-summary
-    .assistant-execution-option-chevron {
-    transform: rotate(180deg);
-  }
-  .assistant-execution-option-content {
-    display: grid;
-    min-width: 0;
-    gap: 6px;
-    padding: 0 8px 8px;
-  }
-  .assistant-alternatives-content {
-    display: grid;
-    min-width: 0;
-  }
-  .assistant-alternatives-content > .assistant-execution-option {
-    border: 0;
-    border-top: 1px solid var(--line);
-    border-radius: 0;
-    background: transparent;
   }
   .assistant-execution-heading {
     display: flex;
@@ -1991,18 +1893,6 @@
     padding-inline: 9px;
     font-size: 8px;
   }
-  .assistant-alternative-actions {
-    display: flex;
-    min-width: 0;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 5px;
-  }
-  .assistant-alternative-actions > .button-base {
-    min-height: 29px;
-    padding-inline: 9px;
-    font-size: 8px;
-  }
   .assistant-execution-error {
     margin: 0;
     color: var(--amber);
@@ -2064,6 +1954,7 @@
   }
   .proposal-heading {
     display: flex;
+    min-width: 0;
     align-items: flex-start;
     gap: 9px;
   }
@@ -2179,7 +2070,13 @@
     font-family: var(--font-mono);
     font-size: 0.92em;
   }
-  .assistant-answer-markdown pre {
+  .assistant-markdown-code-block {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .assistant-answer-markdown pre,
+  .assistant-proposal-summary pre,
+  .assistant-proposal-markdown pre {
     max-width: 100%;
     overflow: auto;
     margin: 5px 0 8px;
@@ -2188,7 +2085,9 @@
     border-radius: var(--radius-panel);
     background: var(--panel);
   }
-  .assistant-answer-markdown pre code {
+  .assistant-answer-markdown pre code,
+  .assistant-proposal-summary pre code,
+  .assistant-proposal-markdown pre code {
     color: var(--text-soft);
   }
   .assistant-answer-markdown blockquote {

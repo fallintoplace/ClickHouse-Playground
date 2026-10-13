@@ -746,14 +746,10 @@ for (const [format, signature] of Object.entries(imageSignatures)) {
 }
 test('Assistant preserves and accepts returned SQL regardless of the request action', async () => {
     for (const action of ASSISTANT_ACTIONS) {
-        const alternatives = [
-            { title: 'Other query', summary: 'Another value.', sql: 'SELECT 42' },
-        ];
-        const f = aiFixture({ ...proposal, alternatives });
+        const f = aiFixture(proposal);
         const c = f.ai.prepare(owner, { ...f.input, action });
         const p = await f.ai.propose(owner, c.id, true);
         assert.equal(p.sql, proposal.sql);
-        assert.deepEqual(p.alternatives, alternatives);
         assert.equal(
             f.ai.decide(owner, p.id, 'accepted', 'local', 'SELECT 2').decision,
             'accepted',
@@ -775,6 +771,20 @@ test('Accepting proposal records a decision, never creates a run', async () => {
         p = await f.ai.propose(owner, c.id, true);
     f.ai.decide(owner, p.id, 'accepted', 'local', 'SELECT 2');
     assert.equal(f.store.count('runs'), 0);
+});
+
+test('A saved Markdown SQL reply can use the same decision endpoint after reload', async () => {
+    const f = aiFixture();
+    const c = f.ai.prepare(owner, f.input);
+    const p = await f.ai.propose(owner, c.id, true);
+    f.store.put('proposals', p.id, {
+        ...p,
+        sql: null,
+        summary: 'Returned query.\n\n```sql\nSELECT 99\n```',
+    });
+    const accepted = f.ai.decide(owner, p.id, 'accepted', 'local', 'SELECT 1');
+    assert.equal(accepted.sql, 'SELECT 99');
+    assert.equal(accepted.decision, 'accepted');
 });
 test('Prepared contexts accept supported actions and reject unknown actions', () => {
     const f = aiFixture();
@@ -1024,6 +1034,8 @@ test('Assistant instructions prefer structured replies while accepting Markdown'
     assert.match(built.payload.instructions, /full plain-language answer in summary/i);
     assert.match(built.payload.instructions, /a direct Markdown reply is also accepted/i);
     assert.match(built.payload.instructions, /fenced sql code blocks/i);
+    assert.match(built.payload.instructions, /one proposed script for a single review/i);
+    assert.doesNotMatch(built.payload.instructions, /alternatives \(/i);
 });
 test('SQL context includes all source columns for a requested table copy', () => {
     const f = aiFixture();
@@ -1127,45 +1139,9 @@ test('Assistant preserves full notes without response count or length limits', (
         assert.deepEqual(validateProposal({ ...proposal, tables, [field]: notes })[field], notes);
     }
 });
-test('Assistant proposals validate named, independently runnable alternatives', () => {
-    const content = validateProposal({
-        ...proposal,
-        alternatives: [
-            {
-                title: 'Delete instead',
-                summary: 'Remove matching rows.',
-                sql: 'ALTER TABLE events DELETE WHERE id = 1',
-            },
-        ],
-    });
-    assert.deepEqual(content.alternatives, [
-        {
-            title: 'Delete instead',
-            summary: 'Remove matching rows.',
-            sql: 'ALTER TABLE events DELETE WHERE id = 1',
-        },
-    ]);
-    const alternatives = Array.from({ length: 5 }, (_, index) => ({
-        title: `Option ${index}: ${'x'.repeat(121)}`,
-        summary: 'x'.repeat(1001),
-        sql: `SELECT ${index}`,
-    }));
-    const reply = { ...proposal, sql: null, alternatives, summary: 'x'.repeat(20001) };
-    assert.deepEqual(validateProposal(reply), reply);
-});
-test('Assistant grounding checks cover SQL alternatives', () => {
+test('Assistant grounding checks cover every statement in the proposed script', () => {
     const quality = evaluateProposal(
-        {
-            ...proposal,
-            sql: 'SELECT 1',
-            alternatives: [
-                {
-                    title: 'Other table',
-                    summary: 'Read another source.',
-                    sql: 'SELECT * FROM missing_table',
-                },
-            ],
-        },
+        { ...proposal, sql: 'SELECT 1; SELECT * FROM missing_table;' },
         'generate',
         { schema: { truncated: false, tables: [{ database: 'default', name: 'events' }] } },
     );

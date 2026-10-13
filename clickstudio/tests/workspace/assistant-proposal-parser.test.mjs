@@ -18,7 +18,6 @@ function validProposal(overrides = {}) {
         promptVersion: 'v1',
         contextSummary: ['One table is available'],
         sql: 'SELECT 1 AS result',
-        alternatives: [],
         summary: 'Returns one row',
         assumptions: [],
         tables: [],
@@ -55,7 +54,7 @@ test('Assistant replies display returned text even when proposal parsing fails',
         const reply = assistantReplyFrom(value, request);
         assert.equal(reply.summary, expected);
         assert.equal(reply.sql, null);
-        assert.deepEqual(reply.alternatives, []);
+
         assert.equal(reply.id, request.id);
         assert.equal(reply.connectionId, request.connectionId);
         assert.deepEqual(parseAssistantProposal(reply), reply);
@@ -91,13 +90,6 @@ test('Assistant replies retain existing proposals when their SQL metadata is val
 test('Assistant proposal parsing returns a typed, normalized proposal', () => {
     const parsed = parseAssistantProposal(
         validProposal({
-            alternatives: [
-                {
-                    title: 'Delete instead',
-                    summary: 'Remove matching rows.',
-                    sql: 'ALTER TABLE events DELETE WHERE id = 1',
-                },
-            ],
             sources: [{ title: 'Docs', url: 'https://example.com/path' }],
             findings: [{ severity: 'low', message: 'Small note', evidence: 'SELECT 1' }],
             quality: {
@@ -114,13 +106,6 @@ test('Assistant proposal parsing returns a typed, normalized proposal', () => {
 
     assert.deepEqual(parsed, {
         ...validProposal(),
-        alternatives: [
-            {
-                title: 'Delete instead',
-                summary: 'Remove matching rows.',
-                sql: 'ALTER TABLE events DELETE WHERE id = 1',
-            },
-        ],
         sources: [{ title: 'Docs', url: 'https://example.com/path' }],
         findings: [{ severity: 'low', message: 'Small note', evidence: 'SELECT 1' }],
         quality: {
@@ -140,7 +125,7 @@ test('Assistant proposal parsing keeps nullable and empty optional fields', () =
     );
 
     assert.equal(parsed.sql, null);
-    assert.deepEqual(parsed.alternatives, []);
+
     assert.equal(parsed.clarification, 'Which table?');
     assert.deepEqual(parsed.sources, []);
 });
@@ -155,12 +140,6 @@ test('Assistant proposal parsing rejects missing or invalid required fields', ()
         validProposal({ clarification: false }),
         validProposal({ assumptions: 'none' }),
         validProposal({ findings: [{ severity: 'critical', message: 'Invalid', evidence: 'x' }] }),
-        validProposal({
-            alternatives: [{ title: 1, summary: 'Bad choice', sql: 'DELETE FROM events' }],
-        }),
-        validProposal({
-            alternatives: [{ title: 'Other query', summary: null, sql: 42 }],
-        }),
     ];
 
     for (const proposal of invalidProposals)
@@ -189,16 +168,6 @@ test('Assistant proposal parsing preserves source metadata without content restr
         [{ title: 'Docs', url: null }],
     ])
         assert.equal(parseAssistantProposal(validProposal({ sources: entries })), undefined);
-});
-
-test('Assistant proposal parsing preserves standalone alternatives and complete reply text', () => {
-    const alternatives = Array.from({ length: 5 }, (_, index) => ({
-        title: `Option ${index}: ${'x'.repeat(121)}`,
-        summary: 'x'.repeat(1001),
-        sql: index === 0 ? '' : `SELECT ${index}`,
-    }));
-    const proposal = validProposal({ sql: null, summary: 'x'.repeat(20001), alternatives });
-    assert.deepEqual(parseAssistantProposal(proposal), proposal);
 });
 
 test('Assistant proposal parsing validates the full optional quality report', () => {

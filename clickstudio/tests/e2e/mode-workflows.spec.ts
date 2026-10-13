@@ -646,15 +646,9 @@ test('Accepted proposal history cannot run older SQL from chat', async ({ page }
     });
 });
 
-test('Ask AI previews mixed writes and keeps UPDATE and DELETE alternatives separate', async ({
-    page,
-}) => {
+test('Ask AI reviews a mixed script once before a separate execution', async ({ page }) => {
     const combinedSql =
         "SELECT id FROM demo.events WHERE id = 1; ALTER TABLE demo.events UPDATE status = 'reviewed' WHERE id = 1; ALTER TABLE demo.events DELETE WHERE id = 1";
-    const updateSql =
-        "SELECT id FROM demo.events WHERE id = 1; ALTER TABLE demo.events UPDATE status = 'reviewed' WHERE id = 1";
-    const deleteSql =
-        'SELECT id FROM demo.events WHERE id = 1; ALTER TABLE demo.events DELETE WHERE id = 1';
     let proposalBaseSql = '';
     await page.route('**/api/assistant/sql', async route => {
         const body = jsonRecord(route.request().postDataJSON(), 'Assistant request');
@@ -673,19 +667,7 @@ test('Ask AI previews mixed writes and keeps UPDATE and DELETE alternatives sepa
                 contextSummary: [],
                 decision: 'pending',
                 sql: combinedSql,
-                alternatives: [
-                    {
-                        title: 'Update matching row',
-                        summary: 'Change the status and keep the event.',
-                        sql: updateSql,
-                    },
-                    {
-                        title: 'Delete matching row',
-                        summary: 'Remove the matching event.',
-                        sql: deleteSql,
-                    },
-                ],
-                summary: 'Choose whether to update or delete the matching event.',
+                summary: 'Review the complete script before running it.',
                 assumptions: [],
                 tables: ['demo.events'],
                 caveats: [],
@@ -711,19 +693,7 @@ test('Ask AI previews mixed writes and keeps UPDATE and DELETE alternatives sepa
                 contextSummary: [],
                 decision: body.decision,
                 sql: combinedSql,
-                alternatives: [
-                    {
-                        title: 'Update matching row',
-                        summary: 'Change the status and keep the event.',
-                        sql: updateSql,
-                    },
-                    {
-                        title: 'Delete matching row',
-                        summary: 'Remove the matching event.',
-                        sql: deleteSql,
-                    },
-                ],
-                summary: 'Choose whether to update or delete the matching event.',
+                summary: 'Review the complete script before running it.',
                 assumptions: [],
                 tables: ['demo.events'],
                 caveats: [],
@@ -737,26 +707,13 @@ test('Ask AI previews mixed writes and keeps UPDATE and DELETE alternatives sepa
     await page.getByTestId('open-ai').click();
     await page
         .getByRole('textbox', { name: 'Ask AI', exact: true })
-        .fill('Give me separate update and delete options for this row');
+        .fill('Preview, update, and delete this row');
     await page
         .locator('.assistant-panel')
         .getByRole('button', { name: 'Send', exact: true })
         .click();
-    await expect(page.getByTestId('assistant-execution-option')).toHaveCount(3);
-    const recommended = page.getByTestId('assistant-execution-option').nth(0);
-    const alternative = page.getByTestId('assistant-execution-option').nth(1);
-    const deleteAlternative = page.getByTestId('assistant-execution-option').nth(2);
-    await expect(alternative).not.toHaveAttribute('open', '');
-    await expect(deleteAlternative).not.toHaveAttribute('open', '');
-    await expect(alternative.locator(':scope > summary')).toContainText(
-        'ClickHouse mutations may finish asynchronously.',
-    );
-    await expect(deleteAlternative.locator(':scope > summary')).toContainText(
-        'ClickHouse mutations may finish asynchronously.',
-    );
-    await page.getByTestId('assistant-alternatives').locator(':scope > summary').click();
-    await alternative.locator(':scope > summary').click();
-    await deleteAlternative.locator(':scope > summary').click();
+    await expect(page.getByTestId('assistant-execution-option')).toHaveCount(1);
+    const recommended = page.getByTestId('assistant-execution-option');
     await expect(
         recommended.getByRole('list', { name: 'Statements in execution order' }).locator('li'),
     ).toHaveCount(3);
@@ -766,18 +723,11 @@ test('Ask AI previews mixed writes and keeps UPDATE and DELETE alternatives sepa
     await expect(recommended.locator('li').nth(0).locator('pre')).toBeHidden();
     await expect(recommended.locator('li').nth(1).locator('pre')).toBeHidden();
     await expect(recommended.locator('li').nth(2).locator('pre')).toBeHidden();
-    await expect(alternative).toContainText('Update matching row');
-    await expect(deleteAlternative).toContainText('Delete matching row');
-    await expect(alternative.locator('li').nth(1)).toHaveAttribute('data-operation', 'update');
-    await expect(deleteAlternative.locator('li').nth(1)).toHaveAttribute(
-        'data-operation',
-        'delete',
-    );
-
     await page
         .getByTestId('sql-proposal-review')
         .getByRole('button', { name: 'Accept SQL changes', exact: true })
         .click();
+    await page.getByTestId('sql-proposal-diff').locator(':scope > summary').click();
     await expect(
         recommended.getByText('UPDATE runs before DELETE, which may remove the changed rows.', {
             exact: false,
@@ -789,18 +739,6 @@ test('Ask AI previews mixed writes and keeps UPDATE and DELETE alternatives sepa
     await expect(
         page.locator('.proposal-card').getByRole('button', { name: /Run|Reject|Accept/ }),
     ).toHaveCount(0);
-    await expect(
-        alternative.getByRole('button', {
-            name: 'Open in SQL tab: Update matching row',
-            exact: true,
-        }),
-    ).toBeEnabled();
-    await expect(
-        deleteAlternative.getByRole('button', {
-            name: 'Open in SQL tab: Delete matching row',
-            exact: true,
-        }),
-    ).toBeEnabled();
     const readStep = recommended.locator('li').nth(0);
     await readStep.locator('summary').click();
     await expect(readStep.locator('pre')).toBeVisible();

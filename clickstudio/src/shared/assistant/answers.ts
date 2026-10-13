@@ -4,7 +4,6 @@ import { isRecord } from '../common/values.js';
 export function assistantAnswerContent(answer: string): ProposalContent {
     return {
         sql: null,
-        alternatives: [],
         summary: answer,
         assumptions: [],
         tables: [],

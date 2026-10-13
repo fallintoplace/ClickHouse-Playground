@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
 import { GEO_HELP_CITIES } from '../../src/frontend/help/previews/geo-help-examples.js';
 import { openBlankSql, openSqlExamples, openWorkspacePanel, replaceSql } from './helpers.js';
+import { jsonRecord } from '../helpers/type-guards.js';
 import {
     previewCloudSchema,
     mockCloudEndpoint,
@@ -550,6 +551,82 @@ test('Restoring a draft with an unavailable run keeps its SQL without an error t
             .filter({ hasText: 'This retained run is no longer available in this browser.' }),
     ).toHaveCount(0);
 });
+
+for (const connectionId of ['demo', 'clickhouse-cloud']) {
+    test(`Browser ${connectionId} drafts remain runnable after their saved document disappears`, async ({
+        page,
+    }) => {
+        const workspaceKey = `clickstudio:workspace:${connectionId}:v1`;
+        const sql = 'SELECT 42 AS preserved_query';
+        await page.addInitScript(
+            ({ workspaceKey, sql }) => {
+                if (sessionStorage.getItem('clickstudio:seeded-browser-recovery')) return;
+                localStorage.setItem(
+                    workspaceKey,
+                    JSON.stringify({
+                        version: 1,
+                        activeId: 'recovered-browser-query',
+                        tabs: [
+                            {
+                                id: 'recovered-browser-query',
+                                name: 'Recovered browser query.sql',
+                                sql,
+                                serverId: 'missing-browser-document',
+                                baseRevision: 3,
+                                parameters: {},
+                                chart: { kind: 'table', x: 0, ys: [], title: 'Query result' },
+                                runIds: [],
+                                checkpoints: [],
+                                from: 0,
+                                to: 0,
+                                kind: 'query',
+                                dependencies: [],
+                            },
+                        ],
+                    }),
+                );
+                sessionStorage.setItem('clickstudio:seeded-browser-recovery', 'true');
+            },
+            { workspaceKey, sql },
+        );
+        if (connectionId === 'clickhouse-cloud') {
+            await mockCloudEndpoint(page);
+            await page.route('**/api/cloud', route => {
+                const body = jsonRecord(route.request().postDataJSON());
+                return body.action === 'run'
+                    ? route.fulfill({
+                          json: {
+                              queryId: body.queryId,
+                              columns: [{ name: 'preserved_query', type: 'UInt8' }],
+                              rows: [[42]],
+                              elapsedMs: 1,
+                              bytes: 1,
+                              truncated: false,
+                          },
+                      })
+                    : route.fallback();
+            });
+        }
+        await page.goto('/experimental?connection=demo');
+        if (connectionId === 'clickhouse-cloud') await connectPreviewCloud(page);
+        await expect(page.locator('.cm-content')).toHaveText(sql);
+        await page.getByTestId('run-button').click();
+        await expect(page.locator('.execution-bar')).toHaveAttribute(
+            'data-run-status',
+            'succeeded',
+        );
+        await expect(page.getByRole('alert')).toHaveCount(0);
+        const restored = await page.evaluate(workspaceKey => {
+            const workspace = JSON.parse(localStorage.getItem(workspaceKey) ?? 'null');
+            return workspace.tabs.find((tab: { id: string }) => tab.id === workspace.activeId);
+        }, workspaceKey);
+        expect(restored).toMatchObject({
+            sql,
+            serverId: 'missing-browser-document',
+            baseRevision: 3,
+        });
+    });
+}
 
 test('Charts filter opens a chart example in a new SQL tab without executing it', async ({
     page,

@@ -13,7 +13,7 @@ import ReactMarkdown, { type ExtraProps } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Nodes, Root } from 'mdast';
 import { statementOutline, type SqlOperation } from '../../queries/editor/sql-editor-helpers';
-import type { Proposal, ProposalAlternative } from '../../../shared/assistant/types';
+import type { Proposal } from '../../../shared/assistant/types';
 import {
     assistantSqlReview,
     type AssistantSqlReview,
@@ -48,7 +48,6 @@ export type AssistantWorkflowProps = {
     trusted: boolean;
     onAskAI: () => void;
     onCancelRequest: () => void;
-    onOpenSqlDraft: (name: string, sql: string) => void;
 };
 
 type SqlDiffRow = {
@@ -95,6 +94,12 @@ function AssistantSqlProposalDiff({
     proposal: Proposal;
     review: AssistantSqlReview;
 }) {
+    const outline = useMemo(() => statementOutline(proposal.sql ?? ''), [proposal.sql]);
+    const showPlan =
+        outline.statements.length > 1 ||
+        Boolean(outline.error) ||
+        outline.statements.some(statement => statement.operation !== 'read') ||
+        outline.statements.length === 0;
     const [open, setOpen] = useState(review.status === 'Needs review');
     const changes = useMemo(
         () => diffLines(proposal.baseSql, proposal.sql ?? ''),
@@ -195,6 +200,7 @@ function AssistantSqlProposalDiff({
                         </pre>
                     )}
                 </ScrollEdgeFrame>
+                {showPlan && <AssistantScriptPlan sql={proposal.sql ?? ''} />}
             </details>
             {review.message && (
                 <p className="sql-proposal-review-message" role="status">
@@ -258,48 +264,14 @@ function normalizeCitationLinks(sources: readonly { url: string }[]) {
     };
 }
 
-function sqlFromCodeBlock(node: ExtraProps['node']): string | undefined {
-    const code = node?.children.find(child => child.type === 'element' && child.tagName === 'code');
-    if (code?.type !== 'element') return undefined;
-    const classes = code.properties.className;
-    if (
-        !Array.isArray(classes) ||
-        !classes.some(
-            name =>
-                typeof name === 'string' &&
-                /^language-(?:sql|clickhouse|postgresql|postgres|mysql|sqlite|tsql)$/i.test(name),
-        )
-    )
-        return undefined;
-    const text = code.children
-        .flatMap(child => (child.type === 'text' ? [child.value] : []))
-        .join('');
-    return text.endsWith('\n') ? text.slice(0, -1) : text;
-}
-
 function AssistantCodeBlock({
-    node,
+    node: _node,
     children,
-    onOpenSqlDraft,
     ...props
-}: ComponentPropsWithoutRef<'pre'> &
-    ExtraProps & {
-        onOpenSqlDraft?: AssistantWorkflowProps['onOpenSqlDraft'];
-    }) {
-    const sql = sqlFromCodeBlock(node);
-    if (sql === undefined || !onOpenSqlDraft) return <pre {...props}>{children}</pre>;
+}: ComponentPropsWithoutRef<'pre'> & ExtraProps) {
     return (
         <div className="assistant-markdown-code-block">
             <pre {...props}>{children}</pre>
-            <div className="assistant-alternative-actions">
-                <Button
-                    variant="secondary"
-                    aria-label="Open SQL code block in SQL tab"
-                    onClick={() => onOpenSqlDraft('Query.sql', sql)}
-                >
-                    Open in SQL tab
-                </Button>
-            </div>
         </div>
     );
 }
@@ -309,20 +281,18 @@ function AssistantMarkdown({
     sources,
     className,
     testId,
-    onOpenSqlDraft,
 }: {
     text: string;
     sources: readonly { url: string }[];
     className: string;
     testId?: string;
-    onOpenSqlDraft?: AssistantWorkflowProps['onOpenSqlDraft'];
 }) {
     return (
         <div className={className} data-testid={testId}>
             <ReactMarkdown
                 remarkPlugins={[remarkGfm, normalizeCitationLinks(sources)]}
                 components={{
-                    pre: props => <AssistantCodeBlock {...props} onOpenSqlDraft={onOpenSqlDraft} />,
+                    pre: AssistantCodeBlock,
                     a: ({ href, children, ...props }) => (
                         <a {...props} href={href} target="_blank" rel="noreferrer">
                             {children}
@@ -346,21 +316,7 @@ const operationLabels: Record<SqlOperation, string> = {
 };
 const SCRIPT_PLAN_PAGE_SIZE = 5;
 
-function AssistantExecutionOption({
-    title,
-    summary,
-    sql,
-    openDisabled,
-    onOpenSqlDraft,
-    alternative = false,
-}: {
-    title: string;
-    summary?: string;
-    sql: string;
-    openDisabled: boolean;
-    onOpenSqlDraft: AssistantWorkflowProps['onOpenSqlDraft'];
-    alternative?: boolean;
-}) {
+function AssistantScriptPlan({ sql }: { sql: string }) {
     const outline = useMemo(() => statementOutline(sql), [sql]);
     const statements = outline.statements;
     const [page, setPage] = useState(0);
@@ -381,17 +337,6 @@ function AssistantExecutionOption({
           'ClickHouse mutations may finish asynchronously.'
         : undefined;
 
-    const getOptionLabel = () => {
-        if (alternative) {
-            return 'ALTERNATIVE';
-        }
-
-        if (statements.length > 1) {
-            return 'SCRIPT PLAN';
-        }
-
-        return 'RECOMMENDED OPTION';
-    };
     const executionContent = (
         <>
             {outline.error && (
@@ -473,81 +418,18 @@ function AssistantExecutionOption({
                     script.
                 </p>
             )}
-            {alternative && (
-                <footer className="assistant-alternative-actions">
-                    <Button
-                        variant="secondary"
-                        onClick={() => {
-                            if (!openDisabled) onOpenSqlDraft(`${title}.sql`, sql);
-                        }}
-                        disabled={openDisabled}
-                        aria-label={`Open in SQL tab: ${title}`}
-                    >
-                        Open in SQL tab
-                    </Button>
-                </footer>
-            )}
         </>
     );
-
-    if (alternative) {
-        return (
-            <details
-                className="assistant-execution-option assistant-execution-option-collapsible"
-                aria-label={`Execution plan: ${title}`}
-                data-testid="assistant-execution-option"
-            >
-                <summary className="assistant-execution-option-summary">
-                    <span className="assistant-execution-option-summary-main">
-                        <span className="assistant-execution-option-summary-heading">
-                            <span className="eyebrow">{getOptionLabel()}</span>
-                            <strong>{title}</strong>
-                        </span>
-                        {summary && (
-                            <span className="assistant-execution-option-summary-description">
-                                {summary}
-                            </span>
-                        )}
-                        {mutationWarning && (
-                            <span className="assistant-execution-warning" role="status">
-                                {mutationWarning}
-                            </span>
-                        )}
-                        {outline.error && (
-                            <span className="assistant-execution-option-summary-status">
-                                SQL preview unavailable
-                            </span>
-                        )}
-                        {!outline.error && !statements.length && (
-                            <span className="assistant-execution-option-summary-status">
-                                No SQL statements
-                            </span>
-                        )}
-                    </span>
-                    <span className="assistant-execution-count">
-                        {statements.length} {statements.length === 1 ? 'statement' : 'statements'}
-                        {statements.length > 1 ? ' · runs in order' : ''}
-                    </span>
-                    <span className="assistant-execution-option-chevron" aria-hidden="true">
-                        <Icon name="chevron" />
-                    </span>
-                </summary>
-                <div className="assistant-execution-option-content">{executionContent}</div>
-            </details>
-        );
-    }
 
     return (
         <section
             className="assistant-execution-option"
-            aria-label={`Execution plan: ${title}`}
+            aria-label="Script plan"
             data-testid="assistant-execution-option"
         >
             <header className="assistant-execution-heading">
                 <div>
-                    <span className="eyebrow">{getOptionLabel()}</span>
-                    <strong>{title}</strong>
-                    {summary && <p>{summary}</p>}
+                    <strong>Script plan</strong>
                     {mutationWarning && (
                         <p className="assistant-execution-warning" role="status">
                             {mutationWarning}
@@ -571,8 +453,6 @@ function AssistantOutput({
     connectionId,
     turn,
     latestTurnId,
-    busy,
-    onOpenSqlDraft,
 }: {
     mode: AssistantWorkflowProps['mode'];
     sql: string;
@@ -580,15 +460,9 @@ function AssistantOutput({
     connectionId: string;
     turn: AssistantChatTurn;
     latestTurnId: string | undefined;
-    busy: boolean;
-    onOpenSqlDraft: AssistantWorkflowProps['onOpenSqlDraft'];
 }) {
     const proposal = turn.proposal;
     const proposalSql = proposal?.sql ?? null;
-    const mainOutline = useMemo(
-        () => (proposalSql === null ? undefined : statementOutline(proposalSql)),
-        [proposalSql],
-    );
     if (turn.status === 'pending')
         return (
             <div className="assistant-pending" role="status">
@@ -610,24 +484,16 @@ function AssistantOutput({
         );
     if (!proposal) return null;
 
-    const alternatives: ProposalAlternative[] = proposal.alternatives ?? [];
     const beginner = mode === 'beginner';
-    const proposalIsScript = (mainOutline?.statements.length ?? 0) > 1;
-    const proposalHasNonReadStatement =
-        mainOutline?.statements.some(statement => statement.operation !== 'read') ?? false;
-    const proposalHasNoStatements = proposalSql !== null && mainOutline?.statements.length === 0;
-    const showExecutionOptions =
-        alternatives.length > 0 ||
-        (proposalSql !== null &&
-            (proposalIsScript ||
-                proposalHasNonReadStatement ||
-                Boolean(mainOutline?.error) ||
-                proposalHasNoStatements));
     const review = assistantSqlReview(
         { ...turn, proposal },
-        { sql, draftId, connectionId, latestTurnId },
+        {
+            sql,
+            draftId,
+            connectionId,
+            latestTurnId,
+        },
     );
-    const openDisabled = busy || !review.canOpenAlternative;
     const sources = (proposal.sources ?? []).map(source => {
         try {
             const url = new URL(source.url);
@@ -662,28 +528,6 @@ function AssistantOutput({
     const supportingDetailCount =
         proposal.assumptions.length + proposal.caveats.length + sources.length;
     const hasSupportingDetails = supportingDetailCount > 0;
-    const alternativeOptions = alternatives.map((option, index) => (
-        <AssistantExecutionOption
-            key={`${proposal.id}:alternative:${index}`}
-            title={option.title}
-            summary={option.summary}
-            sql={option.sql}
-            openDisabled={openDisabled}
-            onOpenSqlDraft={onOpenSqlDraft}
-            alternative
-        />
-    ));
-    const getProposalLabel = () => {
-        if (alternatives.length) {
-            return 'Recommended option';
-        }
-
-        if (proposalIsScript) {
-            return 'Script plan';
-        }
-
-        return 'SQL action';
-    };
     return (
         <div className="proposal-card">
             <div className="proposal-heading">
@@ -691,7 +535,6 @@ function AssistantOutput({
                     <AssistantMarkdown
                         sources={sources}
                         text={proposal.summary}
-                        onOpenSqlDraft={onOpenSqlDraft}
                         className={
                             proposalSql === null
                                 ? 'assistant-answer-markdown'
@@ -781,47 +624,6 @@ function AssistantOutput({
                     review={review}
                 />
             )}
-            {showExecutionOptions && (
-                <div className="assistant-execution-options">
-                    {proposalSql !== null && (
-                        <AssistantExecutionOption
-                            key={`${proposal.id}:recommended`}
-                            title={getProposalLabel()}
-                            sql={proposalSql}
-                            openDisabled={openDisabled}
-                            onOpenSqlDraft={onOpenSqlDraft}
-                        />
-                    )}
-                    {alternatives.length === 1 && alternativeOptions}
-                    {alternatives.length > 1 && (
-                        <details
-                            className="assistant-alternatives assistant-execution-option assistant-execution-option-collapsible"
-                            aria-label="Alternatives"
-                            data-testid="assistant-alternatives"
-                        >
-                            <summary className="assistant-execution-option-summary">
-                                <span className="assistant-execution-option-summary-main">
-                                    <span className="assistant-execution-option-summary-heading">
-                                        <strong>Alternatives</strong>
-                                    </span>
-                                </span>
-                                <span className="assistant-execution-count">
-                                    {alternatives.length} options
-                                </span>
-                                <span
-                                    className="assistant-execution-option-chevron"
-                                    aria-hidden="true"
-                                >
-                                    <Icon name="chevron" />
-                                </span>
-                            </summary>
-                            <div className="assistant-alternatives-content">
-                                {alternativeOptions}
-                            </div>
-                        </details>
-                    )}
-                </div>
-            )}
         </div>
     );
 }
@@ -850,7 +652,6 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
         notice,
         onAskAI,
         onCancelRequest,
-        onOpenSqlDraft,
     } = props;
     const transcriptViewport = useRef<HTMLDivElement>(null);
     const [questionInput, setQuestionInput] = useState<HTMLTextAreaElement | null>(null);
@@ -996,8 +797,6 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
                                             connectionId={connectionId}
                                             turn={turn}
                                             latestTurnId={latestTurnIds.get(turn.draftId)}
-                                            busy={busy}
-                                            onOpenSqlDraft={onOpenSqlDraft}
                                         />
                                     </div>
                                 </article>

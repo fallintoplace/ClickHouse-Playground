@@ -19,11 +19,15 @@ export default defineConfig({
         ['html', { open: 'never' }],
         ['json', { outputFile: 'test-results/results.json' }],
     ],
-    testIgnore: ['**/preview.spec.ts'],
+    testIgnore: ['**/preview.spec.ts', '**/playground-scripts.spec.ts'],
     projects: [
         {
             name: 'functional',
-            testIgnore: ['**/preview.spec.ts', '**/css-appearance.spec.ts'],
+            testIgnore: [
+                '**/preview.spec.ts',
+                '**/playground-scripts.spec.ts',
+                '**/css-appearance.spec.ts',
+            ],
         },
         { name: 'visual', testMatch: '**/css-appearance.spec.ts' },
     ],

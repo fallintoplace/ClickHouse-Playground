@@ -53,10 +53,9 @@ const reviewContext = {
     latestTurnId: 'turn',
 };
 
-test('Current SQL changes need editor review and can open alternatives before acceptance', () => {
+test('Current SQL changes need editor review', () => {
     assert.deepEqual(assistantSqlReview(sqlTurn(), reviewContext), {
         status: 'Needs review',
-        canOpenAlternative: true,
     });
 });
 
@@ -67,7 +66,7 @@ test('Returned SQL can be reviewed regardless of the request action', () => {
             sqlTurn({ proposal: { ...turn.proposal, action } }),
             reviewContext,
         );
-        assert.deepEqual(state, { status: 'Needs review', canOpenAlternative: true });
+        assert.deepEqual(state, { status: 'Needs review' });
         assert.equal(
             pendingEditorProposal(
                 [sqlTurn({ proposal: { ...turn.proposal, action } })],
@@ -83,11 +82,11 @@ test('Returned SQL can be reviewed regardless of the request action', () => {
             sqlTurn({ proposal: { ...turn.proposal, sql: turn.proposal.baseSql } }),
             reviewContext,
         ),
-        { status: 'No SQL changes', canOpenAlternative: true },
+        { status: 'No SQL changes' },
     );
 });
 
-test('Old, unowned and cross-connection proposals cannot open alternatives', () => {
+test('Old, unowned and cross-connection proposals stay informational', () => {
     const turn = sqlTurn();
     const cases = [
         [turn, { ...reviewContext, latestTurnId: 'later' }],
@@ -98,7 +97,6 @@ test('Old, unowned and cross-connection proposals cannot open alternatives', () 
     for (const [candidate, context] of cases)
         assert.deepEqual(assistantSqlReview(candidate, context), {
             status: 'Earlier proposal',
-            canOpenAlternative: false,
         });
 });
 
@@ -111,11 +109,7 @@ test('Accepted and rejected history keeps the recorded decision', () => {
         const candidate = sqlTurn({ proposal: { ...turn.proposal, decision } });
         assert.deepEqual(
             assistantSqlReview(candidate, { ...reviewContext, latestTurnId: 'later' }),
-            { status, canOpenAlternative: false },
-        );
-        assert.equal(
-            assistantSqlReview(candidate, reviewContext).canOpenAlternative,
-            decision === 'accepted',
+            { status },
         );
     }
 });
@@ -130,7 +124,6 @@ test('An accepted proposal that missed its draft is not reported as applied', ()
     assert.deepEqual(assistantSqlReview(restored, reviewContext), {
         status: 'Not applied',
         message: 'The original SQL draft closed before this proposal could be applied.',
-        canOpenAlternative: true,
     });
     for (const applied of [true, undefined, 'false']) {
         state.chats[0].turns = [{ ...turn, applied }];
@@ -145,29 +138,18 @@ test('Changing tabs retains the proposal ownership warning without replacing ano
     assert.deepEqual(assistantSqlReview(sqlTurn(), { ...reviewContext, draftId: 'other' }), {
         status: 'Another query',
         message: 'Open the original SQL tab to review this proposal.',
-        canOpenAlternative: true,
     });
 });
 
 test('Edited drafts and stored static checks do not block returned SQL', () => {
     assert.deepEqual(assistantSqlReview(sqlTurn(), { ...reviewContext, sql: 'SELECT 99' }), {
         status: 'Needs review',
-        canOpenAlternative: true,
     });
     const turn = sqlTurn();
     const failed = sqlTurn({ proposal: { ...turn.proposal, quality: { status: 'fail' } } });
     assert.deepEqual(assistantSqlReview(failed, reviewContext), {
         status: 'Needs review',
-        canOpenAlternative: true,
     });
-    for (const decision of ['pending', 'accepted', 'rejected'])
-        assert.equal(
-            assistantSqlReview(
-                sqlTurn({ proposal: { ...failed.proposal, decision } }),
-                reviewContext,
-            ).canOpenAlternative,
-            decision !== 'rejected',
-        );
 });
 
 test('Editor proposals belong to the originating query and connection', () => {
@@ -188,7 +170,6 @@ test('A background reply can review and replace an edited SQL draft', () => {
         assert.equal(pendingEditorProposal([turn], 'draft', 'demo', sql).id, 'turn');
     assert.deepEqual(assistantSqlReview(turn, { ...reviewContext, sql: 'SELECT 3' }), {
         status: 'Needs review',
-        canOpenAlternative: true,
     });
 });
 

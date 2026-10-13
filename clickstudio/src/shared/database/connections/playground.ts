@@ -57,10 +57,7 @@ export const PLAYGROUND_CONNECTION: Connection & { trusted: boolean } = {
             'System-table documentation is not enabled on this connection.',
         ),
         import: capability(false, 'The public Playground connection is read only.'),
-        scripts: capability(
-            false,
-            'The public Playground accepts one read-only statement per request.',
-        ),
+        scripts: capability(true),
         parameters: capability(
             false,
             'Query parameters are not enabled on the public Playground connection.',

@@ -284,7 +284,7 @@ test('Local API exposes the public Playground as ready and read only', async t =
     assert.equal(playground.readonly, true);
     const manifest = jsonRecord(playground.manifest, 'Playground capabilities');
     assert.equal(jsonRecord(manifest.import).available, false);
-    assert.equal(jsonRecord(manifest.scripts).available, false);
+    assert.equal(jsonRecord(manifest.scripts).available, true);
     assert.equal(jsonRecord(manifest.parameters).available, false);
 });
 

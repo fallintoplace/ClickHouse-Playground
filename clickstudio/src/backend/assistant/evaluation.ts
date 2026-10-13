@@ -9,7 +9,7 @@ import type {
 import type { Schema } from '../../shared/database/schema/types.js';
 import { lexSql } from '../../shared/sql/sql.js';
 
-export const ASSISTANT_EVALUATOR_VERSION = 'assistant-eval-v1';
+export const ASSISTANT_EVALUATOR_VERSION = 'assistant-eval-v2';
 
 interface EvaluationContext {
     schema?: Pick<Schema, 'tables' | 'truncated'>;
@@ -76,11 +76,8 @@ export function evaluateProposal(
     const checks: ProposalQualityCheck[] = [];
     const inspectOnly = action === 'review' || action === 'explain';
     const flexible = action === 'ask';
-    const alternatives = content.alternatives ?? [];
-    const sqlOptions = [content.sql, ...alternatives.map(option => option.sql)].filter(
-        (sql): sql is string => sql !== null,
-    );
-    if (inspectOnly && (content.sql !== null || alternatives.length > 0))
+    const sqlOptions = [content.sql].filter((sql): sql is string => sql !== null);
+    if (inspectOnly && content.sql !== null)
         checks.push({
             id: 'contract',
             status: 'fail',
@@ -192,8 +189,6 @@ export interface AssistantBenchmarkCase {
         sqlAbsent?: string[];
         sqlNull?: boolean;
         minimumFindings?: number;
-        alternativeCount?: number;
-        alternativeSqlIncludes?: string[];
     };
     candidate: ProposalContent;
 }
@@ -283,24 +278,15 @@ export const ASSISTANT_BENCHMARK_CASES: readonly AssistantBenchmarkCase[] = [
         },
     },
     {
-        id: 'separate-update-delete-options',
+        id: 'multi-statement-answer',
         action: 'ask',
         expected: {
-            sqlIncludes: ['ALTER TABLE', 'UPDATE'],
-            sqlAbsent: ['DELETE'],
-            alternativeCount: 1,
-            alternativeSqlIncludes: ['ALTER TABLE', 'DELETE'],
+            sqlIncludes: ['count()', 'LIMIT 10'],
+            sqlAbsent: ['DELETE', 'UPDATE'],
         },
         candidate: {
-            sql: "ALTER TABLE default.events UPDATE status = 'reviewed' WHERE id = 1",
-            alternatives: [
-                {
-                    title: 'Delete instead',
-                    summary: 'Remove the matching event.',
-                    sql: 'ALTER TABLE default.events DELETE WHERE id = 1',
-                },
-            ],
-            summary: 'Choose whether to update or delete the matching event.',
+            sql: 'SELECT count() FROM default.events;\nSELECT * FROM default.events LIMIT 10;',
+            summary: 'Count events and preview ten rows in one script.',
             assumptions: [],
             tables: ['default.events'],
             caveats: [],
@@ -322,9 +308,6 @@ function gradeBenchmarkCase(testCase: AssistantBenchmarkCase): AssistantBenchmar
         schema: benchmarkSchema,
     });
     const sql = testCase.candidate.sql?.toLowerCase() ?? '';
-    const alternativeSql = (testCase.candidate.alternatives ?? [])
-        .map(option => option.sql.toLowerCase())
-        .join('\n');
     const expected = testCase.expected;
     const includes = (expected.sqlIncludes ?? []).every(value => sql.includes(value.toLowerCase()));
     const absent = (expected.sqlAbsent ?? []).every(value => !sql.includes(value.toLowerCase()));
@@ -332,20 +315,7 @@ function gradeBenchmarkCase(testCase: AssistantBenchmarkCase): AssistantBenchmar
         expected.sqlNull === undefined ||
         (expected.sqlNull ? testCase.candidate.sql === null : testCase.candidate.sql !== null);
     const findings = testCase.candidate.findings.length >= (expected.minimumFindings ?? 0);
-    const alternativeCount =
-        expected.alternativeCount === undefined ||
-        (testCase.candidate.alternatives ?? []).length === expected.alternativeCount;
-    const alternativesInclude = (expected.alternativeSqlIncludes ?? []).every(value =>
-        alternativeSql.includes(value.toLowerCase()),
-    );
-    const passed =
-        includes &&
-        absent &&
-        nullShape &&
-        findings &&
-        alternativeCount &&
-        alternativesInclude &&
-        quality.status !== 'fail';
+    const passed = includes && absent && nullShape && findings && quality.status !== 'fail';
     return {
         id: testCase.id,
         passed,

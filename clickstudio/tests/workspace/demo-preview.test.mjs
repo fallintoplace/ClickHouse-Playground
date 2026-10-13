@@ -1,6 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BrowserWorkspaceApi } from '../../.workspace-build/src/frontend/api/browser-workspace-api.js';
+import {
+    BrowserWorkspaceApi,
+    SavedQueryUnavailableError,
+} from '../../.workspace-build/src/frontend/api/browser-workspace-api.js';
+
+test('Browser saved-query reads distinguish missing records from valid and trashed documents', async () => {
+    const api = new BrowserWorkspaceApi();
+    await assert.rejects(api.request('/documents/missing-document'), SavedQueryUnavailableError);
+    const documents = await api.request('/documents?connectionId=demo');
+    const document = documents[0];
+    assert.deepEqual(await api.request(`/documents/${document.id}`), document);
+    await api.request(`/documents/${document.id}`, { method: 'DELETE' });
+    const trashed = await api.request(`/documents/${document.id}`);
+    assert.equal(trashed.id, document.id);
+    assert.ok(trashed.deletedAt);
+});
 
 test('Static preview scripts keep semicolons inside strings and comments', async () => {
     const api = new BrowserWorkspaceApi();

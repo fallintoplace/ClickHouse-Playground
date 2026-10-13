@@ -140,18 +140,13 @@ test('OpenAI receives prior chat messages before the fresh SQL context', async t
     });
 });
 
-test('OpenAI replies preserve standalone alternatives without local output limits', async t => {
+test('OpenAI replies preserve complete scripts without local output limits', async t => {
     const priorFetch = globalThis.fetch;
     t.after(() => {
         globalThis.fetch = priorFetch;
     });
     const content = {
-        sql: null,
-        alternatives: Array.from({ length: 5 }, (_, index) => ({
-            title: `Option ${index}`,
-            summary: 'x'.repeat(1001),
-            sql: `SELECT ${index}`,
-        })),
+        sql: Array.from({ length: 5 }, (_, index) => `SELECT ${index};`).join('\n'),
         summary: 'x'.repeat(20001),
         assumptions: Array.from({ length: 51 }, () => 'x'.repeat(4001)),
         tables: [],
@@ -166,7 +161,7 @@ test('OpenAI replies preserve standalone alternatives without local output limit
         if (String(input).endsWith('/responses/input_tokens'))
             return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
         return Response.json({
-            id: 'alternatives-response',
+            id: 'complete-script-response',
             status: 'completed',
             output_text: JSON.stringify(content),
             output: [],
@@ -233,7 +228,6 @@ test('OpenAI text, refusals and partial replies are displayed as returned', asyn
         );
         assert.equal(response.content.summary, expected);
         assert.equal(response.content.sql, null);
-        assert.deepEqual(response.content.alternatives, []);
     }
 });
 
@@ -272,6 +266,34 @@ test('OpenAI replies preserve all web citations', async t => {
         response.content.sources,
         annotations.map(({ title, url }) => ({ title, url })),
     );
+});
+
+test('Provider replies normalize SQL into the existing review contract without a required format', async t => {
+    const priorFetch = globalThis.fetch;
+    t.after(() => {
+        globalThis.fetch = priorFetch;
+    });
+    for (const [answer, sql] of [
+        ['```sql\nSELECT 2\n```', 'SELECT 2'],
+        ['```json\n{"sql":"SELECT 2","summary":"Updated."}\n```', 'SELECT 2'],
+        [JSON.stringify({ sql: null, summary: '```sql\nSELECT 2\n```' }), 'SELECT 2'],
+        ['```sql\nSELECT 2\n```\n\n```sql\nSELECT 3\n```', 'SELECT 2\n;\n\nSELECT 3'],
+    ] as const) {
+        globalThis.fetch = async input =>
+            String(input).endsWith('/responses/input_tokens')
+                ? Response.json({ object: 'response.input_tokens', input_tokens: 200 })
+                : Response.json({
+                      id: 'normalized-reply',
+                      status: 'completed',
+                      output_text: answer,
+                      output: [],
+                  });
+        const response = await new OpenAIDriver('test-key', 'test-model').propose(
+            assistantContext(),
+            new AbortController().signal,
+        );
+        assert.equal(response.content.sql, sql);
+    }
 });
 
 test('OpenAI network failures and empty responses still return errors', async t => {

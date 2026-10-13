@@ -158,7 +158,7 @@ function parsePlaygroundError(body: string, status?: number) {
     return new PlaygroundError(code, message || 'ClickHouse Playground could not run this query.');
 }
 
-function validateQuery(sql: string) {
+export function validatePlaygroundQuery(sql: string) {
     const statements = splitSql(sql);
     if (statements.length !== 1)
         throw new PlaygroundError(
@@ -183,10 +183,11 @@ async function executePlaygroundQuery(
     maxRows: number,
     maxBytes: number,
     queryParams: Record<string, string> = {},
+    queryId: string = crypto.randomUUID(),
 ): Promise<PlaygroundQueryResult> {
     if (!sql.trim())
         throw new PlaygroundError('EMPTY_QUERY', 'Write a SQL statement before running it.');
-    validateQuery(sql);
+    validatePlaygroundQuery(sql);
 
     const controller = new AbortController();
     let timedOut = false;
@@ -198,7 +199,6 @@ async function executePlaygroundQuery(
     signal?.addEventListener('abort', abortRequest, { once: true });
     const startedAt = performance.now();
     try {
-        const queryId = crypto.randomUUID();
         const response = await playgroundClient.query({
             query: sql,
             query_params: queryParams,
@@ -265,8 +265,19 @@ async function executePlaygroundQuery(
     }
 }
 
-export function queryPlayground(sql: string, signal?: AbortSignal) {
-    return executePlaygroundQuery(sql, signal, MAX_RESULT_ROWS, MAX_RESPONSE_BYTES);
+export function queryPlayground(
+    sql: string,
+    signal?: AbortSignal,
+    options: { queryId?: string } = {},
+) {
+    return executePlaygroundQuery(
+        sql,
+        signal,
+        MAX_RESULT_ROWS,
+        MAX_RESPONSE_BYTES,
+        {},
+        options.queryId,
+    );
 }
 
 export function loadPlaygroundServerVersion(): Promise<string | undefined> {
@@ -289,7 +300,7 @@ export function loadPlaygroundServerVersion(): Promise<string | undefined> {
 }
 
 export async function queryPlaygroundQueryTree(sql: string, signal?: AbortSignal) {
-    validateQuery(sql);
+    validatePlaygroundQuery(sql);
     const result = await executePlaygroundQuery(
         `EXPLAIN QUERY TREE\n${sql}`,
         signal,

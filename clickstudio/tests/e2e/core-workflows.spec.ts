@@ -2496,7 +2496,6 @@ test('Ask AI keeps chat history when SQL changes and sends prior messages with f
                 summary: 'Answer to Show the old question',
                 clarification: null,
                 sql: null,
-                alternatives: [],
                 assumptions: [],
                 tables: [],
                 caveats: [],

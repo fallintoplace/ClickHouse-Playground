@@ -5,7 +5,7 @@ const baseURL = `http://127.0.0.1:${webPort}`;
 
 export default defineConfig({
     testDir: './tests/e2e',
-    testMatch: 'preview.spec.ts',
+    testMatch: ['preview.spec.ts', 'playground-scripts.spec.ts'],
     fullyParallel: false,
     workers: 1,
     retries: 0,

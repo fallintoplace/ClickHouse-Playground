@@ -79,7 +79,6 @@ function detailedConversationTurn(turn: AssistantChatTurn): AssistantConversatio
             summary,
             clarification,
             sql,
-            alternatives,
             assumptions,
             tables,
             caveats,
@@ -94,7 +93,6 @@ function detailedConversationTurn(turn: AssistantChatTurn): AssistantConversatio
                 summary,
                 clarification,
                 sql,
-                alternatives,
                 assumptions,
                 tables,
                 caveats,
@@ -529,11 +527,20 @@ export function useWorkspaceAssistant({
         setAssistantError('');
         try {
             const response: unknown =
-                isFrontendDemoPreview && proposal.owner === 'vercel-session'
-                    ? { ...proposal, decision, decidedAt: new Date().toISOString() }
+                (isFrontendDemoPreview && proposal.owner === 'vercel-session') ||
+                proposal.owner === 'unparsed-response'
+                    ? {
+                          ...proposal,
+                          decision,
+                          decidedAt: new Date().toISOString(),
+                      }
                     : await post(
                           `/assistant/proposals/${encodeURIComponent(proposal.id)}/decision`,
-                          { decision, connectionId, currentSql: active.sql },
+                          {
+                              decision,
+                              connectionId,
+                              currentSql: active.sql,
+                          },
                           apiResponses.isUnknown,
                           { signal: request.controller.signal },
                       );
