@@ -1,5 +1,6 @@
 import type { OpenSqlDraft } from '../../../queries/execution/sql-draft-observer';
 import type { FunctionTestEvidence } from '../../../database/functions/SqlFunctionDetails';
+import type { SqlFunctionCatalogState } from '../../../database/functions/useSqlFunctionCatalog';
 import { RunComparisonLauncher } from '../../../queries/history/RunComparison';
 import {
     useCallback,
@@ -42,6 +43,7 @@ export type InspectorPaneProps = {
     inspector: Inspector;
     setInspector: (inspector: Inspector) => void;
     connection: Connected;
+    functionCatalog: SqlFunctionCatalogState;
     serverVersion?: string;
     schema?: Schema;
     schemaLoading: boolean;
@@ -216,6 +218,7 @@ export function InspectorPane({
     inspector,
     setInspector,
     connection,
+    functionCatalog,
     serverVersion,
     schema,
     schemaLoading,
@@ -369,6 +372,7 @@ export function InspectorPane({
                         connection={connection}
                         expert={isExpert}
                         functionTest={functionTest}
+                        functionCatalog={functionCatalog}
                         schema={schema}
                         schemaLoading={schemaLoading}
                         schemaLoadingMore={schemaLoadingMore}

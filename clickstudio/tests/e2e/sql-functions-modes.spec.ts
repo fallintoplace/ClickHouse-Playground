@@ -2,7 +2,100 @@ import { test, expect } from '@playwright/test';
 import { setWorkspaceMode, workspacePath } from './helpers.js';
 import { functionsWorkspace } from './sql-functions-helpers.js';
 
+test('Standard loads functions only when Objects is first opened', async ({ page }) => {
+    const { requests } = await functionsWorkspace(page, {
+        path: workspacePath('Standard'),
+        existing: true,
+        openObjects: false,
+    });
+    await expect(page.locator('.inspector-pane')).toHaveCount(0);
+    expect(requests.filter(body => body.action === 'functions')).toHaveLength(0);
+    await page.locator('.icon-rail').getByRole('button', { name: 'Objects', exact: true }).click();
+    await expect(
+        page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }),
+    ).toBeVisible();
+    expect(requests.filter(body => body.action === 'functions')).toHaveLength(1);
+});
+
 for (const mode of ['Standard', 'Experimental']) {
+    test(`${mode} shows a spinner and keeps the pending request when Objects is reopened`, async ({
+        page,
+    }, info) => {
+        const { requests } = await functionsWorkspace(page, {
+            path: workspacePath(mode),
+            existing: true,
+            metadataDelay: 2500,
+            waitForFunctions: false,
+        });
+        const spinner = page.getByRole('status', { name: 'Loading functions', exact: true });
+        await expect(spinner).toBeVisible();
+        await expect(spinner).toHaveClass(/loading-orbit/);
+        await expect(page.getByText('Loading functions…', { exact: true })).toHaveCount(0);
+        await page
+            .locator('.sql-functions-tree')
+            .screenshot({ path: info.outputPath('functions-spinner.png') });
+        await page.getByRole('button', { name: 'Close inspector', exact: true }).click();
+        await page
+            .locator('.icon-rail')
+            .getByRole('button', { name: 'Objects', exact: true })
+            .click();
+        await expect(
+            page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }),
+        ).toBeVisible();
+        await expect(spinner).toHaveCount(0);
+        expect(requests.filter(body => body.action === 'functions')).toHaveLength(1);
+    });
+
+    test(`${mode} reuses functions across panel switches and fetches again only on refresh`, async ({
+        page,
+    }) => {
+        const { requests, state } = await functionsWorkspace(page, {
+            path: workspacePath(mode),
+            existing: true,
+        });
+        const count = (action: string) => requests.filter(body => body.action === action).length;
+        const schemas = count('schema');
+        expect(count('functions')).toBe(1);
+        for (let attempt = 0; attempt < 2; attempt++) {
+            await page.getByRole('button', { name: 'Close inspector', exact: true }).click();
+            await page
+                .locator('.icon-rail')
+                .getByRole('button', { name: 'Objects', exact: true })
+                .click();
+            await expect(
+                page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }),
+            ).toBeVisible();
+        }
+        await page
+            .locator('.inspector-pane')
+            .getByRole('navigation', { name: 'Workspace browser', exact: true })
+            .getByRole('button', { name: 'AI', exact: true })
+            .click();
+        await page
+            .locator('.inspector-pane')
+            .getByRole('navigation', { name: 'Workspace browser', exact: true })
+            .getByRole('button', { name: 'Objects', exact: true })
+            .click();
+        await expect(
+            page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('status', { name: 'Loading functions', exact: true }),
+        ).toHaveCount(0);
+        expect(count('functions')).toBe(1);
+        expect(count('schema')).toBe(schemas);
+        state.functions.push({
+            name: 'fresh_function',
+            parameters: ['x'],
+            createQuery: 'CREATE FUNCTION fresh_function AS x -> x + 1',
+        });
+        await page.locator('.object-refresh-action').click();
+        await expect(
+            page.getByRole('button', { name: 'fresh_function SQL UDF', exact: true }),
+        ).toBeVisible();
+        expect(count('functions')).toBe(2);
+    });
+
     test(`${mode} browses, searches, refreshes and tests SQL UDFs`, async ({ page }) => {
         const { state, requests } = await functionsWorkspace(page, {
             path: workspacePath(mode),

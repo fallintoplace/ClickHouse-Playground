@@ -23,6 +23,7 @@ type FunctionTestState = {
     failCreate: boolean;
     failRun: boolean;
     metadataError: boolean;
+    metadataDelay: number;
     invalidCatalog: boolean;
     runDelay: number;
     mapJson: string;
@@ -170,6 +171,9 @@ export async function functionsWorkspace(
         existing?: boolean;
         path?: string;
         invalidCatalog?: boolean;
+        metadataDelay?: number;
+        waitForFunctions?: boolean;
+        openObjects?: boolean;
     } = {},
 ) {
     const state: FunctionTestState = {
@@ -187,6 +191,7 @@ export async function functionsWorkspace(
         failCreate: false,
         failRun: false,
         metadataError: false,
+        metadataDelay: options.metadataDelay ?? 0,
         invalidCatalog: options.invalidCatalog ?? false,
         runDelay: 0,
         mapJson: '{"a":10,"c":30}',
@@ -219,6 +224,8 @@ export async function functionsWorkspace(
             return route.fulfill({ json: cloudConnectionTest({ serverVersion: '26.6.8.7' }) });
         if (action === 'schema') return route.fulfill({ json: cloudSchema });
         if (action === 'functions') {
+            if (state.metadataDelay)
+                await new Promise(resolve => setTimeout(resolve, state.metadataDelay));
             if (state.metadataError)
                 return route.fulfill({
                     status: 502,
@@ -254,20 +261,33 @@ export async function functionsWorkspace(
             json: { error: { code: 'UNEXPECTED_ACTION', message: `Unexpected ${String(action)}` } },
         });
     });
-    const catalogResponse = page.waitForResponse(
-        response =>
-            response.url().endsWith('/api/cloud') &&
-            jsonRecord(response.request().postDataJSON(), 'Cloud request').action === 'functions',
-    );
+    const catalogResponse =
+        options.waitForFunctions === false || options.openObjects === false
+            ? undefined
+            : page.waitForResponse(
+                  response =>
+                      response.url().endsWith('/api/cloud') &&
+                      jsonRecord(response.request().postDataJSON(), 'Cloud request').action ===
+                          'functions',
+              );
     await connectPreviewCloud(page, options.path);
-    await page.locator('.icon-rail').getByRole('button', { name: 'Objects', exact: true }).click();
-    await catalogResponse;
-    if (options.invalidCatalog) await expect(page.locator('.sql-functions-tree')).toHaveCount(0);
-    else
+    if (options.openObjects !== false)
+        await page
+            .locator('.icon-rail')
+            .getByRole('button', { name: 'Objects', exact: true })
+            .click();
+    if (catalogResponse) {
+        await catalogResponse;
+        if (options.invalidCatalog)
+            await expect(page.locator('.sql-functions-tree')).toHaveCount(0);
+        else
+            await expect(
+                page.getByRole('button', { name: 'Create SQL UDF', exact: true }),
+            ).toBeVisible();
         await expect(
-            page.getByRole('button', { name: 'Create SQL UDF', exact: true }),
-        ).toBeVisible();
-    await expect(page.getByText('Loading functions…', { exact: true })).toHaveCount(0);
+            page.getByRole('status', { name: 'Loading functions', exact: true }),
+        ).toHaveCount(0);
+    }
     return {
         state,
         requests,

@@ -360,8 +360,9 @@ export function useWorkspaceController({
     });
     const { assistantBusy, includeRun, setIncludeRun } = assistant;
     const data = useWorkspaceData({
-        connectionId: connection.id,
+        connection,
         trusted,
+        objectsOpen: drawerOpen && inspector === 'schema',
         activeServerId: active.serverId,
         setWorkspace,
         workspaceRef,

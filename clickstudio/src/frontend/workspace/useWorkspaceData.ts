@@ -18,20 +18,26 @@ import {
 } from '../database/connections/playground-client';
 import type { WorkspaceState } from '../queries/editor/drafts/workspace-state';
 import { startVisiblePolling } from '../browser/visible-polling';
+import { useSqlFunctionCatalog } from '../database/functions/useSqlFunctionCatalog';
+import type { Connected } from './workspace-types';
 
 export function useWorkspaceData({
-    connectionId,
+    connection,
     trusted,
+    objectsOpen,
     activeServerId,
     setWorkspace,
     workspaceRef,
 }: {
-    connectionId: string;
+    connection: Connected;
     trusted: boolean;
+    objectsOpen: boolean;
     activeServerId?: string;
     setWorkspace: Dispatch<SetStateAction<WorkspaceState>>;
     workspaceRef: { current: WorkspaceState };
 }) {
+    const connectionId = connection.id;
+    const functions = useSqlFunctionCatalog(connection, trusted, objectsOpen);
     const [schema, setSchema] = useState<Schema>();
     const [schemaLoading, setSchemaLoading] = useState(false);
     const [schemaLoadingMore, setSchemaLoadingMore] = useState(false);
@@ -290,6 +296,7 @@ export function useWorkspaceData({
     }, [invalidateRequests, loadDocuments, loadHistory, loadSchema, trusted]);
 
     return {
+        functions,
         schema,
         schemaLoading,
         schemaError,

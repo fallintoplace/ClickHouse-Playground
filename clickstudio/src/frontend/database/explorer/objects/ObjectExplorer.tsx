@@ -70,7 +70,7 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
         setDetailsOpen,
     } = state;
     const functionsEnabled = trusted && connection.id === CLICKHOUSE_CLOUD_CONNECTION_ID;
-    const functions = useSqlFunctions(connection, functionsEnabled);
+    const functions = useSqlFunctions(connection, functionsEnabled, props.functionCatalog);
     const functionDetails = functions.selected;
     const canDeleteFunction =
         !connection.readonly && !functions.loading && functions.catalog?.canDrop === true;

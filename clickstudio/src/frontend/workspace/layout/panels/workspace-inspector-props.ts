@@ -142,6 +142,7 @@ export function createInspectorProps({
         inspector,
         setInspector: showInspector,
         connection,
+        functionCatalog: model.data.functions,
         serverVersion:
             connection.id === PLAYGROUND_CONNECTION_ID
                 ? playgroundServerVersion
