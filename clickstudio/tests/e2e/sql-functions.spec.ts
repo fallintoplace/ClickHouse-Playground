@@ -397,19 +397,6 @@ for (const theme of ['Dark', 'Light']) {
     });
 }
 
-test('Copy SQL confirms the copied query and clears confirmation when the inputs change', async ({
-    page,
-}) => {
-    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
-    await functionsWorkspace(page, { existing: true });
-    await page.getByRole('button', { name: 'udf_array_remove_at SQL UDF', exact: true }).click();
-    const details = page.locator('.sql-function-details');
-    await details.getByRole('button', { name: 'Copy SQL', exact: true }).click();
-    await expect(details.getByRole('button', { name: 'Copied', exact: true })).toBeVisible();
-    await page.getByLabel('index', { exact: true }).fill('3');
-    await expect(details.getByRole('button', { name: 'Copy SQL', exact: true })).toBeVisible();
-});
-
 test('Switching SQL tabs during a function test keeps Run disabled and shows the completed result', async ({
     page,
 }) => {

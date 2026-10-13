@@ -20,6 +20,17 @@
     min-height: 0;
   }
 
+  .sql-function-actions .sql-function-delete-action {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--red);
+  }
+
+  .sql-function-actions .sql-function-delete-action:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--red) 55%, var(--line));
+    background: color-mix(in srgb, var(--red) 10%, var(--panel));
+  }
+
   .sql-function-panel {
     min-width: 0;
     min-height: 0;

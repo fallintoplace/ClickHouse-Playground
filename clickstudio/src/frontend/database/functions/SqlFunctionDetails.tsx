@@ -32,18 +32,16 @@ function FunctionDeleteAction({
     onDelete: () => void;
 }) {
     return (
-        <div className="object-utility-actions">
-            <Button
-                variant="danger"
-                className="toolbar-small"
-                disabled={!allowed || busy || !trusted}
-                title={!allowed ? reason : undefined}
-                onClick={onDelete}
-            >
-                <Icon name="trash" />
-                Delete function
-            </Button>
-        </div>
+        <Button
+            variant="danger"
+            className="toolbar-small sql-function-delete-action"
+            disabled={!allowed || busy || !trusted}
+            title={!allowed ? reason : undefined}
+            onClick={onDelete}
+        >
+            <Icon name="trash" />
+            Delete function
+        </Button>
     );
 }
 
@@ -296,23 +294,14 @@ export function SqlFunctionDetails({
                         <Icon name="play" />
                         {busy && attempt ? 'Running…' : 'Run on ClickHouse'}
                     </Button>
-                    <Button
-                        variant="ghost"
-                        className="toolbar-small object-copy-name-action"
-                        disabled={!sql}
-                        onClick={() => onCopy(sql, `function-test:${sql}`)}
-                    >
-                        <Icon name="copy" />
-                        {copiedId === `function-test:${sql}` ? 'Copied' : 'Copy SQL'}
-                    </Button>
+                    <FunctionDeleteAction
+                        allowed={canDelete}
+                        busy={busy}
+                        trusted={trusted}
+                        reason={deleteReason}
+                        onDelete={onDelete}
+                    />
                 </div>
-                <FunctionDeleteAction
-                    allowed={canDelete}
-                    busy={busy}
-                    trusted={trusted}
-                    reason={deleteReason}
-                    onDelete={onDelete}
-                />
             </div>
             <FunctionDetailsTabs id={tabsId} active={activeTab} onChange={setActiveTab} />
             <div

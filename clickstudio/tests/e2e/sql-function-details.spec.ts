@@ -9,7 +9,9 @@ async function detailStyles(details: Locator) {
             element.querySelector('.object-details-title > :is(strong, h3)')!,
         );
         const primary = getComputedStyle(element.querySelector('.object-preview-action')!);
-        const secondary = getComputedStyle(element.querySelector('.object-copy-name-action')!);
+        const secondary = getComputedStyle(
+            element.querySelector('.object-copy-name-action, .sql-function-delete-action')!,
+        );
         return {
             background: card.backgroundColor,
             padding: card.padding,
