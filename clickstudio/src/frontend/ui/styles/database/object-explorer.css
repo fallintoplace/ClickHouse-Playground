@@ -791,6 +791,9 @@
 .object-tree {
   gap: 2px;
 }
+.object-tree-children {
+  gap: 2px;
+}
 .object-tree-row,
 .reference-result {
   position: relative;
@@ -903,9 +906,13 @@
     box-shadow: inset 3px 0 var(--tree-kind-color);
   }
 }
+.object-tree-row.is-database,
+.object-tree-row.is-group.is-table,
+.object-tree-row.is-group.is-view {
+  min-height: 32px;
+}
 .object-tree-row.is-database {
   --tree-kind-color: var(--explorer-database);
-  min-height: 32px;
   margin-top: 0;
   font-weight: 650;
 }
@@ -921,7 +928,7 @@
   color: var(--muted);
   cursor: pointer;
 }
-.object-tree-row.is-database .object-tree-toggle {
+.object-tree-row:is(.is-database, .is-group.is-table, .is-group.is-view) .object-tree-toggle {
   width: 22px;
   height: 24px;
 }
@@ -964,7 +971,7 @@
   text-align: left;
   cursor: pointer;
 }
-.object-tree-row.is-database .object-tree-main {
+.object-tree-row:is(.is-database, .is-group.is-table, .is-group.is-view) .object-tree-main {
   min-height: 24px;
   gap: 6px;
   padding-block: 0;
@@ -978,11 +985,11 @@
   height: 15px;
   stroke-width: 1.9;
 }
-.object-tree-row.is-database .object-kind-glyph {
+.object-tree-row:is(.is-database, .is-group.is-table, .is-group.is-view) .object-kind-glyph {
   width: 21px;
   height: 21px;
 }
-.object-tree-row.is-database .object-kind-glyph > svg {
+.object-tree-row:is(.is-database, .is-group.is-table, .is-group.is-view) .object-kind-glyph > svg {
   width: 14px;
   height: 14px;
 }
@@ -1016,7 +1023,7 @@
   font-size: 9px;
   font-variant-numeric: tabular-nums;
 }
-.object-tree-row.is-database .object-tree-count {
+.object-tree-row:is(.is-database, .is-group.is-table, .is-group.is-view) .object-tree-count {
   min-width: 22px;
   height: 16px;
   font-size: 8px;
