@@ -13,6 +13,13 @@ import {
     type WorkspaceState,
 } from '../drafts/workspace-state';
 
+export type TabScrollState = {
+    overflow: boolean;
+    canScrollLeft: boolean;
+    canScrollRight: boolean;
+    activeTabDirection: 'left' | 'right' | null;
+};
+
 export function useWorkspaceTabs(
     workspace: WorkspaceState,
     setWorkspace: Dispatch<SetStateAction<WorkspaceState>>,
@@ -24,10 +31,11 @@ export function useWorkspaceTabs(
         workspace.tabs[0] ??
         (emptyDraft.current ??= newDraft(nextBlankQueryName(workspace)));
     const tabScrollerRef = useRef<HTMLDivElement>(null);
-    const [tabScrollState, setTabScrollState] = useState({
+    const [tabScrollState, setTabScrollState] = useState<TabScrollState>({
         overflow: false,
         canScrollLeft: false,
         canScrollRight: false,
+        activeTabDirection: null,
     });
     const [renamingTabId, setRenamingTabId] = useState<string>();
     const [tabRenameValue, setTabRenameValue] = useState('');
@@ -38,15 +46,26 @@ export function useWorkspaceTabs(
         const scroller = tabScrollerRef.current;
         if (!scroller) return;
         const maxScrollLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
-        const next = {
+        const next: TabScrollState = {
             overflow: maxScrollLeft > 1,
             canScrollLeft: scroller.scrollLeft > 1,
             canScrollRight: scroller.scrollLeft < maxScrollLeft - 1,
+            activeTabDirection: null,
         };
+        const activeTab = scroller.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+        if (activeTab && scroller.clientWidth > 0) {
+            const scrollerRect = scroller.getBoundingClientRect();
+            const tabRect = activeTab.getBoundingClientRect();
+            if (next.canScrollLeft && tabRect.right <= scrollerRect.left)
+                next.activeTabDirection = 'left';
+            else if (next.canScrollRight && tabRect.left >= scrollerRect.right)
+                next.activeTabDirection = 'right';
+        }
         setTabScrollState(current =>
             current.overflow === next.overflow &&
             current.canScrollLeft === next.canScrollLeft &&
-            current.canScrollRight === next.canScrollRight
+            current.canScrollRight === next.canScrollRight &&
+            current.activeTabDirection === next.activeTabDirection
                 ? current
                 : next,
         );

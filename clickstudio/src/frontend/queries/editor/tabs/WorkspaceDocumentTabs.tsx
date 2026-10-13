@@ -5,12 +5,7 @@ import type { Draft, WorkspaceState } from '../drafts/workspace-state';
 import { cx } from '../../../ui/components/primitives';
 import { Icon } from '../../../ui/components/icons';
 import { useRef, type ReactNode, type RefObject } from 'react';
-
-type TabScrollState = {
-    overflow: boolean;
-    canScrollLeft: boolean;
-    canScrollRight: boolean;
-};
+import type { TabScrollState } from './useWorkspaceTabs';
 
 type WorkspaceDocumentTabsProps = {
     workspace: WorkspaceState;
@@ -66,6 +61,8 @@ export function WorkspaceDocumentTabs({
 }: WorkspaceDocumentTabsProps) {
     const restoreFocusAfterRenameRef = useRef<string | undefined>(undefined);
     const compactSingleTab = experience === 'beginner' && workspace.tabs.length === 1;
+    const activeTabHiddenLeft = tabScrollState.activeTabDirection === 'left';
+    const activeTabHiddenRight = tabScrollState.activeTabDirection === 'right';
     return (
         <div
             className={cx(
@@ -208,22 +205,42 @@ export function WorkspaceDocumentTabs({
                 {tabScrollState.overflow && (
                     <>
                         <button
-                            className="document-tabs-scroll-button is-left"
+                            className={cx(
+                                'document-tabs-scroll-button is-left',
+                                activeTabHiddenLeft && 'has-hidden-active-tab',
+                            )}
                             data-testid="scroll-sql-tabs-left"
                             type="button"
                             aria-label="Scroll SQL tabs left"
-                            title="More SQL tabs to the left"
+                            aria-description={
+                                activeTabHiddenLeft ? 'Active SQL tab is to the left' : undefined
+                            }
+                            title={
+                                activeTabHiddenLeft
+                                    ? 'Active SQL tab is to the left'
+                                    : 'More SQL tabs to the left'
+                            }
                             disabled={!tabScrollState.canScrollLeft}
                             onClick={() => scrollTabs(-1)}
                         >
                             <Icon name="chevron" />
                         </button>
                         <button
-                            className="document-tabs-scroll-button is-right"
+                            className={cx(
+                                'document-tabs-scroll-button is-right',
+                                activeTabHiddenRight && 'has-hidden-active-tab',
+                            )}
                             data-testid="scroll-sql-tabs-right"
                             type="button"
                             aria-label="Scroll SQL tabs right"
-                            title="More SQL tabs to the right"
+                            aria-description={
+                                activeTabHiddenRight ? 'Active SQL tab is to the right' : undefined
+                            }
+                            title={
+                                activeTabHiddenRight
+                                    ? 'Active SQL tab is to the right'
+                                    : 'More SQL tabs to the right'
+                            }
                             disabled={!tabScrollState.canScrollRight}
                             onClick={() => scrollTabs(1)}
                         >
