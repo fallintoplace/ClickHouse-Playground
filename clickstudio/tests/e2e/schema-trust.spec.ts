@@ -154,6 +154,36 @@ function tableObject(page: Page, name = 'events') {
         .getByRole('button', { name: `${name} MergeTree`, exact: true });
 }
 
+test('New table dialog removes secondary helper copy and keeps the required-name error', async ({
+    page,
+}) => {
+    await page.route('**/api/connections/live/table-permissions', route =>
+        route.fulfill({ json: { create: true, insert: true, drop: true } }),
+    );
+    await mockLiveWorkspace(page, route => route.fulfill({ json: schema }));
+    await page.getByRole('button', { name: 'New table in analytics', exact: true }).click();
+
+    const dialog = page.getByRole('dialog', { name: 'New table', exact: true });
+    await expect(dialog).toBeVisible();
+    await expect(
+        dialog.getByText('Choose a database or type its name.', { exact: true }),
+    ).toHaveCount(0);
+    await expect(dialog.locator('#create-table-sorting-help')).toHaveCount(0);
+    await expect(dialog.locator('.create-table-supported-types')).toHaveCount(0);
+    await expect(dialog.getByText('Enter a table name to continue.', { exact: true })).toHaveCount(
+        0,
+    );
+
+    const tableName = dialog.getByRole('textbox', { name: 'Table name', exact: true });
+    await tableName.fill('events');
+    await tableName.fill('');
+    await tableName.blur();
+    await expect(dialog.getByText('A table name is required.', { exact: true })).toBeVisible();
+    await expect(dialog.getByText('Enter a table name to continue.', { exact: true })).toHaveCount(
+        0,
+    );
+});
+
 test('object actions stay visible at rest without column insert buttons', async ({ page }) => {
     let permissionRequests = 0;
     await page.route('**/api/connections/live/table-permissions', async route => {

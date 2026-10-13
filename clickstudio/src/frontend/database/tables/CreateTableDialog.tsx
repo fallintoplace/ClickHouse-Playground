@@ -190,10 +190,7 @@ export function CreateTableDialog({ connection, databases, onClose, onCreated }:
     }
 
     const creationHelp = () => {
-        let databaseHelp:
-            | 'Use letters, numbers, and underscores. Start with a letter or _.'
-            | 'Choose or type a database name.'
-            | 'Choose a database or type its name.';
+        let databaseHelp: string;
 
         if (databaseTouched && !databaseIsValid) {
             if (database) {
@@ -202,7 +199,7 @@ export function CreateTableDialog({ connection, databases, onClose, onCreated }:
                 databaseHelp = 'Choose or type a database name.';
             }
         } else {
-            databaseHelp = 'Choose a database or type its name.';
+            databaseHelp = '';
         }
         let tableHelp: string;
 
@@ -225,7 +222,7 @@ export function CreateTableDialog({ connection, databases, onClose, onCreated }:
             if (table) {
                 createDisabledReason = 'Use a valid table name to continue.';
             } else {
-                createDisabledReason = 'Enter a table name to continue.';
+                createDisabledReason = '';
             }
         } else if (!columnsAreValid) {
             createDisabledReason = 'Give each column a valid name.';
@@ -316,7 +313,7 @@ export function CreateTableDialog({ connection, databases, onClose, onCreated }:
                 <CreateTableContent model={contentModel} />
 
                 <footer className="table-action-dialog-footer create-table-footer">
-                    {!created && !canCreate && !busy && (
+                    {!created && !canCreate && !busy && createDisabledReason && (
                         <p className="create-table-submit-help">{createDisabledReason}</p>
                     )}
                     {created ? (
@@ -437,7 +434,6 @@ function CreateTableContent({ model }: { model: CreateTableContentModel }) {
                         <span className="create-table-select-wrap">
                             <select
                                 aria-label="Sorting key"
-                                aria-describedby="create-table-sorting-help"
                                 value={orderBy}
                                 onChange={event => setOrderBy(event.target.value)}
                                 className="create-table-control create-table-select"
@@ -450,14 +446,7 @@ function CreateTableContent({ model }: { model: CreateTableContentModel }) {
                             </select>
                             <Icon name="chevron" />
                         </span>
-                        <span id="create-table-sorting-help" className="create-table-help">
-                            Organizes data for queries. Defaults to the first column.
-                        </span>
                     </label>
-                    <p className="create-table-supported-types">
-                        Available types: String, Bool, UInt64, Int64, Float64, Decimal(18, 2), Date,
-                        DateTime, UUID.
-                    </p>
                 </>
             )}
             {created && (
@@ -610,7 +599,7 @@ function renderDatabasePicker({
                     ref={databaseInput}
                     id={databaseInputId}
                     aria-label="Database"
-                    aria-describedby="create-table-database-help"
+                    aria-describedby={databaseHelp ? 'create-table-database-help' : undefined}
                     aria-invalid={databaseTouched && !databaseIsValid}
                     aria-autocomplete="list"
                     aria-haspopup="listbox"
@@ -694,12 +683,14 @@ function renderDatabasePicker({
                     </p>
                 )}
             </div>
-            <span
-                id="create-table-database-help"
-                className={`create-table-help${databaseTouched && !databaseIsValid ? ' is-error' : ''}`}
-            >
-                {databaseHelp}
-            </span>
+            {databaseHelp && (
+                <span
+                    id="create-table-database-help"
+                    className={`create-table-help${databaseTouched && !databaseIsValid ? ' is-error' : ''}`}
+                >
+                    {databaseHelp}
+                </span>
+            )}
         </div>
     );
 }
