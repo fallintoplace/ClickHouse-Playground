@@ -392,40 +392,40 @@ function CreateTableContent({ model }: { model: CreateTableContentModel }) {
         error,
     } = model;
     return (
-        <main className="create-table-content table-action-dialog-content min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3 sm:px-5 sm:py-4">
+        <main className="create-table-content table-action-dialog-content min-h-0 flex-1 overflow-y-auto">
             {!created && (
                 <>
-                    {renderDatabasePicker(model)}
+                    <div className="create-table-identity-grid">
+                        {renderDatabasePicker(model)}
 
-                    <label className="create-table-field">
-                        <span>Table name</span>
-                        <input
-                            ref={tableInput}
-                            aria-label="Table name"
-                            aria-describedby="create-table-name-help create-table-target"
-                            aria-invalid={tableTouched && !tableIsValid}
-                            value={table}
-                            onChange={event => setTable(event.target.value)}
-                            onBlur={() => setTableTouched(true)}
-                            required
-                            maxLength={128}
-                            pattern={identifierPatternAttribute}
-                            placeholder="e.g. events"
-                            className="create-table-control font-mono"
-                        />
-                        <span
-                            id="create-table-name-help"
-                            className={`create-table-help${tableTouched && !tableIsValid ? ' is-error' : ''}`}
-                        >
-                            {tableHelp}
-                        </span>
-                        <span id="create-table-target" className="create-table-target">
-                            <span>Destination</span>
-                            <code>
-                                {database.trim() || '<database>'}.{table.trim() || '<table_name>'}
-                            </code>
-                        </span>
-                    </label>
+                        <label className="create-table-field">
+                            <span>Table name</span>
+                            <input
+                                ref={tableInput}
+                                aria-label="Table name"
+                                aria-describedby="create-table-name-help create-table-target"
+                                aria-invalid={tableTouched && !tableIsValid}
+                                value={table}
+                                onChange={event => setTable(event.target.value)}
+                                onBlur={() => setTableTouched(true)}
+                                required
+                                maxLength={128}
+                                pattern={identifierPatternAttribute}
+                                placeholder="e.g. events"
+                                className="create-table-control font-mono"
+                            />
+                            <span
+                                id="create-table-name-help"
+                                className={`create-table-help${tableTouched && !tableIsValid ? ' is-error' : ''}`}
+                            >
+                                {tableHelp}
+                            </span>
+                            <span id="create-table-target" className="create-table-target">
+                                <span>Destination</span>
+                                <code>{`${database.trim() || '<database>'}.${table.trim() || '<table_name>'}`}</code>
+                            </span>
+                        </label>
+                    </div>
 
                     {renderTableColumns(model)}
 
@@ -475,8 +475,8 @@ function renderTableColumns({
     updateColumn,
 }: Pick<CreateTableContentModel, 'setColumns' | 'columns' | 'updateColumn'>) {
     return (
-        <section aria-label="Table columns" className="create-table-columns space-y-1.5">
-            <div className="flex items-center justify-between">
+        <section aria-label="Table columns" className="create-table-columns">
+            <div className="create-table-columns-heading flex items-center justify-between">
                 <h3 className="text-xs font-semibold">Columns</h3>
                 <button
                     type="button"

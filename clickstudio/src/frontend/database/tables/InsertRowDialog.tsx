@@ -568,7 +568,7 @@ function renderInsertRowDialog({
             onClick={event => {
                 if (event.target === dialog.current && canClose) close();
             }}
-            className="table-action-dialog m-auto max-h-[min(90dvh,800px)] w-[min(760px,calc(100vw-2rem))] max-w-none overflow-hidden rounded-2xl border border-[var(--line-bright)] bg-[var(--panel)] p-0 text-[var(--text)] shadow-[var(--shadow-dialog)]"
+            className="table-action-dialog insert-row-dialog m-auto max-h-[min(90dvh,800px)] w-[min(760px,calc(100vw-2rem))] max-w-none overflow-hidden rounded-2xl border border-[var(--line-bright)] bg-[var(--panel)] p-0 text-[var(--text)] shadow-[var(--shadow-dialog)]"
         >
             <div className="table-action-dialog-layout">
                 <header className="table-action-dialog-header">
@@ -590,7 +590,7 @@ function renderInsertRowDialog({
                         <Icon name="close" />
                     </button>
                 </header>
-                <main className="table-action-dialog-content min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3 sm:px-5 sm:py-4">
+                <main className="insert-row-content table-action-dialog-content min-h-0 flex-1 overflow-y-auto">
                     {loading && (
                         <p role="status" className="text-sm text-[var(--text-soft)]">
                             Checking insert access…
@@ -616,9 +616,9 @@ function renderInsertRowDialog({
                         <form
                             id="insert-row-form"
                             onSubmit={event => void reviewRow(event)}
-                            className="space-y-2"
+                            className="insert-row-form"
                         >
-                            <p className="text-xs text-[var(--muted)]">
+                            <p className="insert-row-guidance text-xs text-[var(--muted)]">
                                 Required columns are included. Leave defaulted or nullable columns
                                 out to use their ClickHouse defaults.
                             </p>
@@ -630,10 +630,10 @@ function renderInsertRowDialog({
                                         className="insert-row-column grid gap-2 rounded-lg border border-[var(--line)] bg-[var(--page)] p-2 sm:grid-cols-[minmax(9rem,.8fr)_minmax(0,1.5fr)] sm:items-center"
                                     >
                                         <div className="min-w-0">
-                                            <strong className="block truncate text-xs">
+                                            <strong className="insert-row-column-name block truncate text-xs">
                                                 {column.name}
                                             </strong>
-                                            <code className="font-sans text-[11px] text-[var(--muted)]">
+                                            <code className="insert-row-column-meta font-sans text-[11px] text-[var(--muted)]">
                                                 {column.type}
                                                 {column.defaultKind
                                                     ? ` · ${column.defaultKind}`
@@ -642,7 +642,7 @@ function renderInsertRowDialog({
                                         </div>
                                         <div className="flex min-w-0 items-center gap-3">
                                             {optional && (
-                                                <label className="flex shrink-0 items-center gap-1.5 text-[10px] text-[var(--text-soft)]">
+                                                <label className="insert-row-include flex shrink-0 items-center gap-1.5 text-[10px] text-[var(--text-soft)]">
                                                     <input
                                                         type="checkbox"
                                                         checked={included[column.name] ?? false}
