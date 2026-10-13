@@ -9,23 +9,19 @@ import { ExplorerGroupRow, ObjectLeafRow } from '../explorer/objects/tree/Object
 export function FunctionsTree({
     catalog,
     loading,
-    error,
     search,
     canCreate,
     createReason,
     onCreate,
     onSelect,
-    onRefresh,
 }: {
     catalog?: FunctionCatalog;
     loading: boolean;
-    error?: string;
     search: string;
     canCreate: boolean;
     createReason: string;
     onCreate: () => void;
     onSelect: (fn: SqlFunction) => void;
-    onRefresh: () => void;
 }) {
     const [expanded, setExpanded] = useState(true);
     const query = search.trim().toLowerCase();
@@ -52,23 +48,14 @@ export function FunctionsTree({
                     </button>
                 }
             />
-            {(expanded || query || loading || error || !functions.length) && (
+            {(expanded || query || loading || !functions.length) && (
                 <div role="group" className="object-tree-children">
                     {loading && (
                         <p className="sql-functions-status" role="status">
                             Loading functions…
                         </p>
                     )}
-                    {!loading && error && (
-                        <div className="sql-functions-status" role="alert">
-                            <span>{error}</span>
-                            <button type="button" onClick={onRefresh}>
-                                Retry
-                            </button>
-                        </div>
-                    )}
                     {!loading &&
-                        !error &&
                         functions.length > 0 &&
                         functions.map(fn => (
                             <ObjectLeafRow
@@ -81,7 +68,7 @@ export function FunctionsTree({
                                 onSelect={() => onSelect(fn)}
                             />
                         ))}
-                    {!loading && !error && functions.length === 0 && (
+                    {!loading && functions.length === 0 && (
                         <p className="sql-functions-status">
                             {query ? 'No matching functions.' : 'No SQL UDFs on this server yet.'}
                         </p>

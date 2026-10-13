@@ -23,6 +23,7 @@ type FunctionTestState = {
     failCreate: boolean;
     failRun: boolean;
     metadataError: boolean;
+    invalidCatalog: boolean;
     runDelay: number;
     mapJson: string;
 };
@@ -168,6 +169,7 @@ export async function functionsWorkspace(
         live?: boolean;
         existing?: boolean;
         path?: string;
+        invalidCatalog?: boolean;
     } = {},
 ) {
     const state: FunctionTestState = {
@@ -185,6 +187,7 @@ export async function functionsWorkspace(
         failCreate: false,
         failRun: false,
         metadataError: false,
+        invalidCatalog: options.invalidCatalog ?? false,
         runDelay: 0,
         mapJson: '{"a":10,"c":30}',
     };
@@ -235,7 +238,7 @@ export async function functionsWorkspace(
                           createReason: state.canCreate
                               ? ''
                               : 'CREATE FUNCTION privilege is required.',
-                          canDrop: state.canDrop,
+                          canDrop: state.invalidCatalog ? undefined : state.canDrop,
                           dropReason: state.canDrop ? '' : 'DROP FUNCTION privilege is required.',
                       },
             });
@@ -251,9 +254,19 @@ export async function functionsWorkspace(
             json: { error: { code: 'UNEXPECTED_ACTION', message: `Unexpected ${String(action)}` } },
         });
     });
+    const catalogResponse = page.waitForResponse(
+        response =>
+            response.url().endsWith('/api/cloud') &&
+            jsonRecord(response.request().postDataJSON(), 'Cloud request').action === 'functions',
+    );
     await connectPreviewCloud(page, options.path);
     await page.locator('.icon-rail').getByRole('button', { name: 'Objects', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Create SQL UDF', exact: true })).toBeVisible();
+    await catalogResponse;
+    if (options.invalidCatalog) await expect(page.locator('.sql-functions-tree')).toHaveCount(0);
+    else
+        await expect(
+            page.getByRole('button', { name: 'Create SQL UDF', exact: true }),
+        ).toBeVisible();
     await expect(page.getByText('Loading functions…', { exact: true })).toHaveCount(0);
     return {
         state,

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { SQL_FUNCTION_TEMPLATES } from '../../src/shared/database/functions/sql-functions.js';
 import { functionsWorkspace } from './sql-functions-helpers.js';
+import { workspacePath } from './helpers.js';
 
 test('Existing demo SQL UDFs appear in Objects and execute on ClickHouse', async ({
     page,
@@ -242,25 +243,63 @@ test('Map tester preserves duplicate keys in the server-produced output', async 
     await expect(page.locator('.sql-function-output pre')).toHaveText('{"a":1,"a":2}');
 });
 
-test('A collapsed Functions group still shows refresh errors and can recover', async ({ page }) => {
-    const { state } = await functionsWorkspace(page, { existing: true });
-    await page.getByRole('button', { name: 'Collapse Functions', exact: true }).click();
-    state.metadataError = true;
-    await page.locator('.object-refresh-action').click();
-    await expect(page.locator('.sql-functions-status[role="alert"]')).toContainText(
-        'Function metadata unavailable',
-    );
-    state.metadataError = false;
-    await page
-        .locator('.sql-functions-status')
-        .getByRole('button', { name: 'Retry', exact: true })
-        .click();
-    await expect(page.locator('.sql-functions-status[role="alert"]')).toHaveCount(0);
-    await page.getByRole('button', { name: 'Expand Functions', exact: true }).click();
-    await expect(
-        page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }),
-    ).toBeVisible();
-});
+for (const mode of ['Standard', 'Experimental']) {
+    test(`${mode} hides Functions on refresh failure and recovers through the object refresh`, async ({
+        page,
+    }) => {
+        const { state, requests } = await functionsWorkspace(page, {
+            existing: true,
+            path: workspacePath(mode),
+        });
+        await page.getByRole('button', { name: 'Collapse Functions', exact: true }).click();
+        state.metadataError = true;
+        await page.locator('.object-refresh-action').click();
+        await expect(page.locator('.sql-functions-tree')).toHaveCount(0);
+        await expect(page.getByText('Function metadata unavailable', { exact: true })).toHaveCount(
+            0,
+        );
+        await expect(page.getByTestId('schema-search')).not.toHaveAttribute(
+            'placeholder',
+            'Search objects and functions…',
+        );
+        await expect(
+            page.getByRole('button', { name: 'events MergeTree', exact: true }),
+        ).toBeVisible();
+        const attempts = requests.filter(body => body.action === 'functions').length;
+        state.metadataError = false;
+        await page.locator('.object-refresh-action').click();
+        await expect(
+            page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }),
+        ).toBeVisible();
+        await expect(page.getByTestId('schema-search')).toHaveAttribute(
+            'placeholder',
+            'Search objects and functions…',
+        );
+        expect(requests.filter(body => body.action === 'functions')).toHaveLength(attempts + 1);
+    });
+
+    test(`${mode} hides Functions for an old backend payload and restores them after refresh`, async ({
+        page,
+    }) => {
+        const { state } = await functionsWorkspace(page, {
+            existing: true,
+            path: workspacePath(mode),
+            invalidCatalog: true,
+        });
+        await expect(page.locator('.sql-functions-tree')).toHaveCount(0);
+        await expect(
+            page.getByText('ClickHouse Cloud returned an invalid response.', { exact: true }),
+        ).toHaveCount(0);
+        await expect(
+            page.getByRole('button', { name: 'events MergeTree', exact: true }),
+        ).toBeVisible();
+        state.invalidCatalog = false;
+        await page.locator('.object-refresh-action').click();
+        await expect(
+            page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }),
+        ).toBeVisible();
+    });
+}
 
 test('SQL UDF dialog and tester remain usable in the light theme', async ({ page }, info) => {
     await functionsWorkspace(page, { existing: true });

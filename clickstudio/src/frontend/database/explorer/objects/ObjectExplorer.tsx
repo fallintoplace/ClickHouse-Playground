@@ -74,23 +74,22 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
     const functionDetails = functions.selected;
     const canDeleteFunction =
         !connection.readonly && !functions.loading && functions.catalog?.canDrop === true;
-    const functionsSlot = functionsEnabled ? (
-        <FunctionsTree
-            catalog={functions.catalog}
-            loading={functions.loading}
-            error={functions.error}
-            search={search}
-            canCreate={!connection.readonly && functions.catalog?.canCreate === true}
-            createReason={
-                connection.readonly
-                    ? 'This connection is read only.'
-                    : functions.catalog?.createReason || 'Checking CREATE FUNCTION privileges…'
-            }
-            onCreate={functions.openCreate}
-            onSelect={functions.select}
-            onRefresh={functions.refresh}
-        />
-    ) : undefined;
+    const functionsSlot =
+        functionsEnabled && !functions.error ? (
+            <FunctionsTree
+                catalog={functions.catalog}
+                loading={functions.loading}
+                search={search}
+                canCreate={!connection.readonly && functions.catalog?.canCreate === true}
+                createReason={
+                    connection.readonly
+                        ? 'This connection is read only.'
+                        : functions.catalog?.createReason || 'Checking CREATE FUNCTION privileges…'
+                }
+                onCreate={functions.openCreate}
+                onSelect={functions.select}
+            />
+        ) : undefined;
     const canInsertSelectedTable =
         connection.dataSource !== 'fixture' &&
         Boolean(insertableTable) &&
@@ -296,7 +295,7 @@ function ObjectExplorerBrowser({
         <>
             <div className="object-search-row">
                 <ObjectExplorerSearch
-                    includeFunctions={functionsEnabled}
+                    includeFunctions={Boolean(functionsSlot)}
                     {...{ search, changeSearch, copy }}
                 />
                 <div
