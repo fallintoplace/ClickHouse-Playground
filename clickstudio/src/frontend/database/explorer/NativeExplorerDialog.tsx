@@ -1,5 +1,6 @@
 import { useRef, type ReactNode } from 'react';
 import { Button } from '../../ui/components/primitives';
+import { Icon } from '../../ui/components/icons';
 import { useDialogFocus } from '../../ui/focus/useDialogFocus';
 
 export function NativeExplorerDialog({
@@ -41,8 +42,14 @@ export function NativeExplorerDialog({
                         <h2>{title}</h2>
                         {description && <p>{description}</p>}
                     </div>
-                    <Button aria-label={closeLabel} onClick={onClose}>
-                        Close ×
+                    <Button
+                        variant="ghost"
+                        className="native-dialog-close"
+                        aria-label={closeLabel}
+                        title={closeLabel}
+                        onClick={onClose}
+                    >
+                        <Icon name="close" />
                     </Button>
                 </header>
                 {children}

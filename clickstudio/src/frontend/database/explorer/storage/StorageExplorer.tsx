@@ -70,6 +70,7 @@ export function StorageExplorer({
             title={copy.partsExplorerTitle}
             description="Parts · Merges · Mutations"
             onClose={() => onClose?.()}
+            className="native-storage-dialog"
         >
             {content}
         </NativeExplorerDialog>
