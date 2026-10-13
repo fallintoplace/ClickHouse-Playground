@@ -24,6 +24,7 @@
 }
 .object-column-list-row > code.result-type-badge {
   justify-self: start;
+  color: var(--text);
 }
 .result-type-badge[data-type-group="number"] {
   --result-type-accent: var(--accent-cyan);
