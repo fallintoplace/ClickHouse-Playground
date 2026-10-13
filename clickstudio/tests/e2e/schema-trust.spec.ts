@@ -392,7 +392,7 @@ test('Revoking trust removes loaded schema from editor completion and hover', as
     await expect(page.locator('.sql-hover')).toHaveCount(0);
 });
 
-test('Object explorer shows ClickHouse metadata, searchable children, and generated SQL', async ({
+test('Object explorer shows ClickHouse metadata, searchable children, and preview SQL', async ({
     page,
 }) => {
     await mockLiveWorkspace(page, route => route.fulfill({ json: schema }));
@@ -416,10 +416,9 @@ test('Object explorer shows ClickHouse metadata, searchable children, and genera
     const originalTabName = await sqlTabs.getByRole('tab').first().getAttribute('aria-label');
     await page.locator('button[aria-controls="sql-editor-content"]').click();
     await expect(page.locator('#sql-editor-content')).toBeHidden();
-    await page.getByRole('button', { name: 'Generate SELECT', exact: true }).click();
+    await page.getByRole('button', { name: 'Preview rows', exact: true }).click();
     await expect(page.locator('#sql-editor-content')).toBeVisible();
-    await expect(page.locator('.cm-content')).toContainText('SELECT');
-    await expect(page.locator('.cm-content')).toContainText('`day`');
+    await expect(page.locator('.cm-content')).toContainText('SELECT *');
     await expect(page.locator('.cm-content')).toContainText('FROM `analytics`.`events`');
     await sqlTabs.getByRole('tab', { name: originalTabName!, exact: true }).click();
     await expect(page.locator('#sql-editor-content')).toBeHidden();
@@ -901,7 +900,7 @@ test('A schema response arriving after trust is revoked cannot restore editor me
 
 for (const mode of ['beginner', 'expert']) {
     for (const canInsert of [true, false]) {
-        test(`${mode} shows ${canInsert ? 'both write actions' : 'delete only'} below table name actions`, async ({
+        test(`${mode} keeps preview and copy actions above ${canInsert ? 'insert and delete actions' : 'delete only'}`, async ({
             page,
         }) => {
             await page.route('**/api/connections/live/table-permissions', route =>
@@ -919,12 +918,8 @@ for (const mode of ['beginner', 'expert']) {
             await expect(
                 details.getByRole('button', { name: 'Preview rows', exact: true }),
             ).toBeVisible();
-            await expect(
-                details.getByRole('button', { name: 'Generate SELECT', exact: true }),
-            ).toBeVisible();
-            const rows = details.locator('.object-utility-actions');
-            await expect(rows).toHaveCount(2);
-            await expect(rows.nth(0).getByRole('button')).toHaveText(['Insert name', 'Copy name']);
+            const actions = details.locator('.object-relation-actions > .object-action-grid');
+            await expect(actions.getByRole('button')).toHaveText(['Preview rows', 'Copy name']);
             const writes = details.locator('.object-table-write-actions');
             await expect(writes.getByRole('button')).toHaveText(
                 canInsert ? ['Insert row', 'Delete table'] : ['Delete table'],

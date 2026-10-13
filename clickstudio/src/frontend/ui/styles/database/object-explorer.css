@@ -1408,6 +1408,24 @@
   height: 12px;
   flex: none;
 }
+.object-relation-actions > .object-action-grid .object-copy-name-action {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--panel);
+  color: var(--text-soft);
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease;
+}
+.object-relation-actions > .object-action-grid .object-copy-name-action:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--object-detail-accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--object-detail-accent) 10%, var(--panel));
+  color: var(--object-detail-accent);
+}
+.object-relation-actions > .object-action-grid .object-copy-name-action svg {
+  color: var(--object-detail-accent);
+}
 .object-utility-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

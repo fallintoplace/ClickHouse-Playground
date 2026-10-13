@@ -57,7 +57,6 @@ export function ObjectDetails({
                 expert={expert}
                 copiedId={copiedId}
                 onClose={onClose}
-                onInsert={onInsert}
                 onCopy={onCopy}
                 onOpenSqlDraft={onOpenSqlDraft}
                 onOpenReference={onOpenReference}
@@ -249,7 +248,7 @@ export function ObjectDetails({
     );
 }
 
-type RelationDetailsProps = Omit<ObjectDetailsProps, 'selection'> & {
+type RelationDetailsProps = Omit<ObjectDetailsProps, 'selection' | 'onInsert'> & {
     selection: Extract<ExplorerSelection, { kind: 'relation' }>;
 };
 
@@ -261,7 +260,6 @@ function RelationDetails({
     expert,
     copiedId,
     onClose,
-    onInsert,
     onCopy,
     onOpenSqlDraft,
     onOpenReference,
@@ -334,32 +332,8 @@ function RelationDetails({
                         {copy.previewRows}
                     </Button>
                     <Button
-                        variant="secondary"
-                        className="toolbar-small object-generate-action"
-                        onClick={() =>
-                            onOpenSqlDraft(
-                                `Select ${table.name}.sql`,
-                                tableQuerySql(table, columns, 'select'),
-                                false,
-                            )
-                        }
-                    >
-                        <Icon name="parser" />
-                        {copy.generateSelect}
-                    </Button>
-                </div>
-                <div className="object-utility-actions">
-                    <Button
                         variant="ghost"
-                        className="toolbar-small"
-                        onClick={() => onInsert(qualified)}
-                    >
-                        <Icon name="plus" />
-                        {copy.insertName}
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        className="toolbar-small"
+                        className="toolbar-small object-copy-name-action"
                         onClick={() => void onCopy(qualified, selection.id)}
                     >
                         <Icon name="copy" />
