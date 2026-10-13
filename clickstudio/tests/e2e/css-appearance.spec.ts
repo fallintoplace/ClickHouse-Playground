@@ -378,6 +378,11 @@ for (const theme of ['Light', 'Dark']) {
             'sql-udf-array-result',
             page.locator('.inspector-pane'),
         );
+        await page.getByRole('button', { name: 'Delete function', exact: true }).click();
+        const deleteDialog = page.getByRole('dialog', { name: 'Delete function', exact: true });
+        await deleteDialog.getByRole('textbox').fill('udf_array_remove_at');
+        await expectReferenceStyles(page, info, 'sql-udf-delete', deleteDialog);
+        await page.keyboard.press('Escape');
         await page.locator('.object-back-button').click();
         await page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }).click();
         await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();

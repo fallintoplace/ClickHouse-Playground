@@ -18,6 +18,35 @@ export type FunctionTestEvidence = { busy: boolean };
 type TestAttempt = { id: string; sql: string; submitting: boolean; runId?: string; error?: string };
 type FunctionDetailsTab = 'test' | 'definition';
 
+function FunctionDeleteAction({
+    allowed,
+    busy,
+    trusted,
+    reason,
+    onDelete,
+}: {
+    allowed: boolean;
+    busy: boolean;
+    trusted: boolean;
+    reason: string;
+    onDelete: () => void;
+}) {
+    return (
+        <div className="object-utility-actions">
+            <Button
+                variant="danger"
+                className="toolbar-small"
+                disabled={!allowed || busy || !trusted}
+                title={!allowed ? reason : undefined}
+                onClick={onDelete}
+            >
+                <Icon name="trash" />
+                Delete function
+            </Button>
+        </div>
+    );
+}
+
 function FunctionDetailsTabs({
     id,
     active,
@@ -166,6 +195,9 @@ export function SqlFunctionDetails({
     onRun,
     onCopy,
     copiedId,
+    canDelete,
+    deleteReason,
+    onDelete,
 }: {
     fn: SqlFunction;
     evidence?: FunctionTestEvidence;
@@ -173,6 +205,9 @@ export function SqlFunctionDetails({
     onRun: OpenSqlDraft;
     onCopy: (sql: string, id: string) => void;
     copiedId?: string;
+    canDelete: boolean;
+    deleteReason: string;
+    onDelete: () => void;
 }) {
     const template = SQL_FUNCTION_TEMPLATES.find(
         template =>
@@ -271,6 +306,13 @@ export function SqlFunctionDetails({
                         {copiedId === `function-test:${sql}` ? 'Copied' : 'Copy SQL'}
                     </Button>
                 </div>
+                <FunctionDeleteAction
+                    allowed={canDelete}
+                    busy={busy}
+                    trusted={trusted}
+                    reason={deleteReason}
+                    onDelete={onDelete}
+                />
             </div>
             <FunctionDetailsTabs id={tabsId} active={activeTab} onChange={setActiveTab} />
             <div

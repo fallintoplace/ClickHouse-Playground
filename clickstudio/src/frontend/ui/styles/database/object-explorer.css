@@ -1405,7 +1405,7 @@
   flex: none;
   color: var(--object-detail-accent);
 }
-.object-table-write-actions .button-danger {
+.object-utility-actions .button-danger {
   --object-detail-accent: var(--red);
   grid-column: 2;
   color: var(--red);

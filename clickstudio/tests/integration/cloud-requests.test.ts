@@ -46,11 +46,14 @@ const responses: Record<string, unknown> = {
         functions: [],
         canCreate: false,
         createReason: 'CREATE FUNCTION privilege is required.',
+        canDrop: false,
+        dropReason: 'DROP FUNCTION privilege is required.',
     },
     'create-function': {
         ...SQL_FUNCTION_TEMPLATES[0],
         createQuery: createSqlFunctionQuery(SQL_FUNCTION_TEMPLATES[0]!),
     },
+    'drop-function': { name: 'udf_array_remove_at' },
     test: tested,
     run: result,
     schema: {
@@ -303,6 +306,7 @@ test('Local Cloud sessions continue to omit credentials from JSON and multipart 
     assert.equal(await file.text(), 'value\nx');
     await cloud.loadClickHouseCloudFunctions();
     await cloud.createClickHouseCloudFunction(SQL_FUNCTION_TEMPLATES[0]!);
+    await cloud.dropClickHouseCloudFunction('udf_array_remove_at', 'udf_array_remove_at');
     for (const request of requests.slice(4)) {
         const body = jsonRecord(jsonValue(String(request.options?.body)), 'Function request');
         assert.equal(Object.hasOwn(body, 'credentials'), false);
@@ -331,8 +335,15 @@ test('Cloud function discovery and structured creation use guarded Cloud actions
     };
     const fn = await cloud.createClickHouseCloudFunction(input);
     assert.equal(fn.name, 'udf_array_remove_at');
+    assert.deepEqual(await cloud.dropClickHouseCloudFunction(fn.name, fn.name), { name: fn.name });
     assert.deepEqual(requests[1], { action: 'functions', credentials });
     assert.deepEqual(requests[2], { action: 'create-function', credentials, ...input });
+    assert.deepEqual(requests[3], {
+        action: 'drop-function',
+        credentials,
+        name: fn.name,
+        confirmation: fn.name,
+    });
 });
 
 test('Unknown Cloud JSON actions keep their error and credential validation precedence', async () => {

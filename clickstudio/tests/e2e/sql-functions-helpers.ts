@@ -3,6 +3,7 @@ import { createClient, ClickHouseLogLevel } from '@clickhouse/client';
 import {
     loadSqlFunctions,
     createSqlFunction,
+    dropSqlFunction,
 } from '../../src/backend/database/functions/sql-functions.js';
 import {
     SQL_FUNCTION_TEMPLATES,
@@ -15,6 +16,9 @@ import { connectPreviewCloud } from './cloud-import-helpers.js';
 
 type FunctionTestState = {
     canCreate: boolean;
+    canDrop: boolean;
+    failDrop: boolean;
+    dropDelay: number;
     functions: SqlFunction[];
     failCreate: boolean;
     failRun: boolean;
@@ -91,12 +95,86 @@ async function fulfillFunctionRun(
     });
 }
 
+async function fulfillFunctionCreate(
+    route: Route,
+    body: Record<string, unknown>,
+    state: FunctionTestState,
+    liveClient?: ReturnType<typeof createClient>,
+) {
+    if (state.failCreate)
+        return route.fulfill({
+            status: 403,
+            json: {
+                error: {
+                    code: 'FUNCTION_PERMISSION',
+                    message: 'CREATE FUNCTION privilege was revoked.',
+                },
+            },
+        });
+    const fn = liveClient
+        ? await createSqlFunction(liveClient, body)
+        : {
+              name: stringValue(body.name, 'Function name'),
+              parameters: Array.isArray(body.parameters) ? body.parameters : [],
+              createQuery: createSqlFunctionQuery({
+                  name: stringValue(body.name, 'Function name'),
+                  parameters: Array.isArray(body.parameters)
+                      ? body.parameters.map(parameter => stringValue(parameter, 'Parameter'))
+                      : [],
+                  expression: stringValue(body.expression, 'Expression'),
+              }),
+          };
+    state.functions.push(fn);
+    return route.fulfill({ json: fn });
+}
+
+async function fulfillFunctionDrop(
+    route: Route,
+    body: Record<string, unknown>,
+    state: FunctionTestState,
+    liveClient?: ReturnType<typeof createClient>,
+) {
+    if (state.dropDelay) await new Promise(resolve => setTimeout(resolve, state.dropDelay));
+    if (state.failDrop || !state.canDrop)
+        return route.fulfill({
+            status: 403,
+            json: {
+                error: {
+                    code: 'FUNCTION_PERMISSION',
+                    message: 'DROP FUNCTION privilege was revoked.',
+                },
+            },
+        });
+    if (body.name !== body.confirmation)
+        return route.fulfill({
+            status: 400,
+            json: {
+                error: {
+                    code: 'FUNCTION_DROP_CONFIRMATION',
+                    message: 'Exact name required.',
+                },
+            },
+        });
+    const result = liveClient ? await dropSqlFunction(liveClient, body) : { name: body.name };
+    state.functions = state.functions.filter(fn => fn.name !== body.name);
+    return route.fulfill({ json: result });
+}
+
 export async function functionsWorkspace(
     page: Page,
-    options: { canCreate?: boolean; live?: boolean; existing?: boolean; path?: string } = {},
+    options: {
+        canCreate?: boolean;
+        canDrop?: boolean;
+        live?: boolean;
+        existing?: boolean;
+        path?: string;
+    } = {},
 ) {
     const state: FunctionTestState = {
         canCreate: options.canCreate ?? true,
+        canDrop: options.canDrop ?? true,
+        failDrop: false,
+        dropDelay: 0,
         functions: options.existing
             ? SQL_FUNCTION_TEMPLATES.map(template => ({
                   name: template.name,
@@ -157,38 +235,14 @@ export async function functionsWorkspace(
                           createReason: state.canCreate
                               ? ''
                               : 'CREATE FUNCTION privilege is required.',
+                          canDrop: state.canDrop,
+                          dropReason: state.canDrop ? '' : 'DROP FUNCTION privilege is required.',
                       },
             });
         }
-        if (action === 'create-function') {
-            if (state.failCreate)
-                return route.fulfill({
-                    status: 403,
-                    json: {
-                        error: {
-                            code: 'FUNCTION_PERMISSION',
-                            message: 'CREATE FUNCTION privilege was revoked.',
-                        },
-                    },
-                });
-            const fn = liveClient
-                ? await createSqlFunction(liveClient, body)
-                : {
-                      name: stringValue(body.name, 'Function name'),
-                      parameters: Array.isArray(body.parameters) ? body.parameters : [],
-                      createQuery: createSqlFunctionQuery({
-                          name: stringValue(body.name, 'Function name'),
-                          parameters: Array.isArray(body.parameters)
-                              ? body.parameters.map(parameter =>
-                                    stringValue(parameter, 'Parameter'),
-                                )
-                              : [],
-                          expression: stringValue(body.expression, 'Expression'),
-                      }),
-                  };
-            state.functions.push(fn);
-            return route.fulfill({ json: fn });
-        }
+        if (action === 'create-function')
+            return fulfillFunctionCreate(route, body, state, liveClient);
+        if (action === 'drop-function') return fulfillFunctionDrop(route, body, state, liveClient);
         if (action === 'run') return fulfillFunctionRun(route, body, state, liveClient);
         if (action === 'table-permissions')
             return route.fulfill({ json: { create: false, insert: false, drop: false } });

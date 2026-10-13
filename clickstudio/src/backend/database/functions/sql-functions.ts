@@ -3,19 +3,26 @@ import { CLOUD_QUERY_LIMITS } from '../../../shared/database/connections/cloud-p
 import type { ClickHouseClient } from '@clickhouse/client';
 import { randomUUID } from 'node:crypto';
 import { isRecord } from '../../../shared/common/values.js';
+import { quoteIdentifier } from '../../../shared/sql/sql.js';
 import {
     createSqlFunctionQuery,
     sqlFunctionParameters,
     type FunctionCatalog,
     type SqlFunctionInput,
+    type SqlFunctionDrop,
 } from '../../../shared/database/functions/sql-functions.js';
 import { requireThat } from '../../system/requests/errors.js';
 
 type FunctionClient = Pick<ClickHouseClient, 'exec' | 'command'>;
 
-async function rows(client: FunctionClient, query: string): Promise<Record<string, unknown>[]> {
+async function rows(
+    client: FunctionClient,
+    query: string,
+    queryParams?: Record<string, string>,
+): Promise<Record<string, unknown>[]> {
     const result = await client.exec({
         query: query.startsWith('SELECT') ? `${query} FORMAT JSONEachRow` : query,
+        query_params: queryParams,
         abort_signal: AbortSignal.timeout(8000),
         clickhouse_settings: query.startsWith('SELECT') ? {} : { default_format: 'JSONEachRow' },
     });
@@ -51,7 +58,7 @@ async function rows(client: FunctionClient, query: string): Promise<Record<strin
         });
 }
 
-export async function functionCreationPermission(client: FunctionClient) {
+async function functionPermission(client: FunctionClient, action: 'CREATE' | 'DROP') {
     try {
         const settings = (
             await rows(
@@ -64,31 +71,43 @@ export async function functionCreationPermission(client: FunctionClient) {
             (settings.readonly !== 0 && settings.readonly !== '0') ||
             Number(settings.allow_ddl) !== 1
         )
-            return { canCreate: false, createReason: 'This connection does not allow DDL.' };
-        const grant = (await rows(client, 'CHECK GRANT CREATE FUNCTION ON *.*'))[0];
-        const canCreate = Number(grant?.result) === 1;
+            return { allowed: false, reason: 'This connection does not allow DDL.' };
+        const grant = (await rows(client, `CHECK GRANT ${action} FUNCTION ON *.*`))[0];
+        const allowed = Number(grant?.result) === 1;
         return {
-            canCreate,
-            createReason: canCreate ? '' : 'CREATE FUNCTION privilege is required.',
+            allowed,
+            reason: allowed ? '' : `${action} FUNCTION privilege is required.`,
         };
     } catch {
         return {
-            canCreate: false,
-            createReason: 'Could not verify CREATE FUNCTION privileges. Refresh to try again.',
+            allowed: false,
+            reason: `Could not verify ${action} FUNCTION privileges. Refresh to try again.`,
         };
     }
 }
 
+export async function functionCreationPermission(client: FunctionClient) {
+    const permission = await functionPermission(client, 'CREATE');
+    return { canCreate: permission.allowed, createReason: permission.reason };
+}
+
+export async function functionDeletionPermission(client: FunctionClient) {
+    const permission = await functionPermission(client, 'DROP');
+    return { canDrop: permission.allowed, dropReason: permission.reason };
+}
+
 export async function loadSqlFunctions(client: FunctionClient): Promise<FunctionCatalog> {
-    const [metadata, permission] = await Promise.all([
+    const [metadata, creation, deletion] = await Promise.all([
         rows(
             client,
             "SELECT name, create_query FROM system.functions WHERE origin = 'SQLUserDefined' ORDER BY name LIMIT 1000",
         ),
         functionCreationPermission(client),
+        functionDeletionPermission(client),
     ]);
     return {
-        ...permission,
+        ...creation,
+        ...deletion,
         functions: metadata.map(row => {
             requireThat(
                 typeof row.name === 'string' && typeof row.create_query === 'string',
@@ -139,4 +158,51 @@ export async function createSqlFunction(client: FunctionClient, body: Record<str
         abort_signal: AbortSignal.timeout(15000),
     });
     return { name: input.name, parameters: input.parameters, createQuery: query };
+}
+
+export async function dropSqlFunction(
+    client: FunctionClient,
+    body: Record<string, unknown>,
+): Promise<SqlFunctionDrop> {
+    requireThat(
+        typeof body.name === 'string' &&
+            body.name.trim().length > 0 &&
+            body.name.length <= 8192 &&
+            !Array.from(body.name).some(
+                character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127,
+            ),
+        400,
+        'FUNCTION_INPUT',
+        'Enter a valid function name of up to 8,192 characters.',
+    );
+    requireThat(
+        body.confirmation === body.name,
+        400,
+        'FUNCTION_DROP_CONFIRMATION',
+        'Type the exact function name to confirm deletion.',
+    );
+    const permission = await functionDeletionPermission(client);
+    requireThat(permission.canDrop, 403, 'FUNCTION_PERMISSION', permission.dropReason);
+    const target = (
+        await rows(
+            client,
+            'SELECT origin FROM system.functions WHERE name = {name:String} LIMIT 1',
+            {
+                name: body.name,
+            },
+        )
+    )[0];
+    requireThat(
+        !target || target.origin === 'SQLUserDefined',
+        400,
+        'FUNCTION_DROP_TARGET',
+        'Only SQL UDFs can be deleted here.',
+    );
+    if (target)
+        await client.command({
+            query: `DROP FUNCTION IF EXISTS ${quoteIdentifier(body.name)}`,
+            query_id: `clickstudio-drop-function-${randomUUID()}`,
+            abort_signal: AbortSignal.timeout(15000),
+        });
+    return { name: body.name };
 }

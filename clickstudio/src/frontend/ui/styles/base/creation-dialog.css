@@ -187,7 +187,7 @@
     height: 14px;
   }
 
-  .creation-dialog-button:hover:not(:disabled):not(.is-primary) {
+  .creation-dialog-button:hover:not(:disabled):not(.is-primary):not(.is-danger) {
     border-color: var(--active-border);
     background: var(--control-hover);
     color: var(--text);
@@ -201,6 +201,16 @@
 
   .creation-dialog-button.is-primary:hover:not(:disabled) {
     filter: brightness(1.05);
+  }
+
+  .creation-dialog-button.is-danger {
+    border-color: var(--red);
+    background: color-mix(in srgb, var(--red) 12%, var(--panel));
+    color: var(--red);
+  }
+
+  .creation-dialog-button.is-danger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--red) 20%, var(--panel));
   }
 
   .creation-dialog-button:disabled {

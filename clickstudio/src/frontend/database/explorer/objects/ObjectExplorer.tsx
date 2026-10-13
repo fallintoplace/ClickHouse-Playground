@@ -4,6 +4,7 @@ import { useSqlFunctions } from '../../functions/useSqlFunctions';
 import { FunctionsTree } from '../../functions/FunctionsTree';
 import { SqlFunctionDetails } from '../../functions/SqlFunctionDetails';
 import { CreateSqlFunctionDialog } from '../../functions/CreateSqlFunctionDialog';
+import { DeleteSqlFunctionDialog } from '../../functions/DeleteSqlFunctionDialog';
 import { Button, cx, Spinner } from '../../../ui/components/primitives';
 import { Icon } from '../../../ui/components/icons';
 import { ObjectDetails } from './ObjectExplorerDetails';
@@ -71,6 +72,8 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
     const functionsEnabled = trusted && connection.id === CLICKHOUSE_CLOUD_CONNECTION_ID;
     const functions = useSqlFunctions(connection, functionsEnabled);
     const functionDetails = functions.selected;
+    const canDeleteFunction =
+        !connection.readonly && !functions.loading && functions.catalog?.canDrop === true;
     const functionsSlot = functionsEnabled ? (
         <FunctionsTree
             catalog={functions.catalog}
@@ -155,6 +158,14 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                         fn={functionDetails}
                         evidence={props.functionTest}
                         trusted={trusted}
+                        canDelete={canDeleteFunction}
+                        deleteReason={
+                            connection.readonly
+                                ? 'This connection is read only.'
+                                : functions.catalog?.dropReason ||
+                                  'Checking DROP FUNCTION privileges…'
+                        }
+                        onDelete={() => functions.openDelete(functionDetails)}
                         onRun={onOpenSqlDraft}
                         copiedId={copiedId}
                         onCopy={(sql, id) => void copyText(sql, id)}
@@ -198,6 +209,14 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                     onCreated={functions.created}
                     copiedId={copiedId}
                     onCopy={(sql, id) => void copyText(sql, id)}
+                />
+            )}
+            {functions.deleteTarget && canDeleteFunction && (
+                <DeleteSqlFunctionDialog
+                    key={functions.deleteTarget.name}
+                    name={functions.deleteTarget.name}
+                    onClose={functions.closeDelete}
+                    onDeleted={functions.deleted}
                 />
             )}
             <ObjectExplorerDialogs

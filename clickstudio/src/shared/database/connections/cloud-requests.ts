@@ -1,4 +1,4 @@
-import type { SqlFunctionInput } from '../functions/sql-functions.js';
+import type { SqlFunctionInput, SqlFunctionDropInput } from '../functions/sql-functions.js';
 import type { FlamegraphSource } from '../../queries/inspection/flamegraph.js';
 import type { NativeExplorerRequest } from '../explorer/explorers.js';
 import type { CreateTableColumn } from '../tables/create-table.js';
@@ -7,6 +7,7 @@ import type { QueryLogSource, WorkloadWindow } from '../explorer/activity/worklo
 export const CLOUD_ACTIONS = {
     functions: 'functions',
     createFunction: 'create-function',
+    dropFunction: 'drop-function',
     test: 'test',
     schema: 'schema',
     queryTree: 'query-tree',
@@ -40,6 +41,7 @@ type QueryInput = { sql: string; parameters?: Record<string, string> };
 type CloudRequestPayloads = {
     [CLOUD_ACTIONS.functions]: object;
     [CLOUD_ACTIONS.createFunction]: SqlFunctionInput;
+    [CLOUD_ACTIONS.dropFunction]: SqlFunctionDropInput;
     [CLOUD_ACTIONS.test]: object;
     [CLOUD_ACTIONS.schema]: {
         databaseOffset?: number;

@@ -3,10 +3,14 @@ import { lexSql, quoteIdentifier, quoteStringLiteral } from '../../sql/sql.js';
 
 export type SqlFunctionInput = { name: string; parameters: string[]; expression: string };
 export type SqlFunction = { name: string; createQuery: string; parameters: string[] };
+export type SqlFunctionDropInput = { name: string; confirmation: string };
+export type SqlFunctionDrop = { name: string };
 export type FunctionCatalog = {
     functions: SqlFunction[];
     canCreate: boolean;
     createReason: string;
+    canDrop: boolean;
+    dropReason: string;
 };
 export type FunctionArgument = { value: string; kind: 'json' | 'map' };
 
@@ -89,8 +93,14 @@ export function isFunctionCatalog(value: unknown): value is FunctionCatalog {
         Array.isArray(value.functions) &&
         value.functions.every(isSqlFunction) &&
         typeof value.canCreate === 'boolean' &&
-        typeof value.createReason === 'string'
+        typeof value.createReason === 'string' &&
+        typeof value.canDrop === 'boolean' &&
+        typeof value.dropReason === 'string'
     );
+}
+
+export function isSqlFunctionDrop(value: unknown): value is SqlFunctionDrop {
+    return isRecord(value) && typeof value.name === 'string';
 }
 
 function literal(value: unknown, depth = 0): string {

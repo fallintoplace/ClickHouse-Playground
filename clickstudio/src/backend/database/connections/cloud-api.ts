@@ -1,4 +1,8 @@
-import { loadSqlFunctions, createSqlFunction } from '../functions/sql-functions.js';
+import {
+    loadSqlFunctions,
+    createSqlFunction,
+    dropSqlFunction,
+} from '../functions/sql-functions.js';
 import {
     CLOUD_ACTIONS,
     type CloudCredentials,
@@ -1797,6 +1801,12 @@ async function post(request: Request): Promise<Response> {
                 return json(
                     await withCloudClient(credentials, url, client =>
                         createSqlFunction(client, body),
+                    ),
+                );
+            case CLOUD_ACTIONS.dropFunction:
+                return json(
+                    await withCloudClient(credentials, url, client =>
+                        dropSqlFunction(client, body),
                     ),
                 );
             case CLOUD_ACTIONS.test:

@@ -1,6 +1,7 @@
 import {
     isFunctionCatalog,
     isSqlFunction,
+    isSqlFunctionDrop,
     type SqlFunctionInput,
 } from '../../../shared/database/functions/sql-functions.js';
 import {
@@ -830,5 +831,15 @@ export async function createClickHouseCloudFunction(input: SqlFunctionInput) {
     return requestCloud(
         { action: CLOUD_ACTIONS.createFunction, credentials: cloud.credentials, ...input },
         isSqlFunction,
+    );
+}
+
+export async function dropClickHouseCloudFunction(name: string, confirmation: string) {
+    const cloud = requireCloudConnection(
+        'Reconnect to ClickHouse Cloud before deleting a function.',
+    );
+    return requestCloud(
+        { action: CLOUD_ACTIONS.dropFunction, credentials: cloud.credentials, name, confirmation },
+        isSqlFunctionDrop,
     );
 }

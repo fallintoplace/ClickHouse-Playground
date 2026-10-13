@@ -8,11 +8,14 @@ import {
     functionArgumentSql,
     testSqlFunctionQuery,
     isFunctionCatalog,
+    isSqlFunctionDrop,
 } from '../../.core-build/src/shared/database/functions/sql-functions.js';
 import {
     createSqlFunction,
     loadSqlFunctions,
     functionCreationPermission,
+    functionDeletionPermission,
+    dropSqlFunction,
 } from '../../.core-build/src/backend/database/functions/sql-functions.js';
 
 const first = SQL_FUNCTION_TEMPLATES[0];
@@ -20,20 +23,27 @@ const second = SQL_FUNCTION_TEMPLATES[1];
 function client({
     settings = { readonly: 0, allow_ddl: 1 },
     grant = 1,
+    dropGrant = 1,
     metadata = [],
+    target = { origin: 'SQLUserDefined' },
     fail = false,
 } = {}) {
     const queries = [],
         commands = [];
+    const parameters = [];
     return {
         queries,
         commands,
-        async exec({ query }) {
+        parameters,
+        async exec({ query, query_params }) {
             queries.push(query);
+            parameters.push(query_params);
             if (fail) throw new Error('permission unavailable');
             let values = metadata;
             if (query.includes('getSetting')) values = [settings];
+            else if (query.startsWith('CHECK GRANT DROP')) values = [{ result: dropGrant }];
             else if (query.startsWith('CHECK')) values = [{ result: grant }];
+            else if (query.startsWith('SELECT origin')) values = target ? [target] : [];
             return { stream: Readable.from(values.map(value => JSON.stringify(value) + '\n')) };
         },
         async command(input) {
@@ -150,10 +160,13 @@ test('SQL UDF discovery returns server definitions independently of databases', 
     const catalog = await loadSqlFunctions(source);
     assert.equal(isFunctionCatalog(catalog), true);
     assert.equal(catalog.canCreate, true);
+    assert.equal(catalog.canDrop, true);
     assert.deepEqual(catalog.functions[0].parameters, ['items', 'index']);
     assert.ok(source.queries.some(sql => sql.includes("origin = 'SQLUserDefined'")));
     assert.equal(isFunctionCatalog({ ...catalog, canCreate: 'true' }), false);
     assert.equal(isFunctionCatalog({ ...catalog, functions: [{}] }), false);
+    assert.equal(isFunctionCatalog({ ...catalog, canDrop: 'true' }), false);
+    assert.equal(isFunctionCatalog({ ...catalog, dropReason: undefined }), false);
 });
 
 test('Read-only, DDL-denied and unverified permissions disable creation', async () => {
@@ -244,4 +257,142 @@ test('Function discovery decodes UTF-8 split across chunks and bounds response b
         loadSqlFunctions(source),
         error => error.code === 'FUNCTION_RESPONSE_SIZE',
     );
+});
+
+test('Creation and deletion permissions are independent and fail closed', async () => {
+    for (const grant of [0, 1]) {
+        for (const dropGrant of [0, 1]) {
+            const catalog = await loadSqlFunctions(client({ grant, dropGrant }));
+            assert.equal(catalog.canCreate, grant === 1);
+            assert.equal(catalog.canDrop, dropGrant === 1);
+            assert.equal(
+                catalog.dropReason,
+                dropGrant ? '' : 'DROP FUNCTION privilege is required.',
+            );
+        }
+    }
+    for (const settings of [
+        { readonly: 1, allow_ddl: 1 },
+        { readonly: '2', allow_ddl: '1' },
+        { readonly: 0, allow_ddl: 0 },
+        {},
+        { allow_ddl: 1 },
+    ]) {
+        const source = client({ settings });
+        assert.equal((await functionDeletionPermission(source)).canDrop, false);
+        assert.equal(source.queries.length, 1);
+        await assert.rejects(
+            dropSqlFunction(source, { name: first.name, confirmation: first.name }),
+            error => error.code === 'FUNCTION_PERMISSION',
+        );
+        assert.equal(source.commands.length, 0);
+    }
+    for (const dropGrant of [0, null, 'unverified'])
+        assert.equal((await functionDeletionPermission(client({ dropGrant }))).canDrop, false);
+    const failed = await functionDeletionPermission(client({ fail: true }));
+    assert.equal(failed.canDrop, false);
+    assert.match(failed.dropReason, /Could not verify DROP FUNCTION/);
+    assert.equal(
+        (
+            await functionDeletionPermission(
+                client({ settings: { readonly: '0', allow_ddl: '1' }, dropGrant: '1' }),
+            )
+        ).canDrop,
+        true,
+    );
+});
+
+test('Deletion requires a valid target and exact typed confirmation before any query', async () => {
+    const source = client();
+    for (const name of [undefined, 7, '', ' ', 'a'.repeat(8193), 'a\n', 'a\u0000', 'a\u007f']) {
+        await assert.rejects(
+            dropSqlFunction(source, { name, confirmation: name }),
+            error => error.code === 'FUNCTION_INPUT',
+        );
+    }
+    for (const confirmation of [
+        undefined,
+        7,
+        '',
+        first.name.toUpperCase(),
+        `${first.name} `,
+        ` ${first.name}`,
+    ])
+        await assert.rejects(
+            dropSqlFunction(source, { name: first.name, confirmation }),
+            error => error.code === 'FUNCTION_DROP_CONFIRMATION',
+        );
+    assert.equal(source.queries.length, 0);
+    assert.equal(source.commands.length, 0);
+    assert.equal(isSqlFunctionDrop({ name: first.name }), true);
+    for (const value of [null, [], {}, { name: 1 }]) assert.equal(isSqlFunctionDrop(value), false);
+});
+
+test('Deletion rechecks DROP grant and only targets SQL UDFs', async () => {
+    const input = { name: first.name, confirmation: first.name };
+    const source = client({ grant: 0 });
+    assert.deepEqual(await dropSqlFunction(source, input), { name: first.name });
+    assert.equal(source.commands.length, 1);
+    assert.equal(source.commands[0].query, `DROP FUNCTION IF EXISTS \`${first.name}\``);
+    assert.match(source.commands[0].query_id, /^clickstudio-drop-function-/);
+    assert.equal(source.commands[0].abort_signal instanceof AbortSignal, true);
+    assert.ok(source.queries.includes('CHECK GRANT DROP FUNCTION ON *.*'));
+    assert.deepEqual(source.parameters.at(-1), { name: first.name });
+    for (const origin of ['System', 'ExecutableUserDefined', undefined]) {
+        const forbidden = client({ target: { origin } });
+        await assert.rejects(
+            dropSqlFunction(forbidden, input),
+            error => error.code === 'FUNCTION_DROP_TARGET',
+        );
+        assert.equal(forbidden.commands.length, 0);
+    }
+    const revoked = client({ dropGrant: 0 });
+    await assert.rejects(
+        dropSqlFunction(revoked, input),
+        error => error.code === 'FUNCTION_PERMISSION',
+    );
+    assert.equal(revoked.commands.length, 0);
+    assert.equal(
+        revoked.queries.some(query => query.includes('system.functions')),
+        false,
+    );
+});
+
+test('Deletion quotes unusual names and treats already removed functions as success', async () => {
+    const name = '函数`\\; DROP TABLE events; --';
+    const source = client();
+    await dropSqlFunction(source, { name, confirmation: name });
+    assert.deepEqual(source.parameters.at(-1), { name });
+    assert.equal(
+        source.commands[0].query,
+        'DROP FUNCTION IF EXISTS `函数\\`\\\\; DROP TABLE events; --`',
+    );
+    const longName = 'x'.repeat(256);
+    await dropSqlFunction(source, { name: longName, confirmation: longName });
+    assert.equal(source.commands[1].query, `DROP FUNCTION IF EXISTS \`${longName}\``);
+    const gone = client({ target: null });
+    assert.deepEqual(await dropSqlFunction(gone, { name: first.name, confirmation: first.name }), {
+        name: first.name,
+    });
+    assert.equal(gone.commands.length, 0);
+});
+
+test('Deletion surfaces metadata and command failures without retries', async () => {
+    const input = { name: first.name, confirmation: first.name };
+    const source = client();
+    const originalExec = source.exec;
+    source.exec = async params => {
+        if (params.query.includes('system.functions')) throw new Error('metadata unavailable');
+        return originalExec(params);
+    };
+    await assert.rejects(dropSqlFunction(source, input), /metadata unavailable/);
+    assert.equal(source.commands.length, 0);
+    source.exec = originalExec;
+    let attempts = 0;
+    source.command = async () => {
+        attempts++;
+        throw new Error('Request timed out');
+    };
+    await assert.rejects(dropSqlFunction(source, input), /timed out/);
+    assert.equal(attempts, 1);
 });

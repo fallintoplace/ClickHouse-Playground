@@ -245,4 +245,13 @@
     font-size: 12px;
     font-weight: 600;
   }
+
+  .sql-function-delete-dialog {
+    width: min(480px, calc(100vw - 32px));
+  }
+
+  .sql-function-delete-dialog code {
+    font-family: var(--font-mono);
+    overflow-wrap: anywhere;
+  }
 }

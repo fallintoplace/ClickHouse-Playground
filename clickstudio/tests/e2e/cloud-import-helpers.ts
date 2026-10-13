@@ -176,6 +176,8 @@ export async function mockCloudEndpoint(
                     functions: [],
                     canCreate: false,
                     createReason: 'CREATE FUNCTION privilege is required.',
+                    canDrop: false,
+                    dropReason: 'DROP FUNCTION privilege is required.',
                 },
             });
             return;
