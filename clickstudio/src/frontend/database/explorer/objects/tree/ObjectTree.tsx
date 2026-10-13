@@ -23,7 +23,9 @@ export function ObjectTree({
     connection,
     trusted,
     onCreateTable,
+    functionsSlot,
 }: {
+    functionsSlot?: ReactNode;
     treeScroll: import('react').RefObject<HTMLDivElement | null>;
     copy: ObjectExplorerProps['copy'];
     model: ObjectExplorerModel;
@@ -39,6 +41,7 @@ export function ObjectTree({
     return (
         <div className="object-tree-scroll" ref={treeScroll}>
             <div className="object-tree" role="tree" aria-label={copy.objects}>
+                {functionsSlot}
                 {model.databases.map(database => {
                     const databaseExpanded = expanded(database.id, Boolean(model.query));
                     return (

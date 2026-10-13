@@ -1,9 +1,12 @@
+import type { SqlFunctionInput } from '../functions/sql-functions.js';
 import type { FlamegraphSource } from '../../queries/inspection/flamegraph.js';
 import type { NativeExplorerRequest } from '../explorer/explorers.js';
 import type { CreateTableColumn } from '../tables/create-table.js';
 import type { QueryLogSource, WorkloadWindow } from '../explorer/activity/workload.js';
 
 export const CLOUD_ACTIONS = {
+    functions: 'functions',
+    createFunction: 'create-function',
     test: 'test',
     schema: 'schema',
     queryTree: 'query-tree',
@@ -35,6 +38,8 @@ export type CloudCredentials = {
 
 type QueryInput = { sql: string; parameters?: Record<string, string> };
 type CloudRequestPayloads = {
+    [CLOUD_ACTIONS.functions]: object;
+    [CLOUD_ACTIONS.createFunction]: SqlFunctionInput;
     [CLOUD_ACTIONS.test]: object;
     [CLOUD_ACTIONS.schema]: {
         databaseOffset?: number;

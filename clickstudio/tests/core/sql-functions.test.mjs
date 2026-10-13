@@ -1,0 +1,247 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { Readable } from 'node:stream';
+import {
+    SQL_FUNCTION_TEMPLATES,
+    createSqlFunctionQuery,
+    sqlFunctionParameters,
+    functionArgumentSql,
+    testSqlFunctionQuery,
+    isFunctionCatalog,
+} from '../../.core-build/src/shared/database/functions/sql-functions.js';
+import {
+    createSqlFunction,
+    loadSqlFunctions,
+    functionCreationPermission,
+} from '../../.core-build/src/backend/database/functions/sql-functions.js';
+
+const first = SQL_FUNCTION_TEMPLATES[0];
+const second = SQL_FUNCTION_TEMPLATES[1];
+function client({
+    settings = { readonly: 0, allow_ddl: 1 },
+    grant = 1,
+    metadata = [],
+    fail = false,
+} = {}) {
+    const queries = [],
+        commands = [];
+    return {
+        queries,
+        commands,
+        async exec({ query }) {
+            queries.push(query);
+            if (fail) throw new Error('permission unavailable');
+            let values = metadata;
+            if (query.includes('getSetting')) values = [settings];
+            else if (query.startsWith('CHECK')) values = [{ result: grant }];
+            return { stream: Readable.from(values.map(value => JSON.stringify(value) + '\n')) };
+        },
+        async command(input) {
+            commands.push(input);
+        },
+    };
+}
+
+test('SQL UDF templates use the requested names and existing higher-order functions', () => {
+    assert.equal(first.name, 'udf_array_remove_at');
+    assert.equal(second.name, 'udf_map_remove');
+    for (const template of SQL_FUNCTION_TEMPLATES) {
+        const sql = createSqlFunctionQuery(template);
+        assert.equal(sql.startsWith(`CREATE FUNCTION \`${template.name}\` AS`), true);
+        assert.deepEqual(sqlFunctionParameters(sql), template.parameters);
+        assert.doesNotMatch(sql, /OR REPLACE|IF NOT EXISTS/);
+    }
+    assert.match(first.expression, /arrayEnumerate/);
+    assert.match(second.expression, /mapFilter/);
+});
+
+test('Create SQL validates identifiers, unique bounded parameters and one expression', () => {
+    for (const input of [
+        { ...first, name: 'bad; DROP TABLE t' },
+        { ...first, name: 'a'.repeat(129) },
+        { ...first, parameters: [] },
+        { ...first, parameters: ['x', 'x'] },
+        { ...first, parameters: ['x) -> 1; DROP FUNCTION f'] },
+        { ...first, parameters: Array.from({ length: 17 }, (_, i) => `x${i}`) },
+        { ...first, expression: '' },
+        { ...first, expression: '-- comment only' },
+        { ...first, expression: 'x'.repeat(8193) },
+        { ...first, expression: '1; DROP TABLE t' },
+        { ...first, expression: "'unterminated" },
+    ])
+        assert.throws(() => createSqlFunctionQuery(input));
+    assert.match(
+        createSqlFunctionQuery({
+            name: 'quoted',
+            parameters: ['x'],
+            expression: "concat(x, ';') -- comment",
+        }),
+        /\n;$/,
+    );
+});
+
+test('Canonical definitions expose their parameters without confusing inner lambdas', () => {
+    assert.deepEqual(
+        sqlFunctionParameters(
+            'CREATE FUNCTION f AS (items, index) -> arrayFilter((x, i) -> i != index, items, arrayEnumerate(items))',
+        ),
+        ['items', 'index'],
+    );
+    assert.deepEqual(sqlFunctionParameters('CREATE FUNCTION f AS (`x`, `y`) -> x + y'), ['x', 'y']);
+    assert.deepEqual(sqlFunctionParameters('CREATE FUNCTION f AS (bad-name) -> 1'), []);
+    assert.deepEqual(sqlFunctionParameters('CREATE FUNCTION f AS x -> (x + 1)'), ['x']);
+    assert.deepEqual(sqlFunctionParameters('CREATE FUNCTION f AS `x` -> (x + 1)'), ['x']);
+    assert.deepEqual(sqlFunctionParameters('not a function'), []);
+});
+
+test('Tester turns JSON into escaped literals and preserves duplicate map keys', () => {
+    assert.equal(
+        functionArgumentSql({ kind: 'json', value: '[1, "hello", true, null, [2]]' }),
+        "[1, 'hello', true, NULL, [2]]",
+    );
+    const text = "a'\\; DROP FUNCTION f; --";
+    assert.equal(
+        functionArgumentSql({ kind: 'json', value: JSON.stringify(text) }),
+        "'a\\'\\\\; DROP FUNCTION f; --'",
+    );
+    assert.equal(
+        functionArgumentSql({ kind: 'map', value: '[["a", 1], ["a", 2], ["b", 3]]' }),
+        "map('a', 1, 'a', 2, 'b', 3)",
+    );
+    const fn = {
+        name: first.name,
+        parameters: first.parameters,
+        createQuery: createSqlFunctionQuery(first),
+    };
+    assert.equal(
+        testSqlFunctionQuery(fn, first.arguments),
+        'SELECT `udf_array_remove_at`([10, 20, 30, 40], 2) AS result, toJSONString(result) AS result_json;',
+    );
+    assert.throws(() => testSqlFunctionQuery(fn, []));
+    assert.match(testSqlFunctionQuery({ ...fn, name: 'f`x' }, first.arguments), /`f\\`x`/);
+});
+
+test('Tester rejects raw SQL, JSON objects, unsafe numbers, huge maps and deep inputs', () => {
+    for (const value of [
+        'SELECT 1',
+        '{}',
+        '1e999',
+        '9007199254740993',
+        JSON.stringify(Array(101).fill(1)),
+        '[[[[[[1]]]]]]',
+        '"' + 'x'.repeat(8193) + '"',
+    ])
+        assert.throws(() => functionArgumentSql({ kind: 'json', value }));
+    for (const value of [
+        '{}',
+        '[]',
+        '[1, 2]',
+        '[["a"]]',
+        '[["a", 1, 2]]',
+        JSON.stringify(Array(101).fill(['a', 1])),
+    ])
+        assert.throws(() => functionArgumentSql({ kind: 'map', value }));
+});
+
+test('SQL UDF discovery returns server definitions independently of databases', async () => {
+    const source = client({
+        metadata: [{ name: first.name, create_query: createSqlFunctionQuery(first) }],
+    });
+    const catalog = await loadSqlFunctions(source);
+    assert.equal(isFunctionCatalog(catalog), true);
+    assert.equal(catalog.canCreate, true);
+    assert.deepEqual(catalog.functions[0].parameters, ['items', 'index']);
+    assert.ok(source.queries.some(sql => sql.includes("origin = 'SQLUserDefined'")));
+    assert.equal(isFunctionCatalog({ ...catalog, canCreate: 'true' }), false);
+    assert.equal(isFunctionCatalog({ ...catalog, functions: [{}] }), false);
+});
+
+test('Read-only, DDL-denied and unverified permissions disable creation', async () => {
+    for (const settings of [
+        { readonly: 1, allow_ddl: 1 },
+        { readonly: '2', allow_ddl: '1' },
+        { readonly: 0, allow_ddl: 0 },
+        {},
+        { allow_ddl: 1 },
+    ]) {
+        const source = client({ settings });
+        assert.equal((await functionCreationPermission(source)).canCreate, false);
+        assert.equal(source.queries.length, 1);
+        await assert.rejects(
+            createSqlFunction(source, first),
+            error => error.code === 'FUNCTION_PERMISSION',
+        );
+        assert.equal(source.commands.length, 0);
+    }
+    for (const options of [{ grant: 0 }, { grant: undefined, settings: {} }, { fail: true }])
+        assert.equal((await functionCreationPermission(client(options))).canCreate, false);
+    assert.equal(
+        (
+            await functionCreationPermission(
+                client({ settings: { readonly: '0', allow_ddl: '1' }, grant: '1' }),
+            )
+        ).canCreate,
+        true,
+    );
+});
+
+test('Create checks privileges again before executing exactly one CREATE without overwrite', async () => {
+    const source = client();
+    const created = await createSqlFunction(source, first);
+    assert.equal(created.name, first.name);
+    assert.equal(source.commands.length, 1);
+    assert.equal(source.commands[0].query, createSqlFunctionQuery(first));
+    assert.match(source.commands[0].query_id, /^clickstudio-create-function-/);
+    assert.equal(source.queries.at(-1), 'CHECK GRANT CREATE FUNCTION ON *.*');
+    await assert.rejects(
+        createSqlFunction(source, { ...first, expression: '1; DROP TABLE t' }),
+        error => error.code === 'FUNCTION_INPUT',
+    );
+    await assert.rejects(
+        createSqlFunction(source, { parameters: [1] }),
+        error => error.code === 'FUNCTION_INPUT',
+    );
+    assert.equal(source.commands.length, 1);
+    const denied = client({ grant: 0 });
+    await assert.rejects(
+        createSqlFunction(denied, first),
+        error => error.code === 'FUNCTION_PERMISSION',
+    );
+    assert.equal(denied.commands.length, 0);
+});
+
+test('Creation surfaces ClickHouse errors and never automatically retries', async () => {
+    const source = client();
+    let attempts = 0;
+    source.command = async () => {
+        attempts++;
+        throw new Error('Function already exists');
+    };
+    await assert.rejects(createSqlFunction(source, first), /already exists/);
+    assert.equal(attempts, 1);
+});
+
+test('Function discovery decodes UTF-8 split across chunks and bounds response bytes', async () => {
+    const source = client();
+    const originalExec = source.exec;
+    source.exec = async input => {
+        if (!input.query.includes('system.functions')) return originalExec(input);
+        const bytes = Buffer.from(
+            JSON.stringify({
+                name: 'unicode',
+                create_query: "CREATE FUNCTION unicode AS (x) -> concat(x, '你好')",
+            }) + '\n',
+        );
+        const split = bytes.indexOf(Buffer.from('你')) + 1;
+        return { stream: Readable.from([bytes.subarray(0, split), bytes.subarray(split)]) };
+    };
+    assert.match((await loadSqlFunctions(source)).functions[0].createQuery, /你好/);
+    source.exec = async input =>
+        input.query.includes('system.functions')
+            ? { stream: Readable.from([Buffer.alloc(2_000_001)]) }
+            : originalExec(input);
+    await assert.rejects(
+        loadSqlFunctions(source),
+        error => error.code === 'FUNCTION_RESPONSE_SIZE',
+    );
+});

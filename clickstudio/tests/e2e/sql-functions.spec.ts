@@ -1,0 +1,356 @@
+import { test, expect } from '@playwright/test';
+import { SQL_FUNCTION_TEMPLATES } from '../../src/shared/database/functions/sql-functions.js';
+import { functionsWorkspace } from './sql-functions-helpers.js';
+
+test('Existing demo SQL UDFs appear in Objects and execute on ClickHouse', async ({ page }) => {
+    const workspace = await functionsWorkspace(page, {
+        existing: true,
+        live: Boolean(process.env.CLICKSTUDIO_UDF_TEST_URL),
+    });
+    try {
+        const tree = page.getByRole('tree', { name: 'Objects', exact: true });
+        await expect(tree.getByRole('treeitem').first()).toContainText('Functions');
+        for (const [index, template] of SQL_FUNCTION_TEMPLATES.entries()) {
+            await page
+                .getByRole('button', { name: `${template.name} SQL UDF`, exact: true })
+                .click();
+            const details = page.locator('.sql-function-details');
+            await expect(
+                details.getByRole('heading', { name: template.name, exact: true }),
+            ).toBeVisible();
+            await expect(details.getByRole('combobox')).toBeHidden();
+            await details.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
+            await expect(details.locator('.sql-function-output')).toBeVisible();
+            await expect(details.getByText('Executed on ClickHouse', { exact: true })).toHaveCount(
+                0,
+            );
+            if (!index)
+                await expect(details.locator('.sql-function-output-items')).toHaveText('103040');
+            else
+                await expect(details.locator('.sql-function-output pre')).toHaveText(
+                    '{"a":10,"c":30}',
+                );
+            await expect(
+                details.getByRole('button', { name: 'Run on ClickHouse', exact: true }),
+            ).toBeEnabled();
+            await page.screenshot({ path: `test-results/sql-functions/${template.name}.png` });
+            await details.screenshot({
+                path: `test-results/sql-functions/${template.name}-details.png`,
+            });
+            await page.locator('.object-back-button').click();
+        }
+        expect(workspace.requests.some(body => body.action === 'create-function')).toBe(false);
+        expect(workspace.requests.filter(body => body.action === 'run')).toHaveLength(2);
+    } finally {
+        await workspace.close();
+    }
+});
+
+test('Functions can be browsed and tested when creation privileges are absent', async ({
+    page,
+}) => {
+    const { requests } = await functionsWorkspace(page, { canCreate: false, existing: true });
+    const create = page.getByRole('button', { name: 'Create SQL UDF', exact: true });
+    await expect(create).toBeDisabled();
+    await expect(create).toHaveAttribute('title', 'CREATE FUNCTION privilege is required.');
+    await page.getByRole('button', { name: 'udf_array_remove_at SQL UDF', exact: true }).click();
+    await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
+    await expect(page.locator('.sql-function-output')).toBeVisible();
+    expect(requests.some(body => body.action === 'create-function')).toBe(false);
+});
+
+test('Custom function starts blank, previews SQL and creates a testable SQL UDF', async ({
+    page,
+}) => {
+    const workspace = await functionsWorkspace(page, {
+        live: Boolean(process.env.CLICKSTUDIO_UDF_TEST_URL),
+    });
+    try {
+        await page.getByRole('button', { name: 'Create SQL UDF', exact: true }).click();
+        const dialog = page.getByRole('dialog', { name: 'Create SQL Function', exact: true });
+        for (const name of ['Function name', 'Parameters', 'Expression'])
+            await expect(dialog.getByLabel(name, { exact: true })).toHaveValue('');
+        await expect(dialog.getByLabel('Function name', { exact: true })).toBeFocused();
+        await expect(
+            dialog.getByRole('button', { name: 'Create UDF', exact: true }),
+        ).toBeDisabled();
+        await dialog.getByLabel('Function name', { exact: true }).fill('add_tax_demo');
+        await dialog.getByLabel('Parameters', { exact: true }).fill('price');
+        await dialog.getByLabel('Expression', { exact: true }).fill('price * 1.19');
+        await expect(dialog.locator('pre')).toHaveText(
+            'CREATE FUNCTION `add_tax_demo` AS (`price`) -> price * 1.19;',
+        );
+        for (const target of [
+            dialog,
+            ...(await dialog.locator('input, textarea, .sql-function-preview').all()),
+        ])
+            await expect(target).toHaveCSS('border-radius', '4px');
+        await page.screenshot({ path: 'test-results/sql-functions/custom-function.png' });
+        await dialog.getByRole('button', { name: 'Create UDF', exact: true }).click();
+        await expect(page.locator('.sql-function-details h3')).toHaveText('add_tax_demo');
+        await page.getByLabel('price', { exact: true }).fill('100');
+        await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
+        await expect(page.locator('.sql-function-output pre')).toHaveText('119');
+        expect(workspace.requests.find(body => body.action === 'create-function')).toMatchObject({
+            name: 'add_tax_demo',
+            parameters: ['price'],
+            expression: 'price * 1.19',
+        });
+    } finally {
+        await workspace.close();
+    }
+});
+
+test('Create opens a clean custom function form with 4px corners', async ({ page }) => {
+    await functionsWorkspace(page, { existing: true });
+    await page.getByRole('button', { name: 'Create SQL UDF', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Create SQL Function', exact: true });
+    await expect(
+        dialog.getByRole('button', { name: /Remove array item|Remove map key|Custom function/ }),
+    ).toHaveCount(0);
+    await expect(dialog.getByLabel('Function name', { exact: true })).toHaveValue('');
+    const bounds = await dialog.boundingBox();
+    const viewport = page.viewportSize();
+    expect(Math.abs(bounds!.x + bounds!.width / 2 - viewport!.width / 2)).toBeLessThan(2);
+    expect(Math.abs(bounds!.y + bounds!.height / 2 - viewport!.height / 2)).toBeLessThan(2);
+    await expect(dialog).toHaveCSS('border-radius', '4px');
+    await dialog.getByLabel('Function name', { exact: true }).fill('my_function');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Create SQL UDF', exact: true }).click();
+    await expect(dialog.getByLabel('Function name', { exact: true })).toHaveValue('');
+});
+
+test('Function search filters globally while preserving database groups', async ({ page }) => {
+    await functionsWorkspace(page, { existing: true });
+    await page.getByTestId('schema-search').fill('udf_map');
+    await expect(
+        page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }),
+    ).toBeVisible();
+    await expect(
+        page.getByRole('button', { name: 'udf_array_remove_at SQL UDF', exact: true }),
+    ).toHaveCount(0);
+    await page.getByRole('button', { name: 'Clear object search', exact: true }).click();
+    await expect(page.getByRole('tree', { name: 'Objects', exact: true })).toContainText('default');
+});
+
+test('Invalid creation fields and raw SQL tester input never reach the server', async ({
+    page,
+}) => {
+    const { requests } = await functionsWorkspace(page, { existing: true });
+    await page.getByRole('button', { name: 'Create SQL UDF', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Create SQL Function', exact: true });
+    await dialog.getByLabel('Expression', { exact: true }).fill('1; DROP TABLE events');
+    await expect(dialog.getByRole('button', { name: 'Create UDF', exact: true })).toBeDisabled();
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Create SQL UDF', exact: true })).toBeFocused();
+    await page.getByRole('button', { name: 'udf_array_remove_at SQL UDF', exact: true }).click();
+    await page.getByLabel('items', { exact: true }).fill('SELECT 1');
+    await expect(
+        page.getByRole('button', { name: 'Run on ClickHouse', exact: true }),
+    ).toBeDisabled();
+    expect(requests.some(body => body.action === 'run' || body.action === 'create-function')).toBe(
+        false,
+    );
+});
+
+test('Revoked permissions and server test errors stay visible without automatic retries', async ({
+    page,
+}) => {
+    const { state, requests } = await functionsWorkspace(page, { existing: true });
+    state.failCreate = true;
+    await page.getByRole('button', { name: 'Create SQL UDF', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Create SQL Function', exact: true });
+    await dialog.getByLabel('Function name', { exact: true }).fill('my_function');
+    await dialog.getByLabel('Parameters', { exact: true }).fill('value');
+    await dialog.getByLabel('Expression', { exact: true }).fill('value + 1');
+    await dialog.getByRole('button', { name: 'Create UDF', exact: true }).click();
+    await expect(dialog.getByRole('alert')).toContainText('privilege was revoked');
+    expect(requests.filter(body => body.action === 'create-function')).toHaveLength(1);
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    state.failRun = true;
+    await page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }).click();
+    await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
+    await expect(page.locator('.sql-function-details').getByRole('alert')).toContainText(
+        'input type is invalid',
+    );
+    await expect(page.locator('.sql-function-output')).toHaveCount(0);
+});
+
+test('Changing inputs clears the previous result and prevents stale output during a run', async ({
+    page,
+}) => {
+    const { state } = await functionsWorkspace(page, { existing: true });
+    await page.getByRole('button', { name: 'udf_array_remove_at SQL UDF', exact: true }).click();
+    await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
+    await expect(page.locator('.sql-function-output')).toBeVisible();
+    await page.getByLabel('index', { exact: true }).fill('1');
+    await expect(page.locator('.sql-function-output')).toHaveCount(0);
+    state.runDelay = 300;
+    await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
+    await page.getByLabel('index', { exact: true }).fill('3');
+    await expect(page.locator('.sql-function-output')).toHaveCount(0);
+    await expect(
+        page.getByRole('button', { name: 'Run on ClickHouse', exact: true }),
+    ).toBeEnabled();
+    await expect(page.locator('.sql-function-output')).toHaveCount(0);
+});
+
+test('Reusing a tester draft after switching tabs cannot show its old result on failure', async ({
+    page,
+}) => {
+    const { state } = await functionsWorkspace(page, { existing: true });
+    await page.getByRole('button', { name: 'udf_array_remove_at SQL UDF', exact: true }).click();
+    await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
+    await expect(page.locator('.sql-function-output')).toBeVisible();
+    await page.getByRole('tab', { name: 'Getting started.sql', exact: true }).click();
+    state.failRun = true;
+    state.runDelay = 300;
+    await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
+    await expect(page.locator('.sql-function-output')).toHaveCount(0);
+    await expect(page.locator('.sql-function-details').getByRole('alert')).toContainText(
+        'input type is invalid',
+    );
+    await expect(page.locator('.sql-function-output')).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: /Test udf_array_remove_at/ })).toHaveCount(1);
+});
+
+test('Map tester preserves duplicate keys in the server-produced output', async ({ page }) => {
+    const { state } = await functionsWorkspace(page, { existing: true });
+    state.mapJson = '{"a":1,"a":2}';
+    await page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }).click();
+    await page.getByText('Input options', { exact: true }).click();
+    const format = page.getByRole('combobox', { name: 'entries input format', exact: true });
+    await expect(format).toHaveValue('map');
+    await format.selectOption('json');
+    await expect(page.locator('.sql-function-preview pre')).not.toContainText('map(');
+    await format.selectOption('map');
+    await expect(page.locator('.sql-function-preview pre')).toContainText('map(');
+    await page.getByText('Input options', { exact: true }).click();
+    await page.getByLabel('entries', { exact: true }).fill('[["a", 1], ["a", 2], ["b", 3]]');
+    await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
+    await expect(page.locator('.sql-function-output pre')).toHaveText('{"a":1,"a":2}');
+});
+
+test('A collapsed Functions group still shows refresh errors and can recover', async ({ page }) => {
+    const { state } = await functionsWorkspace(page, { existing: true });
+    await page.getByRole('button', { name: 'Collapse Functions', exact: true }).click();
+    state.metadataError = true;
+    await page.locator('.object-refresh-action').click();
+    await expect(page.locator('.sql-functions-status[role="alert"]')).toContainText(
+        'Function metadata unavailable',
+    );
+    state.metadataError = false;
+    await page
+        .locator('.sql-functions-status')
+        .getByRole('button', { name: 'Retry', exact: true })
+        .click();
+    await expect(page.locator('.sql-functions-status[role="alert"]')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Expand Functions', exact: true }).click();
+    await expect(
+        page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }),
+    ).toBeVisible();
+});
+
+test('SQL UDF dialog and tester remain usable in the light theme', async ({ page }) => {
+    await functionsWorkspace(page, { existing: true });
+    await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
+    await page.getByRole('button', { name: 'udf_array_remove_at SQL UDF', exact: true }).click();
+    await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
+    await expect(page.locator('.sql-function-output')).toBeVisible();
+    await page.screenshot({ path: 'test-results/sql-functions/tester-light.png' });
+    await page.locator('.object-back-button').click();
+    await page.getByRole('button', { name: 'Create SQL UDF', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Create SQL Function', exact: true });
+    await expect(dialog.getByLabel('Function name', { exact: true })).toBeFocused();
+    await page.screenshot({ path: 'test-results/sql-functions/create-light.png' });
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).focus();
+    await page.keyboard.press('Tab');
+    await expect(
+        dialog.getByRole('button', { name: 'Close Create SQL Function', exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('button', { name: 'Create SQL UDF', exact: true })).toBeFocused();
+});
+
+test('Function tester remains disabled until the ClickHouse run finishes', async ({ page }) => {
+    const { state, requests } = await functionsWorkspace(page, { existing: true });
+    state.runDelay = 1200;
+    await page.getByRole('button', { name: 'udf_array_remove_at SQL UDF', exact: true }).click();
+    await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
+    const running = page.getByRole('button', { name: 'Running…', exact: true });
+    await expect(running).toBeDisabled();
+    await expect.poll(() => requests.filter(body => body.action === 'run').length).toBe(1);
+    await expect(running).toBeDisabled();
+    await expect(page.locator('.sql-function-output')).toHaveCount(0);
+    await expect(page.locator('.sql-function-output')).toBeVisible();
+    await expect(
+        page.getByRole('button', { name: 'Run on ClickHouse', exact: true }),
+    ).toBeEnabled();
+    expect(requests.filter(body => body.action === 'run')).toHaveLength(1);
+});
+
+test('Copy SQL confirms the copied query and clears confirmation when the inputs change', async ({
+    page,
+}) => {
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await functionsWorkspace(page, { existing: true });
+    await page.getByRole('button', { name: 'udf_array_remove_at SQL UDF', exact: true }).click();
+    const details = page.locator('.sql-function-details');
+    await details.getByRole('button', { name: 'Copy SQL', exact: true }).click();
+    await expect(details.getByRole('button', { name: 'Copied', exact: true })).toBeVisible();
+    await page.getByLabel('index', { exact: true }).fill('3');
+    await expect(details.getByRole('button', { name: 'Copy SQL', exact: true })).toBeVisible();
+});
+
+test('Switching SQL tabs during a function test keeps Run disabled and shows the completed result', async ({
+    page,
+}) => {
+    const { state, requests } = await functionsWorkspace(page, { existing: true });
+    state.runDelay = 1500;
+    await page.getByRole('button', { name: 'udf_array_remove_at SQL UDF', exact: true }).click();
+    await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Running…', exact: true })).toBeDisabled();
+    await page.getByRole('tab', { name: 'Getting started.sql', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Running…', exact: true })).toBeDisabled();
+    await expect(page.locator('.sql-function-output')).toBeVisible();
+    await expect(
+        page.getByRole('button', { name: 'Run on ClickHouse', exact: true }),
+    ).toBeEnabled();
+    expect(requests.filter(body => body.action === 'run')).toHaveLength(1);
+});
+
+test('Reopening a function card adopts its running query without submitting it twice', async ({
+    page,
+}) => {
+    const { state, requests } = await functionsWorkspace(page, { existing: true });
+    state.runDelay = 2000;
+    await page.getByRole('button', { name: 'udf_array_remove_at SQL UDF', exact: true }).click();
+    await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Running…', exact: true })).toBeDisabled();
+    await page.getByRole('tab', { name: 'Getting started.sql', exact: true }).click();
+    await page.locator('.object-back-button').click();
+    await page.getByRole('button', { name: 'udf_array_remove_at SQL UDF', exact: true }).click();
+    await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
+    await expect(page.locator('.sql-function-output')).toBeVisible();
+    expect(requests.filter(body => body.action === 'run')).toHaveLength(1);
+});
+
+test('Function tester never adopts a running EXPLAIN action as its result', async ({ page }) => {
+    const { state, requests } = await functionsWorkspace(page, { existing: true });
+    await page.getByRole('button', { name: 'udf_array_remove_at SQL UDF', exact: true }).click();
+    await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
+    await expect(page.locator('.sql-function-output')).toBeVisible();
+    state.runDelay = 1500;
+    await page.getByRole('button', { name: 'EXPLAIN PLAN', exact: true }).click();
+    await expect.poll(() => requests.filter(body => body.action === 'run').length).toBe(2);
+    await page.getByRole('tab', { name: 'Getting started.sql', exact: true }).click();
+    await page.locator('.object-back-button').click();
+    await page.getByRole('button', { name: 'udf_array_remove_at SQL UDF', exact: true }).click();
+    await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
+    await expect(page.locator('.sql-function-details').getByRole('alert')).toContainText(
+        'Another action is running',
+    );
+    await expect(page.locator('.sql-function-output')).toHaveCount(0);
+    expect(requests.filter(body => body.action === 'run')).toHaveLength(2);
+});

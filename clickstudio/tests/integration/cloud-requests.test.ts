@@ -5,6 +5,10 @@ import * as cloud from '../../src/frontend/database/connections/cloud-connection
 import { BrowserWorkspaceApi } from '../../src/frontend/api/browser-workspace-api.js';
 import { jsonRecord, jsonValue, responseErrorCode, stringValue } from '../helpers/type-guards.js';
 import { cloudConnectionTest } from '../helpers/cloud-fixtures.js';
+import {
+    SQL_FUNCTION_TEMPLATES,
+    createSqlFunctionQuery,
+} from '../../src/shared/database/functions/sql-functions.js';
 
 const credentials = {
     host: 'service.clickhouse.cloud:8443',
@@ -38,6 +42,15 @@ const metadata = {
     truncated: false,
 } as const;
 const responses: Record<string, unknown> = {
+    functions: {
+        functions: [],
+        canCreate: false,
+        createReason: 'CREATE FUNCTION privilege is required.',
+    },
+    'create-function': {
+        ...SQL_FUNCTION_TEMPLATES[0],
+        createQuery: createSqlFunctionQuery(SQL_FUNCTION_TEMPLATES[0]!),
+    },
     test: tested,
     run: result,
     schema: {
@@ -288,6 +301,38 @@ test('Local Cloud sessions continue to omit credentials from JSON and multipart 
     assert.ok(file instanceof File);
     assert.equal(file.name, 'rows.csv');
     assert.equal(await file.text(), 'value\nx');
+    await cloud.loadClickHouseCloudFunctions();
+    await cloud.createClickHouseCloudFunction(SQL_FUNCTION_TEMPLATES[0]!);
+    for (const request of requests.slice(4)) {
+        const body = jsonRecord(jsonValue(String(request.options?.body)), 'Function request');
+        assert.equal(Object.hasOwn(body, 'credentials'), false);
+    }
+});
+
+test('Cloud function discovery and structured creation use guarded Cloud actions', async t => {
+    const requests: Record<string, unknown>[] = [];
+    t.mock.method(globalThis, 'fetch', async (_url: unknown, options?: RequestInit) => {
+        const body = jsonRecord(jsonValue(String(options?.body)), 'Cloud function request');
+        requests.push(body);
+        return Response.json(responseFor(body));
+    });
+    t.after(() => cloud.disconnectClickHouseCloud());
+    await cloud.connectClickHouseCloud(credentials);
+    const api = new BrowserWorkspaceApi();
+    assert.deepEqual(
+        await api.request('/connections/clickhouse-cloud/functions'),
+        responses.functions,
+    );
+    const template = SQL_FUNCTION_TEMPLATES[0]!;
+    const input = {
+        name: template.name,
+        parameters: template.parameters,
+        expression: template.expression,
+    };
+    const fn = await cloud.createClickHouseCloudFunction(input);
+    assert.equal(fn.name, 'udf_array_remove_at');
+    assert.deepEqual(requests[1], { action: 'functions', credentials });
+    assert.deepEqual(requests[2], { action: 'create-function', credentials, ...input });
 });
 
 test('Unknown Cloud JSON actions keep their error and credential validation precedence', async () => {

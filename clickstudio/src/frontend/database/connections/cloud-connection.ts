@@ -1,4 +1,9 @@
 import {
+    isFunctionCatalog,
+    isSqlFunction,
+    type SqlFunctionInput,
+} from '../../../shared/database/functions/sql-functions.js';
+import {
     CLOUD_ACTIONS,
     type CloudCredentials,
     type CloudRequest,
@@ -806,5 +811,24 @@ export async function loadClickHouseCloudReplication(
         { action: CLOUD_ACTIONS.replication, credentials: cloud.credentials },
         apiResponses.isReplicationSnapshot,
         signal,
+    );
+}
+
+export async function loadClickHouseCloudFunctions(signal?: AbortSignal) {
+    const cloud = requireCloudConnection('Reconnect to ClickHouse Cloud.');
+    return requestCloud(
+        { action: CLOUD_ACTIONS.functions, credentials: cloud.credentials },
+        isFunctionCatalog,
+        signal,
+    );
+}
+
+export async function createClickHouseCloudFunction(input: SqlFunctionInput) {
+    const cloud = requireCloudConnection(
+        'Reconnect to ClickHouse Cloud before creating a function.',
+    );
+    return requestCloud(
+        { action: CLOUD_ACTIONS.createFunction, credentials: cloud.credentials, ...input },
+        isSqlFunction,
     );
 }

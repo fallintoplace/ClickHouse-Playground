@@ -1,3 +1,4 @@
+import { loadSqlFunctions, createSqlFunction } from '../functions/sql-functions.js';
 import {
     CLOUD_ACTIONS,
     type CloudCredentials,
@@ -1790,6 +1791,14 @@ async function post(request: Request): Promise<Response> {
     const { credentials, url } = validated;
     try {
         switch (body.action) {
+            case CLOUD_ACTIONS.functions:
+                return json(await withCloudClient(credentials, url, loadSqlFunctions));
+            case CLOUD_ACTIONS.createFunction:
+                return json(
+                    await withCloudClient(credentials, url, client =>
+                        createSqlFunction(client, body),
+                    ),
+                );
             case CLOUD_ACTIONS.test:
                 return json(await testConnection(credentials, url));
             case CLOUD_ACTIONS.schema:

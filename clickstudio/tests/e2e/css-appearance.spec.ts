@@ -1,3 +1,4 @@
+import { functionsWorkspace } from './sql-functions-helpers.js';
 import { setWorkspaceMode, replaceSql, runButton, runScript, trust } from './helpers.js';
 import { test, expect } from '@playwright/test';
 import type { Script } from '../../src/shared/queries/execution/types.js';
@@ -342,5 +343,47 @@ for (const theme of ['Light', 'Dark']) {
         await dialog.getByRole('button', { name: 'Import rows', exact: true }).click();
         await expect(dialog).toContainText('2 source rows processed successfully');
         await compareStyles('success');
+    });
+}
+
+for (const theme of ['Light', 'Dark']) {
+    test(`CSS preserves ${theme} SQL UDF discovery, creation and tester`, async ({
+        page,
+    }, info) => {
+        await page.setViewportSize({ width: 1440, height: 1000 });
+        await functionsWorkspace(page, { existing: true });
+        await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+        await expectReferenceStyles(
+            page,
+            info,
+            'sql-udf-functions',
+            page.locator('.inspector-pane'),
+        );
+        await page.getByRole('button', { name: 'Create SQL UDF', exact: true }).click();
+        const dialog = page.getByRole('dialog', { name: 'Create SQL Function', exact: true });
+        await expect(dialog.getByLabel('Function name', { exact: true })).toBeFocused();
+        await expectReferenceStyles(page, info, 'sql-udf-create', dialog);
+        await page.keyboard.press('Escape');
+        await page
+            .getByRole('button', { name: 'udf_array_remove_at SQL UDF', exact: true })
+            .click();
+        await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
+        await expect(page.locator('.sql-function-output')).toBeVisible();
+        await expectReferenceStyles(
+            page,
+            info,
+            'sql-udf-array-result',
+            page.locator('.inspector-pane'),
+        );
+        await page.locator('.object-back-button').click();
+        await page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }).click();
+        await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
+        await expect(page.locator('.sql-function-output')).toBeVisible();
+        await expectReferenceStyles(
+            page,
+            info,
+            'sql-udf-map-result',
+            page.locator('.inspector-pane'),
+        );
     });
 }

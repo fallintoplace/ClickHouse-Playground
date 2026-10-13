@@ -1,6 +1,12 @@
 import type { ReactNode } from 'react';
 
 const iconPaths = {
+    function: (
+        <>
+            <path d="M15 3h-2a3 3 0 0 0-3 3L8 18a3 3 0 0 1-3 3H3" />
+            <path d="M6 9h9M15 14l6 7M21 14l-6 7" />
+        </>
+    ),
     schema: (
         <>
             <rect width="18" height="18" x="3" y="3" rx="2" />

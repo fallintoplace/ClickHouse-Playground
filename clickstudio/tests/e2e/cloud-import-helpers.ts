@@ -170,6 +170,16 @@ export async function mockCloudEndpoint(
             await route.fulfill({ json: previewCloudConnectionTest });
             return;
         }
+        if (body.action === 'functions') {
+            await route.fulfill({
+                json: {
+                    functions: [],
+                    canCreate: false,
+                    createReason: 'CREATE FUNCTION privilege is required.',
+                },
+            });
+            return;
+        }
         if (body.action === 'schema') {
             if (importSucceeded) onSchemaAfterImport?.();
             await route.fulfill({ json: activeSchema });

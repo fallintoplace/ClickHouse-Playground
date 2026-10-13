@@ -20,7 +20,7 @@ export function ExplorerGroupRow({
     expanded: boolean;
     onToggle: () => void;
     database?: boolean;
-    kind?: 'table' | 'view' | 'dictionary' | 'column' | 'projection' | 'index';
+    kind?: 'table' | 'view' | 'dictionary' | 'column' | 'projection' | 'index' | 'function';
     action?: ReactNode;
 }) {
     const hasChildren = count > 0;
@@ -89,7 +89,7 @@ export function ObjectLeafRow({
 }: {
     level: number;
     selected: boolean;
-    glyph: 'column' | 'projection' | 'index' | 'dictionary';
+    glyph: 'column' | 'projection' | 'index' | 'function' | 'dictionary';
     label: string;
     meta?: string;
     onSelect: () => void;

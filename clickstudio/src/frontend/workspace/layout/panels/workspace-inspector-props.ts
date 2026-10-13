@@ -177,6 +177,9 @@ export function createInspectorProps({
             !savedDocument.deletedAt,
         ),
         run,
+        functionTest: {
+            busy: Boolean(model.busy || (run && !terminal(run))),
+        },
         profile,
         pipeline,
         comparisonProfiles: profilesByRun,

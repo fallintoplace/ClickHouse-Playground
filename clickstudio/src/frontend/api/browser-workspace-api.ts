@@ -43,6 +43,7 @@ import {
     loadClickHouseCloudQueryTree,
     loadClickHouseCloudSchema,
     loadClickHouseCloudTablePermissions,
+    loadClickHouseCloudFunctions,
     runClickHouseCloudSql,
     searchClickHouseCloudDocumentation,
     CloudRequestError,
@@ -1193,6 +1194,10 @@ export class BrowserWorkspaceApi {
         options: RequestOptions,
     ): Promise<unknown> {
         switch (parts[2]) {
+            case 'functions':
+                if (parts[1] === CLICKHOUSE_CLOUD_CONNECTION_ID && method === 'GET')
+                    return loadClickHouseCloudFunctions(options.signal);
+                break;
             case 'table-permissions':
                 if (parts[1] === CLICKHOUSE_CLOUD_CONNECTION_ID && method === 'POST')
                     return loadClickHouseCloudTablePermissions(

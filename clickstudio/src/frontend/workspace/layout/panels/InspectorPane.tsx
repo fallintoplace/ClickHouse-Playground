@@ -1,3 +1,5 @@
+import type { OpenSqlDraft } from '../../../queries/execution/sql-draft-observer';
+import type { FunctionTestEvidence } from '../../../database/functions/SqlFunctionDetails';
 import { RunComparisonLauncher } from '../../../queries/history/RunComparison';
 import {
     useCallback,
@@ -61,6 +63,7 @@ export type InspectorPaneProps = {
     unsavedDraft: boolean;
     canRestoreRevision: boolean;
     run?: Run;
+    functionTest?: FunctionTestEvidence;
     profile?: QueryProfile;
     comparisonProfiles?: Readonly<Record<string, QueryProfile>>;
     comparisonPipelines?: Readonly<Record<string, ProfilePipeline>>;
@@ -71,7 +74,7 @@ export type InspectorPaneProps = {
     onImportedTableRevealed: (target: ImportedTableTarget) => void;
     onRefreshHistory: () => void;
     onInsert: (value: string) => void;
-    onOpenSqlDraft: (name: string, sql: string, run: boolean, reuseExisting?: boolean) => void;
+    onOpenSqlDraft: OpenSqlDraft;
     onTableDeleted: (table: Pick<SchemaTable, 'database' | 'name'>) => void;
     onOpenRun: (run: Run) => void;
     onOpenDocument: (document: QueryDocument) => void;
@@ -234,6 +237,7 @@ export function InspectorPane({
     unsavedDraft,
     canRestoreRevision,
     run,
+    functionTest,
     profile,
     pipeline,
     onRefreshSchema,
@@ -364,6 +368,7 @@ export function InspectorPane({
                         copy={copy}
                         connection={connection}
                         expert={isExpert}
+                        functionTest={functionTest}
                         schema={schema}
                         schemaLoading={schemaLoading}
                         schemaLoadingMore={schemaLoadingMore}

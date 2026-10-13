@@ -1,3 +1,4 @@
+import type { SqlDraftObserver } from './sql-draft-observer';
 import { useRef, type Dispatch, type RefObject, type SetStateAction } from 'react';
 import {
     parameterNames,
@@ -361,7 +362,13 @@ export function useWorkspaceExecution({
         panels.revealPanelTemporarily('results', draft.id);
     };
 
-    const openSqlDraft = (name: string, sql: string, run: boolean, reuseExisting = false) => {
+    const openSqlDraft = (
+        name: string,
+        sql: string,
+        run: boolean,
+        reuseExisting = false,
+        observer?: SqlDraftObserver,
+    ) => {
         if (run && (busy || executionInFlightRef.current)) {
             setError(copy.common.runActionWait, { tone: 'warning', timeoutMs: 5000 });
             return;
@@ -370,6 +377,7 @@ export function useWorkspaceExecution({
             setError(copy.common.runActionTrustRequired, { tone: 'warning', timeoutMs: 5000 });
             return;
         }
+        let reusedDraft: { draftId: string } | undefined;
         if (
             run &&
             reuseExisting &&
@@ -379,26 +387,20 @@ export function useWorkspaceExecution({
                 sql,
                 id => setWorkspace(current => ({ ...current, activeId: id })),
                 draft => {
-                    void executeSqlForDraft(draft, draft.sql, {
-                        expandResults: true,
-                        trackChartRun: true,
-                        preview: true,
-                    });
+                    reusedDraft = { draftId: draft.id };
+                    void executeObservedDraft(draft, executeSqlForDraft, connection.id, observer);
                 },
             )
         )
-            return;
+            return reusedDraft;
         const draft = newDraft(name, sql);
         if (!openNewDraft(draft, !run)) return;
         if (!run) {
             window.requestAnimationFrame(() => editor.current?.focus());
-            return;
+            return { draftId: draft.id };
         }
-        void executeSqlForDraft(draft, draft.sql, {
-            expandResults: true,
-            trackChartRun: true,
-            preview: true,
-        });
+        void executeObservedDraft(draft, executeSqlForDraft, connection.id, observer);
+        return { draftId: draft.id };
     };
     const startBlankSql = () => {
         if (!openNewDraft(newDraft(nextBlankQueryName(workspaceRef.current)), true)) return false;
@@ -474,6 +476,7 @@ function createDraftExecutor({
             expandResults?: boolean;
             trackChartRun?: boolean;
             preview?: boolean;
+            observer?: SqlDraftObserver;
         } = {},
     ) => {
         const kind = options.kind ?? 'query';
@@ -693,6 +696,7 @@ function createDraftExecutor({
                     }));
                     if (options.trackChartRun)
                         setExampleChartRunId(options.view === 'chart' ? created.id : undefined);
+                    options.observer?.submitted(created);
                 };
                 if (isScript) await submitScript();
                 else await submitRun();
@@ -701,6 +705,7 @@ function createDraftExecutor({
             },
             isScript ? 'script' : 'run',
             caught => {
+                options.observer?.failed(apiErrorDetail(caught));
                 const requestId = apiRequestId(caught);
                 recordFailedQueryError({
                     draftId: draft.id,
@@ -720,4 +725,47 @@ function createDraftExecutor({
             },
         );
     };
+}
+
+async function executeObservedDraft(
+    draft: Draft,
+    execute: ReturnType<typeof createDraftExecutor>,
+    connectionId: string,
+    observer?: SqlDraftObserver,
+) {
+    if (observer && draft.activeRunId) {
+        try {
+            const previous = await api(
+                `/runs/${encodeURIComponent(draft.activeRunId)}`,
+                apiResponses.isRunResponse,
+            );
+            if (!terminal(previous)) {
+                const expectedSql = draft.sql.trim().replace(/;$/, '');
+                const actualSql = previous.sql.trim().replace(/;$/, '');
+                if (
+                    previous.kind !== 'query' ||
+                    previous.connectionId !== connectionId ||
+                    actualSql !== expectedSql
+                ) {
+                    observer.failed({
+                        code: 'FUNCTION_TEST_RUNNING',
+                        message:
+                            'Another action is running in this query tab. Wait for it to finish, then run the function test.',
+                    });
+                    return;
+                }
+                observer.submitted(previous);
+                return;
+            }
+        } catch (error) {
+            observer.failed(apiErrorDetail(error));
+            return;
+        }
+    }
+    await execute(draft, draft.sql, {
+        expandResults: true,
+        trackChartRun: true,
+        preview: true,
+        observer,
+    });
 }

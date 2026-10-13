@@ -821,6 +821,9 @@
 .object-tree-row.is-table {
   --tree-kind-color: var(--explorer-table);
 }
+.object-tree-row.is-function {
+  --tree-kind-color: var(--violet);
+}
 .object-tree-row.is-view {
   --tree-kind-color: var(--explorer-view);
 }

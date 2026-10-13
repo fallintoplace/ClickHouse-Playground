@@ -5,7 +5,9 @@ export function ObjectExplorerSearch({
     search,
     changeSearch,
     copy,
+    includeFunctions = false,
 }: {
+    includeFunctions?: boolean;
     search: ObjectExplorerProps['search'];
     changeSearch: (value: string) => void;
     copy: ObjectExplorerProps['copy'];
@@ -17,8 +19,8 @@ export function ObjectExplorerSearch({
                 data-testid="schema-search"
                 value={search}
                 onChange={event => changeSearch(event.target.value)}
-                placeholder={copy.objectSearch}
-                aria-label={copy.objectSearch}
+                placeholder={includeFunctions ? 'Search objects and functions…' : copy.objectSearch}
+                aria-label={includeFunctions ? 'Search objects and functions…' : copy.objectSearch}
             />
             {search && (
                 <button

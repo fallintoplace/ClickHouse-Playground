@@ -1,8 +1,11 @@
+import type { OpenSqlDraft } from '../../../../queries/execution/sql-draft-observer';
+import type { FunctionTestEvidence } from '../../../functions/SqlFunctionDetails';
 import type { Schema, SchemaTable } from '../../../../../shared/database/schema/types';
 import type { Connected, ImportedTableTarget } from '../../../../workspace/workspace-types';
 import type { Copy } from '../../../../ui/copy';
 
 export type ObjectExplorerProps = {
+    functionTest?: FunctionTestEvidence;
     copy: Copy['common'];
     connection: Connected;
     expert: boolean;
@@ -18,7 +21,7 @@ export type ObjectExplorerProps = {
     importedTableTarget?: ImportedTableTarget;
     onImportedTableRevealed: (target: ImportedTableTarget) => void;
     onInsert: (value: string) => void;
-    onOpenSqlDraft: (name: string, sql: string, run: boolean, reuseExisting?: boolean) => void;
+    onOpenSqlDraft: OpenSqlDraft;
     onTableDeleted: (table: Pick<SchemaTable, 'database' | 'name'>) => void;
     onOpenReference: (name: string, type: string) => void;
     compact?: boolean;
