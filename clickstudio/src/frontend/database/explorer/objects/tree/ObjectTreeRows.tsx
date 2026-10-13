@@ -68,9 +68,10 @@ export function ExplorerGroupRow({
                 <span className="object-tree-label">
                     <strong>{label}</strong>
                 </span>
-                <small className="object-tree-count">{count.toLocaleString()}</small>
+                {!action && <small className="object-tree-count">{count.toLocaleString()}</small>}
             </button>
             {action}
+            {action && <small className="object-tree-count">{count.toLocaleString()}</small>}
         </div>
     );
 }

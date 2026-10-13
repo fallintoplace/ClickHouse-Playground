@@ -121,47 +121,49 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                 </div>
             ) : (
                 <>
-                    <ObjectExplorerSearch {...{ search, changeSearch, copy }} />
-                    <div
-                        className={cx(
-                            'schema-heading object-heading',
-                            !expert && 'is-standard-object-heading',
-                        )}
-                    >
-                        {expert && (
+                    <div className="object-search-row">
+                        <ObjectExplorerSearch {...{ search, changeSearch, copy }} />
+                        <div
+                            className={cx(
+                                'schema-heading object-heading',
+                                !expert && 'is-standard-object-heading',
+                            )}
+                        >
+                            {expert && (
+                                <Button
+                                    variant="ghost"
+                                    className="toolbar-small"
+                                    disabled={!trusted}
+                                    onClick={() => setLineageOpen(true)}
+                                >
+                                    View dependencies
+                                </Button>
+                            )}
+                            <span>
+                                {copy.objectCount.replace(
+                                    '{count}',
+                                    (model.query
+                                        ? model.visibleObjects
+                                        : model.totalObjects
+                                    ).toLocaleString(),
+                                )}
+                            </span>
                             <Button
                                 variant="ghost"
-                                className="toolbar-small"
-                                disabled={!trusted}
-                                onClick={() => setLineageOpen(true)}
+                                className={cx(
+                                    'toolbar-small',
+                                    'object-refresh-action',
+                                    schemaLoading && 'is-loading',
+                                )}
+                                aria-label={schemaLoading ? copy.loading : copy.refresh}
+                                aria-busy={schemaLoading}
+                                title={schemaLoading ? copy.loading : copy.refresh}
+                                onClick={onRefreshSchema}
+                                disabled={schemaLoading || !trusted}
                             >
-                                View dependencies
+                                <Icon name="refresh" />
                             </Button>
-                        )}
-                        <span>
-                            {copy.objectCount.replace(
-                                '{count}',
-                                (model.query
-                                    ? model.visibleObjects
-                                    : model.totalObjects
-                                ).toLocaleString(),
-                            )}
-                        </span>
-                        <Button
-                            variant="ghost"
-                            className={cx(
-                                'toolbar-small',
-                                'object-refresh-action',
-                                schemaLoading && 'is-loading',
-                            )}
-                            aria-label={schemaLoading ? copy.loading : copy.refresh}
-                            aria-busy={schemaLoading}
-                            title={schemaLoading ? copy.loading : copy.refresh}
-                            onClick={onRefreshSchema}
-                            disabled={schemaLoading || !trusted}
-                        >
-                            <Icon name="refresh" />
-                        </Button>
+                        </div>
                     </div>
                     {schemaError && <div className="callout callout-error">{schemaError}</div>}
                     {schema?.metadataWarnings?.length ? (
