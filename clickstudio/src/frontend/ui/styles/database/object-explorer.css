@@ -788,6 +788,9 @@
   gap: 4px;
   min-width: 0;
 }
+.object-tree {
+  gap: 2px;
+}
 .object-tree-row,
 .reference-result {
   position: relative;
@@ -902,7 +905,8 @@
 }
 .object-tree-row.is-database {
   --tree-kind-color: var(--explorer-database);
-  margin-top: 2px;
+  min-height: 32px;
+  margin-top: 0;
   font-weight: 650;
 }
 .object-tree-toggle {
@@ -916,6 +920,10 @@
   background: transparent;
   color: var(--muted);
   cursor: pointer;
+}
+.object-tree-row.is-database .object-tree-toggle {
+  width: 22px;
+  height: 24px;
 }
 .object-tree-toggle:disabled {
   cursor: default;
@@ -956,6 +964,11 @@
   text-align: left;
   cursor: pointer;
 }
+.object-tree-row.is-database .object-tree-main {
+  min-height: 24px;
+  gap: 6px;
+  padding-block: 0;
+}
 .object-tree-main:disabled {
   color: inherit;
   cursor: default;
@@ -964,6 +977,14 @@
   width: 15px;
   height: 15px;
   stroke-width: 1.9;
+}
+.object-tree-row.is-database .object-kind-glyph {
+  width: 21px;
+  height: 21px;
+}
+.object-tree-row.is-database .object-kind-glyph > svg {
+  width: 14px;
+  height: 14px;
 }
 .object-tree-row.is-group:not(.is-database) .object-tree-label strong {
   color: color-mix(in srgb, var(--tree-kind-color) 68%, var(--muted));
@@ -995,6 +1016,11 @@
   font-size: 9px;
   font-variant-numeric: tabular-nums;
 }
+.object-tree-row.is-database .object-tree-count {
+  min-width: 22px;
+  height: 16px;
+  font-size: 8px;
+}
 .object-tree-group-actions {
   display: flex;
   flex: none;
@@ -1008,6 +1034,11 @@
   height: 25px;
   flex: none;
   place-items: center;
+}
+.object-tree-row.is-database .object-tree-group-action,
+.object-tree-row.is-database .object-tree-inline-action {
+  width: 22px;
+  height: 22px;
 }
 .object-tree-inline-action {
   display: grid;
