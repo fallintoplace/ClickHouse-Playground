@@ -1148,6 +1148,10 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.object-column-list-row-spacer {
+  width: 24px;
+  height: 24px;
+}
 .object-column-name button {
   min-width: 0;
   flex: 1;
