@@ -70,8 +70,10 @@ for (const mode of ['Standard', 'Experimental']) {
         await expect(
             page.getByRole('button', { name: 'Actions for github.events', exact: true }),
         ).toHaveCount(0);
-        for (const name of ['Insert row', 'Delete table'])
+        for (const name of ['Insert row', 'Delete table']) {
             await expect(page.getByRole('menuitem', { name, exact: true })).toHaveCount(0);
+            await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
+        }
     });
     test(`${mode} closes the source picker on an outside editor click`, async ({ page }) => {
         await setWorkspaceMode(page, mode);

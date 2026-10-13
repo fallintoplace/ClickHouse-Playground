@@ -182,10 +182,8 @@ for (const mode of ['beginner', 'expert']) {
         await expect(
             page.getByRole('button', { name: 'Actions for analytics.events', exact: true }),
         ).toHaveCount(0);
-        await expect(page.getByRole('menuitem', { name: 'Insert row', exact: true })).toHaveCount(
-            0,
-        );
-        await expect(page.getByRole('menuitem', { name: 'Delete table', exact: true })).toHaveCount(
+        await expect(page.getByRole('button', { name: 'Insert row', exact: true })).toHaveCount(0);
+        await expect(page.getByRole('button', { name: 'Delete table', exact: true })).toHaveCount(
             0,
         );
         await expect(page.getByRole('button', { name: 'Preview rows', exact: true })).toBeVisible();
@@ -205,9 +203,8 @@ test('Insert-only permissions hide create and drop while preserving the insert d
         page.getByRole('button', { name: 'New table in analytics', exact: true }),
     ).toHaveCount(0);
     await tableObject(page).click();
-    await page.getByRole('button', { name: 'Actions for analytics.events', exact: true }).click();
-    await expect(page.getByRole('menuitem', { name: 'Delete table', exact: true })).toHaveCount(0);
-    await page.getByRole('menuitem', { name: 'Insert row', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Delete table', exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Insert row', exact: true }).click();
     await expect(page.getByRole('dialog', { name: 'Insert row', exact: true })).toBeVisible();
 });
 
@@ -230,9 +227,8 @@ test('Unavailable permission checks hide create while retaining selected-table a
     ).toHaveCount(0);
     await tableObject(page).click();
     await expect.poll(() => permissionRequests).toBeGreaterThan(1);
-    await page.getByRole('button', { name: 'Actions for analytics.events', exact: true }).click();
     for (const name of ['Insert row', 'Delete table'])
-        await expect(page.getByRole('menuitem', { name, exact: true })).toBeEnabled();
+        await expect(page.getByRole('button', { name, exact: true })).toBeEnabled();
 });
 
 test('A late denial closes an open write dialog and cannot reopen it', async ({ page }) => {
@@ -245,13 +241,14 @@ test('A late denial closes an open write dialog and cannot reopen it', async ({ 
     });
     await mockLiveWorkspace(page, route => route.fulfill({ json: schema }));
     await tableObject(page).click();
-    await page.getByRole('button', { name: 'Actions for analytics.events', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Insert row', exact: true }).click();
+    await page.getByRole('button', { name: 'Insert row', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Insert row', exact: true });
     await expect(dialog).toBeVisible();
     await expect.poll(() => Boolean(deny)).toBe(true);
     deny!();
     await expect(dialog).toHaveCount(0);
+    for (const name of ['Insert row', 'Delete table'])
+        await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
     await expect(
         page.getByRole('button', { name: 'Actions for analytics.events', exact: true }),
     ).toHaveCount(0);
@@ -291,11 +288,8 @@ test('A late denial for a previous table does not hide the current table actions
     denyPrevious!();
     await expect.poll(() => previousResolved && currentResolved).toBe(true);
     await expect(page.locator('.object-details-hero > code')).toHaveText('analytics.new_events');
-    await page
-        .getByRole('button', { name: 'Actions for analytics.new_events', exact: true })
-        .click();
     for (const name of ['Insert row', 'Delete table'])
-        await expect(page.getByRole('menuitem', { name, exact: true })).toBeEnabled();
+        await expect(page.getByRole('button', { name, exact: true })).toBeEnabled();
 });
 
 async function hoverToken(page: Page, token: string) {
@@ -692,9 +686,9 @@ test('Deleting a table preserves its cached preview rows without a status pill',
     const results = page.getByRole('region', { name: 'Query results', exact: true });
     await expect(results.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Actions for analytics.events', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Delete table', exact: true }).click();
+    await page.getByRole('button', { name: 'Delete table', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Delete table', exact: true });
+    await expect(dialog.getByRole('button', { name: 'Delete table', exact: true })).toBeDisabled();
     await dialog
         .getByRole('textbox', { name: 'Type analytics.events to confirm' })
         .fill('analytics.events');
@@ -842,3 +836,56 @@ test('A schema response arriving after trust is revoked cannot restore editor me
     await page.keyboard.press('Control+Space');
     await expect(page.getByRole('option').filter({ hasText: 'events' })).toHaveCount(0);
 });
+
+for (const mode of ['beginner', 'expert']) {
+    for (const canInsert of [true, false]) {
+        test(`${mode} shows ${canInsert ? 'both write actions' : 'delete only'} below table name actions`, async ({
+            page,
+        }) => {
+            await page.route('**/api/connections/live/table-permissions', route =>
+                route.fulfill({ json: { create: false, insert: canInsert, drop: true } }),
+            );
+            await mockLiveWorkspace(page, route => route.fulfill({ json: schema }), mode);
+            if (mode === 'beginner') {
+                await page
+                    .locator('.icon-rail')
+                    .getByRole('button', { name: 'Objects', exact: true })
+                    .click();
+            }
+            await tableObject(page).click();
+            const details = page.getByRole('region', { name: 'Selected object', exact: true });
+            await expect(
+                details.getByRole('button', { name: 'Actions for analytics.events', exact: true }),
+            ).toHaveCount(0);
+            await expect(
+                details.getByRole('button', { name: 'Preview rows', exact: true }),
+            ).toBeVisible();
+            await expect(
+                details.getByRole('button', { name: 'Generate SELECT', exact: true }),
+            ).toBeVisible();
+            const rows = details.locator('.object-utility-actions');
+            await expect(rows).toHaveCount(2);
+            await expect(rows.nth(0).getByRole('button')).toHaveText(['Insert name', 'Copy name']);
+            const writes = details.locator('.object-table-write-actions');
+            await expect(writes.getByRole('button')).toHaveText(
+                canInsert ? ['Insert row', 'Delete table'] : ['Delete table'],
+            );
+            const remove = writes.getByRole('button', { name: 'Delete table', exact: true });
+            await expect(remove).toBeEnabled();
+            await expect(remove).toHaveClass(/button-danger/);
+            if (canInsert)
+                await expect(
+                    writes.getByRole('button', { name: 'Insert row', exact: true }),
+                ).toBeEnabled();
+            const nameBounds = await details
+                .getByRole('button', { name: 'Copy name', exact: true })
+                .boundingBox();
+            const deleteBounds = await remove.boundingBox();
+            expect(nameBounds).not.toBeNull();
+            expect(deleteBounds).not.toBeNull();
+            expect(deleteBounds!.y).toBeGreaterThanOrEqual(nameBounds!.y + nameBounds!.height);
+            expect(Math.abs(deleteBounds!.x - nameBounds!.x)).toBeLessThan(1);
+            expect(Math.abs(deleteBounds!.width - nameBounds!.width)).toBeLessThan(1);
+        });
+    }
+}

@@ -6,7 +6,6 @@ import { useObjectExplorerState } from './tree/useObjectExplorerState';
 import { ObjectExplorerSearch } from './ObjectExplorerSearch';
 import { ObjectTree } from './tree/ObjectTree';
 import { ObjectExplorerDialogs } from './ObjectExplorerDialogs';
-import { ObjectTableActionsMenu } from './ObjectTableActionsMenu';
 
 function ObjectExplorerEmptySearch({
     query,
@@ -82,27 +81,45 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
         connection.dataSource !== 'fixture' &&
         Boolean(deletableTable) &&
         tablePermissions.drop !== false;
+    const tableActionDisabledReason = trusted ? undefined : copy.runActionTrustRequired;
     const compactTableActions =
         showCompactDetails &&
         selectedTable &&
         (canInsertSelectedTable || canDeleteSelectedTable) ? (
-            <ObjectTableActionsMenu
-                table={selectedTable.table}
-                canInsertRow={canInsertSelectedTable}
-                canDeleteTable={canDeleteSelectedTable}
-                trusted={trusted}
-                copy={copy}
-                onInsertRow={() => {
-                    if (insertableTable)
-                        setInsertRowTarget({
-                            table: insertableTable.table,
-                            columns: insertableTable.columns,
-                        });
-                }}
-                onDeleteTable={() => {
-                    if (deletableTable) setDeleteTableTarget(deletableTable);
-                }}
-            />
+            <div className="object-utility-actions object-table-write-actions">
+                {canInsertSelectedTable && (
+                    <Button
+                        variant="ghost"
+                        className="toolbar-small"
+                        disabled={!trusted}
+                        title={tableActionDisabledReason}
+                        onClick={() => {
+                            if (insertableTable)
+                                setInsertRowTarget({
+                                    table: insertableTable.table,
+                                    columns: insertableTable.columns,
+                                });
+                        }}
+                    >
+                        <Icon name="plus" />
+                        {copy.insertRow}
+                    </Button>
+                )}
+                {canDeleteSelectedTable && (
+                    <Button
+                        variant="danger"
+                        className="toolbar-small"
+                        disabled={!trusted}
+                        title={tableActionDisabledReason}
+                        onClick={() => {
+                            if (deletableTable) setDeleteTableTarget(deletableTable);
+                        }}
+                    >
+                        <Icon name="trash" />
+                        {copy.deleteTable}
+                    </Button>
+                )}
+            </div>
         ) : undefined;
     return (
         <section

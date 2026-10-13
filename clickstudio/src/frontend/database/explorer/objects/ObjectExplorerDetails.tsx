@@ -305,7 +305,6 @@ function RelationDetails({
                         {selection.relationKind === 'view' ? 'VIEW' : 'TABLE'}
                     </span>
                     <strong>{table.name}</strong>
-                    {tableActions}
                 </div>
                 <code>
                     {table.database}.{table.name}
@@ -366,6 +365,7 @@ function RelationDetails({
                         {copiedId === selection.id ? copy.copied : copy.copyName}
                     </Button>
                 </div>
+                {tableActions}
             </div>
             {expert && (table.engine.endsWith('MergeTree') || table.database === 'system') && (
                 <div className="object-reference-actions">

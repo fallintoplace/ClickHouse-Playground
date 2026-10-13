@@ -859,8 +859,7 @@
   height: 14px;
 }
 .object-tree-row:hover .object-table-actions-trigger,
-.object-table-actions-trigger[aria-expanded="true"],
-.object-details-title .object-table-actions-trigger {
+.object-table-actions-trigger[aria-expanded="true"] {
   opacity: 1;
   pointer-events: auto;
 }
@@ -1383,6 +1382,11 @@
   height: 13px;
   flex: none;
   color: var(--object-detail-accent);
+}
+.object-table-write-actions .button-danger {
+  --object-detail-accent: var(--red);
+  grid-column: 2;
+  color: var(--red);
 }
 .object-fact-list {
   display: grid;
