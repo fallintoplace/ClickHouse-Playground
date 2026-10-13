@@ -29,6 +29,7 @@ for (const mode of ['Standard', 'Experimental']) {
             for (const theme of ['Dark', 'Light']) {
                 await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
                 const accent = theme === 'Dark' ? 'rgb(250, 255, 105)' : 'rgb(166, 95, 45)';
+                const border = theme === 'Dark' ? 'rgb(41, 67, 78)' : 'rgb(188, 203, 224)';
 
                 await tabList.evaluate(node => {
                     node.scrollLeft = 0;
@@ -45,7 +46,7 @@ for (const mode of ['Standard', 'Experimental']) {
                     'Active SQL tab is to the right',
                 );
                 await expect(scrollRight).toHaveCSS('color', accent);
-                await expect(scrollRight).toHaveCSS('border-top-color', accent);
+                await expect(scrollRight).toHaveCSS('border-top-color', border);
                 await scrollRight.hover();
                 await expectReferenceStyles(
                     page,
@@ -55,6 +56,7 @@ for (const mode of ['Standard', 'Experimental']) {
                     false,
                 );
                 await expect(scrollRight).toHaveCSS('color', accent);
+                await expect(scrollRight).toHaveCSS('border-top-color', border);
                 await expect(lastTab).toHaveAttribute('aria-selected', 'true');
 
                 await tabList.evaluate(node => {
@@ -88,7 +90,7 @@ for (const mode of ['Standard', 'Experimental']) {
                     'Active SQL tab is to the left',
                 );
                 await expect(scrollLeft).toHaveCSS('color', accent);
-                await expect(scrollLeft).toHaveCSS('border-top-color', accent);
+                await expect(scrollLeft).toHaveCSS('border-top-color', border);
                 await expectReferenceStyles(
                     page,
                     info,

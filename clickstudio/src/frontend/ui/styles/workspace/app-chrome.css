@@ -758,7 +758,7 @@
     color: var(--accent);
   }
   .document-tabs-scroll-button.has-hidden-active-tab:not(:disabled) {
-    border-color: var(--accent-mark);
+    border-color: var(--line);
     background: var(--active-surface);
     color: var(--accent-mark);
   }
