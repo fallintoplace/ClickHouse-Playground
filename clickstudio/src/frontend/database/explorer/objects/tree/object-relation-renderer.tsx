@@ -1,6 +1,4 @@
 import {
-    explorerColumnId,
-    explorerColumnsId,
     explorerProjectionId,
     explorerProjectionsId,
     explorerSkipIndexId,
@@ -8,7 +6,6 @@ import {
     type ExplorerRelation,
     type ObjectExplorerModel,
 } from '../object-explorer-model';
-import { quoteIdentifier } from '../../../../../shared/sql/sql';
 import { cx } from '../../../../ui/components/primitives';
 import { Icon } from '../../../../ui/components/icons';
 import type { ObjectExplorerProps } from './object-explorer-types';
@@ -28,7 +25,6 @@ export function createRelationRenderer({
     copy,
     toggle,
     selectObject,
-    onInsert,
     onInsertRow,
     onDeleteTable,
 }: {
@@ -43,7 +39,6 @@ export function createRelationRenderer({
     copy: ObjectExplorerProps['copy'];
     toggle: (id: string) => void;
     selectObject: (id: string) => void;
-    onInsert: ObjectExplorerProps['onInsert'];
     onInsertRow: (relation: ExplorerRelation) => void;
     onDeleteTable: (relation: ExplorerRelation) => void;
 }) {
@@ -52,16 +47,11 @@ export function createRelationRenderer({
             relation.id,
             Boolean(model.query && relationChildrenMatch(relation)),
         );
-        const columnGroupId = explorerColumnsId(relation.table.database, relation.table.name);
         const projectionGroupId = explorerProjectionsId(
             relation.table.database,
             relation.table.name,
         );
         const indexGroupId = explorerSkipIndexesId(relation.table.database, relation.table.name);
-        const columnsExpanded = expanded(
-            columnGroupId,
-            Boolean(model.query && relation.matchedColumns.length),
-        );
         const projectionsExpanded = expanded(
             projectionGroupId,
             Boolean(model.query && relation.matchedProjections.length),
@@ -70,10 +60,6 @@ export function createRelationRenderer({
             indexGroupId,
             Boolean(model.query && relation.matchedSkipIndexes.length),
         );
-        const columns =
-            model.query && relation.matchedColumns.length
-                ? relation.matchedColumns
-                : relation.columns;
         const projections =
             model.query && relation.matchedProjections.length
                 ? relation.matchedProjections
@@ -83,7 +69,6 @@ export function createRelationRenderer({
                 ? relation.matchedSkipIndexes
                 : (relation.table.skipIndexes ?? []);
         const hasChildren =
-            relation.columns.length > 0 ||
             (relation.table.projections?.length ?? 0) > 0 ||
             (relation.table.skipIndexes?.length ?? 0) > 0;
         const selectedTable = relation.id === selectedTableId && relation.kind === 'table';
@@ -152,44 +137,6 @@ export function createRelationRenderer({
                 </div>
                 {relationExpanded && hasChildren && (
                     <div role="group" className="object-tree-children">
-                        {relation.columns.length > 0 && (
-                            <>
-                                <ExplorerGroupRow
-                                    level={level + 1}
-                                    label={copy.columns}
-                                    count={relation.columns.length}
-                                    expanded={columnsExpanded}
-                                    onToggle={() => toggle(columnGroupId)}
-                                    kind="column"
-                                />
-                                {columnsExpanded && (
-                                    <div role="group">
-                                        {columns.map(column => {
-                                            const id = explorerColumnId(
-                                                relation.table.database,
-                                                relation.table.name,
-                                                column.name,
-                                            );
-                                            return (
-                                                <ObjectLeafRow
-                                                    key={id}
-                                                    level={level + 2}
-                                                    selected={selectedId === id}
-                                                    glyph="column"
-                                                    label={column.name}
-                                                    meta={column.type}
-                                                    onSelect={() => selectObject(id)}
-                                                    onInsert={() =>
-                                                        onInsert(quoteIdentifier(column.name))
-                                                    }
-                                                    insertLabel="Insert column name"
-                                                />
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </>
-                        )}
                         {(relation.table.projections?.length ?? 0) > 0 && (
                             <>
                                 <ExplorerGroupRow

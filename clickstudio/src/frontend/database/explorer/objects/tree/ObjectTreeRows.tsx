@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { SchemaTable } from '../../../../../shared/database/schema/types';
 import { quoteIdentifier } from '../../../../../shared/sql/sql';
 import { cx } from '../../../../ui/components/primitives';
@@ -11,6 +12,8 @@ export function ExplorerGroupRow({
     onToggle,
     database = false,
     kind = 'table',
+    action,
+    onInteract,
 }: {
     level: number;
     label: string;
@@ -19,12 +22,16 @@ export function ExplorerGroupRow({
     onToggle: () => void;
     database?: boolean;
     kind?: 'table' | 'view' | 'dictionary' | 'column' | 'projection' | 'index';
+    action?: ReactNode;
+    onInteract?: () => void;
 }) {
+    const hasChildren = count > 0;
     return (
         <div
             role="treeitem"
             aria-level={level}
-            aria-expanded={expanded}
+            aria-expanded={hasChildren ? expanded : undefined}
+            tabIndex={hasChildren ? undefined : 0}
             className={cx(
                 'object-tree-row',
                 'is-group',
@@ -32,18 +39,29 @@ export function ExplorerGroupRow({
                 !database && `is-${kind}`,
             )}
             style={{ '--tree-indent': `${Math.max(0, level - 1) * 12}px` }}
+            onPointerEnter={onInteract}
+            onFocusCapture={onInteract}
         >
             <button
                 type="button"
                 className="object-tree-toggle"
-                aria-label={expanded ? `Collapse ${label}` : `Expand ${label}`}
+                aria-label={
+                    hasChildren ? (expanded ? `Collapse ${label}` : `Expand ${label}`) : label
+                }
+                disabled={!hasChildren}
                 onClick={onToggle}
             >
                 <span className={cx(expanded && 'is-open')}>
-                    <Icon name="chevron" />
+                    {hasChildren && <Icon name="chevron" />}
                 </span>
             </button>
-            <button type="button" className="object-tree-main" title={label} onClick={onToggle}>
+            <button
+                type="button"
+                className="object-tree-main"
+                title={label}
+                disabled={!hasChildren}
+                onClick={onToggle}
+            >
                 <span className={cx('object-kind-glyph', database && 'is-database')}>
                     <Icon name={database ? 'database' : kind} />
                 </span>
@@ -52,6 +70,7 @@ export function ExplorerGroupRow({
                 </span>
                 <small className="object-tree-count">{count.toLocaleString()}</small>
             </button>
+            {action}
         </div>
     );
 }

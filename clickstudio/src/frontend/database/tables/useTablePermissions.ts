@@ -12,6 +12,7 @@ export function useTablePermissions(
     trusted: boolean,
     database: string,
     table?: string,
+    enabled = true,
 ) {
     const { id, host, username, dataSource } = connection;
     const testedAt = connection.manifest?.testedAt;
@@ -20,7 +21,7 @@ export function useTablePermissions(
     const readOnlySource = id === PLAYGROUND_CONNECTION_ID || dataSource === 'fixture';
 
     useEffect(() => {
-        if (!trusted || readOnlySource) return;
+        if (!enabled || !trusted || readOnlySource) return;
         const controller = new AbortController();
         void post(
             `/connections/${encodeURIComponent(id)}/table-permissions`,
@@ -33,7 +34,7 @@ export function useTablePermissions(
             })
             .catch(() => {});
         return () => controller.abort();
-    }, [id, database, table, key, trusted, readOnlySource]);
+    }, [id, database, table, key, enabled, trusted, readOnlySource]);
 
     if (readOnlySource) return NO_TABLE_PERMISSIONS;
     return trusted && loaded?.key === key ? loaded.permissions : {};

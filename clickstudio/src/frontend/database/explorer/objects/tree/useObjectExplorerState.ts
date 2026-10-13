@@ -82,7 +82,7 @@ export function useObjectExplorerState(props: ObjectExplorerProps) {
         columns: readonly SchemaColumn[];
     }>();
     const [deleteTableTarget, setDeleteTableTarget] = useState<SchemaTable>();
-    const [createTableOpen, setCreateTableOpen] = useState(false);
+    const [createTableDatabase, setCreateTableDatabase] = useState<string>();
     const [createdTableTarget, setCreatedTableTarget] = useState<{
         database: string;
         table: string;
@@ -236,20 +236,19 @@ export function useObjectExplorerState(props: ObjectExplorerProps) {
     const selected = selectedId ? model.selectionById.get(selectedId) : undefined;
     const selectedTable =
         selected?.kind === 'relation' && selected.relationKind === 'table' ? selected : undefined;
-    const actionDatabase = selectedTable?.table.database ?? connection.database;
     const tablePermissions = useTablePermissions(
         connection,
         trusted,
-        actionDatabase,
+        selectedTable?.table.database ?? connection.database,
         selectedTable?.table.name,
+        Boolean(selectedTable),
     );
     useEffect(() => {
-        if (tablePermissions.create === false) setCreateTableOpen(false);
         if (tablePermissions.insert === false) setInsertRowTarget(undefined);
         if (tablePermissions.drop === false) setDeleteTableTarget(undefined);
-    }, [tablePermissions.create, tablePermissions.insert, tablePermissions.drop]);
+    }, [tablePermissions.insert, tablePermissions.drop]);
     useEffect(() => {
-        setCreateTableOpen(false);
+        setCreateTableDatabase(undefined);
         setInsertRowTarget(undefined);
         setDeleteTableTarget(undefined);
     }, [storageKey, connection.host, connection.username, connection.manifest?.testedAt]);
@@ -286,7 +285,6 @@ export function useObjectExplorerState(props: ObjectExplorerProps) {
     };
 
     const relationChildrenMatch = (relation: ExplorerRelation) =>
-        relation.matchedColumns.length > 0 ||
         relation.matchedProjections.length > 0 ||
         relation.matchedSkipIndexes.length > 0;
 
@@ -308,7 +306,6 @@ export function useObjectExplorerState(props: ObjectExplorerProps) {
         copy,
         toggle,
         selectObject,
-        onInsert,
         onInsertRow: relation =>
             setInsertRowTarget({ table: relation.table, columns: relation.columns }),
         onDeleteTable: relation => setDeleteTableTarget(relation.table),
@@ -320,12 +317,12 @@ export function useObjectExplorerState(props: ObjectExplorerProps) {
         compact,
         showCompactDetails,
         selectedTable,
-        actionDatabase,
         tablePermissions,
         connection,
         trusted,
         copy,
-        setCreateTableOpen,
+        createTableDatabase,
+        setCreateTableDatabase,
         insertableTable,
         setInsertRowTarget,
         deletableTable,
@@ -358,7 +355,6 @@ export function useObjectExplorerState(props: ObjectExplorerProps) {
         detailsOpen,
         partsTable,
         lineageOpen,
-        createTableOpen,
         setSearch,
         setCreatedTableTarget,
         insertRowTarget,

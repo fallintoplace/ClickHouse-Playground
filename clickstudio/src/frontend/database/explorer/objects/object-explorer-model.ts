@@ -275,6 +275,10 @@ export function buildObjectExplorer(
         ensureDatabase(dictionary.database).dictionaries.push(dictionary);
     }
 
+    for (const database of schema.databases ?? []) {
+        if (!query || database.toLowerCase().includes(query)) ensureDatabase(database);
+    }
+
     const sortRelations = (relations: ExplorerRelation[]) =>
         relations.sort((left, right) => left.table.name.localeCompare(right.table.name));
     const result = [...databases.values()]
@@ -288,7 +292,6 @@ export function buildObjectExplorer(
                     database.tables.length + database.views.length + database.dictionaries.length,
             } satisfies ExplorerDatabase;
         })
-        .filter(database => database.visibleObjectCount > 0)
         .sort(databaseSort(preferredDatabase));
 
     const totalObjects = schema.tables.length + (schema.dictionaries?.length ?? 0);

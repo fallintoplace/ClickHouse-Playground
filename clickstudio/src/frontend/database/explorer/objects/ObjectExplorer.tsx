@@ -3,8 +3,7 @@ import { Icon } from '../../../ui/components/icons';
 import { ObjectDetails } from './ObjectExplorerDetails';
 import type { ObjectExplorerProps } from './tree/object-explorer-types';
 import { useObjectExplorerState } from './tree/useObjectExplorerState';
-import { ObjectExplorerActions } from './ObjectExplorerActions';
-import { ObjectExplorerSearch } from './ObjectExplorerActions';
+import { ObjectExplorerSearch } from './ObjectExplorerSearch';
 import { ObjectTree } from './tree/ObjectTree';
 import { ObjectExplorerDialogs } from './ObjectExplorerDialogs';
 import { ObjectTableActionsMenu } from './ObjectTableActionsMenu';
@@ -14,12 +13,12 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
         compact,
         showCompactDetails,
         selectedTable,
-        actionDatabase,
         tablePermissions,
         connection,
         trusted,
         copy,
-        setCreateTableOpen,
+        createTableDatabase,
+        setCreateTableDatabase,
         insertableTable,
         setInsertRowTarget,
         deletableTable,
@@ -52,7 +51,6 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
         detailsOpen,
         partsTable,
         lineageOpen,
-        createTableOpen,
         setSearch,
         setCreatedTableTarget,
         insertRowTarget,
@@ -99,16 +97,6 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                 showCompactDetails && 'is-detail-mode',
             )}
         >
-            <ObjectExplorerActions
-                {...{
-                    selectedTable,
-                    tablePermissions,
-                    connection,
-                    trusted,
-                    copy,
-                    setCreateTableOpen,
-                }}
-            />
             {showCompactDetails && selected ? (
                 <div className="object-compact-details">
                     <button type="button" className="object-back-button" onClick={browseObjects}>
@@ -127,6 +115,8 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                         onOpenSqlDraft={onOpenSqlDraft}
                         onOpenReference={onOpenReference}
                         onOpenParts={setPartsTable}
+                        onSelect={selectObject}
+                        search={search}
                     />
                 </div>
             ) : (
@@ -212,6 +202,9 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                                         renderRelation,
                                         selectedId,
                                         selectObject,
+                                        connection,
+                                        trusted,
+                                        onCreateTable: setCreateTableDatabase,
                                     }}
                                 />
                             ) : (
@@ -257,6 +250,8 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                                     onOpenSqlDraft={onOpenSqlDraft}
                                     onOpenReference={onOpenReference}
                                     onOpenParts={setPartsTable}
+                                    onSelect={selectObject}
+                                    search={search}
                                 />
                             )}
                         </>
@@ -273,10 +268,9 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                     connection,
                     schema,
                     setLineageOpen,
-                    createTableOpen,
-                    actionDatabase,
+                    createTableDatabase,
                     tablePermissions,
-                    setCreateTableOpen,
+                    setCreateTableDatabase,
                     setSearch,
                     setCreatedTableTarget,
                     onRefreshSchema,

@@ -15,10 +15,9 @@ export function ObjectExplorerDialogs({
     connection,
     schema,
     setLineageOpen,
-    createTableOpen,
-    actionDatabase,
+    createTableDatabase,
     tablePermissions,
-    setCreateTableOpen,
+    setCreateTableDatabase,
     setSearch,
     setCreatedTableTarget,
     onRefreshSchema,
@@ -39,10 +38,9 @@ export function ObjectExplorerDialogs({
     | 'connection'
     | 'schema'
     | 'setLineageOpen'
-    | 'createTableOpen'
-    | 'actionDatabase'
+    | 'createTableDatabase'
     | 'tablePermissions'
-    | 'setCreateTableOpen'
+    | 'setCreateTableDatabase'
     | 'setSearch'
     | 'setCreatedTableTarget'
     | 'onRefreshSchema'
@@ -76,12 +74,12 @@ export function ObjectExplorerDialogs({
                     />
                 </OverlayPortal>
             )}
-            {trusted && tablePermissions.create !== false && createTableOpen && (
+            {trusted && createTableDatabase && (
                 <OverlayPortal>
                     <CreateTableDialog
-                        connection={{ ...connection, database: actionDatabase }}
+                        connection={{ ...connection, database: createTableDatabase }}
                         databases={schema?.databases ?? []}
-                        onClose={() => setCreateTableOpen(false)}
+                        onClose={() => setCreateTableDatabase(undefined)}
                         onCreated={target => {
                             setSearch('');
                             setCreatedTableTarget(target);
