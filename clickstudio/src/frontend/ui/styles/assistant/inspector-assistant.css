@@ -639,40 +639,6 @@
     color: var(--muted);
     font-size: 8px;
   }
-  .schema-metadata-warning {
-    display: flex;
-    align-items: flex-start;
-    gap: 7px;
-    padding: 8px 9px;
-    border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
-    border-radius: var(--radius-panel);
-    background: color-mix(in srgb, var(--accent) 5%, var(--panel));
-    color: var(--text-soft);
-    font-size: 9px;
-    line-height: 1.45;
-  }
-  .schema-metadata-warning-icon {
-    display: grid;
-    flex: none;
-    width: 14px;
-    height: 14px;
-    place-items: center;
-    margin-top: 1px;
-    border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line));
-    border-radius: 50%;
-    color: var(--accent);
-    font-size: 8px;
-    font-weight: 700;
-    line-height: 1;
-  }
-  .schema-metadata-warning-content {
-    display: grid;
-    min-width: 0;
-    gap: 4px;
-  }
-  .schema-metadata-warning-content p {
-    margin: 0;
-  }
   .history-card,
   .document-card {
     display: flex;

@@ -330,18 +330,6 @@ function ObjectExplorerBrowser({
                 </div>
             </div>
             {schemaError && <div className="callout callout-error">{schemaError}</div>}
-            {schema?.metadataWarnings?.length ? (
-                <div className="schema-metadata-warning" role="note">
-                    <span className="schema-metadata-warning-icon" aria-hidden="true">
-                        i
-                    </span>
-                    <div className="schema-metadata-warning-content">
-                        {schema.metadataWarnings.map(warning => (
-                            <p key={warning}>{warning}</p>
-                        ))}
-                    </div>
-                </div>
-            ) : null}
             {!trusted && (
                 <div className="inspector-empty">
                     <Icon name="lock" />
