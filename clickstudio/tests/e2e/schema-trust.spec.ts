@@ -488,6 +488,74 @@ test('Column details show the type once and keep comments readable', async ({ pa
 });
 
 for (const mode of ['Standard', 'Experimental']) {
+    test(`Column row separators span the ${mode} list without an empty scrollbar gutter`, async ({
+        page,
+    }, info) => {
+        const columns = [
+            { name: 'event_id', type: 'UInt64' },
+            { name: 'event_time', type: 'DateTime' },
+            { name: 'event_name', type: 'LowCardinality(String)' },
+            { name: 'event_count', type: 'UInt64' },
+        ].map(column => ({ ...schema.columns[0], ...column }));
+        await mockLiveWorkspace(
+            page,
+            route => route.fulfill({ json: { ...schema, columns } }),
+            mode,
+        );
+        if (mode === 'Standard')
+            await page
+                .locator('.icon-rail')
+                .getByRole('button', { name: 'Objects', exact: true })
+                .click();
+        await tableObject(page).click();
+
+        const details = page.getByRole('region', { name: 'Selected object', exact: true });
+        const viewport = details.locator('.object-column-list-viewport');
+        const search = details.getByRole('textbox', { name: /^Search columns/ });
+        for (const theme of ['Light', 'Dark']) {
+            await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+            for (const size of [
+                { width: 1600, height: 1000 },
+                { width: 1100, height: 1000 },
+            ]) {
+                await page.setViewportSize(size);
+                await expect
+                    .poll(() =>
+                        viewport.evaluate(element => {
+                            const row = element.querySelector('.object-column-list-row')!;
+                            const border = parseFloat(getComputedStyle(element).borderRightWidth);
+                            return Math.abs(
+                                element.getBoundingClientRect().right -
+                                    border -
+                                    row.getBoundingClientRect().right,
+                            );
+                        }),
+                    )
+                    .toBeLessThanOrEqual(1);
+                await expect
+                    .poll(() =>
+                        viewport.evaluate(element => element.scrollHeight - element.clientHeight),
+                    )
+                    .toBeLessThanOrEqual(1);
+            }
+            await expectReferenceStyles(page, info, `column-separators-${theme}`, viewport);
+        }
+        await search.fill('UInt64');
+        await expect(viewport.getByRole('listitem')).toHaveCount(2);
+        await expect(details.getByRole('button', { name: 'event_id', exact: true })).toBeVisible();
+        await expect(
+            details.getByRole('button', { name: 'event_count', exact: true }),
+        ).toBeVisible();
+        await expect(viewport.locator('.object-column-list-row').first()).toHaveCSS(
+            'border-bottom-width',
+            '1px',
+        );
+        await expect(viewport.locator('.object-column-list-row').last()).toHaveCSS(
+            'border-bottom-width',
+            '0px',
+        );
+    });
+
     for (const engine of ['MergeTree', 'View']) {
         test(`${engine} Overview metadata fills the ${mode} sidebar after resizing`, async ({
             page,

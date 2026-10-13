@@ -1346,7 +1346,6 @@
   border-radius: var(--radius-control);
   background: var(--panel);
   scrollbar-color: var(--scrollbar-thumb) transparent;
-  scrollbar-gutter: stable;
 }
 .object-explorer-section.is-detail-mode .object-column-list-viewport {
   max-height: none;
