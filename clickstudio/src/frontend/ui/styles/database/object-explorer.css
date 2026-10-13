@@ -801,11 +801,8 @@
   border-radius: var(--radius-control);
   background: transparent;
   color: var(--muted);
-  opacity: 0;
-  pointer-events: none;
   cursor: pointer;
   transition:
-    opacity 0.14s ease,
     border-color 0.14s ease,
     background 0.14s ease,
     color 0.14s ease,
@@ -818,10 +815,6 @@
 .object-tree-inline-action svg {
   width: 13px;
   height: 13px;
-}
-.object-tree-row:hover .object-tree-inline-action {
-  opacity: 1;
-  pointer-events: auto;
 }
 .object-tree-inline-action:hover {
   border-color: color-mix(in srgb, var(--tree-kind-color) 40%, var(--line-bright));
@@ -845,11 +838,8 @@
   border-radius: var(--radius-control);
   background: transparent;
   color: var(--muted);
-  opacity: 0;
-  pointer-events: none;
   cursor: pointer;
   transition:
-    opacity 0.14s ease,
     border-color 0.14s ease,
     background 0.14s ease,
     color 0.14s ease;
@@ -857,11 +847,6 @@
 .object-table-actions-trigger svg {
   width: 14px;
   height: 14px;
-}
-.object-tree-row:hover .object-table-actions-trigger,
-.object-table-actions-trigger[aria-expanded="true"] {
-  opacity: 1;
-  pointer-events: auto;
 }
 .object-table-actions-trigger:hover {
   border-color: color-mix(
@@ -1288,11 +1273,7 @@
   border-radius: var(--radius-control);
   background: transparent;
   color: var(--muted);
-  opacity: 0;
   cursor: pointer;
-}
-.object-column-list-row:hover .object-column-insert {
-  opacity: 1;
 }
 .object-column-insert:hover {
   border-color: color-mix(in srgb, var(--object-detail-accent) 40%, var(--line));
@@ -2497,9 +2478,6 @@
   }
   .object-details {
     max-height: 48%;
-  }
-  .object-tree-inline-action {
-    opacity: 1;
   }
 }
 @media (prefers-reduced-motion: reduce) {

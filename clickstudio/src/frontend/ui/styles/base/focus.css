@@ -135,7 +135,6 @@
   outline-offset: var(--focus-inset);
 }
 
-.object-tree-inline-action:focus-visible,
 .document-tab:focus-within > button {
   opacity: 1;
 }
