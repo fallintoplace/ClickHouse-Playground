@@ -16,64 +16,27 @@
   }
 
   .sql-function-details {
-    display: grid;
     min-width: 0;
     min-height: 0;
-    align-content: start;
-    overflow: auto;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-control);
-    background: var(--panel);
   }
 
-  .sql-function-details > header {
-    padding: 12px 16px;
+  .sql-function-panel {
+    min-width: 0;
+    min-height: 0;
   }
 
-  .sql-function-details h3 {
-    margin: 10px 0 0;
-    font-family: var(--font-mono);
-    font-size: 15px;
-    font-weight: 500;
-    line-height: 1.5;
-    overflow-wrap: anywhere;
-  }
-
-  .sql-function-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    color: var(--muted);
-    font-size: 10px;
-  }
-
-  .sql-function-badge {
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-    color: var(--text-soft);
-    font-size: 11px;
-    font-weight: 600;
-  }
-
-  .sql-function-badge svg {
-    color: var(--accent);
-  }
-
-  .sql-function-eyebrow {
-    color: var(--muted);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
+  .sql-function-panel[hidden] {
+    display: none;
   }
 
   .sql-function-tester {
     display: grid;
     min-width: 0;
+    gap: 10px;
   }
 
-  .sql-function-tester h4 {
+  .sql-function-tester h4,
+  .sql-function-definition h4 {
     margin: 0;
     color: var(--text-soft);
     font-size: 12px;
@@ -84,8 +47,10 @@
   .sql-function-arguments {
     display: grid;
     gap: 10px;
-    padding: 12px 16px;
-    border-top: 1px solid var(--line);
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    background: var(--panel);
   }
 
   .sql-function-argument {
@@ -156,41 +121,18 @@
   .sql-function-tester .sql-function-preview {
     min-width: 0;
     gap: 8px;
-    padding: 12px 16px;
-    border-width: 1px 0;
-    border-radius: 0;
-    background: var(--page-raised);
-  }
-
-  .sql-function-actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-
-  .sql-function-actions .sql-function-run {
-    margin-left: auto;
-    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-    background: color-mix(in srgb, var(--accent) 14%, var(--panel));
-    color: var(--accent);
-    font-size: 11px;
-    box-shadow: none;
-  }
-
-  .sql-function-actions .sql-function-run:hover:not(:disabled) {
-    border-color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 22%, var(--panel));
-    color: var(--accent);
-    transform: none;
+    padding: 10px;
+    background: var(--panel);
   }
 
   .sql-function-result {
     display: grid;
     min-width: 0;
     gap: 8px;
-    padding: 12px 16px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    background: var(--panel);
   }
 
   .sql-function-result-heading {
@@ -206,6 +148,13 @@
     font-family: var(--font-mono);
     font-size: 10px;
     overflow-wrap: anywhere;
+  }
+
+  .sql-function-result-meta {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
   }
 
   .sql-function-result-empty {
@@ -252,19 +201,17 @@
   }
 
   .sql-function-definition {
-    padding: 10px 16px;
-    border-top: 1px solid var(--line);
+    display: grid;
+    min-width: 0;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    background: var(--panel);
   }
 
-  .sql-function-definition summary {
-    color: var(--muted);
-    font-size: 11px;
-    cursor: pointer;
-  }
-
-  .sql-function-definition[open] summary {
-    margin-bottom: 10px;
-    color: var(--text-soft);
+  .sql-function-definition .toolbar-small {
+    justify-self: start;
   }
 
   .sql-function-error {

@@ -1,7 +1,7 @@
 import type { OpenSqlDraft } from '../../queries/execution/sql-draft-observer';
 import { terminal } from '../../queries/execution/status';
 import { useFunctionTestResult } from './useFunctionTestResult';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
     SQL_FUNCTION_TEMPLATES,
     testSqlFunctionQuery,
@@ -12,9 +12,59 @@ import type { Json } from '../../../shared/common/values';
 import { message } from '../../api/client';
 import { Button } from '../../ui/components/primitives';
 import { Icon } from '../../ui/components/icons';
+import { resultTypeGroup } from '../../queries/results/result-type-group';
 
 export type FunctionTestEvidence = { busy: boolean };
 type TestAttempt = { id: string; sql: string; submitting: boolean; runId?: string; error?: string };
+type FunctionDetailsTab = 'test' | 'definition';
+
+function FunctionDetailsTabs({
+    id,
+    active,
+    onChange,
+}: {
+    id: string;
+    active: FunctionDetailsTab;
+    onChange: (tab: FunctionDetailsTab) => void;
+}) {
+    const tabs = [
+        { key: 'test', label: 'Test' },
+        { key: 'definition', label: 'Definition' },
+    ] as const;
+    return (
+        <div className="object-detail-tabs" role="tablist" aria-label="Function details">
+            {tabs.map((tab, index) => (
+                <button
+                    key={tab.key}
+                    type="button"
+                    role="tab"
+                    id={`${id}-${tab.key}-tab`}
+                    aria-controls={`${id}-${tab.key}-panel`}
+                    aria-selected={active === tab.key}
+                    tabIndex={active === tab.key ? 0 : -1}
+                    onClick={() => onChange(tab.key)}
+                    onKeyDown={event => {
+                        let next: number;
+                        if (event.key === 'ArrowRight' || event.key === 'ArrowLeft')
+                            next = 1 - index;
+                        else if (event.key === 'Home') next = 0;
+                        else if (event.key === 'End') next = 1;
+                        else return;
+                        event.preventDefault();
+                        onChange(tabs[next]!.key);
+                        const buttons =
+                            event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>(
+                                '[role="tab"]',
+                            );
+                        buttons?.[next]?.focus();
+                    }}
+                >
+                    {tab.label}
+                </button>
+            ))}
+        </div>
+    );
+}
 
 function functionTestBusy(
     attempt: TestAttempt | undefined,
@@ -135,6 +185,8 @@ export function SqlFunctionDetails({
     );
     const [attempt, setAttempt] = useState<TestAttempt>();
     const [startError, setStartError] = useState('');
+    const [activeTab, setActiveTab] = useState<FunctionDetailsTab>('test');
+    const tabsId = useId();
     let sql = '',
         validation = '';
     try {
@@ -160,6 +212,7 @@ export function SqlFunctionDetails({
     };
     const test = () => {
         if (!sql || busy || !trusted) return;
+        setActiveTab('test');
         setStartError('');
         const id = crypto.randomUUID();
         setAttempt({ id, sql, submitting: true });
@@ -182,99 +235,136 @@ export function SqlFunctionDetails({
     };
 
     return (
-        <div className="sql-function-details">
-            <header>
-                <div className="sql-function-heading">
-                    <span className="sql-function-badge">
-                        <Icon name="function" />
-                        SQL UDF
-                    </span>
-                    <span>Server-wide</span>
+        <section
+            className="object-details sql-function-details"
+            data-kind="function"
+            aria-label="Selected function"
+        >
+            <header className="object-details-hero">
+                <div className="object-details-title">
+                    <span className="object-kind-badge">SQL UDF</span>
+                    <h3>{fn.name}</h3>
                 </div>
-                <h3>{fn.name}</h3>
+                <small>
+                    Server-wide · {fn.parameters.length}{' '}
+                    {fn.parameters.length === 1 ? 'argument' : 'arguments'}
+                </small>
             </header>
-            <section aria-label="Function tester" className="sql-function-tester">
-                <div className="sql-function-arguments">
-                    <h4>Arguments</h4>
-                    <FunctionInputs
-                        parameters={fn.parameters}
-                        arguments_={arguments_}
-                        onChange={changeArgument}
-                    />
-                    {!sql && (
-                        <p className="sql-function-error" role="status">
-                            {validation}
-                        </p>
-                    )}
+            <div className="object-relation-actions">
+                <div className="object-action-grid sql-function-actions">
+                    <Button
+                        variant="primary"
+                        className="toolbar-small object-preview-action"
+                        disabled={!sql || busy || !trusted}
+                        onClick={test}
+                    >
+                        <Icon name="play" />
+                        {busy && attempt ? 'Running…' : 'Run on ClickHouse'}
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        className="toolbar-small object-copy-name-action"
+                        disabled={!sql}
+                        onClick={() => onCopy(sql, `function-test:${sql}`)}
+                    >
+                        <Icon name="copy" />
+                        {copiedId === `function-test:${sql}` ? 'Copied' : 'Copy SQL'}
+                    </Button>
                 </div>
-                <div className="sql-function-preview">
-                    <h4>Test query</h4>
-                    <pre>{sql || 'Enter valid arguments to preview SQL.'}</pre>
-                    <div className="sql-function-actions">
-                        <Button
-                            variant="ghost"
-                            className="toolbar-small"
-                            disabled={!sql}
-                            onClick={() => onCopy(sql, `function-test:${sql}`)}
-                        >
-                            <Icon name="copy" />
-                            {copiedId === `function-test:${sql}` ? 'Copied' : 'Copy SQL'}
-                        </Button>
-                        <Button
-                            className="sql-function-run"
-                            disabled={!sql || busy || !trusted}
-                            onClick={test}
-                        >
-                            <Icon name="play" />
-                            {busy && attempt ? 'Running…' : 'Run on ClickHouse'}
-                        </Button>
-                    </div>
-                </div>
-                <section
-                    aria-label="Function result"
-                    className="sql-function-result"
-                    aria-live="polite"
-                >
-                    <div className="sql-function-result-heading">
-                        <h4>Result</h4>
-                        {!testError && output !== undefined && (
-                            <small>
-                                {result?.columns[0]?.type} · {Math.round(run?.elapsedMs ?? 0)} ms
-                            </small>
+            </div>
+            <FunctionDetailsTabs id={tabsId} active={activeTab} onChange={setActiveTab} />
+            <div
+                className="sql-function-panel"
+                role="tabpanel"
+                hidden={activeTab !== 'test'}
+                id={`${tabsId}-test-panel`}
+                aria-labelledby={`${tabsId}-test-tab`}
+            >
+                <section aria-label="Function tester" className="sql-function-tester">
+                    <div className="sql-function-arguments">
+                        <h4>Arguments</h4>
+                        <FunctionInputs
+                            parameters={fn.parameters}
+                            arguments_={arguments_}
+                            onChange={changeArgument}
+                        />
+                        {!sql && (
+                            <p className="sql-function-error" role="status">
+                                {validation}
+                            </p>
                         )}
                     </div>
-                    {testError && (
-                        <p className="sql-function-error" role="alert">
-                            {testError}
-                        </p>
-                    )}
-                    {!testError && output !== undefined && (
-                        <div className="sql-function-output">
-                            <FunctionOutput
-                                value={output}
-                                type={result?.columns[0]?.type}
-                                rawJson={result?.rows[0]?.[1]}
-                            />
+                    <section
+                        aria-label="Function result"
+                        className="sql-function-result"
+                        aria-live="polite"
+                    >
+                        <div className="sql-function-result-heading">
+                            <h4>Result</h4>
+                            {!testError && output !== undefined && (
+                                <div className="sql-function-result-meta">
+                                    {result?.columns[0]?.type && (
+                                        <code
+                                            className="result-type-badge"
+                                            title={result.columns[0].type}
+                                            data-type-group={resultTypeGroup(
+                                                result.columns[0].type,
+                                            )}
+                                        >
+                                            {result.columns[0].type}
+                                        </code>
+                                    )}
+                                    <small>{Math.round(run?.elapsedMs ?? 0)} ms</small>
+                                </div>
+                            )}
                         </div>
-                    )}
-                    {!testError && output === undefined && (
-                        <p className="sql-function-result-empty">{resultHint}</p>
-                    )}
+                        {testError && (
+                            <p className="sql-function-error" role="alert">
+                                {testError}
+                            </p>
+                        )}
+                        {!testError && output !== undefined && (
+                            <div className="sql-function-output">
+                                <FunctionOutput
+                                    value={output}
+                                    type={result?.columns[0]?.type}
+                                    rawJson={result?.rows[0]?.[1]}
+                                />
+                            </div>
+                        )}
+                        {!testError && output === undefined && (
+                            <p className="sql-function-result-empty">{resultHint}</p>
+                        )}
+                    </section>
+                    <div className="sql-function-preview">
+                        <h4>Test query</h4>
+                        <pre>{sql || 'Enter valid arguments to preview SQL.'}</pre>
+                    </div>
                 </section>
-            </section>
-            <details className="sql-function-definition">
-                <summary>Function definition</summary>
-                <pre>{fn.createQuery}</pre>
-                <Button
-                    variant="ghost"
-                    className="toolbar-small"
-                    onClick={() => onCopy(fn.createQuery, `function-definition:${fn.createQuery}`)}
-                >
-                    {copiedId === `function-definition:${fn.createQuery}`
-                        ? 'Copied'
-                        : 'Copy definition'}
-                </Button>
-            </details>
-        </div>
+            </div>
+            <div
+                className="sql-function-panel"
+                role="tabpanel"
+                hidden={activeTab !== 'definition'}
+                id={`${tabsId}-definition-panel`}
+                aria-labelledby={`${tabsId}-definition-tab`}
+            >
+                <div className="sql-function-definition">
+                    <h4>Function definition</h4>
+                    <pre>{fn.createQuery}</pre>
+                    <Button
+                        variant="secondary"
+                        className="toolbar-small"
+                        onClick={() =>
+                            onCopy(fn.createQuery, `function-definition:${fn.createQuery}`)
+                        }
+                    >
+                        {copiedId === `function-definition:${fn.createQuery}`
+                            ? 'Copied'
+                            : 'Copy definition'}
+                    </Button>
+                </div>
+            </div>
+        </section>
     );
 }

@@ -986,6 +986,9 @@
 .object-details[data-kind="skip-index"] {
   --object-detail-accent: var(--explorer-index);
 }
+.object-details[data-kind="function"] {
+  --object-detail-accent: var(--violet);
+}
 .object-details-close {
   position: absolute;
   z-index: 1;
@@ -1074,9 +1077,10 @@
   letter-spacing: -0.015em;
   line-height: 1.2;
 }
-.object-details-title > strong {
+.object-details-title > :is(strong, h3) {
   min-width: 0;
   flex: 1;
+  margin: 0;
   overflow-wrap: anywhere;
   color: var(--text);
   font-family: var(--font-sans);
