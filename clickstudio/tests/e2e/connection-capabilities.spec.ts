@@ -77,6 +77,7 @@ test('Connection review tests capabilities before trust and can retest after res
 
     await page.goto('/experimental');
     await expect(page.locator('.connection-quick-status')).toHaveText('Test needed');
+    await expect(page.locator('.editor-control-rail')).toHaveCount(0);
     await expect(page.getByTestId('server-version')).toHaveText('ClickHouse version unavailable');
     await page.locator('.connection-trigger').click();
     const menu = page.getByRole('dialog', { name: 'Connection details' });
@@ -84,17 +85,24 @@ test('Connection review tests capabilities before trust and can retest after res
     await expect.poll(() => tests).toBe(1);
     await expect(page.locator('.connection-quick-status')).toHaveText('Review needed');
     await expect(page.getByTestId('server-version')).toHaveText('ClickHouse 24.6');
+    await expect(page.getByTestId('run-action-explain')).toBeVisible();
+    await expect(page.getByTestId('run-action-explain-plan')).toBeVisible();
+    await expect(page.getByTestId('run-action-explain-pipeline')).toBeVisible();
+    await expect(page.getByTestId('run-action-explain-analyze')).toHaveCount(0);
+    await expect(page.getByTestId('run-action-explain')).toBeDisabled();
     await expect(menu.getByRole('button', { name: 'Trust connection', exact: true })).toBeVisible();
     expect(trusts).toBe(0);
 
     page.once('dialog', dialog => void dialog.accept());
     await menu.getByRole('button', { name: 'Trust connection', exact: true }).click();
     await expect(page.locator('.connection-quick-status')).toHaveText('Read-only');
+    await expect(page.getByTestId('run-action-explain')).toBeEnabled();
     expect(trusts).toBe(1);
 
     manifest = undefined;
     await page.reload();
     await expect(page.locator('.connection-quick-status')).toHaveText('Retest needed');
+    await expect(page.locator('.editor-control-rail')).toHaveCount(0);
     await expect(page.getByTestId('server-version')).toHaveText('ClickHouse version unavailable');
     await page.locator('.connection-trigger').click();
     const restartedMenu = page.getByRole('dialog', { name: 'Connection details' });

@@ -23,7 +23,6 @@ import {
     resultsViewTitle,
     resultsViews,
     safeSelectedStatement,
-    safeStatementCount,
     type FailedQueryError,
 } from '../workspace-helpers';
 
@@ -237,7 +236,6 @@ export function useWorkspaceViewState({
         pending: !documentsLoaded,
         readError: documentsReadError,
     });
-    const statementCount = safeStatementCount(active.sql);
     const {
         failureError,
         failureSql,
@@ -333,7 +331,6 @@ export function useWorkspaceViewState({
         sortedHistory,
         savedDocument,
         saveStatus,
-        statementCount,
         failureError,
         failureSql,
         failureRange,

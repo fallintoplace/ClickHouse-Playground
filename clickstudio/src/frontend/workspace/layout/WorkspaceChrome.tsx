@@ -50,7 +50,9 @@ export function RunActionGroup({ actions, copy }: { actions: RunAction[]; copy: 
     const explainGroupLabel = explainActions[0]?.label.split(/\s+/)[0] ?? '';
     const renderAction = (action: RunAction) => {
         const isExplainAction = action.id === 'explain' || action.id.startsWith('explain-');
-        const label = isExplainAction ? action.label.replace(/^[^\s]+\s+/, '') : action.label;
+        const label = isExplainAction
+            ? action.label.replace(/^[^\s]+\s+/, '').toLowerCase()
+            : action.label;
         if (!action.disabled || !action.title)
             return (
                 <Button
@@ -74,7 +76,7 @@ export function RunActionGroup({ actions, copy }: { actions: RunAction[]; copy: 
             {explainActions.length > 0 && (
                 <div className="run-explain-actions" role="group" aria-label={explainGroupLabel}>
                     <span className="run-explain-label" aria-hidden="true">
-                        {explainGroupLabel}
+                        {explainGroupLabel.toLowerCase()}
                     </span>
                     {explainActions.map(renderAction)}
                 </div>

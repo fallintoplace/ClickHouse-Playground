@@ -116,7 +116,7 @@ export function WorkspaceQueryPanel({
             revealPanelTemporarily('query', active.id);
         openedReview.current = proposalId;
     }, [proposalId, active.id, revealPanelTemporarily]);
-    const { statementCount, editorErrorContext, editorErrorRange } = viewState;
+    const { editorErrorContext, editorErrorRange } = viewState;
     const selectedSql =
         active.to > active.from ? active.sql.slice(active.from, active.to) : undefined;
     const queryNameAtFocus = useRef(active.name);
@@ -334,7 +334,6 @@ export function WorkspaceQueryPanel({
                             trusted={trusted}
                             busy={busy}
                             unsupportedParameters={unsupportedParameters}
-                            statementCount={statementCount}
                         />
                     )}
                 </div>
@@ -351,7 +350,6 @@ function ExpertQueryControlRail({
     trusted,
     busy,
     unsupportedParameters,
-    statementCount,
 }: {
     copy: Copy;
     state: WorkspaceQueryPanelState;
@@ -360,91 +358,54 @@ function ExpertQueryControlRail({
     trusted: boolean;
     busy: BusyAction;
     unsupportedParameters: boolean;
-    statementCount: number | undefined;
 }) {
+    const explainOptions = [
+        {
+            id: 'explain',
+            label: copy.common.explain,
+            kind: 'explain',
+            capability: connection.manifest?.explain,
+        },
+        {
+            id: 'explain-plan',
+            label: copy.common.explainPlan,
+            kind: 'plan',
+            capability: connection.manifest?.explainPlan ?? connection.manifest?.explain,
+        },
+        {
+            id: 'explain-pipeline',
+            label: copy.common.explainPipeline,
+            kind: 'pipeline',
+            capability: connection.manifest?.explainPipeline ?? connection.manifest?.pipeline,
+        },
+        {
+            id: 'explain-analyze',
+            label: copy.common.explainAnalyze,
+            kind: 'analyze',
+            capability: connection.manifest?.explainAnalyze,
+        },
+    ] satisfies {
+        id: WorkspaceRunCapabilityAction;
+        label: string;
+        kind: RunKind;
+        capability: WorkspaceRunCapability | undefined;
+    }[];
+    const availableOptions = explainOptions.filter(option => option.capability?.available);
+    if (!availableOptions.length) return null;
+    const disabled =
+        Boolean(state.editorProposal) || !trusted || Boolean(busy) || unsupportedParameters;
     return (
         <aside className="editor-control-rail" aria-label={copy.common.runActions}>
-            <div className="editor-rail-status">
-                <div className="editor-mode-label">
-                    <span className="editor-language-dot" />
-                    {copy.common.clickhouseSql}
-                </div>
-                <span>
-                    {statementCount === undefined
-                        ? copy.common.incompleteSql
-                        : (statementCount === 1
-                              ? copy.common.oneStatement
-                              : copy.common.manyStatements
-                          ).replace('{count}', String(statementCount))}
-                </span>
-            </div>
             <div className="editor-actions">
                 <RunActionGroup
                     copy={copy.common}
-                    actions={[
-                        {
-                            id: 'explain',
-                            label: copy.common.explain,
-                            disabled:
-                                Boolean(state.editorProposal) ||
-                                !trusted ||
-                                Boolean(busy) ||
-                                unsupportedParameters ||
-                                !connection.manifest?.explain.available,
-                            title: actions.runActionTitle(connection.manifest?.explain, 'explain'),
-                            onSelect: () => void actions.onRun('explain'),
-                        },
-                        {
-                            id: 'explain-plan',
-                            label: copy.common.explainPlan,
-                            disabled:
-                                Boolean(state.editorProposal) ||
-                                !trusted ||
-                                Boolean(busy) ||
-                                unsupportedParameters ||
-                                !(connection.manifest?.explainPlan ?? connection.manifest?.explain)
-                                    ?.available,
-                            title: actions.runActionTitle(
-                                connection.manifest?.explainPlan ?? connection.manifest?.explain,
-                                'explain-plan',
-                            ),
-                            onSelect: () => void actions.onRun('plan'),
-                        },
-                        {
-                            id: 'explain-pipeline',
-                            label: copy.common.explainPipeline,
-                            disabled:
-                                Boolean(state.editorProposal) ||
-                                !trusted ||
-                                Boolean(busy) ||
-                                unsupportedParameters ||
-                                !(
-                                    connection.manifest?.explainPipeline ??
-                                    connection.manifest?.pipeline
-                                )?.available,
-                            title: actions.runActionTitle(
-                                connection.manifest?.explainPipeline ??
-                                    connection.manifest?.pipeline,
-                                'explain-pipeline',
-                            ),
-                            onSelect: () => void actions.onRun('pipeline'),
-                        },
-                        {
-                            id: 'explain-analyze',
-                            label: copy.common.explainAnalyze,
-                            disabled:
-                                Boolean(state.editorProposal) ||
-                                !trusted ||
-                                Boolean(busy) ||
-                                unsupportedParameters ||
-                                !connection.manifest?.explainAnalyze?.available,
-                            title: actions.runActionTitle(
-                                connection.manifest?.explainAnalyze,
-                                'explain-analyze',
-                            ),
-                            onSelect: () => void actions.onRun('analyze'),
-                        },
-                    ]}
+                    actions={availableOptions.map(option => ({
+                        id: option.id,
+                        label: option.label,
+                        disabled,
+                        title: actions.runActionTitle(option.capability, option.id),
+                        onSelect: () => void actions.onRun(option.kind),
+                    }))}
                 />
             </div>
         </aside>
