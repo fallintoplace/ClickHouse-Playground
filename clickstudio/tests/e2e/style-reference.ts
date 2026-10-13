@@ -9,7 +9,7 @@ const referenceCss = gunzipSync(
 ).toString();
 
 async function visibleStyles(page: Page, target: Page | Locator) {
-    const scope = target === page ? page.locator('body') : (target as Locator);
+    const scope = 'mainFrame' in target ? page.locator('body') : target;
     return scope.evaluate(root => {
         const properties = [
             'display',
