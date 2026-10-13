@@ -623,18 +623,6 @@
   padding: 0;
   border: 0;
 }
-.schema-heading.object-heading > span {
-  margin-left: auto;
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 8px;
-  font-weight: 760;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-.schema-heading.object-heading.is-standard-object-heading > span {
-  margin-left: 0;
-}
 .object-heading .toolbar-small {
   color: var(--explorer-signal);
 }

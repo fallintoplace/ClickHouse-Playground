@@ -347,7 +347,6 @@ export const copy = {
         referenceSystemTable: 'System table reference',
         clearSearch: 'Clear search',
         objectSearch: 'Search objects, columns, engines, and indexes…',
-        objectCount: '{count} OBJECTS',
         noObjectsMatch: 'No objects match this search.',
         noObjectsMatchHint: 'Try a different name, type, engine, index, or column.',
         noObjectsAvailable: 'No objects found.',

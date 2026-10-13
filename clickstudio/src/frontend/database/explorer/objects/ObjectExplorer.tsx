@@ -298,12 +298,7 @@ function ObjectExplorerBrowser({
                     includeFunctions={Boolean(functionsSlot)}
                     {...{ search, changeSearch, copy }}
                 />
-                <div
-                    className={cx(
-                        'schema-heading object-heading',
-                        !expert && 'is-standard-object-heading',
-                    )}
-                >
+                <div className="schema-heading object-heading">
                     {expert && (
                         <Button
                             variant="ghost"
@@ -314,15 +309,6 @@ function ObjectExplorerBrowser({
                             View dependencies
                         </Button>
                     )}
-                    <span>
-                        {copy.objectCount.replace(
-                            '{count}',
-                            (model.query
-                                ? model.visibleObjects
-                                : model.totalObjects
-                            ).toLocaleString(),
-                        )}
-                    </span>
                     <Button
                         variant="ghost"
                         className={cx(
