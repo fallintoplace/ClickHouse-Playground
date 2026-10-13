@@ -862,9 +862,6 @@ test('ClickHouse Cloud insert row leaves defaulted columns out and needs no type
         .click();
     await page.getByRole('button', { name: 'events MergeTree', exact: true }).click();
     const details = page.getByRole('region', { name: 'Selected object', exact: true });
-    await expect(
-        details.getByRole('button', { name: 'Actions for default.events', exact: true }),
-    ).toHaveCount(0);
     await details.getByRole('button', { name: 'Insert row', exact: true }).click();
 
     const dialog = page.getByRole('dialog', { name: 'Insert row', exact: true });

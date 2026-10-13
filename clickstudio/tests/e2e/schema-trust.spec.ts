@@ -184,13 +184,26 @@ test('New table dialog removes secondary helper copy and keeps the required-name
     );
 });
 
-test('object actions stay visible at rest without column insert buttons', async ({ page }) => {
+test('table details keep write actions without row ellipses or column insert buttons', async ({
+    page,
+}) => {
     let permissionRequests = 0;
     await page.route('**/api/connections/live/table-permissions', async route => {
         permissionRequests++;
         await route.fulfill({ json: { create: true, insert: true, drop: true } });
     });
-    await mockLiveWorkspace(page, route => route.fulfill({ json: schema }));
+    await mockLiveWorkspace(page, route =>
+        route.fulfill({
+            json: {
+                ...schema,
+                tables: [
+                    ...schema.tables,
+                    { ...schema.tables[0], name: 'other_events' },
+                    { ...schema.tables[0], name: 'more_events' },
+                ],
+            },
+        }),
+    );
 
     const createTable = page.getByRole('button', { name: 'New table in analytics', exact: true });
     await expect.poll(() => permissionRequests).toBeGreaterThan(0);
@@ -202,22 +215,17 @@ test('object actions stay visible at rest without column insert buttons', async 
     await expect.poll(() => permissionRequests).toBeGreaterThan(1);
     await expect(page.locator('.object-column-insert')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Insert name', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Insert row', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Delete table', exact: true })).toBeVisible();
     await page.mouse.move(0, 0);
 
     await page.getByRole('button', { name: '‹ Objects', exact: true }).click();
-    const tableActions = page.getByRole('button', {
-        name: 'Actions for analytics.events',
-        exact: true,
-    });
-    await expect(tableActions).toBeVisible();
-    await page.mouse.move(0, 0);
-    await expect(tableActions).toHaveCSS('opacity', '1');
+    await expect(page.locator('.object-tree-row.is-object.is-table')).toHaveCount(3);
+    await expect(page.locator('.object-table-actions-trigger')).toHaveCount(0);
 });
 
 for (const mode of ['beginner', 'expert']) {
-    test(`${mode} keeps denied table writes outside its available object actions`, async ({
-        page,
-    }) => {
+    test(`${mode} hides denied table write actions in details`, async ({ page }) => {
         let permissionRequests = 0;
         await page.route('**/api/connections/live/table-permissions', async route => {
             permissionRequests++;
@@ -239,9 +247,6 @@ for (const mode of ['beginner', 'expert']) {
         ).toHaveCount(0);
         await tableObject(page).click();
         await expect.poll(() => permissionRequests).toBeGreaterThan(1);
-        await expect(
-            page.getByRole('button', { name: 'Actions for analytics.events', exact: true }),
-        ).toHaveCount(0);
         await expect(page.getByRole('button', { name: 'Insert row', exact: true })).toHaveCount(0);
         await expect(page.getByRole('button', { name: 'Delete table', exact: true })).toHaveCount(
             0,
@@ -268,7 +273,7 @@ test('Insert-only permissions hide create and drop while preserving the insert d
     await expect(page.getByRole('dialog', { name: 'Insert row', exact: true })).toBeVisible();
 });
 
-test('Unavailable permission checks hide create while retaining selected-table actions', async ({
+test('Unavailable permission checks hide create while retaining selected-table details actions', async ({
     page,
 }) => {
     let permissionRequests = 0;
@@ -309,9 +314,6 @@ test('A late denial closes an open write dialog and cannot reopen it', async ({ 
     await expect(dialog).toHaveCount(0);
     for (const name of ['Insert row', 'Delete table'])
         await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
-    await expect(
-        page.getByRole('button', { name: 'Actions for analytics.events', exact: true }),
-    ).toHaveCount(0);
 });
 
 test('A late denial for a previous table does not hide the current table actions', async ({
@@ -914,9 +916,6 @@ for (const mode of ['beginner', 'expert']) {
             }
             await tableObject(page).click();
             const details = page.getByRole('region', { name: 'Selected object', exact: true });
-            await expect(
-                details.getByRole('button', { name: 'Actions for analytics.events', exact: true }),
-            ).toHaveCount(0);
             await expect(
                 details.getByRole('button', { name: 'Preview rows', exact: true }),
             ).toBeVisible();

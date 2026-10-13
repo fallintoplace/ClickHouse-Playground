@@ -8,24 +8,6 @@
   pointer-events: auto;
 }
 
-.object-tree-row:focus-within .object-table-actions-trigger {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.object-table-actions-menu > button:focus-visible {
-  border-color: var(--line-bright);
-  background: var(--control-hover);
-  color: var(--text);
-  outline: none;
-}
-
-.object-table-actions-menu > button.is-danger:focus-visible {
-  border-color: color-mix(in srgb, var(--red) 32%, var(--line));
-  background: color-mix(in srgb, var(--red) 8%, var(--panel));
-  color: var(--red);
-}
-
 .object-detail-tabs button:focus-visible {
   outline: 2px solid var(--object-detail-accent);
   outline-offset: -2px;
