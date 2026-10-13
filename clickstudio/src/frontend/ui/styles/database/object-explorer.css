@@ -1122,7 +1122,7 @@
 .object-column-list-row {
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 0.72fr) 25px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.72fr);
   align-items: center;
   gap: 7px;
   padding: 0 6px 0 9px;
@@ -1147,10 +1147,6 @@
   font-weight: 550;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.object-column-list-row-spacer {
-  width: 24px;
-  height: 24px;
 }
 .object-column-name button {
   min-width: 0;

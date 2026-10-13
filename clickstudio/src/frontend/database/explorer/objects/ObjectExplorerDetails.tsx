@@ -542,10 +542,6 @@ function TableColumnsPanel({
                                         {column.defaultKind && <small>DEFAULT</small>}
                                     </span>
                                     <code title={column.type}>{column.type}</code>
-                                    <span
-                                        className="object-column-list-row-spacer"
-                                        aria-hidden="true"
-                                    />
                                 </div>
                             ))}
                         </div>
