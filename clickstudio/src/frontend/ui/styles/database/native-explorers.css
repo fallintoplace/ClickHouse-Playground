@@ -662,10 +662,6 @@
   stroke: var(--lineage-highlight);
   stroke-width: 2;
 }
-.native-lineage-dialog .native-lineage-node:focus-visible rect {
-  stroke: var(--focus-color);
-  stroke-width: 2.5;
-}
 .native-lineage-dialog .native-lineage-node.beginner-node.input-table .native-node-kind {
   fill: var(--lineage-highlight);
 }

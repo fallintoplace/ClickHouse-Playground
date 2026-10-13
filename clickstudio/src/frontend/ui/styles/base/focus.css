@@ -170,6 +170,7 @@
 }
 
 .native-lineage-node:focus-visible rect,
+.native-lineage-dialog .native-lineage-node:focus-visible rect,
 .pipeline-graph-node:focus-visible .pipeline-node-face,
 .ast-graph-node:focus-visible rect,
 .workload-scatter-point:focus-visible,

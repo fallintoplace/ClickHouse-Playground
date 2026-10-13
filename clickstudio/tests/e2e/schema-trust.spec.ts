@@ -214,7 +214,8 @@ test('table details keep write actions without row ellipses or column insert but
     await tableObject(page).click();
     await expect.poll(() => permissionRequests).toBeGreaterThan(1);
     await expect(page.locator('.object-column-insert')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Insert name', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Insert name', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Copy name', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Insert row', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Delete table', exact: true })).toBeVisible();
     await page.mouse.move(0, 0);
@@ -416,10 +417,17 @@ test('Object explorer shows ClickHouse metadata, searchable children, and previe
     const originalTabName = await sqlTabs.getByRole('tab').first().getAttribute('aria-label');
     await page.locator('button[aria-controls="sql-editor-content"]').click();
     await expect(page.locator('#sql-editor-content')).toBeHidden();
+    const previewRequest = page.waitForRequest(
+        request => request.method() === 'POST' && new URL(request.url()).pathname === '/api/runs',
+    );
     await page.getByRole('button', { name: 'Preview rows', exact: true }).click();
-    await expect(page.locator('#sql-editor-content')).toBeVisible();
-    await expect(page.locator('.cm-content')).toContainText('SELECT *');
-    await expect(page.locator('.cm-content')).toContainText('FROM `analytics`.`events`');
+    const previewSql = jsonRecord((await previewRequest).postDataJSON()).sql;
+    expect(previewSql).toContain('SELECT *');
+    expect(previewSql).toContain('FROM `analytics`.`events`');
+    await expect(
+        sqlTabs.getByRole('tab', { name: 'Preview events.sql', exact: true }),
+    ).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('#sql-editor-content')).toBeHidden();
     await sqlTabs.getByRole('tab', { name: originalTabName!, exact: true }).click();
     await expect(page.locator('#sql-editor-content')).toBeHidden();
 

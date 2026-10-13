@@ -793,6 +793,7 @@
 }
 .object-tree-children {
   gap: 2px;
+  min-width: 0;
 }
 .object-tree-row,
 .reference-result {
@@ -1078,9 +1079,6 @@
   background: color-mix(in srgb, var(--tree-kind-color) 10%, var(--panel-hover));
   color: var(--tree-kind-color);
   box-shadow: none;
-}
-.object-tree-children {
-  min-width: 0;
 }
 .object-empty-search {
   display: grid;

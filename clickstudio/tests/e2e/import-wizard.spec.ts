@@ -1,5 +1,6 @@
 import { setWorkspaceMode, trust } from './helpers.js';
 import { test, expect } from '@playwright/test';
+import { open, unlink } from 'node:fs/promises';
 import { jsonRecord } from '../helpers/type-guards.js';
 import {
     IMPORT_FILE_SIZE_LABEL,
@@ -401,7 +402,7 @@ test('File import review lists skipped columns and success can start another imp
     expect(previewRequests).toBe(2);
 });
 
-test('File import rejects oversized files in the browser before upload', async ({ page }) => {
+test('File import rejects oversized files in the browser before upload', async ({ page }, info) => {
     await mockWritableWorkspace(page);
     let previewRequests = 0;
     await page.route('**/api/imports/preview', route => {
@@ -411,16 +412,23 @@ test('File import rejects oversized files in the browser before upload', async (
 
     await page.getByRole('button', { name: 'Import', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Import data', exact: true });
-    await dialog.getByLabel('Choose a CSV, JSON, or NDJSON file').setInputFiles({
-        name: 'large.csv',
-        mimeType: 'text/csv',
-        buffer: Buffer.alloc(MAX_IMPORT_FILE_BYTES + 1),
-    });
-    await expect(dialog.getByRole('alert')).toContainText(
-        `larger than the ${IMPORT_FILE_SIZE_LABEL} import limit`,
-    );
-    await expect(dialog.getByRole('button', { name: 'Read file and continue' })).toBeDisabled();
-    expect(previewRequests).toBe(0);
+    const path = info.outputPath('large.csv');
+    const file = await open(path, 'w');
+    try {
+        await file.truncate(MAX_IMPORT_FILE_BYTES + 1);
+    } finally {
+        await file.close();
+    }
+    try {
+        await dialog.getByLabel('Choose a CSV, JSON, or NDJSON file').setInputFiles(path);
+        await expect(dialog.getByRole('alert')).toContainText(
+            `larger than the ${IMPORT_FILE_SIZE_LABEL} import limit`,
+        );
+        await expect(dialog.getByRole('button', { name: 'Read file and continue' })).toBeDisabled();
+        expect(previewRequests).toBe(0);
+    } finally {
+        await unlink(path);
+    }
 });
 
 test('File import rejects unsupported file types before upload', async ({ page }) => {

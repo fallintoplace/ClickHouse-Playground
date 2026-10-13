@@ -88,11 +88,11 @@ for (const mode of ['Standard', 'Experimental']) {
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
             await expect(page.getByTestId('new-sql')).toHaveCSS(
                 'background-color',
-                theme === 'Light' ? 'rgb(224, 182, 142)' : 'rgb(250, 255, 105)',
+                theme === 'Light' ? 'rgb(255, 255, 255)' : 'rgb(20, 35, 45)',
             );
             await expect(page.getByTestId('new-sql')).toHaveCSS(
                 'color',
-                theme === 'Light' ? 'rgb(45, 25, 14)' : 'rgb(21, 25, 26)',
+                theme === 'Light' ? 'rgb(98, 55, 25)' : 'rgb(250, 255, 105)',
             );
         }
         const sql = 'SELECT 42 AS keep_my_draft';

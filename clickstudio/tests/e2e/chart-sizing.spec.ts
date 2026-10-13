@@ -429,12 +429,24 @@ for (const xType of ['DateTime', 'Float64']) {
             await page.getByRole('button', { name: 'Close inspector', exact: true }).click();
             await page.setViewportSize({ width: 1778, height: 824 });
             await expectPlotFits(results);
-            const marks = results.locator(kind === 'bar' ? '.chart-bar' : '.chart-point');
-            const first = await marks.first().boundingBox();
-            const last = await marks.last().boundingBox();
-            const canvas = (await results.locator('.chart-canvas').boundingBox())!;
-            expect(first!.x).toBeGreaterThanOrEqual(canvas.x);
-            expect(last!.x + last!.width).toBeLessThanOrEqual(canvas.x + canvas.width);
+            await expect
+                .poll(() =>
+                    results.locator('.chart-canvas').evaluate((element, kind) => {
+                        const marks = element.querySelectorAll(
+                            kind === 'bar' ? '.chart-bar' : '.chart-point',
+                        );
+                        const first = marks[0]?.getBoundingClientRect();
+                        const last = marks[marks.length - 1]?.getBoundingClientRect();
+                        const canvas = element.getBoundingClientRect();
+                        return (
+                            first !== undefined &&
+                            last !== undefined &&
+                            first.left >= canvas.left &&
+                            last.right <= canvas.right
+                        );
+                    }, kind),
+                )
+                .toBe(true);
             await results.locator('.chart-canvas').screenshot({
                 path: info.outputPath(`${xType}-${kind}.png`),
             });
