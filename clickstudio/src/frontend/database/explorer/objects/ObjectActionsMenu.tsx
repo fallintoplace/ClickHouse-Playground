@@ -3,29 +3,36 @@ import { Icon } from '../../../ui/components/icons';
 import type { ObjectExplorerProps } from './tree/object-explorer-types';
 import type { SchemaTable } from '../../../../shared/database/schema/types';
 
-export function ObjectTableActionsMenu({
-    table,
-    canInsertRow,
-    canDeleteTable,
-    trusted,
-    copy,
-    onInsertRow,
-    onDeleteTable,
-}: {
-    table: SchemaTable;
-    canInsertRow: boolean;
-    canDeleteTable: boolean;
+type ObjectActionsMenuProps = {
     trusted: boolean;
     copy: ObjectExplorerProps['copy'];
-    onInsertRow: () => void;
-    onDeleteTable: () => void;
-}) {
+} & (
+    | {
+          kind: 'database';
+          database: string;
+          onCreateTable: () => void;
+      }
+    | {
+          kind: 'table';
+          table: SchemaTable;
+          canInsertRow: boolean;
+          canDeleteTable: boolean;
+          onInsertRow: () => void;
+          onDeleteTable: () => void;
+      }
+);
+
+export function ObjectActionsMenu(props: ObjectActionsMenuProps) {
     const id = useId();
     const trigger = useRef<HTMLButtonElement>(null);
     const menu = useRef<HTMLDivElement>(null);
     const restoreFocusOnClose = useRef(false);
     const [open, setOpen] = useState(false);
-    const qualifiedName = `${table.database}.${table.name}`;
+    const { trusted, copy } = props;
+    const qualifiedName =
+        props.kind === 'database'
+            ? props.database
+            : `${props.table.database}.${props.table.name}`;
 
     const close = (restoreFocus: boolean) => {
         restoreFocusOnClose.current = restoreFocus;
@@ -123,11 +130,11 @@ export function ObjectTableActionsMenu({
     };
 
     return (
-        <div className="object-table-actions">
+        <div className="object-actions">
             <button
                 ref={trigger}
                 type="button"
-                className="object-table-actions-trigger"
+                className="object-actions-trigger"
                 aria-label={`Actions for ${qualifiedName}`}
                 aria-haspopup="menu"
                 aria-expanded={open}
@@ -149,7 +156,7 @@ export function ObjectTableActionsMenu({
             <div
                 ref={menu}
                 id={id}
-                className="object-table-actions-menu"
+                className="object-actions-menu"
                 popover="auto"
                 role="menu"
                 aria-label={`Actions for ${qualifiedName}`}
@@ -173,20 +180,33 @@ export function ObjectTableActionsMenu({
                     if (!isOpen) restoreFocusOnClose.current = false;
                 }}
             >
-                {canInsertRow && (
+                {props.kind === 'database' && (
                     <button
                         type="button"
                         role="menuitem"
                         tabIndex={-1}
                         disabled={!trusted}
                         title={!trusted ? copy.runActionTrustRequired : undefined}
-                        onClick={() => runAction(onInsertRow)}
+                        onClick={() => runAction(props.onCreateTable)}
+                    >
+                        <Icon name="plus" />
+                        {copy.newTable}
+                    </button>
+                )}
+                {props.kind === 'table' && props.canInsertRow && (
+                    <button
+                        type="button"
+                        role="menuitem"
+                        tabIndex={-1}
+                        disabled={!trusted}
+                        title={!trusted ? copy.runActionTrustRequired : undefined}
+                        onClick={() => runAction(props.onInsertRow)}
                     >
                         <Icon name="plus" />
                         {copy.insertRow}
                     </button>
                 )}
-                {canDeleteTable && (
+                {props.kind === 'table' && props.canDeleteTable && (
                     <button
                         type="button"
                         role="menuitem"
@@ -194,7 +214,7 @@ export function ObjectTableActionsMenu({
                         className="is-danger"
                         disabled={!trusted}
                         title={!trusted ? copy.runActionTrustRequired : undefined}
-                        onClick={() => runAction(onDeleteTable)}
+                        onClick={() => runAction(props.onDeleteTable)}
                     >
                         <Icon name="trash" />
                         {copy.deleteTable}

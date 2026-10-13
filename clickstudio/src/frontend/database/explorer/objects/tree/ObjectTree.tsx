@@ -1,7 +1,5 @@
-import { type ReactNode, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { SchemaDictionary } from '../../../../../shared/database/schema/types';
-import { useTablePermissions } from '../../../tables/useTablePermissions';
-import { Icon } from '../../../../ui/components/icons';
 import {
     explorerCategoryId,
     explorerDictionaryId,
@@ -20,9 +18,6 @@ export function ObjectTree({
     renderRelation,
     selectedId,
     selectObject,
-    connection,
-    trusted,
-    onCreateTable,
 }: {
     treeScroll: import('react').RefObject<HTMLDivElement | null>;
     copy: ObjectExplorerProps['copy'];
@@ -32,9 +27,6 @@ export function ObjectTree({
     renderRelation: (relation: ExplorerRelation, level: number) => import('react').ReactElement;
     selectedId: string | undefined;
     selectObject: (id: string) => void;
-    connection: ObjectExplorerProps['connection'];
-    trusted: boolean;
-    onCreateTable: (database: string) => void;
 }) {
     return (
         <div className="object-tree-scroll" ref={treeScroll}>
@@ -47,11 +39,9 @@ export function ObjectTree({
                                 database={database.name}
                                 count={database.visibleObjectCount}
                                 expanded={databaseExpanded}
+                                selected={selectedId === database.id}
                                 onToggle={() => toggle(database.id)}
-                                connection={connection}
-                                trusted={trusted}
-                                copy={copy}
-                                onCreateTable={onCreateTable}
+                                onSelect={() => selectObject(database.id)}
                             />
                             {databaseExpanded && (
                                 <div role="group" className="object-tree-children">
@@ -108,42 +98,17 @@ function DatabaseRow({
     database,
     count,
     expanded,
+    selected,
     onToggle,
-    connection,
-    trusted,
-    copy,
-    onCreateTable,
+    onSelect,
 }: {
     database: string;
     count: number;
     expanded: boolean;
+    selected: boolean;
     onToggle: () => void;
-    connection: ObjectExplorerProps['connection'];
-    trusted: boolean;
-    copy: ObjectExplorerProps['copy'];
-    onCreateTable: (database: string) => void;
+    onSelect: () => void;
 }) {
-    const [permissionCheckRequested, setPermissionCheckRequested] = useState(false);
-    const permissions = useTablePermissions(
-        connection,
-        trusted,
-        database,
-        undefined,
-        permissionCheckRequested,
-    );
-    const action =
-        permissions.create === true ? (
-            <button
-                type="button"
-                className="object-tree-inline-action object-create-table-inline-action"
-                title={`${copy.newTable} in ${database}`}
-                aria-label={`${copy.newTable} in ${database}`}
-                onClick={() => onCreateTable(database)}
-            >
-                <Icon name="plus" />
-            </button>
-        ) : undefined;
-
     return (
         <ExplorerGroupRow
             level={1}
@@ -152,8 +117,8 @@ function DatabaseRow({
             expanded={expanded}
             onToggle={onToggle}
             database
-            action={action}
-            onInteract={() => setPermissionCheckRequested(true)}
+            selected={selected}
+            onSelect={onSelect}
         />
     );
 }

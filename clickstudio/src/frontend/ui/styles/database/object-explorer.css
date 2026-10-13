@@ -801,10 +801,6 @@
     color 0.14s ease,
     box-shadow 0.14s ease;
 }
-.object-tree-inline-action.object-create-table-inline-action {
-  width: 18px;
-  margin-right: 0;
-}
 .object-tree-inline-action svg {
   width: 13px;
   height: 13px;
@@ -823,12 +819,12 @@
   color: var(--tree-kind-color);
   box-shadow: none;
 }
-.object-table-actions {
+.object-actions {
   display: flex;
   flex: none;
   align-items: center;
 }
-.object-table-actions-trigger {
+.object-actions-trigger {
   display: grid;
   width: 25px;
   height: 25px;
@@ -848,25 +844,23 @@
     background 0.14s ease,
     color 0.14s ease;
 }
-.object-table-actions-trigger svg {
+.object-actions-trigger svg {
   width: 14px;
   height: 14px;
 }
-.object-tree-row:hover .object-table-actions-trigger,
-.object-tree-row:focus-within .object-table-actions-trigger,
-.object-table-actions-trigger[aria-expanded="true"],
-.object-details-title .object-table-actions-trigger {
+.object-actions-trigger[aria-expanded="true"],
+.object-details-title .object-actions-trigger {
   opacity: 1;
   pointer-events: auto;
 }
-.object-table-actions-trigger:hover {
+.object-actions-trigger:hover {
   border-color:
-    color-mix(in srgb, var(--tree-kind-color, var(--explorer-table)) 40%, var(--line-bright));
+    color-mix(in srgb, var(--object-detail-accent, var(--explorer-table)) 40%, var(--line-bright));
   background:
-    color-mix(in srgb, var(--tree-kind-color, var(--explorer-table)) 10%, var(--panel-hover));
-  color: var(--tree-kind-color, var(--explorer-table));
+    color-mix(in srgb, var(--object-detail-accent, var(--explorer-table)) 10%, var(--panel-hover));
+  color: var(--object-detail-accent, var(--explorer-table));
 }
-.object-table-actions-menu[popover] {
+.object-actions-menu[popover] {
   position: fixed;
   inset: auto;
   width: max-content;
@@ -882,11 +876,11 @@
   color: var(--text);
   box-shadow: var(--shadow-popover);
 }
-.object-table-actions-menu[popover]:popover-open {
+.object-actions-menu[popover]:popover-open {
   display: grid;
   gap: 2px;
 }
-.object-table-actions-menu > button {
+.object-actions-menu > button {
   display: flex;
   width: 100%;
   min-height: 32px;
@@ -904,23 +898,23 @@
   white-space: nowrap;
   cursor: pointer;
 }
-.object-table-actions-menu > button:hover,
-.object-table-actions-menu > button:focus-visible {
+.object-actions-menu > button:hover,
+.object-actions-menu > button:focus-visible {
   border-color: var(--line-bright);
   background: var(--control-hover);
   color: var(--text);
   outline: none;
 }
-.object-table-actions-menu > button.is-danger {
+.object-actions-menu > button.is-danger {
   color: var(--red);
 }
-.object-table-actions-menu > button.is-danger:hover,
-.object-table-actions-menu > button.is-danger:focus-visible {
+.object-actions-menu > button.is-danger:hover,
+.object-actions-menu > button.is-danger:focus-visible {
   border-color: color-mix(in srgb, var(--red) 32%, var(--line));
   background: color-mix(in srgb, var(--red) 8%, var(--panel));
   color: var(--red);
 }
-.object-table-actions-menu > button svg {
+.object-actions-menu > button svg {
   width: 14px;
   height: 14px;
   flex: none;
@@ -966,6 +960,9 @@
 }
 .object-details[data-kind="table"] {
   --object-detail-accent: var(--explorer-table);
+}
+.object-details[data-kind="database"] {
+  --object-detail-accent: var(--explorer-database);
 }
 .object-details[data-kind="view"] {
   --object-detail-accent: var(--explorer-view);

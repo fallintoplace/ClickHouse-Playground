@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import type { SchemaTable } from '../../../../../shared/database/schema/types';
 import { quoteIdentifier } from '../../../../../shared/sql/sql';
 import { cx } from '../../../../ui/components/primitives';
@@ -12,8 +11,8 @@ export function ExplorerGroupRow({
     onToggle,
     database = false,
     kind = 'table',
-    action,
-    onInteract,
+    selected = false,
+    onSelect,
 }: {
     level: number;
     label: string;
@@ -22,8 +21,8 @@ export function ExplorerGroupRow({
     onToggle: () => void;
     database?: boolean;
     kind?: 'table' | 'view' | 'dictionary' | 'column' | 'projection' | 'index';
-    action?: ReactNode;
-    onInteract?: () => void;
+    selected?: boolean;
+    onSelect?: () => void;
 }) {
     const hasChildren = count > 0;
     return (
@@ -37,10 +36,10 @@ export function ExplorerGroupRow({
                 'is-group',
                 database && 'is-database',
                 !database && `is-${kind}`,
+                selected && 'is-selected',
             )}
             style={{ '--tree-indent': `${Math.max(0, level - 1) * 12}px` }}
-            onPointerEnter={onInteract}
-            onFocusCapture={onInteract}
+            aria-selected={onSelect ? selected : undefined}
         >
             <button
                 type="button"
@@ -59,8 +58,11 @@ export function ExplorerGroupRow({
                 type="button"
                 className="object-tree-main"
                 title={label}
-                disabled={!hasChildren}
-                onClick={onToggle}
+                disabled={!hasChildren && !onSelect}
+                onClick={() => {
+                    if (hasChildren) onToggle();
+                    onSelect?.();
+                }}
             >
                 <span className={cx('object-kind-glyph', database && 'is-database')}>
                     <Icon name={database ? 'database' : kind} />
@@ -68,10 +70,8 @@ export function ExplorerGroupRow({
                 <span className="object-tree-label">
                     <strong>{label}</strong>
                 </span>
-                {!action && <small className="object-tree-count">{count.toLocaleString()}</small>}
+                <small className="object-tree-count">{count.toLocaleString()}</small>
             </button>
-            {action}
-            {action && <small className="object-tree-count">{count.toLocaleString()}</small>}
         </div>
     );
 }
