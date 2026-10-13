@@ -239,8 +239,8 @@ function parseCreateTable(value: unknown): {
     return { name: record.name, columns, generateId: record.generateId };
 }
 
-export async function connectPreviewCloud(page: Page) {
-    await page.goto('/experimental');
+export async function connectPreviewCloud(page: Page, path = '/experimental') {
+    await page.goto(path);
     const connectButton = page.getByRole('button', { name: 'Connect Cloud' });
     await expect(connectButton).toBeVisible();
     await expect(page.getByRole('dialog', { name: 'Data source options' })).toHaveCount(0);

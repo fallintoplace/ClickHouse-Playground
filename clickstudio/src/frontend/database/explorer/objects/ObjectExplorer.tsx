@@ -68,7 +68,7 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
         setSelectedId,
         setDetailsOpen,
     } = state;
-    const functionsEnabled = expert && trusted && connection.id === CLICKHOUSE_CLOUD_CONNECTION_ID;
+    const functionsEnabled = trusted && connection.id === CLICKHOUSE_CLOUD_CONNECTION_ID;
     const functions = useSqlFunctions(connection, functionsEnabled);
     const functionDetails = functions.selected;
     const functionsSlot = functionsEnabled ? (

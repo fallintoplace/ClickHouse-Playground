@@ -93,7 +93,7 @@ async function fulfillFunctionRun(
 
 export async function functionsWorkspace(
     page: Page,
-    options: { canCreate?: boolean; live?: boolean; existing?: boolean } = {},
+    options: { canCreate?: boolean; live?: boolean; existing?: boolean; path?: string } = {},
 ) {
     const state: FunctionTestState = {
         canCreate: options.canCreate ?? true,
@@ -197,11 +197,8 @@ export async function functionsWorkspace(
             json: { error: { code: 'UNEXPECTED_ACTION', message: `Unexpected ${String(action)}` } },
         });
     });
-    await connectPreviewCloud(page);
-    await page
-        .getByRole('navigation', { name: 'Workspace browser' })
-        .getByRole('button', { name: 'Objects', exact: true })
-        .click();
+    await connectPreviewCloud(page, options.path);
+    await page.locator('.icon-rail').getByRole('button', { name: 'Objects', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Create SQL UDF', exact: true })).toBeVisible();
     await expect(page.getByText('Loading functions…', { exact: true })).toHaveCount(0);
     return {
