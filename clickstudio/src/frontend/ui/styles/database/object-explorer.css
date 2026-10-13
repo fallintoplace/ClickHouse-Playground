@@ -118,6 +118,7 @@
   opacity: 0.45;
 }
 :is(.create-table-dialog, .insert-row-dialog) {
+  border-radius: 8px;
   border-color: color-mix(in srgb, var(--line-bright) 76%, var(--text));
   background: var(--panel);
   box-shadow: var(--shadow-dialog), var(--shadow-inset);
@@ -146,7 +147,7 @@
 :is(.create-table-dialog, .insert-row-dialog) .table-action-dialog-close {
   width: 34px;
   height: 34px;
-  border-radius: 7px;
+  border-radius: 5px;
   background: color-mix(in srgb, var(--panel) 72%, transparent);
 }
 :is(.create-table-dialog, .insert-row-dialog) .table-action-dialog-footer {
@@ -157,7 +158,7 @@
 :is(.create-table-dialog, .insert-row-dialog) .table-action-dialog-button {
   min-height: 38px;
   padding: 0 15px;
-  border-radius: 7px;
+  border-radius: 5px;
   transition:
     border-color 0.16s ease,
     background 0.16s ease,
@@ -233,7 +234,7 @@
   min-height: 40px;
   padding: 0 12px;
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: 5px;
   background: var(--control-well);
   color: var(--text);
   font: inherit;
@@ -305,7 +306,7 @@
   overflow: auto;
   padding: 4px;
   border: 1px solid var(--line-bright);
-  border-radius: var(--radius-popover);
+  border-radius: 6px;
   background: var(--panel-raised);
   box-shadow: var(--shadow-popover);
   scrollbar-color: var(--scrollbar-thumb) transparent;
@@ -316,7 +317,7 @@
 .create-table-database-option {
   min-height: 34px;
   padding: 8px 10px;
-  border-radius: var(--radius-control);
+  border-radius: 5px;
   color: var(--text-soft);
   font-family: var(--font-mono);
   font-size: 12px;
@@ -357,7 +358,7 @@
   max-width: 100%;
   padding: 5px 8px;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 4px;
   background: color-mix(in srgb, var(--text) 2%, var(--panel));
   color: var(--muted);
   font-size: 10px;
@@ -376,7 +377,7 @@
   align-items: center;
   gap: 12px;
   padding: 10px;
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--panel);
   box-shadow: var(--shadow-inset);
 }
@@ -385,7 +386,7 @@
   gap: 9px;
   padding: 13px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 6px;
   background: color-mix(in srgb, var(--text) 2%, var(--page));
 }
 .create-table-columns-heading h3 {
@@ -396,7 +397,7 @@
 }
 .create-table-columns-heading button {
   min-height: 32px;
-  border-radius: 6px;
+  border-radius: 5px;
 }
 .create-table-column-field {
   display: grid;
@@ -413,7 +414,7 @@
 }
 .create-table-column-control {
   min-height: 38px;
-  border-radius: 6px;
+  border-radius: 5px;
   background: var(--control-well);
 }
 .create-table-column-control:not(:disabled):not([aria-invalid="true"]):hover {
@@ -423,7 +424,7 @@
   min-height: 34px;
   align-self: center;
   margin-top: 0;
-  border-radius: 6px;
+  border-radius: 5px;
 }
 .create-table-select-wrap {
   position: relative;
@@ -460,7 +461,7 @@
 }
 .create-table-secondary-button {
   min-height: 36px;
-  border-radius: 7px;
+  border-radius: 5px;
   color: var(--text-soft);
   transition:
     border-color 0.16s ease,
@@ -485,7 +486,7 @@
   .create-table-dialog {
     width: calc(100vw - 1rem);
     max-height: calc(100dvh - 1rem);
-    border-radius: var(--radius-dialog);
+    border-radius: 8px;
   }
   .create-table-content {
     gap: 14px;
@@ -518,7 +519,7 @@
   gap: 14px;
   padding: 12px 14px;
   border-color: var(--line);
-  border-radius: 8px;
+  border-radius: 6px;
   background: color-mix(in srgb, var(--text) 2%, var(--page));
   box-shadow: inset 2px 0 color-mix(in srgb, var(--accent) 24%, transparent);
 }
@@ -536,7 +537,7 @@
   margin: 0;
   padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: 5px;
   background: color-mix(in srgb, var(--text) 2%, var(--panel-raised));
   color: var(--text-soft);
   font-size: 11px;
@@ -555,7 +556,7 @@
   padding: 3px 6px;
   overflow-wrap: anywhere;
   border: 1px solid var(--line);
-  border-radius: 5px;
+  border-radius: 4px;
   background: var(--panel-raised);
   color: var(--text-soft);
   font-family: var(--font-mono);
@@ -574,7 +575,7 @@
   min-height: 40px;
   padding: 0 12px;
   border-color: var(--line);
-  border-radius: 6px;
+  border-radius: 5px;
   background: var(--control-well);
   color: var(--text);
   transition:
