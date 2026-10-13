@@ -801,10 +801,6 @@
     color 0.14s ease,
     box-shadow 0.14s ease;
 }
-.object-tree-inline-action.object-create-table-inline-action {
-  width: 18px;
-  margin-right: 0;
-}
 .object-tree-inline-action svg {
   width: 13px;
   height: 13px;
