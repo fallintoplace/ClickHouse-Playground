@@ -1732,6 +1732,89 @@
     border-radius: var(--radius-panel);
     background: color-mix(in srgb, var(--page-raised) 68%, var(--panel));
   }
+  .assistant-execution-option-collapsible {
+    gap: 0;
+    overflow: hidden;
+    padding: 0;
+  }
+  .assistant-execution-option-collapsible > summary {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr) auto 16px;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    cursor: pointer;
+    list-style: none;
+  }
+  .assistant-execution-option-collapsible > summary::-webkit-details-marker {
+    display: none;
+  }
+  .assistant-execution-option-collapsible > summary:hover {
+    background: color-mix(in srgb, var(--panel-raised) 55%, transparent);
+  }
+  .assistant-execution-option-summary-main {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+  }
+  .assistant-execution-option-summary-heading {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 8px;
+  }
+  .assistant-execution-option-summary-heading .eyebrow {
+    color: var(--muted);
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+  }
+  .assistant-execution-option-summary-heading strong {
+    color: var(--text-soft);
+    font-size: 9px;
+    line-height: 1.4;
+  }
+  .assistant-execution-option-summary-description,
+  .assistant-execution-option-summary-status {
+    color: var(--muted);
+    font-size: 8px;
+    line-height: 1.45;
+  }
+  .assistant-execution-option-summary-status {
+    color: var(--amber);
+  }
+  .assistant-execution-option-summary-main .assistant-execution-warning {
+    color: var(--amber);
+    font-size: 8px;
+    line-height: 1.45;
+  }
+  .assistant-execution-option-chevron {
+    display: grid;
+    width: 16px;
+    height: 16px;
+    flex: none;
+    place-items: center;
+    color: var(--muted);
+    transition: transform 120ms ease;
+  }
+  .assistant-execution-option-chevron svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+  }
+  .assistant-execution-option-collapsible[open]
+    > .assistant-execution-option-summary
+    .assistant-execution-option-chevron {
+    transform: rotate(180deg);
+  }
+  .assistant-execution-option-content {
+    display: grid;
+    min-width: 0;
+    gap: 6px;
+    padding: 0 8px 8px;
+  }
   .assistant-execution-heading {
     display: flex;
     min-width: 0;

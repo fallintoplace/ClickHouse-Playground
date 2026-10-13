@@ -278,6 +278,8 @@ test('Script plan pages are independent and new proposals start on the first pag
     const plans = page.getByTestId('assistant-execution-option');
     await plans.first().getByRole('button', { name: 'Next', exact: true }).click();
     await expect(plans.first().getByRole('navigation')).toContainText('6–10 of 11');
+    await expect(plans.last()).not.toHaveAttribute('open', '');
+    await plans.last().locator('summary').click();
     await expect(plans.last().getByRole('navigation')).toContainText('1–5 of 11');
     await review(page).getByRole('button', { name: 'Accept SQL changes', exact: true }).click();
     await installProposal(page, script, { id: 'new-paged-script', summary: 'New script.' });
@@ -308,7 +310,15 @@ for (const mode of ['beginner', 'expert']) {
         await replaceSql(page, originalSql);
         await askForChanges(page);
         await expect(review(page)).toBeVisible();
-        const alternative = page.getByRole('button', {
+        const alternativeCard = page.getByTestId('assistant-execution-option').last();
+        await expect(alternativeCard).not.toHaveAttribute('open', '');
+        await expect(alternativeCard.locator('summary')).toContainText('Other query');
+        await expect(alternativeCard.locator('.assistant-execution-steps')).toBeHidden();
+        await expect(
+            alternativeCard.getByRole('button', { name: 'Open in SQL tab: Other query' }),
+        ).toHaveCount(0);
+        await alternativeCard.locator('summary').click();
+        const alternative = alternativeCard.getByRole('button', {
             name: 'Open in SQL tab: Other query',
             exact: true,
         });
@@ -397,7 +407,12 @@ test('Failed SQL checks block acceptance and opening alternatives while keeping 
     await expect(page.locator('.sql-proposal-review-message')).toContainText(
         'A required check failed',
     );
-    await expect(page.getByRole('button', { name: 'Open in SQL tab: Other query' })).toBeDisabled();
+    const alternativeCard = page.getByTestId('assistant-execution-option').last();
+    await expect(alternativeCard).not.toHaveAttribute('open', '');
+    await alternativeCard.locator('summary').click();
+    await expect(
+        alternativeCard.getByRole('button', { name: 'Open in SQL tab: Other query' }),
+    ).toBeDisabled();
     await expect(review(page).getByRole('button', { name: 'Accept SQL changes' })).toBeDisabled();
     await review(page).getByRole('button', { name: 'Reject SQL changes' }).click();
     await expect(liveEditor(page)).toHaveText(originalSql);

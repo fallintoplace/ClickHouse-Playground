@@ -746,6 +746,16 @@ test('Ask AI previews mixed writes and keeps UPDATE and DELETE alternatives sepa
     const recommended = page.getByTestId('assistant-execution-option').nth(0);
     const alternative = page.getByTestId('assistant-execution-option').nth(1);
     const deleteAlternative = page.getByTestId('assistant-execution-option').nth(2);
+    await expect(alternative).not.toHaveAttribute('open', '');
+    await expect(deleteAlternative).not.toHaveAttribute('open', '');
+    await expect(alternative.locator('summary')).toContainText(
+        'ClickHouse mutations may finish asynchronously.',
+    );
+    await expect(deleteAlternative.locator('summary')).toContainText(
+        'ClickHouse mutations may finish asynchronously.',
+    );
+    await alternative.locator('summary').click();
+    await deleteAlternative.locator('summary').click();
     await expect(
         recommended.getByRole('list', { name: 'Statements in execution order' }).locator('li'),
     ).toHaveCount(3);

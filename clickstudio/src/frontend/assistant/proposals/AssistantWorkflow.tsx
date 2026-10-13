@@ -299,6 +299,10 @@ function AssistantExecutionOption({
     const hasMutation = statements.some(
         statement => statement.operation === 'update' || statement.operation === 'delete',
     );
+    const mutationWarning = hasMutation
+        ? `${hasUpdateBeforeDelete ? 'UPDATE runs before DELETE, which may remove the changed rows. ' : ''}` +
+          'ClickHouse mutations may finish asynchronously.'
+        : undefined;
 
     const getOptionLabel = () => {
         if (alternative) {
@@ -311,31 +315,8 @@ function AssistantExecutionOption({
 
         return 'RECOMMENDED OPTION';
     };
-    return (
-        <section
-            className="assistant-execution-option"
-            aria-label={`Execution plan: ${title}`}
-            data-testid="assistant-execution-option"
-        >
-            <header className="assistant-execution-heading">
-                <div>
-                    <span className="eyebrow">{getOptionLabel()}</span>
-                    <strong>{title}</strong>
-                    {summary && <p>{summary}</p>}
-                    {hasMutation && (
-                        <p className="assistant-execution-warning" role="status">
-                            {hasUpdateBeforeDelete
-                                ? 'UPDATE runs before DELETE, which may remove the changed rows. '
-                                : ''}
-                            ClickHouse mutations may finish asynchronously.
-                        </p>
-                    )}
-                </div>
-                <span className="assistant-execution-count">
-                    {statements.length} {statements.length === 1 ? 'statement' : 'statements'}
-                    {statements.length > 1 ? ' · runs in order' : ''}
-                </span>
-            </header>
+    const executionContent = (
+        <>
             {outline.error && (
                 <p className="assistant-execution-error" role="alert">
                     Could not split this SQL safely: {outline.error}
@@ -424,6 +405,79 @@ function AssistantExecutionOption({
                     </Button>
                 </footer>
             )}
+        </>
+    );
+
+    if (alternative) {
+        return (
+            <details
+                className="assistant-execution-option assistant-execution-option-collapsible"
+                aria-label={`Execution plan: ${title}`}
+                data-testid="assistant-execution-option"
+            >
+                <summary className="assistant-execution-option-summary">
+                    <span className="assistant-execution-option-summary-main">
+                        <span className="assistant-execution-option-summary-heading">
+                            <span className="eyebrow">{getOptionLabel()}</span>
+                            <strong>{title}</strong>
+                        </span>
+                        {summary && (
+                            <span className="assistant-execution-option-summary-description">
+                                {summary}
+                            </span>
+                        )}
+                        {mutationWarning && (
+                            <span className="assistant-execution-warning" role="status">
+                                {mutationWarning}
+                            </span>
+                        )}
+                        {outline.error && (
+                            <span className="assistant-execution-option-summary-status">
+                                SQL preview unavailable
+                            </span>
+                        )}
+                        {!outline.error && !statements.length && (
+                            <span className="assistant-execution-option-summary-status">
+                                No SQL statements
+                            </span>
+                        )}
+                    </span>
+                    <span className="assistant-execution-count">
+                        {statements.length} {statements.length === 1 ? 'statement' : 'statements'}
+                        {statements.length > 1 ? ' · runs in order' : ''}
+                    </span>
+                    <span className="assistant-execution-option-chevron" aria-hidden="true">
+                        <Icon name="chevron" />
+                    </span>
+                </summary>
+                <div className="assistant-execution-option-content">{executionContent}</div>
+            </details>
+        );
+    }
+
+    return (
+        <section
+            className="assistant-execution-option"
+            aria-label={`Execution plan: ${title}`}
+            data-testid="assistant-execution-option"
+        >
+            <header className="assistant-execution-heading">
+                <div>
+                    <span className="eyebrow">{getOptionLabel()}</span>
+                    <strong>{title}</strong>
+                    {summary && <p>{summary}</p>}
+                    {mutationWarning && (
+                        <p className="assistant-execution-warning" role="status">
+                            {mutationWarning}
+                        </p>
+                    )}
+                </div>
+                <span className="assistant-execution-count">
+                    {statements.length} {statements.length === 1 ? 'statement' : 'statements'}
+                    {statements.length > 1 ? ' · runs in order' : ''}
+                </span>
+            </header>
+            {executionContent}
         </section>
     );
 }
