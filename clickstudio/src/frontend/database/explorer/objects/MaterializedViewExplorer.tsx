@@ -634,6 +634,7 @@ export function MaterializedViewExplorer({
             title="Materialized view dependencies"
             description={`${selectedDatabase} · Insert triggers, write targets, and refresh schedules`}
             onClose={() => onClose?.()}
+            className="native-lineage-dialog"
         >
             {content}
         </NativeExplorerDialog>

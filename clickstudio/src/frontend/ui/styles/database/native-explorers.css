@@ -7,6 +7,42 @@
   font-size: 12px;
   outline: none;
 }
+.native-dialog.native-lineage-dialog {
+  --lineage-highlight: color-mix(in srgb, var(--accent) 42%, var(--line-bright));
+  --lineage-write: color-mix(in srgb, var(--green) 58%, var(--muted));
+  --lineage-refresh: color-mix(in srgb, var(--violet) 58%, var(--muted));
+  gap: 12px;
+  border-color: var(--line-bright);
+  background: var(--panel);
+}
+.native-dialog.native-lineage-dialog > .native-heading {
+  align-items: center;
+  padding: 2px 0 12px;
+  border-bottom: 1px solid var(--line);
+}
+.native-dialog.native-lineage-dialog > .native-heading .eyebrow {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+}
+.native-dialog.native-lineage-dialog > .native-heading h2 {
+  margin: 4px 0 5px;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+.native-dialog.native-lineage-dialog > .native-heading p {
+  margin: 0;
+  font-size: 11px;
+}
+.native-dialog.native-lineage-dialog > .native-heading .button-base {
+  min-height: 32px;
+  padding-inline: 12px;
+  color: var(--text-soft);
+  font-size: 10px;
+}
 .native-dialog h2,
 .native-dialog h3,
 .native-activity h3 {
@@ -184,6 +220,20 @@
   font-size: 10px;
   letter-spacing: 0.02em;
 }
+.native-lineage-dialog .native-lineage-meta-toolbar {
+  gap: 8px 14px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid var(--line);
+}
+.native-lineage-dialog .native-snapshot-meta {
+  min-width: 220px;
+  flex: 1;
+}
+.native-lineage-dialog .native-lineage-meta-toolbar > .button-base {
+  min-height: 32px;
+  padding-inline: 12px;
+  font-size: 10px;
+}
 .native-notes {
   color: var(--muted);
   font-size: 11px;
@@ -252,6 +302,9 @@
   border-radius: var(--radius-control);
   padding: 7px 10px;
   font: inherit;
+}
+.native-lineage-dialog .native-lineage-database {
+  font-size: 10px;
 }
 .native-lineage-primer {
   display: grid;
@@ -497,11 +550,85 @@
   border-color: var(--muted);
   border-top-style: dotted;
 }
+.native-lineage-dialog .native-lineage-map-heading {
+  margin-top: 2px;
+}
+.native-lineage-dialog .native-lineage-layout {
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 12px;
+}
+.native-lineage-dialog .native-lineage-canvas {
+  background: var(--canvas);
+}
+.native-lineage-dialog .native-edge {
+  stroke: var(--lineage-highlight);
+}
+.native-lineage-dialog .native-edge.edge-writes-to {
+  stroke: var(--lineage-write);
+}
+.native-lineage-dialog .native-edge.edge-refresh-dependency {
+  stroke: var(--lineage-refresh);
+}
+.native-lineage-dialog .native-edge-marker path {
+  fill: var(--lineage-highlight);
+}
+.native-lineage-dialog .native-edge-marker.edge-writes-to path {
+  fill: var(--lineage-write);
+}
+.native-lineage-dialog .native-edge-marker.edge-refresh-dependency path {
+  fill: var(--lineage-refresh);
+}
+.native-lineage-dialog .native-lineage-node.materialized-view rect {
+  stroke: var(--lineage-refresh);
+}
+.native-lineage-dialog .native-lineage-node.input-table rect {
+  stroke: var(--lineage-highlight);
+}
+.native-lineage-dialog .native-lineage-node.result-table rect {
+  stroke: var(--lineage-write);
+}
+.native-lineage-dialog .native-lineage-node.is-selected rect {
+  stroke: var(--lineage-highlight);
+  stroke-width: 2;
+}
+.native-lineage-dialog .native-lineage-node:focus-visible rect {
+  stroke: var(--focus-color);
+  stroke-width: 2.5;
+}
+.native-lineage-dialog .native-lineage-node.beginner-node.input-table .native-node-kind {
+  fill: var(--lineage-highlight);
+}
+.native-lineage-dialog .native-lineage-node.beginner-node.materialized-view .native-node-kind {
+  fill: var(--lineage-refresh);
+}
+.native-lineage-dialog .native-lineage-node.beginner-node.result-table .native-node-kind {
+  fill: var(--lineage-write);
+}
+.native-lineage-dialog .native-lineage-legend {
+  gap: 10px 14px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--line);
+  font-size: 10px;
+}
+.native-lineage-dialog .native-lineage-legend span::before {
+  width: 16px;
+  border-color: var(--lineage-highlight);
+}
+.native-lineage-dialog .native-lineage-legend .edge-writes-to::before {
+  border-color: var(--lineage-write);
+}
+.native-lineage-dialog .native-lineage-legend .edge-refresh-dependency::before {
+  border-color: var(--lineage-refresh);
+}
 .native-node-details {
   min-width: 0;
   max-height: 570px;
   overflow: auto;
   padding: 15px;
+}
+.native-lineage-dialog .native-node-details {
+  border-color: var(--line);
+  background: var(--panel-raised);
 }
 .native-node-details h3 {
   font-size: 16px;
@@ -509,6 +636,20 @@
 }
 .native-node-details .native-metrics dd {
   font-size: 22px;
+}
+.native-lineage-dialog .native-node-details .native-metrics dd {
+  font-size: 20px;
+}
+.native-lineage-dialog .native-node-details:not(.is-beginner) .native-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  padding-block: 10px;
+  border-block: 1px solid var(--line);
+}
+.native-lineage-dialog .native-node-details:not(.is-beginner) .native-metrics div + div {
+  padding-left: 12px;
+  border-left: 1px solid var(--line);
 }
 .native-node-explanation {
   margin: 4px 0 12px;
@@ -562,6 +703,11 @@
   margin: 15px 0;
   border-top: 1px solid var(--line);
 }
+.native-lineage-dialog > footer.native-notes {
+  padding-top: 5px;
+  border-top: 1px solid var(--line);
+  font-size: 10px;
+}
 .native-relationships p {
   margin: 9px 0 0;
   display: grid;
@@ -581,7 +727,13 @@
   .native-lineage-layout {
     grid-template-columns: minmax(0, 1fr);
   }
+  .native-dialog.native-lineage-dialog .native-lineage-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .native-node-details {
+    max-height: none;
+  }
+  .native-dialog.native-lineage-dialog .native-node-details {
     max-height: none;
   }
   .native-lineage-canvas {
@@ -633,4 +785,12 @@
 :root[data-theme="click-light"] :is(.native-lineage-primer) {
   background: var(--panel-raised);
   border-color: var(--line);
+}
+
+:root[data-theme="click-light"] .native-dialog.native-lineage-dialog {
+  --lineage-highlight: var(--accent);
+  --lineage-write: var(--green);
+  --lineage-refresh: var(--violet);
+  border-color: var(--line-bright);
+  background: var(--panel);
 }

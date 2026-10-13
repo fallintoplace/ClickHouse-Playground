@@ -8,7 +8,9 @@ export function NativeExplorerDialog({
     onClose,
     children,
     closeLabel = 'Close explorer',
+    className,
 }: {
+    className?: string;
     closeLabel?: string;
     title: string;
     description?: string;
@@ -31,7 +33,7 @@ export function NativeExplorerDialog({
                 role="dialog"
                 aria-modal="true"
                 aria-label={title}
-                className="parts-explorer-dialog native-dialog"
+                className={`parts-explorer-dialog native-dialog${className ? ` ${className}` : ''}`}
             >
                 <header className="native-heading">
                     <div>
