@@ -15,7 +15,7 @@ import { Icon } from '../../../ui/components/icons';
 type ObjectDetailsProps = {
     copy: Copy['common'];
     selection: ExplorerSelection;
-    actions?: ReactNode;
+    tableActions?: ReactNode;
     trusted: boolean;
     expert: boolean;
     copiedId?: string;
@@ -32,7 +32,7 @@ type ObjectDetailsProps = {
 export function ObjectDetails({
     copy,
     selection,
-    actions,
+    tableActions,
     trusted,
     expert,
     copiedId,
@@ -45,43 +45,13 @@ export function ObjectDetails({
     onSelect,
     search,
 }: ObjectDetailsProps) {
-    if (selection.kind === 'database') {
-        return (
-            <section className="object-details" data-kind="database" aria-label="Selected object">
-                {onClose && (
-                    <button
-                        type="button"
-                        className="object-details-close"
-                        aria-label="Close object details"
-                        onClick={onClose}
-                    >
-                        ×
-                    </button>
-                )}
-                <div className="object-details-hero">
-                    <div className="object-details-title">
-                        <span className="object-kind-badge">DATABASE</span>
-                        <strong>{selection.database.name}</strong>
-                        {actions}
-                    </div>
-                    <small>
-                        {copy.objectCount.replace(
-                            '{count}',
-                            selection.database.visibleObjectCount.toLocaleString(),
-                        )}
-                    </small>
-                </div>
-            </section>
-        );
-    }
-
     if (selection.kind === 'relation') {
         return (
             <RelationDetails
                 key={selection.id}
                 copy={copy}
                 selection={selection}
-                actions={actions}
+                tableActions={tableActions}
                 trusted={trusted}
                 expert={expert}
                 copiedId={copiedId}
@@ -285,7 +255,7 @@ type RelationDetailsProps = Omit<ObjectDetailsProps, 'selection'> & {
 function RelationDetails({
     copy,
     selection,
-    actions,
+    tableActions,
     trusted,
     expert,
     copiedId,
@@ -335,7 +305,7 @@ function RelationDetails({
                         {selection.relationKind === 'view' ? 'VIEW' : 'TABLE'}
                     </span>
                     <strong>{table.name}</strong>
-                    {actions}
+                    {tableActions}
                 </div>
                 <code>
                     {table.database}.{table.name}

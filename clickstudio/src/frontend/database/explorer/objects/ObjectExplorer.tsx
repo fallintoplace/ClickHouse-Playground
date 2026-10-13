@@ -6,8 +6,7 @@ import { useObjectExplorerState } from './tree/useObjectExplorerState';
 import { ObjectExplorerSearch } from './ObjectExplorerSearch';
 import { ObjectTree } from './tree/ObjectTree';
 import { ObjectExplorerDialogs } from './ObjectExplorerDialogs';
-import { ObjectActionsMenu } from './ObjectActionsMenu';
-import { useTablePermissions } from '../../tables/useTablePermissions';
+import { ObjectTableActionsMenu } from './ObjectTableActionsMenu';
 
 export function ObjectExplorer(props: ObjectExplorerProps) {
     const {
@@ -60,27 +59,6 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
         setSelectedId,
         setDetailsOpen,
     } = useObjectExplorerState(props);
-    const selectedDatabase =
-        selected?.kind === 'database' ? selected.database : undefined;
-    const databasePermissions = useTablePermissions(
-        connection,
-        trusted,
-        selectedDatabase?.name ?? connection.database,
-        undefined,
-        Boolean(selectedDatabase),
-    );
-    const databaseActions =
-        selectedDatabase &&
-        connection.dataSource !== 'fixture' &&
-        databasePermissions.create === true ? (
-            <ObjectActionsMenu
-                kind="database"
-                database={selectedDatabase.name}
-                trusted={trusted}
-                copy={copy}
-                onCreateTable={() => setCreateTableDatabase(selectedDatabase.name)}
-            />
-        ) : undefined;
     const canInsertSelectedTable =
         connection.dataSource !== 'fixture' &&
         Boolean(insertableTable) &&
@@ -89,10 +67,11 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
         connection.dataSource !== 'fixture' &&
         Boolean(deletableTable) &&
         tablePermissions.drop !== false;
-    const selectedTableActions =
-        selectedTable && (canInsertSelectedTable || canDeleteSelectedTable) ? (
-            <ObjectActionsMenu
-                kind="table"
+    const compactTableActions =
+        showCompactDetails &&
+        selectedTable &&
+        (canInsertSelectedTable || canDeleteSelectedTable) ? (
+            <ObjectTableActionsMenu
                 table={selectedTable.table}
                 canInsertRow={canInsertSelectedTable}
                 canDeleteTable={canDeleteSelectedTable}
@@ -110,7 +89,6 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                 }}
             />
         ) : undefined;
-    const compactDetailsActions = databaseActions ?? selectedTableActions;
     return (
         <section
             className={cx(
@@ -128,7 +106,7 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                     <ObjectDetails
                         copy={copy}
                         selection={selected}
-                        actions={compactDetailsActions}
+                        tableActions={compactTableActions}
                         trusted={trusted}
                         expert={expert}
                         copiedId={copiedId}
@@ -226,6 +204,9 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                                         renderRelation,
                                         selectedId,
                                         selectObject,
+                                        connection,
+                                        trusted,
+                                        onCreateTable: setCreateTableDatabase,
                                     }}
                                 />
                             ) : (
@@ -262,11 +243,6 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                                 <ObjectDetails
                                     copy={copy}
                                     selection={selected}
-                                    actions={
-                                        selected.kind === 'database'
-                                            ? databaseActions
-                                            : selectedTableActions
-                                    }
                                     trusted={trusted}
                                     expert={expert}
                                     copiedId={copiedId}

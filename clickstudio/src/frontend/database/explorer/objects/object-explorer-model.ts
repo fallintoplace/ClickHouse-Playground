@@ -32,7 +32,6 @@ export interface ExplorerDatabase {
 }
 
 export type ExplorerSelection =
-    | { id: string; kind: 'database'; database: ExplorerDatabase }
     | {
           id: string;
           kind: 'relation';
@@ -294,10 +293,6 @@ export function buildObjectExplorer(
             } satisfies ExplorerDatabase;
         })
         .sort(databaseSort(preferredDatabase));
-
-    for (const database of result) {
-        selectionById.set(database.id, { id: database.id, kind: 'database', database });
-    }
 
     const totalObjects = schema.tables.length + (schema.dictionaries?.length ?? 0);
     const visibleObjects = result.reduce((sum, database) => sum + database.visibleObjectCount, 0);

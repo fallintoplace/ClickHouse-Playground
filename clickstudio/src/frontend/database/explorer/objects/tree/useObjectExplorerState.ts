@@ -293,10 +293,22 @@ export function useObjectExplorerState(props: ObjectExplorerProps) {
         model,
         relationChildrenMatch,
         selectedId,
+        selectedTableId: selectedTable?.id,
+        canInsertSelectedTable:
+            connection.dataSource !== 'fixture' &&
+            Boolean(insertableTable) &&
+            tablePermissions.insert !== false,
+        canDeleteSelectedTable:
+            connection.dataSource !== 'fixture' &&
+            Boolean(deletableTable) &&
+            tablePermissions.drop !== false,
         highlightedTableId,
         copy,
         toggle,
         selectObject,
+        onInsertRow: relation =>
+            setInsertRowTarget({ table: relation.table, columns: relation.columns }),
+        onDeleteTable: relation => setDeleteTableTarget(relation.table),
     });
 
     const showCompactDetails = compact && detailsOpen && selected;
