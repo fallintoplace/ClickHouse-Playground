@@ -7,7 +7,7 @@ import {
 } from '../../src/frontend/database/connections/cloud-connection.js';
 import { cloudConnectionTest } from '../helpers/cloud-fixtures.js';
 
-test('Cloud connections advertise their query budget while inspector requests keep their larger row cap', async t => {
+test('Cloud connections advertise their query budget while inspector requests keep their separate row cap', async t => {
     t.mock.method(globalThis, 'fetch', async () => Response.json(cloudConnectionTest()));
     t.after(() => disconnectClickHouseCloud());
     const connection = await connectClickHouseCloud({
@@ -18,7 +18,7 @@ test('Cloud connections advertise their query budget while inspector requests ke
     });
     assert.equal(connection.id, 'clickhouse-cloud');
     assert.deepEqual(connection.limits, {
-        rows: 1000,
+        rows: 20000,
         bytes: 2000000,
         seconds: 45,
         memory: 536870912,

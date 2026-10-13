@@ -705,9 +705,6 @@
     color: var(--text);
     box-shadow: var(--shadow-popover);
   }
-  .sql-editor .cm-completionInfo {
-    pointer-events: none;
-  }
   .sql-editor .cm-tooltip-autocomplete ul li[aria-selected] {
     background: color-mix(in srgb, var(--accent) 16%, var(--panel));
     color: var(--text);

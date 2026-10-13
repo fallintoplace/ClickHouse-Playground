@@ -132,7 +132,7 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
             {showCompactDetails && selected ? (
                 <div className="object-compact-details">
                     <button type="button" className="object-back-button" onClick={browseObjects}>
-                        <span>‹</span>
+                        <Icon name="chevron" className="object-back-icon" />
                         {copy.objects}
                     </button>
                     <ObjectDetails

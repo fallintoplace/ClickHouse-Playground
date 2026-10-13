@@ -2,6 +2,10 @@ import { setWorkspaceMode, trust } from './helpers.js';
 import { test, expect } from '@playwright/test';
 import { jsonRecord } from '../helpers/type-guards.js';
 import {
+    IMPORT_FILE_SIZE_LABEL,
+    MAX_IMPORT_FILE_BYTES,
+} from '../../src/shared/database/imports/limits.js';
+import {
     schema,
     mockWritableWorkspace,
     previewCsv,
@@ -410,9 +414,11 @@ test('File import rejects oversized files in the browser before upload', async (
     await dialog.getByLabel('Choose a CSV, JSON, or NDJSON file').setInputFiles({
         name: 'large.csv',
         mimeType: 'text/csv',
-        buffer: Buffer.alloc(2_000_001),
+        buffer: Buffer.alloc(MAX_IMPORT_FILE_BYTES + 1),
     });
-    await expect(dialog.getByRole('alert')).toContainText('larger than the 2 MB import limit');
+    await expect(dialog.getByRole('alert')).toContainText(
+        `larger than the ${IMPORT_FILE_SIZE_LABEL} import limit`,
+    );
     await expect(dialog.getByRole('button', { name: 'Read file and continue' })).toBeDisabled();
     expect(previewRequests).toBe(0);
 });

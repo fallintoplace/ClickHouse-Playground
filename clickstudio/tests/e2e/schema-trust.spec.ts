@@ -219,7 +219,7 @@ test('table details keep write actions without row ellipses or column insert but
     await expect(page.getByRole('button', { name: 'Delete table', exact: true })).toBeVisible();
     await page.mouse.move(0, 0);
 
-    await page.getByRole('button', { name: '‹ Objects', exact: true }).click();
+    await page.locator('.object-back-button').click();
     await expect(page.locator('.object-tree-row.is-object.is-table')).toHaveCount(3);
     await expect(page.locator('.object-table-actions-trigger')).toHaveCount(0);
 });
@@ -345,7 +345,7 @@ test('A late denial for a previous table does not hide the current table actions
     );
     await tableObject(page).click();
     await expect.poll(() => Boolean(denyPrevious)).toBe(true);
-    await page.getByRole('button', { name: '‹ Objects', exact: true }).click();
+    await page.locator('.object-back-button').click();
     await tableObject(page, 'new_events').click();
     denyPrevious!();
     await expect.poll(() => previousResolved && currentResolved).toBe(true);
@@ -423,7 +423,7 @@ test('Object explorer shows ClickHouse metadata, searchable children, and previe
     await sqlTabs.getByRole('tab', { name: originalTabName!, exact: true }).click();
     await expect(page.locator('#sql-editor-content')).toBeHidden();
 
-    await page.getByRole('button', { name: '‹ Objects', exact: true }).click();
+    await page.locator('.object-back-button').click();
     const search = page.getByTestId('schema-search');
     await search.fill('tenant_bloom');
     await expect(page.getByText('tenant_bloom', { exact: true })).toBeVisible();
@@ -446,7 +446,7 @@ test('Object explorer keeps selection while browsing and restores expansion afte
     await expect(table).toHaveAttribute('aria-expanded', 'true');
     await table.locator('.object-tree-main').click();
     await expect(page.getByLabel('Selected object')).toContainText('MergeTree');
-    await page.getByRole('button', { name: '‹ Objects', exact: true }).click();
+    await page.locator('.object-back-button').click();
     await expect(table).toHaveAttribute('aria-selected', 'true');
     const search = page.getByTestId('schema-search');
     await search.fill('events');

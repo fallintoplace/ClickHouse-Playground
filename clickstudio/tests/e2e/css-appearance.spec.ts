@@ -53,7 +53,7 @@ for (const theme of ['Light', 'Dark']) {
             await inspector.getByText('events', { exact: true }).first().click();
             await expect(inspector.getByLabel('Selected object')).toBeVisible();
             await expectReferenceStyles(page, info, 'object-details');
-            await inspector.getByRole('button', { name: '‹ Objects', exact: true }).click();
+            await inspector.locator('.object-back-button').click();
             if (mode === 'Standard') await setWorkspaceMode(page, mode);
             await runButton(page).click();
             await expect(page.locator('.execution-bar')).toHaveAttribute(

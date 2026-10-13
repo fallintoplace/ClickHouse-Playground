@@ -283,7 +283,7 @@ export function CreateTableDialog({ connection, databases, onClose, onCreated }:
             onClick={event => {
                 if (event.target === dialog.current && !busy) onClose();
             }}
-            className="table-action-dialog create-table-dialog m-auto max-w-none overflow-hidden rounded-2xl border border-[var(--line-bright)] bg-[var(--panel)] p-0 text-[var(--text)] shadow-[var(--shadow-dialog)]"
+            className="table-action-dialog create-table-dialog m-auto max-w-none overflow-hidden border border-[var(--line-bright)] bg-[var(--panel)] p-0 text-[var(--text)] shadow-[var(--shadow-dialog)]"
         >
             <form
                 onSubmit={event => void create(event)}
@@ -452,7 +452,7 @@ function CreateTableContent({ model }: { model: CreateTableContentModel }) {
             {created && (
                 <p
                     role="status"
-                    className="rounded-xl border border-[var(--green)]/30 bg-[var(--green)]/5 p-4 text-sm"
+                    className="create-table-notice border border-[var(--green)]/30 bg-[var(--green)]/5 p-4 text-sm"
                 >
                     Created <code>{targetTable}</code>.
                 </p>
@@ -460,7 +460,7 @@ function CreateTableContent({ model }: { model: CreateTableContentModel }) {
             {error && (
                 <p
                     role="alert"
-                    className="rounded-lg border border-[var(--red)]/30 bg-[var(--red)]/5 px-3 py-2.5 text-xs text-[var(--red)]"
+                    className="create-table-notice border border-[var(--red)]/30 bg-[var(--red)]/5 px-3 py-2.5 text-xs text-[var(--red)]"
                 >
                     {error}
                 </p>
@@ -490,7 +490,7 @@ function renderTableColumns({
                         ])
                     }
                     disabled={columns.length >= 50}
-                    className="create-table-secondary-button rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs disabled:opacity-40"
+                    className="create-table-secondary-button border border-[var(--line)] px-3 py-1.5 text-xs disabled:opacity-40"
                 >
                     Add column
                 </button>
@@ -498,7 +498,7 @@ function renderTableColumns({
             {columns.map((column, index) => (
                 <div
                     key={index}
-                    className={`create-table-column-row grid grid-cols-[minmax(0,1fr)_minmax(8rem,.8fr)_auto] gap-2 rounded-lg border border-[var(--line)] bg-[var(--page)] p-2${column.generatedId ? ' has-generated-id' : ''}`}
+                    className={`create-table-column-row grid grid-cols-[minmax(0,1fr)_minmax(8rem,.8fr)_auto] gap-2 border border-[var(--line)] bg-[var(--page)] p-2${column.generatedId ? ' has-generated-id' : ''}`}
                 >
                     <label className="create-table-column-field">
                         <span className="create-table-column-label">Name</span>
@@ -543,7 +543,7 @@ function renderTableColumns({
                         onClick={() =>
                             setColumns(current => current.filter((_, item) => item !== index))
                         }
-                        className="create-table-secondary-button create-table-remove rounded-md border border-[var(--line)] px-2 text-xs disabled:opacity-30"
+                        className="create-table-secondary-button create-table-remove border border-[var(--line)] px-2 text-xs disabled:opacity-30"
                     >
                         Remove
                     </button>

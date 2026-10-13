@@ -30,6 +30,7 @@
     "src/frontend/browser/visible-polling.ts",
     "src/frontend/api/browser-workspace-api.ts",
     "src/frontend/database/imports/state/cloud-import.ts",
+    "src/frontend/database/tables/insert-row-validation.ts",
     "src/frontend/help/examples/sql-examples.ts",
     "src/frontend/help/workspace-help-model.ts",
     "src/frontend/queries/results/charts/controls/chart-selection.ts",

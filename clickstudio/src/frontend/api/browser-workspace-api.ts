@@ -496,7 +496,7 @@ export class BrowserWorkspaceApi {
                         ? {}
                         : { writtenRows: response.writtenRows }),
                     warnings: response.truncated
-                        ? ['The result reached the 1,000-row display limit and may be incomplete.']
+                        ? ['The result reached the Cloud row or byte limit and may be incomplete.']
                         : [],
 
                     resultState: 'reopenable',
@@ -671,7 +671,7 @@ export class BrowserWorkspaceApi {
                     bytes: response.bytes,
                     columns: response.columns,
                     warnings: response.truncated
-                        ? ['The result reached the 1,000-row display limit and may be incomplete.']
+                        ? ['The result reached the Cloud row or byte limit and may be incomplete.']
                         : [],
                     sequence: ++this.sequence,
                     resultState: 'reopenable',

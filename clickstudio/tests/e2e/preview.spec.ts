@@ -831,7 +831,7 @@ test('ClickHouse Cloud import refreshes and reveals the created table', async ({
     await expect(page.getByRole('region', { name: 'Selected object' })).toContainText(
         'default.interview_events',
     );
-    await page.getByRole('button', { name: '‹ Objects', exact: true }).click();
+    await page.locator('.object-back-button').click();
     await expect(
         page.getByRole('button', { name: 'interview_events MergeTree', exact: true }),
     ).toBeVisible();
@@ -882,6 +882,111 @@ test('ClickHouse Cloud insert row leaves defaulted columns out and needs no type
         /name="file"; filename="insert-row\.json"\r\nContent-Type: [^\r\n]+\r\n\r\n([\s\S]*?)\r\n--/,
     )?.[1];
     expect(JSON.parse(row!)).toEqual([{ day: '2026-09-28', events: '12' }]);
+});
+
+test('Insert row validates each field before Review and allows empty String values', async ({
+    page,
+}) => {
+    const columns = (
+        [
+            ['event_id', 'UInt64'],
+            ['event_time', 'DateTime'],
+            ['event_name', 'LowCardinality(String)'],
+            ['event_count', 'UInt64'],
+        ] as const
+    ).map(([name, type]) => ({
+        database: 'default',
+        table: 'events',
+        name,
+        type,
+        defaultKind: '',
+        comment: '',
+    }));
+    const imports = await mockCloudEndpoint(page, 'success', {
+        ...previewCloudSchema,
+        columns,
+    });
+    await connectPreviewCloud(page);
+    await page
+        .getByRole('navigation', { name: 'Workspace browser' })
+        .getByRole('button', { name: 'Objects' })
+        .click();
+    await page.getByRole('button', { name: 'events MergeTree', exact: true }).click();
+    await page
+        .getByRole('region', { name: 'Selected object', exact: true })
+        .getByRole('button', { name: 'Insert row', exact: true })
+        .click();
+    const dialog = page.getByRole('dialog', { name: 'Insert row', exact: true });
+    const eventId = dialog.getByLabel('event_id', { exact: true });
+    const eventTime = dialog.getByLabel('event_time', { exact: true });
+    const eventName = dialog.getByLabel('event_name', { exact: true });
+    const eventCount = dialog.getByLabel('event_count', { exact: true });
+    await expect(dialog).not.toContainText('Required columns are included.');
+    await expect(dialog.getByRole('alert')).toHaveCount(0);
+    await expect(eventCount).toBeVisible();
+    const readLayout = () =>
+        dialog.evaluate(element =>
+            Array.from(
+                element.querySelectorAll('.insert-row-column, .table-action-dialog-footer'),
+            ).map(child => {
+                const { y, height } = child.getBoundingClientRect();
+                return { y, height };
+            }),
+        );
+    const initialLayout = await readLayout();
+    expect(initialLayout).toHaveLength(5);
+    await eventId.focus();
+    await eventId.press('Tab');
+    await expect(eventId).toHaveAccessibleDescription('Enter a value.');
+    await expect.poll(readLayout).toEqual(initialLayout);
+
+    await dialog.getByRole('button', { name: 'Review row' }).click();
+    await expect(eventId).toBeFocused();
+    await expect(dialog.getByRole('alert')).toHaveCount(3);
+    await expect.poll(readLayout).toEqual(initialLayout);
+    await expect(eventName).toHaveAttribute('aria-invalid', 'false');
+    await expect(dialog.locator('pre')).toHaveCount(0);
+    expect(imports).toHaveLength(0);
+
+    await eventId.fill('-1');
+    await expect(eventId).toHaveAccessibleDescription('Enter zero or a positive whole number.');
+    await eventId.fill('18446744073709551616');
+    await expect(eventId).toHaveAccessibleDescription('Value is outside the UInt64 range.');
+    await eventId.fill('18446744073709551615');
+    await expect(eventId).toHaveAttribute('aria-invalid', 'false');
+    await eventTime.fill('2026-02-30 12:00:00');
+    await expect(eventTime).toHaveAccessibleDescription(
+        'Enter a valid date and time in YYYY-MM-DD HH:mm:ss format.',
+    );
+    await expect.poll(readLayout).toEqual(initialLayout);
+    const errorBounds = await eventTime.evaluate(input => {
+        const row = input.closest('.insert-row-column');
+        const error = row?.querySelector('.insert-row-column-error');
+        if (!row || !error) throw new Error('Expected a field row with a validation error.');
+        return {
+            inputBottom: input.getBoundingClientRect().bottom,
+            errorTop: error.getBoundingClientRect().top,
+            errorBottom: error.getBoundingClientRect().bottom,
+            rowBottom: row.getBoundingClientRect().bottom,
+        };
+    });
+    expect(errorBounds.errorTop).toBeGreaterThanOrEqual(errorBounds.inputBottom);
+    expect(errorBounds.errorBottom).toBeLessThanOrEqual(errorBounds.rowBottom - 1);
+    await eventTime.fill('2024-02-29 12:00:00');
+    await eventCount.fill('12.5');
+    await expect(eventCount).toHaveAccessibleDescription('Enter a number.');
+    await eventCount.fill('0');
+    await expect(dialog.getByRole('alert')).toHaveCount(0);
+    await expect.poll(readLayout).toEqual(initialLayout);
+    await dialog.getByRole('button', { name: 'Review row' }).click();
+    await expect(dialog.locator('pre')).toContainText('"event_id": "18446744073709551615"');
+    await expect(dialog.locator('pre')).toContainText('"event_name": ""');
+    await dialog.getByRole('button', { name: 'Insert row', exact: true }).click();
+    await expect(dialog).toContainText(
+        'ClickHouse acknowledged an insert request containing one row for default.events',
+    );
+    expect(imports).toHaveLength(1);
+    expect(imports[0]).toContain('"event_name":""');
 });
 
 test('ClickHouse Cloud can create a table from a file when no tables exist', async ({ page }) => {

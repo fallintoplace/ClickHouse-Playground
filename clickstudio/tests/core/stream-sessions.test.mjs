@@ -4,6 +4,7 @@ import { Readable } from 'node:stream';
 import { collectCompactStream } from '../../.core-build/src/backend/database/clickhouse/result-stream.js';
 import { SessionService } from '../../.core-build/src/backend/system/login/sessions.js';
 import { DEFAULT_LIMITS } from '../../.core-build/src/shared/queries/execution/settings.js';
+import { CLOUD_QUERY_LIMITS } from '../../.core-build/src/shared/database/connections/cloud-policy.js';
 import { FileStore, MemoryStore, audit } from '../../.core-build/src/backend/system/store.js';
 import { isRecord } from '../../.core-build/src/shared/common/values.js';
 import { mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -41,10 +42,7 @@ test('Cloud LIMIT results with three or five rows stay complete', async () => {
                 { length: count },
                 (_, index) => `["${index + 1}","row-${index + 1}"]\n`,
             ).join('');
-        const output = await collectCompactStream(Readable.from([result]), {
-            rows: 1_000,
-            bytes: 2_000_000,
-        });
+        const output = await collectCompactStream(Readable.from([result]), CLOUD_QUERY_LIMITS);
         assert.equal(output.rows.length, count);
         assert.equal(output.truncated, false);
     }
@@ -52,26 +50,23 @@ test('Cloud LIMIT results with three or five rows stay complete', async () => {
 test('Cloud results below the display caps stay complete', async () => {
     const result =
         header +
-        Array.from({ length: 34 }, (_, index) => `["${index + 1}","row-${index + 1}"]\n`).join('');
-    const output = await collectCompactStream(Readable.from([result]), {
-        rows: 1_000,
-        bytes: 2_000_000,
-    });
-    assert.equal(output.rows.length, 34);
+        Array.from({ length: 2_000 }, (_, index) => `["${index + 1}","row-${index + 1}"]\n`).join(
+            '',
+        );
+    const output = await collectCompactStream(Readable.from([result]), CLOUD_QUERY_LIMITS);
+    assert.equal(output.rows.length, 2_000);
     assert.equal(output.truncated, false);
 });
 test('Cloud result caps retain the row prefix and flag an extra row', async () => {
     const result =
         header +
-        Array.from({ length: 1_001 }, (_, index) => `["${index + 1}","row-${index + 1}"]\n`).join(
-            '',
-        );
-    const output = await collectCompactStream(Readable.from([result]), {
-        rows: 1_000,
-        bytes: 2_000_000,
-    });
-    assert.equal(output.rows.length, 1_000);
-    assert.equal(output.rows[999]?.[0], '1000');
+        Array.from(
+            { length: CLOUD_QUERY_LIMITS.rows + 1 },
+            (_, index) => `["${index + 1}","row-${index + 1}"]\n`,
+        ).join('');
+    const output = await collectCompactStream(Readable.from([result]), CLOUD_QUERY_LIMITS);
+    assert.equal(output.rows.length, CLOUD_QUERY_LIMITS.rows);
+    assert.equal(output.rows.at(-1)?.[0], String(CLOUD_QUERY_LIMITS.rows));
     assert.equal(output.truncated, true);
 });
 test('Cloud results at the byte cap are complete until another row arrives', async () => {

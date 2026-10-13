@@ -12,6 +12,8 @@ import {
 import type { SchemaColumn, SchemaTable } from '../../../shared/database/schema/types';
 import { api, apiResponses, message, post, RequestError } from '../../api/client';
 import { Icon } from '../../ui/components/icons';
+import { InsertRowFields } from './InsertRowFields';
+import { insertRowValidationErrors, isOptionalInsertRowColumn } from './insert-row-validation';
 import {
     checkClickHouseCloudImport,
     CLICKHOUSE_CLOUD_CONNECTION_ID,
@@ -49,8 +51,32 @@ type ImportJob = {
     connectionId?: string;
 };
 type Step = 'edit' | 'review' | 'status';
-function optionalColumn(column: SchemaColumn) {
-    return Boolean(column.defaultKind) || /^Nullable\(/.test(column.type);
+
+function useInsertRowValidation(
+    columns: readonly SchemaColumn[],
+    included: Record<string, boolean>,
+    values: Record<string, string>,
+) {
+    const [validatedFields, setValidatedFields] = useState<Set<string>>(() => new Set());
+    const validationErrors = useMemo(
+        () => insertRowValidationErrors(columns, included, values),
+        [columns, included, values],
+    );
+    const fieldErrors = new Map(
+        [...validationErrors].filter(([column]) => validatedFields.has(column)),
+    );
+    const onFieldBlur = (column: string) => {
+        setValidatedFields(current => new Set(current).add(column));
+    };
+    const validateFields = (form: HTMLFormElement) => {
+        setValidatedFields(new Set(columns.map(column => column.name)));
+        const invalidColumn = validationErrors.keys().next().value;
+        if (invalidColumn === undefined) return true;
+        const input = form.elements.namedItem(invalidColumn);
+        if (input instanceof HTMLInputElement) input.focus();
+        return false;
+    };
+    return { fieldErrors, onFieldBlur, validateFields };
 }
 
 async function confirmInsertedRow({
@@ -107,7 +133,9 @@ export function InsertRowDialog({ connectionId, table, columns, onClose, onInser
         [columns],
     );
     const [included, setIncluded] = useState<Record<string, boolean>>(() =>
-        Object.fromEntries(writableColumns.map(column => [column.name, !optionalColumn(column)])),
+        Object.fromEntries(
+            writableColumns.map(column => [column.name, !isOptionalInsertRowColumn(column)]),
+        ),
     );
     const [values, setValues] = useState<Record<string, string>>(() =>
         Object.fromEntries(writableColumns.map(column => [column.name, ''])),
@@ -122,6 +150,11 @@ export function InsertRowDialog({ connectionId, table, columns, onClose, onInser
     const [retryAttempted, setRetryAttempted] = useState(false);
     const [error, setError] = useState('');
     const [setupError, setSetupError] = useState('');
+    const { fieldErrors, onFieldBlur, validateFields } = useInsertRowValidation(
+        writableColumns,
+        included,
+        values,
+    );
     const cloudConnection = connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID;
     const row = useMemo(
         () =>
@@ -211,8 +244,11 @@ export function InsertRowDialog({ connectionId, table, columns, onClose, onInser
         };
     }, [step, job, busy, name, reportSuccess]);
 
-    const reviewRow = (event: FormEvent<HTMLFormElement>) =>
-        reviewInsertRow(event, {
+    const reviewRow = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setError('');
+        if (!validateFields(event.currentTarget)) return;
+        await reviewInsertRow(event, {
             allowed,
             loading,
             busy,
@@ -227,6 +263,7 @@ export function InsertRowDialog({ connectionId, table, columns, onClose, onInser
             setMapping,
             setPreview,
         });
+    };
 
     async function insertRow() {
         if (!mapping || busy) return;
@@ -372,9 +409,17 @@ export function InsertRowDialog({ connectionId, table, columns, onClose, onInser
         reviewRow,
         writableColumns,
         included,
-        setIncluded,
         values,
-        setValues,
+        fieldErrors,
+        onValueChange: (column, value) => {
+            setValues(current => ({ ...current, [column]: value }));
+            setError('');
+        },
+        onIncludeChange: (column, include) => {
+            setIncluded(current => ({ ...current, [column]: include }));
+            setError('');
+        },
+        onFieldBlur,
         row,
         job,
         retryAttempted,
@@ -400,9 +445,11 @@ type InsertRowDialogRenderProps = {
     reviewRow: (event: FormEvent<HTMLFormElement>) => Promise<void>;
     writableColumns: SchemaColumn[];
     included: Record<string, boolean>;
-    setIncluded: import('react').Dispatch<import('react').SetStateAction<Record<string, boolean>>>;
     values: Record<string, string>;
-    setValues: import('react').Dispatch<import('react').SetStateAction<Record<string, string>>>;
+    fieldErrors: ReadonlyMap<string, string>;
+    onValueChange: (column: string, value: string) => void;
+    onIncludeChange: (column: string, included: boolean) => void;
+    onFieldBlur: (column: string) => void;
     row: { [k: string]: string };
     job: ImportJob | undefined;
     retryAttempted: boolean;
@@ -527,9 +574,11 @@ function renderInsertRowDialog({
     reviewRow,
     writableColumns,
     included,
-    setIncluded,
     values,
-    setValues,
+    fieldErrors,
+    onValueChange,
+    onIncludeChange,
+    onFieldBlur,
     row,
     job,
     retryAttempted,
@@ -568,7 +617,7 @@ function renderInsertRowDialog({
             onClick={event => {
                 if (event.target === dialog.current && canClose) close();
             }}
-            className="table-action-dialog insert-row-dialog m-auto max-h-[min(90dvh,800px)] w-[min(760px,calc(100vw-2rem))] max-w-none overflow-hidden rounded-2xl border border-[var(--line-bright)] bg-[var(--panel)] p-0 text-[var(--text)] shadow-[var(--shadow-dialog)]"
+            className="table-action-dialog insert-row-dialog m-auto max-h-[min(90dvh,800px)] w-[min(760px,calc(100vw-2rem))] max-w-none overflow-hidden border border-[var(--line-bright)] bg-[var(--panel)] p-0 text-[var(--text)] shadow-[var(--shadow-dialog)]"
         >
             <div className="table-action-dialog-layout">
                 <header className="table-action-dialog-header">
@@ -618,61 +667,15 @@ function renderInsertRowDialog({
                             onSubmit={event => void reviewRow(event)}
                             className="insert-row-form"
                         >
-                            <p className="insert-row-guidance text-xs text-[var(--muted)]">
-                                Required columns are included. Leave defaulted or nullable columns
-                                out to use their ClickHouse defaults.
-                            </p>
-                            {writableColumns.map(column => {
-                                const optional = optionalColumn(column);
-                                return (
-                                    <div
-                                        key={column.name}
-                                        className="insert-row-column grid gap-2 rounded-lg border border-[var(--line)] bg-[var(--page)] p-2 sm:grid-cols-[minmax(9rem,.8fr)_minmax(0,1.5fr)] sm:items-center"
-                                    >
-                                        <div className="min-w-0">
-                                            <strong className="insert-row-column-name block truncate text-xs">
-                                                {column.name}
-                                            </strong>
-                                            <code className="insert-row-column-meta font-sans text-[11px] text-[var(--muted)]">
-                                                {column.type}
-                                                {column.defaultKind
-                                                    ? ` · ${column.defaultKind}`
-                                                    : ''}
-                                            </code>
-                                        </div>
-                                        <div className="flex min-w-0 items-center gap-3">
-                                            {optional && (
-                                                <label className="insert-row-include flex shrink-0 items-center gap-1.5 text-[10px] text-[var(--text-soft)]">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={included[column.name] ?? false}
-                                                        onChange={event =>
-                                                            setIncluded(current => ({
-                                                                ...current,
-                                                                [column.name]: event.target.checked,
-                                                            }))
-                                                        }
-                                                    />
-                                                    Include
-                                                </label>
-                                            )}
-                                            <input
-                                                aria-label={column.name}
-                                                disabled={optional && !included[column.name]}
-                                                value={values[column.name] ?? ''}
-                                                onChange={event =>
-                                                    setValues(current => ({
-                                                        ...current,
-                                                        [column.name]: event.target.value,
-                                                    }))
-                                                }
-                                                placeholder={optional ? 'Use default' : 'Value'}
-                                                className="insert-row-column-value min-h-8 min-w-0 flex-1 rounded-md border border-[var(--line)] bg-[var(--panel)] px-2.5 font-mono text-xs disabled:opacity-45"
-                                            />
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                            <InsertRowFields
+                                columns={writableColumns}
+                                included={included}
+                                values={values}
+                                errors={fieldErrors}
+                                onValueChange={onValueChange}
+                                onIncludeChange={onIncludeChange}
+                                onFieldBlur={onFieldBlur}
+                            />
                             {!writableColumns.length && (
                                 <p
                                     role="status"

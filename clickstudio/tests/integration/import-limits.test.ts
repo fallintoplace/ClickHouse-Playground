@@ -5,7 +5,13 @@ import { parseInput } from '../../src/backend/database/imports/imports.js';
 import { parseCsv } from '../../src/shared/database/imports/parser.js';
 import { mapImportRows } from '../../src/shared/database/imports/mapping.js';
 import { parseImportFile } from '../../src/frontend/api/samples/demo-import-data.js';
-import type { ImportFormat } from '../../src/shared/database/imports/limits.js';
+import {
+    IMPORT_FILE_SIZE_LABEL,
+    IMPORT_ROW_LIMIT_LABEL,
+    MAX_IMPORT_FILE_BYTES,
+    MAX_IMPORT_ROWS,
+    type ImportFormat,
+} from '../../src/shared/database/imports/limits.js';
 
 const parsers = { server: parseInput, browser: parseImportFile };
 
@@ -20,15 +26,17 @@ function encodeRows(rows: Record<string, string>[], format: ImportFormat): strin
 }
 
 for (const format of ['csv', 'json', 'ndjson'] as const) {
-    test(`${format} imports accept 10,000 rows and reject the next row in both parsers`, () => {
-        const rows = Array.from({ length: 10_000 }, (_, index) => ({ value: String(index) }));
+    test(`${format} imports accept ${IMPORT_ROW_LIMIT_LABEL} rows and reject the next row in both parsers`, () => {
+        const rows = Array.from({ length: MAX_IMPORT_ROWS }, (_, index) => ({
+            value: String(index),
+        }));
         const accepted = encodeRows(rows, format);
         const rejected = encodeRows([...rows, { value: 'extra' }], format);
         for (const parse of Object.values(parsers)) {
             const result = parse(accepted, format);
-            assert.equal(result.rows.length, 10_000);
-            assert.equal(result.rows.at(-1)?.value, '9999');
-            assert.throws(() => parse(rejected, format), /limited to|1–10,000/);
+            assert.equal(result.rows.length, MAX_IMPORT_ROWS);
+            assert.equal(result.rows.at(-1)?.value, String(MAX_IMPORT_ROWS - 1));
+            assert.throws(() => parse(rejected, format), /limited to|1–1,000,000/);
         }
     });
 
@@ -56,18 +64,18 @@ for (const format of ['csv', 'json', 'ndjson'] as const) {
         }
     });
 
-    test(`${format} imports measure the 2 MB file boundary in UTF-8 bytes in both parsers`, () => {
+    test(`${format} imports measure the ${IMPORT_FILE_SIZE_LABEL} file boundary in UTF-8 bytes in both parsers`, () => {
         const empty = encodeRows([{ value: '' }], format);
-        const availableBytes = 2_000_000 - Buffer.byteLength(empty);
+        const availableBytes = MAX_IMPORT_FILE_BYTES - Buffer.byteLength(empty);
         const value = 'é'.repeat(Math.floor(availableBytes / 2)) + 'a'.repeat(availableBytes % 2);
         const accepted = encodeRows([{ value }], format);
         const rejected = encodeRows([{ value: value + 'a' }], format);
-        assert.equal(Buffer.byteLength(accepted), 2_000_000);
-        assert.equal(Buffer.byteLength(rejected), 2_000_001);
-        assert.ok(rejected.length < 2_000_000);
+        assert.equal(Buffer.byteLength(accepted), MAX_IMPORT_FILE_BYTES);
+        assert.equal(Buffer.byteLength(rejected), MAX_IMPORT_FILE_BYTES + 1);
+        assert.ok(rejected.length < MAX_IMPORT_FILE_BYTES);
         for (const parse of Object.values(parsers)) {
             assert.equal(parse(accepted, format).rows[0]?.value, value);
-            assert.throws(() => parse(rejected, format), /limited to 2 MB/);
+            assert.throws(() => parse(rejected, format), /limited to 100 MB/);
         }
     });
 }
@@ -116,8 +124,8 @@ const errorCases = [
     ['csv', 'a\n"value"tail', 'INVALID_CSV', 'Unexpected character after a closing quote'],
     ['csv', 'a\nval"ue', 'INVALID_CSV', 'Quote in an unquoted field'],
     ['json', '{', 'INVALID_JSON', 'The uploaded JSON is invalid'],
-    ['json', '[]', 'IMPORT_ROWS', 'Upload an array of 1–10,000 JSON objects'],
-    ['ndjson', '\n \n', 'IMPORT_ROWS', 'Upload an array of 1–10,000 JSON objects'],
+    ['json', '[]', 'IMPORT_ROWS', 'Upload an array of 1–1,000,000 JSON objects'],
+    ['ndjson', '\n \n', 'IMPORT_ROWS', 'Upload an array of 1–1,000,000 JSON objects'],
     ['json', '[null]', 'IMPORT_OBJECT', 'Every JSON row must be an object'],
     ['json', '[{}]', 'IMPORT_COLUMNS', 'Import previews support 1–200 columns'],
     ['json', '[{"":1}]', 'INVALID_HEADERS', 'Invalid JSON field name'],
@@ -153,14 +161,14 @@ test('CSV row limits preserve custom parser limits and distinct overflow message
         code: 'IMPORT_ROW_LIMIT',
         message: 'Imports are limited to 1 rows',
     });
-    const source = 'a\n' + '1\n'.repeat(10001);
+    const source = 'a\n' + '1\n'.repeat(MAX_IMPORT_ROWS + 1);
     assert.throws(() => parseInput(source, 'csv'), {
         status: 413,
         code: 'IMPORT_ROW_LIMIT',
-        message: 'Imports are limited to 10000 rows',
+        message: 'Imports are limited to 1000000 rows',
     });
     assert.throws(() => parseImportFile(source, 'csv'), {
-        message: 'Imports are limited to 10,000 rows',
+        message: 'Imports are limited to 1,000,000 rows',
     });
 });
 

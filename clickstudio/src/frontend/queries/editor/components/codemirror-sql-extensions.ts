@@ -29,7 +29,6 @@ export const clickhouseSnippetCompletions = CLICKHOUSE_SNIPPETS.map(item =>
         displayLabel: item.label,
         type: 'text',
         detail: 'ClickHouse SQL template',
-        info: `${item.detail} Edit the example table and columns with Tab.`,
     }),
 );
 
