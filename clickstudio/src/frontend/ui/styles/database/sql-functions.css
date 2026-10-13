@@ -104,10 +104,6 @@
   .sql-function-argument label {
     font-family: var(--font-mono);
     overflow-wrap: anywhere;
-  }
-
-  .sql-function-argument label,
-  .sql-function-fields label {
     font-size: 12px;
     font-weight: 600;
   }
@@ -117,6 +113,16 @@
     max-height: 160px;
     field-sizing: content;
     resize: vertical;
+    width: 100%;
+    min-width: 0;
+    padding: 9px 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    background: var(--page);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.5;
   }
 
   .sql-function-format {
@@ -130,23 +136,7 @@
     font-size: 10px;
   }
 
-  .sql-function-argument textarea,
-  .sql-function-fields input,
-  .sql-function-fields textarea {
-    width: 100%;
-    min-width: 0;
-    padding: 9px 10px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-control);
-    background: var(--page);
-    color: var(--text);
-    font-family: var(--font-mono);
-    font-size: 12px;
-    line-height: 1.5;
-  }
-
-  .sql-function-input-hint,
-  .sql-function-fields small {
+  .sql-function-input-hint {
     margin: 0;
     color: var(--muted);
     font-size: 10px;
@@ -285,72 +275,27 @@
     overflow-wrap: anywhere;
   }
 
-  .sql-function-dialog {
-    width: min(640px, calc(100vw - 32px));
-    max-height: calc(100vh - 32px);
-    margin: auto;
-    padding: 0;
-    overflow: auto;
-    border: 1px solid var(--line-bright);
-    border-radius: var(--radius-control);
-    background: var(--panel);
-    color: var(--text);
-    box-shadow: var(--shadow-popover);
-  }
-
-  .sql-function-dialog::backdrop {
-    background: color-mix(in srgb, var(--page) 75%, transparent);
-  }
-
-  .sql-function-dialog header,
-  .sql-function-dialog footer {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    padding: 16px 20px;
-  }
-
-  .sql-function-dialog header {
-    justify-content: space-between;
-    border-bottom: 1px solid var(--line);
-  }
-
-  .sql-function-dialog h2 {
-    margin: 5px 0 0;
-    font-size: 20px;
-  }
-
-  .sql-function-dialog header button {
-    display: grid;
-    width: 28px;
-    height: 28px;
-    place-items: center;
-  }
-
-  .sql-function-dialog-body {
-    display: grid;
-    gap: 16px;
-    padding: 20px;
-  }
-
   .sql-function-fields {
     display: grid;
-    gap: 12px;
     min-width: 0;
-    padding: 0;
-    border: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 16px;
   }
 
-  .sql-function-fields label {
-    display: grid;
-    gap: 6px;
+  .sql-function-expression {
+    grid-column: 1 / -1;
   }
 
-  .sql-function-dialog footer {
-    border-top: 1px solid var(--line);
+  .sql-function-expression textarea {
+    min-height: 100px;
+    resize: vertical;
   }
 
-  .sql-function-dialog footer > span {
-    flex: 1;
+  .sql-function-create-preview h3 {
+    margin: 0;
+    color: var(--text-soft);
+    font-size: 12px;
+    font-weight: 600;
   }
 }

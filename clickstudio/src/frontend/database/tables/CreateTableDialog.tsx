@@ -18,6 +18,7 @@ import {
     createClickHouseCloudTable,
 } from '../connections/cloud-connection';
 import { Icon } from '../../ui/components/icons';
+import { CreationDialog } from '../../ui/components/CreationDialog';
 
 type Props = {
     connection: Connected;
@@ -31,7 +32,6 @@ const identifierPattern = /^[A-Za-z_][A-Za-z0-9_]{0,127}$/;
 const identifierPatternAttribute = '[A-Za-z_][A-Za-z0-9_]{0,127}';
 
 export function CreateTableDialog({ connection, databases, onClose, onCreated }: Props) {
-    const dialog = useRef<HTMLDialogElement>(null);
     const databaseInput = useRef<HTMLInputElement>(null);
     const tableInput = useRef<HTMLInputElement>(null);
     const databaseOptionsId = `create-table-databases-${useId()}`;
@@ -71,16 +71,6 @@ export function CreateTableDialog({ connection, databases, onClose, onCreated }:
         activeDatabaseOption >= 0 && activeDatabaseOption < databaseOptions.length
             ? activeDatabaseOption
             : -1;
-
-    useEffect(() => {
-        const element = dialog.current;
-        if (!element) return;
-        element.showModal();
-        tableInput.current?.focus({ preventScroll: true });
-        return () => {
-            if (element.open) element.close();
-        };
-    }, []);
 
     useEffect(() => {
         if (!columns.some(column => column.name === orderBy)) setOrderBy(columns[0]?.name ?? '');
@@ -273,46 +263,21 @@ export function CreateTableDialog({ connection, databases, onClose, onCreated }:
     };
 
     return (
-        <dialog
-            ref={dialog}
-            aria-labelledby="create-table-title"
-            onCancel={event => {
-                event.preventDefault();
-                if (!busy) onClose();
-            }}
-            onClick={event => {
-                if (event.target === dialog.current && !busy) onClose();
-            }}
-            className="table-action-dialog create-table-dialog m-auto max-w-none overflow-hidden border border-[var(--line-bright)] bg-[var(--panel)] p-0 text-[var(--text)] shadow-[var(--shadow-dialog)]"
-        >
-            <form
-                onSubmit={event => void create(event)}
-                className="table-action-dialog-layout create-table-form"
-            >
-                <header className="table-action-dialog-header create-table-header">
-                    <div className="min-w-0">
-                        <h2 id="create-table-title" className="table-action-dialog-title">
-                            New table
-                        </h2>
-                        <p className="table-action-dialog-description">
-                            Create an empty MergeTree table in{' '}
-                            <code>{database || 'a database'}</code>.
-                        </p>
-                    </div>
-                    <button
-                        type="button"
-                        aria-label="Close new table"
-                        disabled={busy}
-                        onClick={onClose}
-                        className="table-action-dialog-close"
-                    >
-                        <Icon name="close" />
-                    </button>
-                </header>
-
-                <CreateTableContent model={contentModel} />
-
-                <footer className="table-action-dialog-footer create-table-footer">
+        <CreationDialog
+            className="create-table-dialog"
+            title="New table"
+            description={
+                <>
+                    Create an empty MergeTree table in <code>{database || 'a database'}</code>.
+                </>
+            }
+            closeLabel="Close new table"
+            initialFocus={tableInput}
+            busy={busy}
+            onClose={onClose}
+            onSubmit={event => void create(event)}
+            footer={
+                <>
                     {!created && !canCreate && !busy && createDisabledReason && (
                         <p className="create-table-submit-help">{createDisabledReason}</p>
                     )}
@@ -320,22 +285,34 @@ export function CreateTableDialog({ connection, databases, onClose, onCreated }:
                         <button
                             type="button"
                             onClick={onClose}
-                            className="table-action-dialog-button table-action-dialog-primary create-table-button bg-[var(--accent-action)] text-[var(--accent-ink)]"
+                            className="creation-dialog-button is-primary"
                         >
                             Done
                         </button>
                     ) : (
-                        <button
-                            type="submit"
-                            disabled={busy || !canCreate}
-                            className="table-action-dialog-button table-action-dialog-primary create-table-button bg-[var(--accent-action)] text-[var(--accent-ink)] disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                            {busy ? 'Creating…' : 'Create table'}
-                        </button>
+                        <>
+                            <button
+                                type="button"
+                                className="creation-dialog-button"
+                                disabled={busy}
+                                onClick={onClose}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={busy || !canCreate}
+                                className="creation-dialog-button is-primary"
+                            >
+                                {busy ? 'Creating…' : 'Create table'}
+                            </button>
+                        </>
                     )}
-                </footer>
-            </form>
-        </dialog>
+                </>
+            }
+        >
+            <CreateTableContent model={contentModel} />
+        </CreationDialog>
     );
 }
 
@@ -392,13 +369,13 @@ function CreateTableContent({ model }: { model: CreateTableContentModel }) {
         error,
     } = model;
     return (
-        <main className="create-table-content table-action-dialog-content min-h-0 flex-1 overflow-y-auto">
+        <>
             {!created && (
                 <>
                     <div className="create-table-identity-grid">
                         {renderDatabasePicker(model)}
 
-                        <label className="create-table-field">
+                        <label className="creation-dialog-field">
                             <span>Table name</span>
                             <input
                                 ref={tableInput}
@@ -412,11 +389,11 @@ function CreateTableContent({ model }: { model: CreateTableContentModel }) {
                                 maxLength={128}
                                 pattern={identifierPatternAttribute}
                                 placeholder="e.g. events"
-                                className="create-table-control font-mono"
+                                className="creation-dialog-control"
                             />
                             <span
                                 id="create-table-name-help"
-                                className={`create-table-help${tableTouched && !tableIsValid ? ' is-error' : ''}`}
+                                className={`creation-dialog-help${tableTouched && !tableIsValid ? ' is-error' : ''}`}
                             >
                                 {tableHelp}
                             </span>
@@ -429,14 +406,14 @@ function CreateTableContent({ model }: { model: CreateTableContentModel }) {
 
                     {renderTableColumns(model)}
 
-                    <label className="create-table-field">
+                    <label className="creation-dialog-field">
                         <span>Sorting key</span>
                         <span className="create-table-select-wrap">
                             <select
                                 aria-label="Sorting key"
                                 value={orderBy}
                                 onChange={event => setOrderBy(event.target.value)}
-                                className="create-table-control create-table-select"
+                                className="creation-dialog-control create-table-select"
                             >
                                 {columns.map((column, index) => (
                                     <option key={`${column.name}-${index}`} value={column.name}>
@@ -465,7 +442,7 @@ function CreateTableContent({ model }: { model: CreateTableContentModel }) {
                     {error}
                 </p>
             )}
-        </main>
+        </>
     );
 }
 
@@ -498,7 +475,7 @@ function renderTableColumns({
             {columns.map((column, index) => (
                 <div
                     key={index}
-                    className={`create-table-column-row grid grid-cols-[minmax(0,1fr)_minmax(8rem,.8fr)_auto] gap-2 border border-[var(--line)] bg-[var(--page)] p-2${column.generatedId ? ' has-generated-id' : ''}`}
+                    className="create-table-column-row grid grid-cols-[minmax(0,1fr)_minmax(8rem,.8fr)_auto] border border-[var(--line)]"
                 >
                     <label className="create-table-column-field">
                         <span className="create-table-column-label">Name</span>
@@ -510,7 +487,7 @@ function renderTableColumns({
                             required
                             maxLength={128}
                             pattern={identifierPatternAttribute}
-                            className="create-table-control create-table-column-control font-mono"
+                            className="creation-dialog-control create-table-column-control"
                         />
                         {column.generatedId && (
                             <span className="create-table-generated-id">
@@ -525,7 +502,7 @@ function renderTableColumns({
                                 aria-label={`Column ${index + 1} type`}
                                 value={column.type}
                                 onChange={event => updateColumn(index, 'type', event.target.value)}
-                                className="create-table-control create-table-column-control create-table-select"
+                                className="creation-dialog-control create-table-column-control create-table-select"
                             >
                                 {CREATE_TABLE_COLUMN_TYPES.map(type => (
                                     <option key={type} value={type}>
@@ -592,7 +569,7 @@ function renderDatabasePicker({
     | 'databaseHelp'
 >) {
     return (
-        <div className="create-table-field">
+        <div className="creation-dialog-field">
             <label htmlFor={databaseInputId}>Database</label>
             <div className="create-table-database-picker">
                 <input
@@ -633,7 +610,7 @@ function renderDatabasePicker({
                     maxLength={128}
                     pattern={identifierPatternAttribute}
                     autoComplete="off"
-                    className="create-table-control create-table-database-input font-mono"
+                    className="creation-dialog-control create-table-database-input"
                 />
                 <button
                     type="button"
@@ -686,7 +663,7 @@ function renderDatabasePicker({
             {databaseHelp && (
                 <span
                     id="create-table-database-help"
-                    className={`create-table-help${databaseTouched && !databaseIsValid ? ' is-error' : ''}`}
+                    className={`creation-dialog-help${databaseTouched && !databaseIsValid ? ' is-error' : ''}`}
                 >
                     {databaseHelp}
                 </span>

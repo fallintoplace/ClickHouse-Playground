@@ -19,6 +19,7 @@
 @import "./base/animations.css";
 @import "./workspace/responsive.css";
 @import "./database/object-explorer.css";
+@import "./base/creation-dialog.css";
 @import "./database/sql-functions.css";
 @import "./database/import-wizard.css";
 @import "./database/transfer-dialog.css";
