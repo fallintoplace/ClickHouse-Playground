@@ -16,6 +16,7 @@ import type {
     ProposalQualityCheck,
 } from '../../../shared/assistant/types.js';
 import { isRecord, isStringArray } from '../../../shared/common/values.js';
+import { assistantAnswerContent, assistantReplyText } from '../../../shared/assistant/answers.js';
 
 function isAssistantAction(value: unknown): value is AssistantAction {
     return typeof value === 'string' && ASSISTANT_ACTIONS.some(action => action === value);
@@ -172,5 +173,26 @@ export function parseAssistantProposal(value: unknown): Proposal | undefined {
         ...(sources !== undefined ? { sources } : {}),
         ...(quality ? { quality } : {}),
         ...(typeof value.decidedAt === 'string' ? { decidedAt: value.decidedAt } : {}),
+    };
+}
+
+export function assistantReplyFrom(
+    value: unknown,
+    request: Pick<Proposal, 'id' | 'connectionId' | 'baseSql' | 'action'>,
+): Proposal {
+    const proposal = parseAssistantProposal(value);
+    if (proposal) return proposal;
+    const answer = assistantReplyText(value);
+    if (!answer) throw new Error('The assistant returned no reply. Try again.');
+    return {
+        ...assistantAnswerContent(answer),
+        ...request,
+        owner: 'unparsed-response',
+        createdAt: new Date().toISOString(),
+        responseId: '',
+        model: '',
+        promptVersion: 'plain-text',
+        contextSummary: [],
+        decision: 'pending',
     };
 }

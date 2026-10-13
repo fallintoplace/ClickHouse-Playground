@@ -1030,3 +1030,161 @@ for (const mode of ['beginner', 'expert'])
         await option.getByRole('button', { name: 'Open in SQL tab: Option 3' }).click();
         await expect(liveEditor(page)).toHaveText('SELECT 3 AS value');
     });
+
+const markdownReply = [
+    'Here are three alternatives. Choose whichever fits your request.',
+    '```sql\nSELECT 2 AS value\n```',
+    '```CLICKHOUSE\nSELECT 3 AS value;\nSELECT 4 AS value;\n```',
+    "```sql\nSELECT 'unfinished\n```",
+    '```json\n{"example": true}\n```',
+    'These are the complete scripts returned in this reply.',
+].join('\n\n');
+
+for (const mode of ['beginner', 'expert']) {
+    for (const format of ['proposal', 'text', 'invalid-envelope'])
+        test(`${mode} displays ${format} replies intact and offers each SQL block in a new tab`, async ({
+            page,
+        }) => {
+            if (format === 'proposal')
+                await installProposal(page, null, { summary: markdownReply });
+            else
+                await page.route('**/api/assistant/sql', route =>
+                    route.fulfill({
+                        status: 200,
+                        contentType: format === 'text' ? 'text/plain' : 'application/json',
+                        body:
+                            format === 'text'
+                                ? markdownReply
+                                : JSON.stringify({
+                                      summary: markdownReply,
+                                      sql: 42,
+                                      findings: 'invalid',
+                                  }),
+                    }),
+                );
+            let runs = 0;
+            page.on('request', request => {
+                if (
+                    request.method() === 'POST' &&
+                    ['/api/runs', '/api/scripts'].includes(new URL(request.url()).pathname)
+                )
+                    runs++;
+            });
+            await trust(page, mode);
+            await replaceSql(page, originalSql);
+            await askForChanges(
+                page,
+                'Here are three alternatives. Choose whichever fits your request.',
+            );
+            const answer = page.getByTestId('assistant-answer-markdown');
+            await expect(answer).toContainText(
+                'These are the complete scripts returned in this reply.',
+            );
+            await expect(answer.locator('pre code')).toHaveText([
+                'SELECT 2 AS value\n',
+                'SELECT 3 AS value;\nSELECT 4 AS value;\n',
+                "SELECT 'unfinished\n",
+                '{"example": true}\n',
+            ]);
+            await expect(page.locator('.assistant-turn-error')).toHaveCount(0);
+            await expect(review(page)).toHaveCount(0);
+            await expect(liveEditor(page)).toHaveText(originalSql);
+            const controls = answer.getByRole('button', { name: 'Open SQL code block in SQL tab' });
+            await expect(controls).toHaveCount(3);
+            await controls.nth(1).click();
+            await expect
+                .poll(async () => (await storedDraft(page))?.sql)
+                .toBe('SELECT 3 AS value;\nSELECT 4 AS value;');
+            await controls.nth(2).click();
+            await expect(liveEditor(page)).toHaveText("SELECT 'unfinished");
+            expect(runs).toBe(0);
+        });
+
+    test(`${mode} displays malformed JSON returned by a successful reply`, async ({ page }) => {
+        const reply = '{"summary":"unfinished';
+        await page.route('**/api/assistant/sql', route =>
+            route.fulfill({ status: 200, contentType: 'application/json', body: reply }),
+        );
+        await trust(page, mode);
+        await replaceSql(page, originalSql);
+        await askForChanges(page, reply);
+        await expect(page.getByTestId('assistant-answer-markdown')).toHaveText(reply);
+        await expect(page.locator('.assistant-turn-error')).toHaveCount(0);
+        await expect(liveEditor(page)).toHaveText(originalSql);
+        await expect(review(page)).toHaveCount(0);
+    });
+}
+
+for (const mode of ['beginner', 'expert']) {
+    for (const schemaState of ['loading', 'failed'])
+        test(`${mode} sends chat while schema is ${schemaState}`, async ({ page }) => {
+            let schemaRequests = 0;
+            let releaseSchema: (() => void) | undefined;
+            const schemaReleased = new Promise<void>(resolve => {
+                releaseSchema = resolve;
+            });
+            await page.route('**/api/connections/demo/schema**', async route => {
+                schemaRequests++;
+                if (schemaState === 'loading') await schemaReleased;
+                await route
+                    .fulfill({
+                        status: 503,
+                        json: {
+                            error: {
+                                code: 'SCHEMA_UNAVAILABLE',
+                                message: 'Schema loading failed.',
+                            },
+                        },
+                    })
+                    .catch(() => undefined);
+            });
+            const submissions: Record<string, unknown>[] = [];
+            await page.route('**/api/assistant/sql', async route => {
+                submissions.push(jsonRecord(route.request().postDataJSON()));
+                await route.fulfill({ contentType: 'text/plain', body: 'Reply without schema.' });
+            });
+            try {
+                await trust(page, mode);
+                await expect.poll(() => schemaRequests).toBeGreaterThan(0);
+                const schemaRequestsBeforeChat = schemaRequests;
+                await askForChanges(page, 'Reply without schema.');
+                expect(submissions).toHaveLength(1);
+                expect(submissions[0]?.schema).toBeUndefined();
+                await expect(page.locator('.assistant-schema-refresh')).toHaveCount(0);
+                await expect(page.locator('.assistant-turn-error')).toHaveCount(0);
+                expect(schemaRequests).toBe(schemaRequestsBeforeChat);
+            } finally {
+                releaseSchema?.();
+            }
+        });
+}
+
+test('Opening returned SQL preserves citation-like strings exactly', async ({ page }) => {
+    const sql = "SELECT '[docs]([https://example.com/](https://example.com/))' AS value";
+    await installProposal(page, null, {
+        summary: `Returned SQL:\n\n\`\`\`sql\n${sql}\n\`\`\``,
+        sources: [{ title: 'Docs', url: 'https://example.com/' }],
+    });
+    await trust(page);
+    await askForChanges(page, 'Returned SQL:');
+    const answer = page.getByTestId('assistant-answer-markdown');
+    await expect(answer.locator('pre code')).toHaveText(`${sql}\n`);
+    await answer.getByRole('button', { name: 'Open SQL code block in SQL tab' }).click();
+    await expect.poll(async () => (await storedDraft(page))?.sql).toBe(sql);
+});
+
+test('A successful empty assistant response displays the usual no-reply error', async ({
+    page,
+}) => {
+    await page.route('**/api/assistant/sql', route => route.fulfill({ status: 204, body: '' }));
+    await trust(page);
+    await replaceSql(page, originalSql);
+    await page.getByTestId('open-ai').click();
+    await page.getByRole('textbox', { name: 'Ask AI', exact: true }).fill('Update this query');
+    await page.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect(page.locator('.assistant-turn-error')).toContainText(
+        'The assistant returned no reply.',
+    );
+    await expect(review(page)).toHaveCount(0);
+    await expect(liveEditor(page)).toHaveText(originalSql);
+});

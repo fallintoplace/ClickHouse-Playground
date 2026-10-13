@@ -4,7 +4,7 @@ import type {
 } from '../../../shared/assistant/actions';
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { flushSync } from 'react-dom';
-import { parseAssistantProposal } from './assistant-proposal-parser';
+import { assistantReplyFrom, parseAssistantProposal } from './assistant-proposal-parser';
 import type { AssistantConversationMessage } from '../../../shared/assistant/types';
 import type { Result } from '../../../shared/queries/results/types';
 import type { Schema } from '../../../shared/database/schema/types';
@@ -140,7 +140,6 @@ type AssistantRunContext = { result?: Result; evidenceSql?: string; error?: stri
 type AssistantRunContextLoader = (signal: AbortSignal) => Promise<AssistantRunContext>;
 type AssistantRequestOptions = {
     repair?: AssistantRepairContext;
-    loadSchema?: () => Promise<Schema | undefined>;
 };
 type AssistantActivity = { turnId: string; phase: AssistantPhase };
 type ActiveAssistantRequest = {
@@ -204,10 +203,6 @@ function createAssistantSqlRequestHandler(context: AssistantSqlRequestContext) {
             setAssistantError('Ask a question or describe the SQL you want first.');
             return;
         }
-        if (!schema && !options?.loadSchema) {
-            setAssistantError('Refresh the ClickHouse schema before asking the assistant.');
-            return;
-        }
         if (requestIncludesRun && !activeRunId) {
             setAssistantError('Run a query before including its run context.');
             return;
@@ -229,7 +224,7 @@ function createAssistantSqlRequestHandler(context: AssistantSqlRequestContext) {
         const request = beginAssistantRequest(
             chatId,
             turnId,
-            requestIncludesRun || !schema ? 'preparing' : 'generating',
+            requestIncludesRun ? 'preparing' : 'generating',
         );
         const { controller } = request;
         setAssistantError('');
@@ -242,9 +237,7 @@ function createAssistantSqlRequestHandler(context: AssistantSqlRequestContext) {
             turns: [...chat.turns, turn],
         }));
         try {
-            const currentSchema = schema ?? (await options?.loadSchema?.());
             controller.signal.throwIfAborted();
-            if (!currentSchema) throw new Error('Could not load the ClickHouse schema. Try again.');
             const prepareRunContext = async () => {
                 let runContext;
 
@@ -298,17 +291,19 @@ function createAssistantSqlRequestHandler(context: AssistantSqlRequestContext) {
                     question,
                     conversation: history,
                     sql: turn.contextSql,
-                    schema: {
-                        ...currentSchema,
-                        columns: currentSchema.columns.map(
-                            ({ database: columnDatabase, table, name, type }) => ({
-                                database: columnDatabase,
-                                table,
-                                name,
-                                type,
-                            }),
-                        ),
-                    },
+                    schema: schema
+                        ? {
+                              ...schema,
+                              columns: schema.columns.map(
+                                  ({ database: columnDatabase, table, name, type }) => ({
+                                      database: columnDatabase,
+                                      table,
+                                      name,
+                                      type,
+                                  }),
+                              ),
+                          }
+                        : undefined,
                     serverVersion,
                     database,
                     action: repair ? 'repair' : 'ask',
@@ -320,12 +315,16 @@ function createAssistantSqlRequestHandler(context: AssistantSqlRequestContext) {
                     error: storedRunContext?.error,
                 },
                 apiResponses.isUnknown,
-                { signal: controller.signal },
+                { signal: controller.signal, allowTextResponse: true },
             );
             controller.signal.throwIfAborted();
             if (requestsRef.current.get(chatId) !== request) return;
-            const proposal = parseAssistantProposal(response);
-            if (!proposal) throw new Error('The assistant returned incomplete data. Try again.');
+            const proposal = assistantReplyFrom(response, {
+                id: turnId,
+                connectionId,
+                baseSql: turn.contextSql,
+                action: repair ? 'repair' : 'ask',
+            });
             updateChat(chatId, chat => ({
                 ...chat,
                 updatedAt: new Date().toISOString(),

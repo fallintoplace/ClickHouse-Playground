@@ -1,4 +1,3 @@
-import { FINDING_SEVERITIES } from '../../shared/assistant/actions.js';
 import OpenAI from 'openai';
 import { APIConnectionTimeoutError, APIError } from 'openai';
 import {
@@ -11,57 +10,9 @@ import {
 } from './proposals/assistant.js';
 import { AppError } from '../system/requests/errors.js';
 import type { AssistantSource, ProposalContent } from '../../shared/assistant/types.js';
+import { assistantAnswerContent } from '../../shared/assistant/answers.js';
 import type { OpenAIServiceTier } from '../system/config.js';
 const DEFAULT_MAX_INPUT_TOKENS = 48_000;
-const strings = { type: 'array', items: { type: 'string' } };
-const schema = {
-    type: 'object',
-    additionalProperties: false,
-    required: [
-        'sql',
-        'alternatives',
-        'summary',
-        'assumptions',
-        'tables',
-        'caveats',
-        'clarification',
-        'findings',
-    ],
-    properties: {
-        sql: { type: ['string', 'null'] },
-        alternatives: {
-            type: 'array',
-            items: {
-                type: 'object',
-                additionalProperties: false,
-                required: ['title', 'summary', 'sql'],
-                properties: {
-                    title: { type: 'string' },
-                    summary: { type: 'string' },
-                    sql: { type: 'string' },
-                },
-            },
-        },
-        summary: { type: 'string' },
-        assumptions: strings,
-        tables: strings,
-        caveats: strings,
-        clarification: { type: ['string', 'null'] },
-        findings: {
-            type: 'array',
-            items: {
-                type: 'object',
-                additionalProperties: false,
-                required: ['severity', 'message', 'evidence'],
-                properties: {
-                    severity: { type: 'string', enum: FINDING_SEVERITIES },
-                    message: { type: 'string' },
-                    evidence: { type: 'string' },
-                },
-            },
-        },
-    },
-};
 
 function maxInputTokens(): number {
     const configured = Number(process.env.OPENAI_MAX_INPUT_TOKENS);
@@ -159,24 +110,14 @@ function responseContent(response: OpenAI.Responses.Response): ProposalContent {
             'AI_INCOMPLETE',
             'The assistant returned no reply. No draft was changed.',
         );
-    const plainAnswer: ProposalContent = {
-        sql: null,
-        alternatives: [],
-        summary: answer,
-        assumptions: [],
-        tables: [],
-        caveats: [],
-        clarification: null,
-        findings: [],
-    };
-    if (response.status === 'completed' && refusals.length === 0) {
+    if (!refusals.length) {
         try {
             return validateProposal(JSON.parse(answer));
         } catch {
-            return plainAnswer;
+            return assistantAnswerContent(answer);
         }
     }
-    return plainAnswer;
+    return assistantAnswerContent(answer);
 }
 
 export class OpenAIDriver implements AssistantDriver {
@@ -213,14 +154,6 @@ export class OpenAIDriver implements AssistantDriver {
         if (context.payload.image)
             content.push({ type: 'input_image', image_url: context.payload.image, detail: 'auto' });
         const tools = [{ type: 'web_search' as const }];
-        const text = {
-            format: {
-                type: 'json_schema' as const,
-                name: 'clickhouse_proposal',
-                strict: true,
-                schema,
-            },
-        };
         let conversation: OpenAI.Responses.ResponseInput = (context.payload.conversation ?? []).map(
             message => ({ role: message.role, content: message.content }),
         );
@@ -238,7 +171,6 @@ export class OpenAIDriver implements AssistantDriver {
                         input: requestInput(),
                         tools,
                         tool_choice: 'auto',
-                        text,
                     },
                     { signal },
                 )
@@ -296,7 +228,6 @@ export class OpenAIDriver implements AssistantDriver {
                             input: requestInput(),
                             tools,
                             tool_choice: 'auto',
-                            text,
                         },
                         { signal },
                     );
@@ -335,7 +266,7 @@ export class OpenAIDriver implements AssistantDriver {
             throw new AppError(
                 502,
                 'AI_PROVIDER_ERROR',
-                'The OpenAI request failed or returned invalid structured output. No SQL was applied or executed.',
+                'The OpenAI request failed. No SQL was applied or executed.',
             );
         }
     }

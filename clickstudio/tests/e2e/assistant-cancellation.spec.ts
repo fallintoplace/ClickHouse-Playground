@@ -17,7 +17,7 @@ async function loadHarness(page: Page) {
     await page.waitForFunction(() => Boolean(window.assistantCancellationHarness));
 }
 
-test('Two concurrent accepts for the same SQL draft apply only one proposal', async ({ page }) => {
+test('Explicit concurrent accepts can replace the same SQL draft', async ({ page }) => {
     const proposals = new Map<string, Record<string, unknown>>();
     await page.route('**/api/assistant/sql', async route => {
         const body = jsonRecord(route.request().postDataJSON());
@@ -64,14 +64,15 @@ test('Two concurrent accepts for the same SQL draft apply only one proposal', as
         window.assistantCancellationHarness.acceptConcurrently(),
     );
     expect(releases).toHaveLength(2);
-    expect(state.turns.filter(turn => turn.applied)).toHaveLength(1);
-    expect(state.turns.filter(turn => turn.applied === false)).toHaveLength(1);
+    expect(state.turns.filter(turn => turn.applied)).toHaveLength(2);
     expect(state.turns.map(turn => turn.decision)).toEqual(['accepted', 'accepted']);
-    expect(state.sql).toBe(state.turns.find(turn => turn.applied)!.sql);
+    expect(state.turns.map(turn => turn.sql)).toContain(state.sql);
 });
 
 for (const change of ['edit', 'close', 'unmount'] as const) {
-    test(`A pending acceptance cannot overwrite SQL after ${change}`, async ({ page }) => {
+    test(`A pending acceptance ${change === 'edit' ? 'replaces the edited draft' : `does not apply after ${change}`}`, async ({
+        page,
+    }) => {
         const proposal = {
             id: 'delayed-proposal',
             owner: 'local-owner',
@@ -113,10 +114,12 @@ for (const change of ['edit', 'close', 'unmount'] as const) {
             expect(state.sql).toEqual(['SELECT 1']);
             expect(state.applied).toBeUndefined();
             expect(state.review).toBe('Needs review');
+        } else if (change === 'edit') {
+            expect(state.sql).toEqual(['SELECT 3', 'SELECT 2']);
+            expect(state.applied).toBe(true);
+            expect(state.review).toBe('Applied');
         } else {
-            expect(state.sql).toEqual(
-                change === 'edit' ? ['SELECT edited', 'SELECT 2'] : ['SELECT 2'],
-            );
+            expect(state.sql).toEqual(['SELECT 2']);
             expect(state.applied).toBe(false);
             expect(state.review).toBe('Not applied');
         }
@@ -142,7 +145,7 @@ for (const mode of ['ask', 'repair', 'run'] as const) {
     });
 }
 
-for (const mode of ['run', 'schema', 'repair'] as const) {
+for (const mode of ['run', 'ask', 'repair'] as const) {
     test(`Changes during ${mode} preparation preserve the original context and one request per chat`, async ({
         page,
     }) => {

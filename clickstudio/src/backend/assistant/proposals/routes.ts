@@ -6,7 +6,6 @@ import { type Express } from 'express';
 import type { Principal } from '../../../shared/common/identity.js';
 import type { Result } from '../../../shared/queries/results/types.js';
 import type { Run } from '../../../shared/queries/execution/types.js';
-import type { Schema } from '../../../shared/database/schema/types.js';
 import type { RunService } from '../../queries/execution/runs.js';
 import type { AssistantService } from './assistant.js';
 import { validateAssistantConversation } from './assistant.js';
@@ -72,9 +71,7 @@ function registerAssistantSqlRoute(
                 sql = text(v.sql, 'SQL', MAX_SQL_CHARS, true);
             const conversation = validateAssistantConversation(v.conversation);
             const { action, repair } = assistantRequestFrom(v.action, v.repair);
-            const schema = browserCloud
-                ? assistantSchemaFrom(v.schema, connectionId)
-                : await driver.schema(connectionId);
+            const schema = assistantSchemaFrom(v.schema, connectionId);
             const reportedServerVersion =
                 typeof v.serverVersion === 'string' &&
                 /^\d+(?:\.\d+){2,3}(?:[-+][A-Za-z0-9.-]+)?$/.test(v.serverVersion)
@@ -231,7 +228,7 @@ export function registerAssistantRoutes({
             ),
             sql = text(v.sql, 'SQL', MAX_SQL_CHARS, true),
             question = text(v.question, 'question', 4000, true),
-            schema: Schema = await driver.schema(connectionId);
+            schema = assistantSchemaFrom(v.schema, connectionId);
         const connection = driver.connection(p, connectionId),
             documentation = await assistantReferenceDocs(
                 driver,

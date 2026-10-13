@@ -162,6 +162,7 @@ test('OpenAI replies preserve standalone alternatives without local output limit
     globalThis.fetch = async (input, init) => {
         const body = jsonRecord(jsonValue(String(init?.body)), 'OpenAI request');
         assert.equal(body.max_output_tokens, undefined);
+        assert.equal(body.text, undefined);
         if (String(input).endsWith('/responses/input_tokens'))
             return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
         return Response.json({
@@ -320,15 +321,7 @@ test('Local assistant requests use the configured service tier without changing 
         return Response.json({
             id: 'response-tier',
             status: 'completed',
-            output_text: JSON.stringify({
-                sql: null,
-                summary: 'This SQL returns one row.',
-                assumptions: [],
-                tables: [],
-                caveats: [],
-                clarification: null,
-                findings: [],
-            }),
+            output_text: 'This SQL returns one row.',
             output: [],
         });
     };

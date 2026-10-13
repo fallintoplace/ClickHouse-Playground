@@ -13,6 +13,7 @@ export type ApiOptions = {
     method?: HttpMethod;
     body?: unknown;
     signal?: AbortSignal;
+    allowTextResponse?: boolean;
 };
 
 function isApiError(value: unknown): value is ApiError {
@@ -88,7 +89,15 @@ export async function api<T>(
         },
         body: options.body === undefined ? undefined : JSON.stringify(options.body),
     });
-    const content: unknown = await response.json().catch(() => null);
+    const content: unknown = options.allowTextResponse
+        ? await response.text().then(raw => {
+              try {
+                  return JSON.parse(raw);
+              } catch {
+                  return raw;
+              }
+          })
+        : await response.json().catch(() => null);
     if (!response.ok) {
         const detail =
             isRecord(content) && isApiError(content.error)
@@ -113,7 +122,7 @@ export const post = <T>(
     path: string,
     body: unknown,
     guard: ResponseGuard<T>,
-    options: Pick<ApiOptions, 'signal'> = {},
+    options: Pick<ApiOptions, 'signal' | 'allowTextResponse'> = {},
 ) => api(path, guard, { method: 'POST', body, ...options });
 export function download(name: string, value: unknown, type = 'application/json') {
     const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2);

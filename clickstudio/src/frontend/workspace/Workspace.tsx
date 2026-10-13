@@ -267,7 +267,6 @@ export function Workspace({
                                     .join('\n')
                                     .slice(0, 3_000),
                             },
-                            loadSchema: model.data.loadSchema,
                         },
                     );
                 },

@@ -486,10 +486,6 @@ export function InspectorPane({
                         trusted={trusted}
                         onAskAI={() => onAskAI(schema, assistantServerVersion, connection.database)}
                         onCancelRequest={onCancelAssistantRequest}
-                        schemaReady={Boolean(schema) && !schemaLoading && !schemaError}
-                        schemaLoading={schemaLoading}
-                        schemaStatus={schemaError}
-                        onRefreshSchema={onRefreshSchema}
                         onOpenSqlDraft={(name, sql) => onOpenSqlDraft(name, sql, false)}
                     />
                 )}

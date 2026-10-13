@@ -177,8 +177,10 @@ class PlaygroundVersionDemoDriver extends DemoDriver {
 
 class AssistantSchemaTrackingDemoDriver extends DemoDriver {
     readonly schemaCalls: string[] = [];
+    schemaUnavailable = false;
     override async schema(id: string) {
         this.schemaCalls.push(id);
+        if (this.schemaUnavailable) throw new Error('Schema loading failed.');
         return await super.schema(id);
     }
 }
@@ -546,6 +548,86 @@ test('Assistant context falls back to the bundled ClickHouse documentation', asy
     assert.match(stringValue(reference.serverVersion), /^(?:Offline docs |Demo catalog)/);
 });
 
+test('Assistant endpoints use optional browser schema without loading it from the database', async t => {
+    const driver = new AssistantSchemaTrackingDemoDriver();
+    driver.schemaUnavailable = true;
+    let sentContext: Record<string, unknown> | undefined;
+    const assistant: AssistantDriver = {
+        available: true,
+        model: 'fixture',
+        propose: async context => {
+            sentContext = jsonRecord(JSON.parse(context.payload.context));
+            return {
+                content: {
+                    sql: null,
+                    summary: 'Answer',
+                    assumptions: [],
+                    tables: [],
+                    caveats: [],
+                    clarification: null,
+                    findings: [],
+                },
+                responseId: 'optional-schema',
+            };
+        },
+    };
+    const s = await start(undefined, undefined, driver, assistant);
+    t.after(() => s.stop());
+    await s.call('/connections/demo/trust', { trusted: true, confirmation: 'demo' });
+    const cachedSchema = {
+        fetchedAt: '2026-10-13T00:00:00.000Z',
+        tables: [{ database: 'demo', name: 'cached', engine: 'MergeTree' }],
+        columns: [{ database: 'demo', table: 'cached', name: 'value', type: 'String' }],
+        truncated: false,
+    };
+    const largeSchema = {
+        ...cachedSchema,
+        tables: Array.from({ length: 501 }, (_, index) => ({
+            database: 'demo',
+            name: `table_${index}`,
+            engine: 'MergeTree',
+        })),
+        columns: Array.from({ length: 2_001 }, (_, index) => ({
+            database: 'demo',
+            table: 'cached',
+            name: `column_${index}`,
+            type: 'String',
+        })),
+    };
+    const complexTypeSchema = {
+        ...cachedSchema,
+        columns: [
+            {
+                database: 'demo',
+                table: 'cached',
+                name: 'value',
+                type: `Tuple(${Array.from({ length: 200 }, (_, index) => `field_${index} String`).join(', ')})`,
+            },
+        ],
+    };
+    for (const schema of [undefined, cachedSchema, largeSchema, complexTypeSchema]) {
+        const response = await s.call('/assistant/sql', {
+            connectionId: 'demo',
+            question: 'Explain this',
+            sql: 'SELECT 1',
+            schema,
+        });
+        assert.equal(response.status, 201);
+        assert.equal(sentContext?.schemaIncomplete, !schema || schema.columns.length > 250);
+        assert.equal(sentContext?.schemaFetchedAt, schema?.fetchedAt ?? '');
+        assert.deepEqual(sentContext?.schema, schema?.columns.slice(0, 250) ?? []);
+        const prepared = await s.call('/assistant/context', {
+            connectionId: 'demo',
+            action: 'explain',
+            question: 'Explain this',
+            sql: 'SELECT 1',
+            schema,
+        });
+        assert.equal(prepared.status, 201);
+    }
+    assert.deepEqual(driver.schemaCalls, []);
+});
+
 test('Ask AI uses a validated Playground server version supplied by the browser', async t => {
     let sentVersion: string | undefined;
     const assistant: AssistantDriver = {
@@ -680,7 +762,7 @@ test('Ask AI uses browser Cloud schema and run evidence without resolving a loca
         database: 'default',
         schema: {
             tables: [],
-            columns: [{ database: 'default', table: 't', name: 'c', type: 'x'.repeat(2_049) }],
+            columns: [{ database: 'default', table: 't', name: 'c', type: 42 }],
         },
     });
     assert.equal(invalidSchema.status, 400);

@@ -5,11 +5,13 @@ import {
     useMemo,
     useRef,
     useState,
+    type ComponentPropsWithoutRef,
     type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
 import { diffLines } from 'diff';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { type ExtraProps } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import type { Nodes, Root } from 'mdast';
 import { statementOutline, type SqlOperation } from '../../queries/editor/sql-editor-helpers';
 import type { Proposal, ProposalAlternative } from '../../../shared/assistant/types';
 import {
@@ -46,10 +48,6 @@ export type AssistantWorkflowProps = {
     trusted: boolean;
     onAskAI: () => void;
     onCancelRequest: () => void;
-    schemaReady: boolean;
-    schemaLoading: boolean;
-    schemaStatus: string;
-    onRefreshSchema: () => void;
     onOpenSqlDraft: (name: string, sql: string) => void;
 };
 
@@ -207,27 +205,103 @@ function AssistantSqlProposalDiff({
     );
 }
 
-function normalizeCitationMarkdown(text: string, sources: readonly { url: string }[]) {
-    return sources.reduce((normalized, source) => {
-        let url: URL;
-        try {
-            url = new URL(source.url);
-        } catch {
-            return normalized;
-        }
-        if ((url.protocol !== 'http:' && url.protocol !== 'https:') || url.username || url.password)
-            return normalized;
-        const canonicalUrl = url.href;
-        const escapedUrl = canonicalUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const nestedCitation = new RegExp(
-            String.raw`\[([^\]]+)\]\\?\(\s*\[\s*${escapedUrl}\s*\]\(\s*${escapedUrl}\s*\)\s*\)`,
-            'g',
-        );
-        return normalized.replace(
-            nestedCitation,
-            (_match, label: string) => `[${label}](${canonicalUrl})`,
-        );
-    }, text);
+function normalizeCitationLinks(sources: readonly { url: string }[]) {
+    const urls = new Set(
+        sources.flatMap(source => {
+            try {
+                const url = new URL(source.url);
+                return (url.protocol === 'http:' || url.protocol === 'https:') &&
+                    !url.username &&
+                    !url.password
+                    ? [url.href]
+                    : [];
+            } catch {
+                return [];
+            }
+        }),
+    );
+    return () => (tree: Root) => {
+        const visit = (node: Nodes) => {
+            if (node.type === 'link') {
+                const nested = /^\[\s*(.+?)\s*\]\(\s*(.+?)\s*\)$/.exec(node.url);
+                if (nested && nested[1] === nested[2] && urls.has(nested[1]!))
+                    node.url = nested[1]!;
+            }
+            if (!('children' in node)) return;
+            node.children.forEach(visit);
+            for (let index = 1; index < node.children.length - 1; index++) {
+                const before = node.children[index - 1];
+                const link = node.children[index];
+                const after = node.children[index + 1];
+                if (
+                    before?.type !== 'text' ||
+                    link?.type !== 'link' ||
+                    after?.type !== 'text' ||
+                    !urls.has(link.url)
+                )
+                    continue;
+                const label = /\[([^\]]+)\]\(\s*$/.exec(before.value);
+                if (
+                    !label ||
+                    !/^\s*\)/.test(after.value) ||
+                    link.children.length !== 1 ||
+                    link.children[0]?.type !== 'text' ||
+                    link.children[0].value.trim() !== link.url
+                )
+                    continue;
+                before.value = before.value.slice(0, label.index);
+                link.children[0].value = label[1]!;
+                after.value = after.value.replace(/^\s*\)/, '');
+            }
+        };
+        visit(tree);
+    };
+}
+
+function sqlFromCodeBlock(node: ExtraProps['node']): string | undefined {
+    const code = node?.children.find(child => child.type === 'element' && child.tagName === 'code');
+    if (code?.type !== 'element') return undefined;
+    const classes = code.properties.className;
+    if (
+        !Array.isArray(classes) ||
+        !classes.some(
+            name =>
+                typeof name === 'string' &&
+                /^language-(?:sql|clickhouse|postgresql|postgres|mysql|sqlite|tsql)$/i.test(name),
+        )
+    )
+        return undefined;
+    const text = code.children
+        .flatMap(child => (child.type === 'text' ? [child.value] : []))
+        .join('');
+    return text.endsWith('\n') ? text.slice(0, -1) : text;
+}
+
+function AssistantCodeBlock({
+    node,
+    children,
+    onOpenSqlDraft,
+    ...props
+}: ComponentPropsWithoutRef<'pre'> &
+    ExtraProps & {
+        onOpenSqlDraft?: AssistantWorkflowProps['onOpenSqlDraft'];
+    }) {
+    const sql = sqlFromCodeBlock(node);
+    if (sql === undefined || !onOpenSqlDraft) return <pre {...props}>{children}</pre>;
+    return (
+        <div className="assistant-markdown-code-block">
+            <pre {...props}>{children}</pre>
+            <div className="assistant-alternative-actions">
+                <Button
+                    variant="secondary"
+                    aria-label="Open SQL code block in SQL tab"
+                    onClick={() => onOpenSqlDraft('Query.sql', sql)}
+                >
+                    Open in SQL tab
+                </Button>
+            </div>
+        </div>
+    );
 }
 
 function AssistantMarkdown({
@@ -235,17 +309,20 @@ function AssistantMarkdown({
     sources,
     className,
     testId,
+    onOpenSqlDraft,
 }: {
     text: string;
     sources: readonly { url: string }[];
     className: string;
     testId?: string;
+    onOpenSqlDraft?: AssistantWorkflowProps['onOpenSqlDraft'];
 }) {
     return (
         <div className={className} data-testid={testId}>
             <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
+                remarkPlugins={[remarkGfm, normalizeCitationLinks(sources)]}
                 components={{
+                    pre: props => <AssistantCodeBlock {...props} onOpenSqlDraft={onOpenSqlDraft} />,
                     a: ({ href, children, ...props }) => (
                         <a {...props} href={href} target="_blank" rel="noreferrer">
                             {children}
@@ -253,7 +330,7 @@ function AssistantMarkdown({
                     ),
                 }}
             >
-                {normalizeCitationMarkdown(text, sources)}
+                {text}
             </ReactMarkdown>
         </div>
     );
@@ -576,8 +653,8 @@ function AssistantOutput({
                 className="assistant-proposal-markdown"
             />
             <AssistantMarkdown
-                text={item.evidence}
                 sources={sources}
+                text={item.evidence}
                 className="assistant-proposal-markdown assistant-proposal-finding-evidence"
             />
         </div>
@@ -601,8 +678,9 @@ function AssistantOutput({
             <div className="proposal-heading">
                 <div>
                     <AssistantMarkdown
-                        text={proposal.summary}
                         sources={sources}
+                        text={proposal.summary}
+                        onOpenSqlDraft={onOpenSqlDraft}
                         className={
                             proposalSql === null
                                 ? 'assistant-answer-markdown'
@@ -620,8 +698,8 @@ function AssistantOutput({
                 <div className="assistant-clarification">
                     <span className="assistant-clarification-label">Next step</span>
                     <AssistantMarkdown
-                        text={proposal.clarification}
                         sources={sources}
+                        text={proposal.clarification}
                         className="assistant-proposal-markdown"
                     />
                 </div>
@@ -644,8 +722,8 @@ function AssistantOutput({
                             <div className="proposal-point" key={`${index}-${item}`}>
                                 <span>ASSUMPTION</span>
                                 <AssistantMarkdown
-                                    text={item}
                                     sources={sources}
+                                    text={item}
                                     className="assistant-proposal-markdown"
                                 />
                             </div>
@@ -654,8 +732,8 @@ function AssistantOutput({
                             <div className="proposal-point" key={`${index}-${item}`}>
                                 <span>NOTE</span>
                                 <AssistantMarkdown
-                                    text={item}
                                     sources={sources}
+                                    text={item}
                                     className="assistant-proposal-markdown"
                                 />
                             </div>
@@ -744,16 +822,12 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
         notice,
         onAskAI,
         onCancelRequest,
-        schemaReady,
-        schemaLoading,
-        schemaStatus,
-        onRefreshSchema,
         onOpenSqlDraft,
     } = props;
     const transcriptViewport = useRef<HTMLDivElement>(null);
     const [questionInput, setQuestionInput] = useState<HTMLTextAreaElement | null>(null);
     const activeChat = chats.find(chat => chat.id === activeChatId);
-    const canSubmit = !busy && trusted && schemaReady && Boolean(question.trim());
+    const canSubmit = !busy && trusted && Boolean(question.trim());
     const latestTurnIds = useMemo(
         () => new Map(turns.map(turn => [turn.draftId, turn.id])),
         [turns],
@@ -918,21 +992,6 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
                 {!trusted && (
                     <div className="assistant-feedback callout">
                         Trust this connection before sharing its schema with the assistant.
-                    </div>
-                )}
-                {!schemaReady && trusted && (
-                    <div className="assistant-feedback callout assistant-schema-refresh">
-                        <span>
-                            {schemaStatus ||
-                                'Load the ClickHouse schema before asking the assistant.'}
-                        </span>
-                        <Button
-                            variant="secondary"
-                            disabled={schemaLoading}
-                            onClick={onRefreshSchema}
-                        >
-                            {schemaLoading ? 'Loading…' : 'Refresh schema'}
-                        </Button>
                     </div>
                 )}
                 <div className="assistant-chat-composer">

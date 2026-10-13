@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseAssistantProposal } from '../../.workspace-build/src/frontend/assistant/proposals/assistant-proposal-parser.js';
+import {
+    assistantReplyFrom,
+    parseAssistantProposal,
+} from '../../.workspace-build/src/frontend/assistant/proposals/assistant-proposal-parser.js';
 
 function validProposal(overrides = {}) {
     return {
@@ -26,6 +29,64 @@ function validProposal(overrides = {}) {
         ...overrides,
     };
 }
+
+test('Assistant replies display returned text even when proposal parsing fails', () => {
+    const request = {
+        id: 'turn-1',
+        connectionId: 'connection-1',
+        baseSql: 'SELECT 1',
+        action: 'ask',
+    };
+    for (const [value, expected] of [
+        ['A plain reply with ```sql\nSELECT 2\n```.', 'A plain reply with ```sql\nSELECT 2\n```.'],
+        ['{"summary":"unfinished', '{"summary":"unfinished'],
+        [{ summary: 'Returned answer', sql: 42, findings: 'invalid' }, 'Returned answer'],
+        [{ output_text: 'Raw model text' }, 'Raw model text'],
+        [{ content: 'Another returned answer' }, 'Another returned answer'],
+        [{ unexpected: [1, 2] }, JSON.stringify({ unexpected: [1, 2] }, null, 2)],
+        [
+            { summary: '', other: 'Returned data' },
+            JSON.stringify({ summary: '', other: 'Returned data' }, null, 2),
+        ],
+        [null, 'null'],
+        [undefined, 'undefined'],
+        [42, '42'],
+    ]) {
+        const reply = assistantReplyFrom(value, request);
+        assert.equal(reply.summary, expected);
+        assert.equal(reply.sql, null);
+        assert.deepEqual(reply.alternatives, []);
+        assert.equal(reply.id, request.id);
+        assert.equal(reply.connectionId, request.connectionId);
+        assert.deepEqual(parseAssistantProposal(reply), reply);
+    }
+});
+
+test('Assistant replies report an error when a successful response has no reply', () => {
+    assert.throws(
+        () =>
+            assistantReplyFrom('', {
+                id: 'turn',
+                connectionId: 'connection-1',
+                baseSql: '',
+                action: 'ask',
+            }),
+        /returned no reply/,
+    );
+});
+
+test('Assistant replies retain existing proposals when their SQL metadata is valid', () => {
+    const proposal = validProposal();
+    assert.deepEqual(
+        assistantReplyFrom(proposal, {
+            id: 'turn',
+            connectionId: 'connection-1',
+            baseSql: '',
+            action: 'ask',
+        }),
+        proposal,
+    );
+});
 
 test('Assistant proposal parsing returns a typed, normalized proposal', () => {
     const parsed = parseAssistantProposal(

@@ -17,7 +17,7 @@ declare global {
                 phase: string | undefined;
                 statuses: string[];
             }>;
-            continueWhilePreparing: (mode: 'run' | 'schema' | 'repair') => Promise<{
+            continueWhilePreparing: (mode: 'run' | 'ask' | 'repair') => Promise<{
                 busy: boolean;
                 phase: string | undefined;
                 statuses: string[];

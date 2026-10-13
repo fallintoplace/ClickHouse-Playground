@@ -1639,18 +1639,6 @@
     font-size: 9px;
     line-height: 1.5;
   }
-  .assistant-schema-refresh {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-  .assistant-schema-refresh .button-base {
-    min-height: 27px;
-    flex: none;
-    padding-inline: 8px;
-    font-size: 8px;
-  }
   .assistant-chat-composer {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;

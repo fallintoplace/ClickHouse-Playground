@@ -2614,7 +2614,7 @@ test('Ask AI formats proposal citations in summaries and assumptions', async ({ 
                 decision: 'pending',
                 sql: 'SELECT 1',
                 summary:
-                    'Since 1990 means seasons through 2025-26. ([laseriea.org]\\([https://www.laseriea.org/statistiche/albo-doro/](https://www.laseriea.org/statistiche/albo-doro/)))',
+                    'Since 1990 means seasons through 2025-26. ([laseriea.org]\\([https://www.laseriea.org/statistiche/albo-doro/](https://www.laseriea.org/statistiche/albo-doro/))) Also see ([laseriea.org]([https://www.laseriea.org/statistiche/albo-doro/](https://www.laseriea.org/statistiche/albo-doro/))).',
                 assumptions: [
                     'The 2004-05 season is omitted because it had no official winner. ([channelnewsasia.com]\\([https://www.channelnewsasia.com/sport/list-seriea-champions-6097411](https://www.channelnewsasia.com/sport/list-seriea-champions-6097411)))\n\n<img src=x onerror=alert(1)>',
                 ],
@@ -2645,11 +2645,14 @@ test('Ask AI formats proposal citations in summaries and assumptions', async ({ 
 
     const summary = page.getByTestId('assistant-proposal-summary');
     const summaryCitation = summary.getByRole('link', { name: 'laseriea.org', exact: true });
-    await expect(summaryCitation).toHaveAttribute(
-        'href',
-        'https://www.laseriea.org/statistiche/albo-doro/',
-    );
-    await expect(summaryCitation).toHaveAttribute('target', '_blank');
+    await expect(summaryCitation).toHaveCount(2);
+    for (const citation of await summaryCitation.all()) {
+        await expect(citation).toHaveAttribute(
+            'href',
+            'https://www.laseriea.org/statistiche/albo-doro/',
+        );
+        await expect(citation).toHaveAttribute('target', '_blank');
+    }
     await expect(summary).toContainText('(laseriea.org)');
     await expect(summary).not.toContainText('[laseriea.org]');
 

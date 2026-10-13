@@ -91,7 +91,7 @@ async function cancelRequest(mode: 'ask' | 'repair' | 'run') {
     return snapshot();
 }
 
-async function continueWhilePreparing(mode: 'run' | 'schema' | 'repair') {
+async function continueWhilePreparing(mode: 'run' | 'ask' | 'repair') {
     flushSync(() => {
         assistant.setIncludeRun(mode === 'run');
         assistant.changeAssistantQuestion('Explain original SQL');
@@ -111,10 +111,6 @@ async function continueWhilePreparing(mode: 'run' | 'schema' | 'repair') {
                 return { evidenceSql: 'SELECT original_run' };
             },
             {
-                loadSchema: async () => {
-                    await preparation;
-                    return schema;
-                },
                 ...(mode === 'repair'
                     ? { repair: { sql: 'SELECT broken()', error: 'Original error' } }
                     : {}),

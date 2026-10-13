@@ -1017,10 +1017,13 @@ test('Assistant keeps the named table while bounding table names to 60 KB', () =
     assert.equal(context.tables[0].name, 'target');
     assert.equal(context.tablesIncomplete, true);
 });
-test('Assistant instructions keep the main answer in the visible summary', () => {
+test('Assistant instructions prefer structured replies while accepting Markdown', () => {
     const f = aiFixture();
     const built = buildContext({ ...f.input, action: 'ask', question: 'List the top songs.' });
-    assert.match(built.payload.instructions, /Put the full plain-language answer in summary/i);
+    assert.match(built.payload.instructions, /Prefer a JSON object/i);
+    assert.match(built.payload.instructions, /full plain-language answer in summary/i);
+    assert.match(built.payload.instructions, /a direct Markdown reply is also accepted/i);
+    assert.match(built.payload.instructions, /fenced sql code blocks/i);
 });
 test('SQL context includes all source columns for a requested table copy', () => {
     const f = aiFixture();

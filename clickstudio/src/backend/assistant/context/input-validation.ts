@@ -41,14 +41,23 @@ export function assistantRequestFrom(
 }
 
 export function assistantSchemaFrom(value: unknown, connectionId: string): Schema {
-    if (
-        !isRecord(value) ||
-        !Array.isArray(value.tables) ||
-        !Array.isArray(value.columns) ||
-        value.tables.length > 500 ||
-        value.columns.length > 2_000
-    )
+    if (value === undefined || value === null)
+        return {
+            connectionId,
+            fetchedAt: '',
+            tables: [],
+            columns: [],
+            warnings: ['Schema is unavailable.'],
+            truncated: true,
+        };
+    if (!isRecord(value) || !Array.isArray(value.tables) || !Array.isArray(value.columns))
         throw new AppError(400, 'INVALID_SCHEMA', 'Refresh the ClickHouse schema and try again.');
+
+    const schemaText = (value: unknown, name: string): string => {
+        if (typeof value !== 'string')
+            throw new AppError(400, 'INVALID_SCHEMA', `Invalid ${name}.`);
+        return value;
+    };
 
     const tables: SchemaTable[] = value.tables.map(raw => {
         if (!isRecord(raw))
@@ -58,9 +67,9 @@ export function assistantSchemaFrom(value: unknown, connectionId: string): Schem
                 'Refresh the ClickHouse schema and try again.',
             );
         return {
-            database: assistantInputText(raw.database, 'Schema database', 128),
-            name: assistantInputText(raw.name, 'Schema table', 256),
-            engine: assistantInputText(raw.engine ?? '', 'Schema engine', 128, true),
+            database: schemaText(raw.database, 'schema database'),
+            name: schemaText(raw.name, 'schema table'),
+            engine: schemaText(raw.engine ?? '', 'schema engine'),
         };
     });
     const columns: SchemaColumn[] = value.columns.map(raw => {
@@ -71,20 +80,17 @@ export function assistantSchemaFrom(value: unknown, connectionId: string): Schem
                 'Refresh the ClickHouse schema and try again.',
             );
         return {
-            database: assistantInputText(raw.database, 'Schema database', 128),
-            table: assistantInputText(raw.table, 'Schema table', 256),
-            name: assistantInputText(raw.name, 'Schema column', 256),
-            type: assistantInputText(raw.type, 'Schema type', 2_048),
+            database: schemaText(raw.database, 'schema database'),
+            table: schemaText(raw.table, 'schema table'),
+            name: schemaText(raw.name, 'schema column'),
+            type: schemaText(raw.type, 'schema type'),
             defaultKind: '',
             comment: '',
         };
     });
     return {
         connectionId,
-        fetchedAt:
-            typeof value.fetchedAt === 'string' && value.fetchedAt.length <= 128
-                ? value.fetchedAt
-                : new Date().toISOString(),
+        fetchedAt: typeof value.fetchedAt === 'string' ? value.fetchedAt : new Date().toISOString(),
         tables,
         columns,
         warnings: [],

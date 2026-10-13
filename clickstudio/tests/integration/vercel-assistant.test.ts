@@ -37,6 +37,46 @@ function assistantBody() {
     };
 }
 
+test('Vercel assistant answers without schema and marks it as unknown', async t => {
+    const priorKey = process.env.OPENAI_API_KEY;
+    const priorFetch = globalThis.fetch;
+    process.env.OPENAI_API_KEY = 'test-key';
+    globalThis.fetch = async (input, init) => {
+        if (String(input).endsWith('/responses/input_tokens'))
+            return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
+        const payload = jsonRecord(jsonValue(String(init?.body)), 'OpenAI request');
+        const messages = arrayValue(payload.input).map(item => jsonRecord(item));
+        const content = arrayValue(messages[0]?.content).map(item => jsonRecord(item));
+        const context = jsonRecord(jsonRecord(jsonValue(stringValue(content[0]?.text))).context);
+        assert.deepEqual(context.schema, []);
+        assert.deepEqual(context.tables, []);
+        assert.equal(context.schemaFetchedAt, '');
+        assert.equal(context.schemaIncomplete, true);
+        assert.equal(context.tablesIncomplete, true);
+        return Response.json({
+            id: 'no-schema-response',
+            status: 'completed',
+            output_text: 'You can ask without loading schema.',
+            output: [],
+        });
+    };
+    t.after(() => {
+        globalThis.fetch = priorFetch;
+        if (priorKey === undefined) delete process.env.OPENAI_API_KEY;
+        else process.env.OPENAI_API_KEY = priorKey;
+    });
+    for (const schema of [undefined, null]) {
+        const response = await handler.fetch(
+            request({ ...assistantBody(), schema }, { 'x-real-ip': '192.0.2.98' }),
+        );
+        assert.equal(response.status, 201);
+        assert.equal(
+            (await responseRecord(response)).summary,
+            'You can ask without loading schema.',
+        );
+    }
+});
+
 test('Vercel assistant defaults to Fast processing and honors the server service tier', async t => {
     const priorKey = process.env.OPENAI_API_KEY;
     const priorTier = process.env.OPENAI_SERVICE_TIER;
@@ -53,15 +93,7 @@ test('Vercel assistant defaults to Fast processing and honors the server service
         return Response.json({
             id: 'response-tier',
             status: 'completed',
-            output_text: JSON.stringify({
-                sql: null,
-                summary: 'This SQL returns one row.',
-                assumptions: [],
-                tables: [],
-                caveats: [],
-                clarification: null,
-                findings: [],
-            }),
+            output_text: 'This SQL returns one row.',
             output: [],
         });
     };
@@ -296,7 +328,7 @@ test('Vercel assistant displays returned text outside the structured format', as
     assert.equal((await responseRecord(response)).summary, '{');
 });
 
-test('Vercel assistant accepts larger table lists without structured-output count limits', async t => {
+test('Vercel assistant accepts structured replies without enforcing an output format', async t => {
     const priorKey = process.env.OPENAI_API_KEY;
     const priorFetch = globalThis.fetch;
     process.env.OPENAI_API_KEY = 'test-key';
@@ -318,14 +350,10 @@ test('Vercel assistant accepts larger table lists without structured-output coun
             clarification: null,
             findings: [],
         };
-        const schemas: unknown[] = [];
+        const formats: unknown[] = [];
         globalThis.fetch = async (input, init) => {
             const payload = jsonRecord(jsonValue(String(init?.body)), 'OpenAI request');
-            const text = jsonRecord(payload.text, 'OpenAI text format');
-            const format = jsonRecord(text.format, 'OpenAI response format');
-            const schema = jsonRecord(format.schema, 'OpenAI schema');
-            const properties = jsonRecord(schema.properties, 'OpenAI schema properties');
-            schemas.push(properties.tables);
+            formats.push(payload.text);
             if (String(input).endsWith('/responses/input_tokens'))
                 return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
             return Response.json({
@@ -355,13 +383,7 @@ test('Vercel assistant accepts larger table lists without structured-output coun
         const proposal = await responseRecord(response, 'Assistant proposal');
         assert.deepEqual(proposal.tables, tables);
         assert.equal(proposal.sql, null);
-        assert.deepEqual(
-            schemas,
-            Array.from({ length: 2 }, () => ({
-                type: 'array',
-                items: { type: 'string' },
-            })),
-        );
+        assert.deepEqual(formats, [undefined, undefined]);
     }
 });
 
@@ -508,7 +530,7 @@ test('Vercel assistant returns a requested table proposal with example geography
         assert.equal(response.status, 201);
         const proposal = await responseRecord(response, 'Assistant proposal');
         assert.equal(proposal.sql, sql);
-        assert.match(proposal.caveats[0] ?? '', /example rows/i);
+        assert.match(String(arrayValue(proposal.caveats)[0] ?? ''), /example rows/i);
     } finally {
         globalThis.fetch = priorFetch;
         if (priorKey === undefined) delete process.env.OPENAI_API_KEY;
