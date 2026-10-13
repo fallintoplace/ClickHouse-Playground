@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { SchemaDictionary } from '../../../../../shared/database/schema/types';
 import { useTablePermissions } from '../../../tables/useTablePermissions';
 import { Icon } from '../../../../ui/components/icons';
@@ -123,14 +123,7 @@ function DatabaseRow({
     copy: ObjectExplorerProps['copy'];
     onCreateTable: (database: string) => void;
 }) {
-    const [permissionCheckRequested, setPermissionCheckRequested] = useState(false);
-    const permissions = useTablePermissions(
-        connection,
-        trusted,
-        database,
-        undefined,
-        permissionCheckRequested,
-    );
+    const permissions = useTablePermissions(connection, trusted, database);
     const action =
         permissions.create === true ? (
             <button
@@ -153,7 +146,6 @@ function DatabaseRow({
             onToggle={onToggle}
             database
             action={action}
-            onInteract={() => setPermissionCheckRequested(true)}
         />
     );
 }

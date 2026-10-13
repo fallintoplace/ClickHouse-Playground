@@ -13,7 +13,6 @@ export function ExplorerGroupRow({
     database = false,
     kind = 'table',
     action,
-    onInteract,
 }: {
     level: number;
     label: string;
@@ -23,7 +22,6 @@ export function ExplorerGroupRow({
     database?: boolean;
     kind?: 'table' | 'view' | 'dictionary' | 'column' | 'projection' | 'index';
     action?: ReactNode;
-    onInteract?: () => void;
 }) {
     const hasChildren = count > 0;
     const toggleLabel = expanded ? `Collapse ${label}` : `Expand ${label}`;
@@ -42,8 +40,6 @@ export function ExplorerGroupRow({
                 !database && `is-${kind}`,
             )}
             style={{ '--tree-indent': `${Math.max(0, level - 1) * 12}px` }}
-            onPointerEnter={onInteract}
-            onFocusCapture={onInteract}
         >
             <button
                 type="button"

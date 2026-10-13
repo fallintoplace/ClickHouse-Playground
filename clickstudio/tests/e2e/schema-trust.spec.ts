@@ -154,6 +154,37 @@ function tableObject(page: Page, name = 'events') {
         .getByRole('button', { name: `${name} MergeTree`, exact: true });
 }
 
+test('available object actions stay visible without hovering their rows', async ({ page }) => {
+    let permissionRequests = 0;
+    await page.route('**/api/connections/live/table-permissions', async route => {
+        permissionRequests++;
+        await route.fulfill({ json: { create: true, insert: true, drop: true } });
+    });
+    await mockLiveWorkspace(page, route => route.fulfill({ json: schema }));
+
+    const createTable = page.getByRole('button', { name: 'New table in analytics', exact: true });
+    await expect.poll(() => permissionRequests).toBeGreaterThan(0);
+    await expect(createTable).toBeVisible();
+    await page.mouse.move(0, 0);
+    await expect(createTable).toHaveCSS('opacity', '1');
+
+    await tableObject(page).click();
+    await expect.poll(() => permissionRequests).toBeGreaterThan(1);
+    const columnInsert = page.locator('.object-column-insert');
+    await expect(columnInsert).toBeVisible();
+    await page.mouse.move(0, 0);
+    await expect(columnInsert).toHaveCSS('opacity', '1');
+
+    await page.getByRole('button', { name: '‹ Objects', exact: true }).click();
+    const tableActions = page.getByRole('button', {
+        name: 'Actions for analytics.events',
+        exact: true,
+    });
+    await expect(tableActions).toBeVisible();
+    await page.mouse.move(0, 0);
+    await expect(tableActions).toHaveCSS('opacity', '1');
+});
+
 for (const mode of ['beginner', 'expert']) {
     test(`${mode} keeps denied table writes outside its available object actions`, async ({
         page,
