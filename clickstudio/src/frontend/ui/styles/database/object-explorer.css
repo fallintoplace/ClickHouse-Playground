@@ -2091,7 +2091,7 @@
   cursor: default;
 }
 .parts-explorer-dialog {
-  --parts-highlight: light-dark(#0875c7, #71b7ff);
+  --parts-highlight: var(--accent);
   --parts-selected: color-mix(in srgb, var(--parts-highlight) 10%, var(--panel));
   position: relative;
   display: flex;

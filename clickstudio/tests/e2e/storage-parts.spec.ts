@@ -59,6 +59,17 @@ for (const theme of ['Light', 'Dark']) {
         page,
     }) => {
         const dialog = await openParts(page, snapshot, theme);
+        const accent = theme === 'Dark' ? 'rgb(250, 255, 105)' : 'rgb(98, 55, 25)';
+        const partsTab = dialog
+            .getByRole('group', { name: 'Storage views', exact: true })
+            .getByRole('button', { name: 'Parts', exact: true });
+        await expect(partsTab).toHaveCSS('color', accent);
+        await expect(partsTab).toHaveCSS('border-bottom-color', accent);
+        await expect(dialog.locator('.parts-breadcrumb button')).toHaveCSS('color', accent);
+        await expect(dialog.locator('.parts-map-size b').first()).toHaveCSS(
+            'background-color',
+            accent,
+        );
         await expect(dialog.locator('.parts-overview dd')).toHaveText([
             '1',
             '1',
