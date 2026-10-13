@@ -12,30 +12,40 @@ import { quoteIdentifier } from '../../../../../shared/sql/sql';
 import { cx } from '../../../../ui/components/primitives';
 import { Icon } from '../../../../ui/components/icons';
 import type { ObjectExplorerProps } from './object-explorer-types';
+import { ObjectTableActionsMenu } from '../ObjectTableActionsMenu';
 import { ExplorerGroupRow } from './ObjectTreeRows';
 import { ObjectLeafRow } from './ObjectTreeRows';
-import { qualifiedTableName } from './ObjectTreeRows';
 
 export function createRelationRenderer({
     expanded,
     model,
     relationChildrenMatch,
     selectedId,
+    selectedTableId,
+    canInsertSelectedTable,
+    canDeleteSelectedTable,
     highlightedTableId,
     copy,
     toggle,
     selectObject,
     onInsert,
+    onInsertRow,
+    onDeleteTable,
 }: {
     expanded: (id: string, forced?: boolean) => boolean;
     model: ObjectExplorerModel;
     relationChildrenMatch: (relation: ExplorerRelation) => boolean;
     selectedId: string | undefined;
+    selectedTableId: string | undefined;
+    canInsertSelectedTable: boolean;
+    canDeleteSelectedTable: boolean;
     highlightedTableId: string | undefined;
     copy: ObjectExplorerProps['copy'];
     toggle: (id: string) => void;
     selectObject: (id: string) => void;
     onInsert: ObjectExplorerProps['onInsert'];
+    onInsertRow: (relation: ExplorerRelation) => void;
+    onDeleteTable: (relation: ExplorerRelation) => void;
 }) {
     return (relation: ExplorerRelation, level: number) => {
         const relationExpanded = expanded(
@@ -76,6 +86,9 @@ export function createRelationRenderer({
             relation.columns.length > 0 ||
             (relation.table.projections?.length ?? 0) > 0 ||
             (relation.table.skipIndexes?.length ?? 0) > 0;
+        const selectedTable = relation.id === selectedTableId && relation.kind === 'table';
+        const showTableActions =
+            selectedTable && (canInsertSelectedTable || canDeleteSelectedTable);
 
         return (
             <div className="object-tree-branch" key={relation.id}>
@@ -125,15 +138,17 @@ export function createRelationRenderer({
                             <small>{relation.table.engine}</small>
                         </span>
                     </button>
-                    <button
-                        type="button"
-                        className="object-tree-inline-action"
-                        title={copy.insertTableName}
-                        aria-label={`${copy.insertTableName}: ${relation.table.name}`}
-                        onClick={() => onInsert(qualifiedTableName(relation.table))}
-                    >
-                        <Icon name="plus" />
-                    </button>
+                    {showTableActions && (
+                        <ObjectTableActionsMenu
+                            table={relation.table}
+                            canInsertRow={canInsertSelectedTable}
+                            canDeleteTable={canDeleteSelectedTable}
+                            trusted
+                            copy={copy}
+                            onInsertRow={() => onInsertRow(relation)}
+                            onDeleteTable={() => onDeleteTable(relation)}
+                        />
+                    )}
                 </div>
                 {relationExpanded && hasChildren && (
                     <div role="group" className="object-tree-children">

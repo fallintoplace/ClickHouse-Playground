@@ -460,24 +460,7 @@
   gap: 6px;
 }
 .object-explorer-action-bar .object-create-table-action {
-  flex: 1 1 auto;
-}
-.object-action-context {
-  display: flex;
-  min-width: 0;
-  flex: 1 1 100%;
-  align-items: center;
-  gap: 7px;
-  padding: 1px 3px 0;
-  color: var(--muted);
-  font-size: 8px;
-}
-.object-action-context code {
-  overflow: hidden;
-  color: var(--text-soft);
-  font-family: var(--font-mono);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 0 0 auto;
 }
 .object-explorer-section::before,
 .object-explorer-section::after {
@@ -805,6 +788,7 @@
   background: transparent;
   color: var(--muted);
   opacity: 0;
+  pointer-events: none;
   cursor: pointer;
   transition:
     opacity 0.14s ease,
@@ -819,12 +803,115 @@
 }
 .object-tree-row:hover .object-tree-inline-action {
   opacity: 1;
+  pointer-events: auto;
 }
 .object-tree-inline-action:hover {
   border-color: color-mix(in srgb, var(--tree-kind-color) 40%, var(--line-bright));
   background: color-mix(in srgb, var(--tree-kind-color) 10%, var(--panel-hover));
   color: var(--tree-kind-color);
   box-shadow: none;
+}
+.object-table-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+}
+.object-table-actions-trigger {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  flex: none;
+  place-items: center;
+  margin-right: 3px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--muted);
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  transition:
+    opacity 0.14s ease,
+    border-color 0.14s ease,
+    background 0.14s ease,
+    color 0.14s ease;
+}
+.object-table-actions-trigger svg {
+  width: 14px;
+  height: 14px;
+}
+.object-tree-row:hover .object-table-actions-trigger,
+.object-tree-row:focus-within .object-table-actions-trigger,
+.object-table-actions-trigger[aria-expanded="true"],
+.object-details-title .object-table-actions-trigger {
+  opacity: 1;
+  pointer-events: auto;
+}
+.object-table-actions-trigger:hover {
+  border-color:
+    color-mix(in srgb, var(--tree-kind-color, var(--explorer-table)) 40%, var(--line-bright));
+  background:
+    color-mix(in srgb, var(--tree-kind-color, var(--explorer-table)) 10%, var(--panel-hover));
+  color: var(--tree-kind-color, var(--explorer-table));
+}
+.object-table-actions-menu[popover] {
+  position: fixed;
+  inset: auto;
+  width: max-content;
+  min-width: 150px;
+  max-width: calc(100vw - 16px);
+  max-height: min(220px, calc(100vh - 16px));
+  margin: 0;
+  padding: 4px;
+  overflow: auto;
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-panel);
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow-popover);
+}
+.object-table-actions-menu[popover]:popover-open {
+  display: grid;
+  gap: 2px;
+}
+.object-table-actions-menu > button {
+  display: flex;
+  width: 100%;
+  min-height: 32px;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-soft);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 520;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.object-table-actions-menu > button:hover,
+.object-table-actions-menu > button:focus-visible {
+  border-color: var(--line-bright);
+  background: var(--control-hover);
+  color: var(--text);
+  outline: none;
+}
+.object-table-actions-menu > button.is-danger {
+  color: var(--red);
+}
+.object-table-actions-menu > button.is-danger:hover,
+.object-table-actions-menu > button.is-danger:focus-visible {
+  border-color: color-mix(in srgb, var(--red) 32%, var(--line));
+  background: color-mix(in srgb, var(--red) 8%, var(--panel));
+  color: var(--red);
+}
+.object-table-actions-menu > button svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
 }
 .object-tree-children {
   min-width: 0;
@@ -932,6 +1019,13 @@
   padding: 4px 2px 9px;
   border-bottom: 1px solid var(--line);
 }
+.object-details-title {
+  display: flex;
+  min-width: 0;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 9px;
+}
 .object-kind-badge {
   width: max-content;
   padding: 4px 7px;
@@ -946,6 +1040,17 @@
 }
 .object-details-hero > strong {
   min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: clamp(15px, 1.35vw, 18px);
+  font-weight: 620;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+.object-details-title > strong {
+  min-width: 0;
+  flex: 1;
   overflow-wrap: anywhere;
   color: var(--text);
   font-family: var(--font-sans);

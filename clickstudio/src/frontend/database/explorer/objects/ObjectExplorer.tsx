@@ -7,6 +7,7 @@ import { ObjectExplorerActions } from './ObjectExplorerActions';
 import { ObjectExplorerSearch } from './ObjectExplorerActions';
 import { ObjectTree } from './tree/ObjectTree';
 import { ObjectExplorerDialogs } from './ObjectExplorerDialogs';
+import { ObjectTableActionsMenu } from './ObjectTableActionsMenu';
 
 export function ObjectExplorer(props: ObjectExplorerProps) {
     const {
@@ -60,6 +61,36 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
         setSelectedId,
         setDetailsOpen,
     } = useObjectExplorerState(props);
+    const canInsertSelectedTable =
+        connection.dataSource !== 'fixture' &&
+        Boolean(insertableTable) &&
+        tablePermissions.insert !== false;
+    const canDeleteSelectedTable =
+        connection.dataSource !== 'fixture' &&
+        Boolean(deletableTable) &&
+        tablePermissions.drop !== false;
+    const compactTableActions =
+        showCompactDetails &&
+        selectedTable &&
+        (canInsertSelectedTable || canDeleteSelectedTable) ? (
+            <ObjectTableActionsMenu
+                table={selectedTable.table}
+                canInsertRow={canInsertSelectedTable}
+                canDeleteTable={canDeleteSelectedTable}
+                trusted={trusted}
+                copy={copy}
+                onInsertRow={() => {
+                    if (insertableTable)
+                        setInsertRowTarget({
+                            table: insertableTable.table,
+                            columns: insertableTable.columns,
+                        });
+                }}
+                onDeleteTable={() => {
+                    if (deletableTable) setDeleteTableTarget(deletableTable);
+                }}
+            />
+        ) : undefined;
     return (
         <section
             className={cx(
@@ -76,10 +107,6 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                     trusted,
                     copy,
                     setCreateTableOpen,
-                    insertableTable,
-                    setInsertRowTarget,
-                    deletableTable,
-                    setDeleteTableTarget,
                 }}
             />
             {showCompactDetails && selected ? (
@@ -91,6 +118,7 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                     <ObjectDetails
                         copy={copy}
                         selection={selected}
+                        tableActions={compactTableActions}
                         trusted={trusted}
                         expert={expert}
                         copiedId={copiedId}

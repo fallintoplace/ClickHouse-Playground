@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { SchemaTable } from '../../../../shared/database/schema/types';
 import { tableQuerySql, type ExplorerSelection } from './object-explorer-model';
 import { quoteIdentifier } from '../../../../shared/sql/sql';
@@ -9,6 +10,7 @@ import { Icon } from '../../../ui/components/icons';
 type ObjectDetailsProps = {
     copy: Copy['common'];
     selection: ExplorerSelection;
+    tableActions?: ReactNode;
     trusted: boolean;
     expert: boolean;
     copiedId?: string;
@@ -23,6 +25,7 @@ type ObjectDetailsProps = {
 export function ObjectDetails({
     copy,
     selection,
+    tableActions,
     trusted,
     expert,
     copiedId,
@@ -53,10 +56,13 @@ export function ObjectDetails({
                     </button>
                 )}
                 <div className="object-details-hero">
-                    <span className="object-kind-badge">
-                        {selection.relationKind === 'view' ? 'VIEW' : 'TABLE'}
-                    </span>
-                    <strong>{table.name}</strong>
+                    <div className="object-details-title">
+                        <span className="object-kind-badge">
+                            {selection.relationKind === 'view' ? 'VIEW' : 'TABLE'}
+                        </span>
+                        <strong>{table.name}</strong>
+                        {tableActions}
+                    </div>
                     <code>
                         {table.database}.{table.name}
                     </code>

@@ -371,7 +371,6 @@ export const copy = {
         schemaPrivate: 'Schema is private',
         trustToInspect: 'Trust the connection to inspect tables and columns.',
         readingSchema: 'Reading ClickHouse schema…',
-        insertTableName: 'Insert table name',
         rowsEstimated: 'rows est.',
         parts: 'parts',
         partsVisualize: 'Visualize parts',

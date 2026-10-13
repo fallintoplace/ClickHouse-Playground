@@ -10,10 +10,6 @@ export function ObjectExplorerActions({
     trusted,
     copy,
     setCreateTableOpen,
-    insertableTable,
-    setInsertRowTarget,
-    deletableTable,
-    setDeleteTableTarget,
 }: {
     selectedTable: ObjectExplorerView['selectedTable'];
     tablePermissions: ObjectExplorerView['tablePermissions'];
@@ -21,21 +17,13 @@ export function ObjectExplorerActions({
     trusted: ObjectExplorerProps['trusted'];
     copy: ObjectExplorerProps['copy'];
     setCreateTableOpen: ObjectExplorerView['setCreateTableOpen'];
-    insertableTable: ObjectExplorerView['insertableTable'];
-    setInsertRowTarget: ObjectExplorerView['setInsertRowTarget'];
-    deletableTable: ObjectExplorerView['deletableTable'];
-    setDeleteTableTarget: ObjectExplorerView['setDeleteTableTarget'];
 }) {
-    if (!selectedTable && tablePermissions.create === false) return null;
+    if (connection.dataSource === 'fixture' || tablePermissions.create === false) return null;
     return (
         <div
             className="object-explorer-action-bar"
             role="group"
-            aria-label={
-                selectedTable
-                    ? `Actions for ${selectedTable.table.database}.${selectedTable.table.name}`
-                    : 'Table actions'
-            }
+            aria-label="Table actions"
         >
             {connection.dataSource !== 'fixture' && tablePermissions.create !== false && (
                 <Button
@@ -48,50 +36,6 @@ export function ObjectExplorerActions({
                     <Icon name="table" />
                     {copy.newTable}
                 </Button>
-            )}
-            {connection.dataSource !== 'fixture' &&
-                tablePermissions.insert !== false &&
-                insertableTable && (
-                    <Button
-                        variant="secondary"
-                        className="toolbar-small"
-                        disabled={!trusted}
-                        title={!trusted ? copy.runActionTrustRequired : undefined}
-                        onClick={() =>
-                            setInsertRowTarget({
-                                table: insertableTable.table,
-                                columns: insertableTable.columns,
-                            })
-                        }
-                    >
-                        <Icon name="plus" />
-                        {copy.insertRow}
-                    </Button>
-                )}
-            {connection.dataSource !== 'fixture' &&
-                tablePermissions.drop !== false &&
-                deletableTable && (
-                    <Button
-                        variant="danger"
-                        className="toolbar-small object-delete-table-action"
-                        disabled={!trusted}
-                        title={!trusted ? copy.runActionTrustRequired : undefined}
-                        onClick={() => setDeleteTableTarget(deletableTable)}
-                    >
-                        <Icon name="trash" />
-                        {copy.deleteTable}
-                    </Button>
-                )}
-            {selectedTable && (
-                <span
-                    className="object-action-context"
-                    title={`${selectedTable.table.database}.${selectedTable.table.name}`}
-                >
-                    <span>Selected</span>
-                    <code>
-                        {selectedTable.table.database}.{selectedTable.table.name}
-                    </code>
-                </span>
             )}
         </div>
     );
