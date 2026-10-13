@@ -855,6 +855,11 @@
     height: 16px;
   }
 } /* Light theme */
+:root[data-theme="click-light"] .new-tab-button,
+:root[data-theme="click-light"] .new-tab-button:hover {
+  color: var(--accent);
+}
+
 :root[data-theme="click-light"] .topbar-control-rail {
   background: var(--panel-raised);
   box-shadow: none;
