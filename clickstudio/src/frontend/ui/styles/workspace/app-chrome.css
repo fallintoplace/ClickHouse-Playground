@@ -838,28 +838,23 @@
     flex: none;
     align-self: center;
     place-items: center;
-    border: 1px solid var(--accent-action);
+    border: 1px solid var(--line);
     border-radius: var(--radius-control);
-    background: var(--accent-action);
-    color: var(--accent-ink);
+    background: var(--panel);
+    color: var(--accent-action);
     cursor: pointer;
     transition: 0.18s ease;
   }
   .new-tab-button:hover {
-    border-color: var(--accent-action);
-    background: color-mix(in srgb, var(--accent-action) 86%, var(--panel));
-    color: var(--accent-ink);
+    border-color: var(--line-bright);
+    background: var(--panel-hover);
+    color: var(--accent-action);
   }
   .new-tab-button svg {
     width: 16px;
     height: 16px;
   }
 } /* Light theme */
-:root[data-theme="click-light"] .new-tab-button,
-:root[data-theme="click-light"] .new-tab-button:hover {
-  border-color: var(--active-border);
-}
-
 :root[data-theme="click-light"] .topbar-control-rail {
   background: var(--panel-raised);
   box-shadow: none;
