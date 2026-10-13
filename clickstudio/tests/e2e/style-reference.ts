@@ -8,8 +8,9 @@ const referenceCss = gunzipSync(
     readFileSync(new URL('../fixtures/styles/reference.css.gz', import.meta.url)),
 ).toString();
 
-async function visibleStyles(page: Page) {
-    return page.evaluate(() => {
+async function visibleStyles(page: Page, target: Page | Locator) {
+    const scope = target === page ? page.locator('body') : (target as Locator);
+    return scope.evaluate(root => {
         const properties = [
             'display',
             'visibility',
@@ -68,7 +69,7 @@ async function visibleStyles(page: Page) {
             'stroke-opacity',
         ];
         const entries = [];
-        for (const element of document.body.querySelectorAll('*')) {
+        for (const element of [root, ...root.querySelectorAll('*')]) {
             const bounds = element.getBoundingClientRect();
             if (!bounds.width || !bounds.height) continue;
             let visible = true;
@@ -136,7 +137,7 @@ export async function expectReferenceStyles(
     let expectedStyles: Awaited<ReturnType<typeof visibleStyles>>;
     try {
         expected = await target.screenshot(options);
-        expectedStyles = await visibleStyles(page);
+        expectedStyles = await visibleStyles(page, target);
     } finally {
         await reference.evaluate(({ style, sheets }) => {
             for (const { sheet, disabled } of sheets) sheet.disabled = disabled;
@@ -145,7 +146,7 @@ export async function expectReferenceStyles(
         await reference.dispose();
     }
     const actual = await target.screenshot(options);
-    const actualStyles = await visibleStyles(page);
+    const actualStyles = await visibleStyles(page, target);
     const currentImage = PNG.sync.read(actual),
         referenceImage = PNG.sync.read(expected);
     const dimensions = { width: currentImage.width, height: currentImage.height };

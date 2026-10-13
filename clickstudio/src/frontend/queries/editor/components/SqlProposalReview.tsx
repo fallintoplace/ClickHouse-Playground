@@ -27,7 +27,7 @@ export function SqlProposalReview({
     onDecide: (decision: ProposalDecisionAction) => Promise<void>;
 }) {
     const element = useRef<HTMLDivElement>(null);
-    const { id, baseSql, sql: proposedSql } = proposal;
+    const { id, sql: proposedSql } = proposal;
     useEffect(() => {
         if (!element.current) return;
         const editor = new EditorView({
@@ -65,7 +65,7 @@ export function SqlProposalReview({
                         tabindex: '0',
                     }),
                     unifiedMergeView({
-                        original: baseSql,
+                        original: currentSql,
                         mergeControls: false,
                         highlightChanges: false,
                     }),
@@ -81,11 +81,7 @@ export function SqlProposalReview({
                 ),
             });
         return () => editor.destroy();
-    }, [id, baseSql, proposedSql, dark]);
-    let blocked = '';
-    if (baseSql !== currentSql) blocked = 'The query changed. Request a new proposal.';
-    else if (proposal.quality?.status === 'fail')
-        blocked = 'This proposal did not pass SQL checks.';
+    }, [id, currentSql, proposedSql, dark]);
     return (
         <div className="sql-proposal-review" data-testid="sql-proposal-review">
             <div className="sql-review-surface">
@@ -106,16 +102,16 @@ export function SqlProposalReview({
                         variant="primary"
                         className="toolbar-small"
                         aria-label="Accept SQL changes"
-                        disabled={busy || Boolean(blocked)}
+                        disabled={busy}
                         onClick={() => void onDecide('accepted')}
                     >
                         Accept
                     </Button>
                 </div>
             </div>
-            {(error || blocked) && (
+            {error && (
                 <div className="sql-review-error" role="alert">
-                    {error || blocked}
+                    {error}
                 </div>
             )}
         </div>

@@ -140,6 +140,173 @@ test('OpenAI receives prior chat messages before the fresh SQL context', async t
     });
 });
 
+test('OpenAI replies preserve standalone alternatives without local output limits', async t => {
+    const priorFetch = globalThis.fetch;
+    t.after(() => {
+        globalThis.fetch = priorFetch;
+    });
+    const content = {
+        sql: null,
+        alternatives: Array.from({ length: 5 }, (_, index) => ({
+            title: `Option ${index}`,
+            summary: 'x'.repeat(1001),
+            sql: `SELECT ${index}`,
+        })),
+        summary: 'x'.repeat(20001),
+        assumptions: Array.from({ length: 51 }, () => 'x'.repeat(4001)),
+        tables: [],
+        caveats: [],
+        clarification: null,
+        findings: [],
+    };
+    globalThis.fetch = async (input, init) => {
+        const body = jsonRecord(jsonValue(String(init?.body)), 'OpenAI request');
+        assert.equal(body.max_output_tokens, undefined);
+        if (String(input).endsWith('/responses/input_tokens'))
+            return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
+        return Response.json({
+            id: 'alternatives-response',
+            status: 'completed',
+            output_text: JSON.stringify(content),
+            output: [],
+        });
+    };
+    const driver = new OpenAIDriver('test-key', 'test-model');
+    const response = await driver.propose(assistantContext(), new AbortController().signal);
+    assert.deepEqual(response.content, content);
+});
+
+test('OpenAI text, refusals and partial replies are displayed as returned', async t => {
+    const priorFetch = globalThis.fetch;
+    t.after(() => {
+        globalThis.fetch = priorFetch;
+    });
+    for (const reply of [
+        {
+            status: 'completed',
+            output_text: 'Here is the full answer.',
+            output: [],
+            expected: 'Here is the full answer.',
+        },
+        {
+            status: 'completed',
+            output_text: '{"unexpected":"reply"}',
+            output: [],
+            expected: '{"unexpected":"reply"}',
+        },
+        {
+            status: 'completed',
+            output_text: '',
+            output: [
+                {
+                    type: 'message',
+                    role: 'assistant',
+                    content: [{ type: 'refusal', refusal: 'I cannot help with that request.' }],
+                },
+            ],
+            expected: 'I cannot help with that request.',
+        },
+        {
+            status: 'incomplete',
+            incomplete_details: { reason: 'max_output_tokens' },
+            output_text: 'The reply stopped here',
+            output: [],
+            expected: 'The reply stopped here',
+        },
+        {
+            status: 'incomplete',
+            incomplete_details: { reason: 'content_filter' },
+            output_text: 'This is the returned portion.',
+            output: [],
+            expected: 'This is the returned portion.',
+        },
+    ]) {
+        const { expected, ...body } = reply;
+        globalThis.fetch = async input =>
+            String(input).endsWith('/responses/input_tokens')
+                ? Response.json({ object: 'response.input_tokens', input_tokens: 200 })
+                : Response.json({ id: 'text-response', ...body });
+        const response = await new OpenAIDriver('test-key', 'test-model').propose(
+            assistantContext(),
+            new AbortController().signal,
+        );
+        assert.equal(response.content.summary, expected);
+        assert.equal(response.content.sql, null);
+        assert.deepEqual(response.content.alternatives, []);
+    }
+});
+
+test('OpenAI replies preserve all web citations', async t => {
+    const priorFetch = globalThis.fetch;
+    t.after(() => {
+        globalThis.fetch = priorFetch;
+    });
+    const annotations = Array.from({ length: 25 }, (_, index) => ({
+        type: 'url_citation',
+        title: `Source ${index}`,
+        url: `https://example.com/${index}`,
+        start_index: 0,
+        end_index: 1,
+    }));
+    globalThis.fetch = async input =>
+        String(input).endsWith('/responses/input_tokens')
+            ? Response.json({ object: 'response.input_tokens', input_tokens: 200 })
+            : Response.json({
+                  id: 'sources-response',
+                  status: 'completed',
+                  output: [
+                      {
+                          type: 'message',
+                          role: 'assistant',
+                          content: [{ type: 'output_text', text: 'Returned answer', annotations }],
+                      },
+                  ],
+              });
+    const response = await new OpenAIDriver('test-key', 'test-model').propose(
+        assistantContext(),
+        new AbortController().signal,
+    );
+    assert.equal(response.content.summary, 'Returned answer');
+    assert.deepEqual(
+        response.content.sources,
+        annotations.map(({ title, url }) => ({ title, url })),
+    );
+});
+
+test('OpenAI network failures and empty responses still return errors', async t => {
+    const priorFetch = globalThis.fetch;
+    t.after(() => {
+        globalThis.fetch = priorFetch;
+    });
+    globalThis.fetch = async input => {
+        if (String(input).endsWith('/responses/input_tokens'))
+            return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
+        throw new TypeError('Network connection lost');
+    };
+    await assert.rejects(
+        new OpenAIDriver('test-key', 'test-model').propose(
+            assistantContext(),
+            new AbortController().signal,
+        ),
+        {
+            code: 'AI_PROVIDER_ERROR',
+        },
+    );
+    globalThis.fetch = async input =>
+        String(input).endsWith('/responses/input_tokens')
+            ? Response.json({ object: 'response.input_tokens', input_tokens: 200 })
+            : Response.json({ id: 'empty-response', status: 'completed', output: [] });
+    await assert.rejects(
+        new OpenAIDriver('test-key', 'test-model').propose(
+            assistantContext(),
+            new AbortController().signal,
+        ),
+        {
+            code: 'AI_INCOMPLETE',
+        },
+    );
+});
+
 test('Local assistant requests use the configured service tier without changing reasoning', async t => {
     const originalFetch = globalThis.fetch;
     let requestBody: Record<string, unknown> | undefined;

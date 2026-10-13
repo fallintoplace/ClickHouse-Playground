@@ -4,16 +4,14 @@ import { APIConnectionTimeoutError, APIError } from 'openai';
 import {
     ASSISTANT_REQUEST_TIMEOUT_MS,
     ASSISTANT_TIMEOUT_MESSAGE,
-    MAX_ASSISTANT_PROPOSAL_TABLES,
     isAssistantTimeoutSignal,
     validateProposal,
     type AssistantDriver,
     type PreparedContext,
 } from './proposals/assistant.js';
 import { AppError } from '../system/requests/errors.js';
-import type { AssistantSource } from '../../shared/assistant/types.js';
+import type { AssistantSource, ProposalContent } from '../../shared/assistant/types.js';
 import type { OpenAIServiceTier } from '../system/config.js';
-const MAX_OUTPUT_TOKENS = 12_000;
 const DEFAULT_MAX_INPUT_TOKENS = 48_000;
 const strings = { type: 'array', items: { type: 'string' } };
 const schema = {
@@ -46,7 +44,7 @@ const schema = {
         },
         summary: { type: 'string' },
         assumptions: strings,
-        tables: { ...strings, maxItems: MAX_ASSISTANT_PROPOSAL_TABLES },
+        tables: strings,
         caveats: strings,
         clarification: { type: ['string', 'null'] },
         findings: {
@@ -128,11 +126,7 @@ function responseSources(response: OpenAI.Responses.Response): AssistantSource[]
         for (const part of item.content) {
             if (part.type !== 'output_text') continue;
             for (const annotation of part.annotations) {
-                if (
-                    annotation.type === 'url_citation' &&
-                    !sourceMap.has(annotation.url) &&
-                    sourceMap.size < 20
-                )
+                if (annotation.type === 'url_citation' && !sourceMap.has(annotation.url))
                     sourceMap.set(annotation.url, {
                         title: annotation.title,
                         url: annotation.url,
@@ -141,6 +135,48 @@ function responseSources(response: OpenAI.Responses.Response): AssistantSource[]
         }
     }
     return [...sourceMap.values()];
+}
+
+function responseContent(response: OpenAI.Responses.Response): ProposalContent {
+    const refusals = response.output.flatMap(item =>
+        item.type === 'message'
+            ? item.content.flatMap(part => (part.type === 'refusal' ? [part.refusal] : []))
+            : [],
+    );
+    const outputText =
+        response.output_text ||
+        response.output
+            .flatMap(item =>
+                item.type === 'message'
+                    ? item.content.flatMap(part => (part.type === 'output_text' ? [part.text] : []))
+                    : [],
+            )
+            .join('');
+    const answer = [outputText, ...refusals].filter(Boolean).join('\n\n');
+    if (!answer)
+        throw new AppError(
+            502,
+            'AI_INCOMPLETE',
+            'The assistant returned no reply. No draft was changed.',
+        );
+    const plainAnswer: ProposalContent = {
+        sql: null,
+        alternatives: [],
+        summary: answer,
+        assumptions: [],
+        tables: [],
+        caveats: [],
+        clarification: null,
+        findings: [],
+    };
+    if (response.status === 'completed' && refusals.length === 0) {
+        try {
+            return validateProposal(JSON.parse(answer));
+        } catch {
+            return plainAnswer;
+        }
+    }
+    return plainAnswer;
 }
 
 export class OpenAIDriver implements AssistantDriver {
@@ -260,7 +296,6 @@ export class OpenAIDriver implements AssistantDriver {
                             input: requestInput(),
                             tools,
                             tool_choice: 'auto',
-                            max_output_tokens: MAX_OUTPUT_TOKENS,
                             text,
                         },
                         { signal },
@@ -281,32 +316,12 @@ export class OpenAIDriver implements AssistantDriver {
                     await fitConversationToBudget();
                 }
             }
-            if (response.status !== 'completed' || !response.output_text) {
-                const reason = response.incomplete_details?.reason;
-                let message: string;
-
-                switch (reason) {
-                    case 'max_output_tokens':
-                        message =
-                            'The assistant response reached its length limit. Try asking for a smaller part at a time. No draft was changed.';
-                        break;
-                    case 'content_filter':
-                        message =
-                            'The response was stopped by the content filter. No draft was changed.';
-                        break;
-                    default:
-                        message =
-                            'The assistant stopped before completing a response. No draft was changed.';
-                        break;
-                }
-                throw new AppError(502, 'AI_INCOMPLETE', message);
-            }
             const sources = responseSources(response);
             return {
-                content: validateProposal({
-                    ...JSON.parse(response.output_text),
+                content: {
+                    ...responseContent(response),
                     ...(sources.length ? { sources } : {}),
-                }),
+                },
                 responseId: response.id,
             };
         } catch (error) {

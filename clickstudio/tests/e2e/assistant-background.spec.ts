@@ -206,7 +206,7 @@ for (const mode of ['beginner', 'expert']) {
 }
 
 for (const mode of ['beginner', 'expert']) {
-    test(`Ask AI keeps its original SQL while editing and running in ${mode} mode`, async ({
+    test(`Ask AI keeps original request context and reviews the edited draft in ${mode} mode`, async ({
         page,
     }) => {
         const requests = await deferredReplies(page);
@@ -227,12 +227,24 @@ for (const mode of ['beginner', 'expert']) {
             'Reply to Improve original SQL',
         );
         expect(requests[0]!.body).toMatchObject({ sql: 'SELECT 1 AS original', includeRun: false });
-        await expect(page.getByRole('textbox', { name: 'SQL editor', exact: true })).toHaveText(
-            'SELECT 2 AS edited',
-        );
-        await expect(page.getByTestId('sql-proposal-review')).toHaveCount(0);
+        await expect(page.getByTestId('sql-proposal-review')).toBeVisible();
+        await expect(
+            page.getByTestId('sql-proposal-review').locator('.cm-deletedChunk'),
+        ).toContainText('SELECT 2 AS edited');
+        await expect(page.getByRole('button', { name: 'Accept SQL changes' })).toBeEnabled();
         await expect(page.locator('.assistant-turn-error')).toHaveCount(0);
-        await expect(page.getByTestId('run-button')).toBeEnabled();
+        await page.route('**/api/assistant/proposals/*/decision', route =>
+            route.fulfill({
+                json: {
+                    ...proposalFor(requests[0]!.body, 'SELECT 3 AS suggested'),
+                    decision: 'accepted',
+                },
+            }),
+        );
+        await page.getByRole('button', { name: 'Accept SQL changes' }).click();
+        await expect(page.getByRole('textbox', { name: 'SQL editor', exact: true })).toHaveText(
+            'SELECT 3 AS suggested',
+        );
     });
 }
 

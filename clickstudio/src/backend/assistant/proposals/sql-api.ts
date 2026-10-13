@@ -10,7 +10,6 @@ import {
     validateProposal,
     type PreparedContext,
 } from './assistant.js';
-import { evaluateProposal } from '../evaluation.js';
 import {
     assistantInputText as field,
     assistantRequestFrom,
@@ -172,9 +171,6 @@ async function post(request: Request): Promise<Response> {
             promptVersion: PROMPT_VERSION,
             contextSummary: built.summary,
             decision: 'pending',
-            quality: evaluateProposal(content, action, {
-                schema: { tables: schema.tables, truncated: schema.truncated },
-            }),
         };
         return json(proposal, 201);
     } catch (error) {

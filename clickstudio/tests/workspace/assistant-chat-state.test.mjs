@@ -60,14 +60,23 @@ test('Current SQL changes need editor review and can open alternatives before ac
     });
 });
 
-test('Informational SQL replies do not advertise a missing review action', () => {
+test('Returned SQL can be reviewed regardless of the request action', () => {
     const turn = sqlTurn();
     for (const action of ['explain', 'review']) {
         const state = assistantSqlReview(
             sqlTurn({ proposal: { ...turn.proposal, action } }),
             reviewContext,
         );
-        assert.deepEqual(state, { status: 'Review only', canOpenAlternative: false });
+        assert.deepEqual(state, { status: 'Needs review', canOpenAlternative: true });
+        assert.equal(
+            pendingEditorProposal(
+                [sqlTurn({ proposal: { ...turn.proposal, action } })],
+                'draft',
+                'demo',
+                'SELECT 1',
+            ).proposal.action,
+            action,
+        );
     }
     assert.deepEqual(
         assistantSqlReview(
@@ -120,7 +129,7 @@ test('An accepted proposal that missed its draft is not reported as applied', ()
     assert.equal(restored.applied, false);
     assert.deepEqual(assistantSqlReview(restored, reviewContext), {
         status: 'Not applied',
-        message: 'The original SQL draft changed or closed before this proposal could be applied.',
+        message: 'The original SQL draft closed before this proposal could be applied.',
         canOpenAlternative: true,
     });
     for (const applied of [true, undefined, 'false']) {
@@ -140,18 +149,16 @@ test('Changing tabs retains the proposal ownership warning without replacing ano
     });
 });
 
-test('Changed drafts and failed SQL checks retain their review warnings', () => {
+test('Edited drafts and stored static checks do not block returned SQL', () => {
     assert.deepEqual(assistantSqlReview(sqlTurn(), { ...reviewContext, sql: 'SELECT 99' }), {
-        status: 'Draft changed',
-        message: 'The SQL draft changed. Ask again to review the current draft.',
+        status: 'Needs review',
         canOpenAlternative: true,
     });
     const turn = sqlTurn();
     const failed = sqlTurn({ proposal: { ...turn.proposal, quality: { status: 'fail' } } });
     assert.deepEqual(assistantSqlReview(failed, reviewContext), {
-        status: 'Checks failed',
-        message: 'A required check failed. This proposal can’t be applied.',
-        canOpenAlternative: false,
+        status: 'Needs review',
+        canOpenAlternative: true,
     });
     for (const decision of ['pending', 'accepted', 'rejected'])
         assert.equal(
@@ -159,7 +166,7 @@ test('Changed drafts and failed SQL checks retain their review warnings', () => 
                 sqlTurn({ proposal: { ...failed.proposal, decision } }),
                 reviewContext,
             ).canOpenAlternative,
-            false,
+            decision !== 'rejected',
         );
 });
 
@@ -174,14 +181,13 @@ test('Editor proposals belong to the originating query and connection', () => {
     );
 });
 
-test('A background reply cannot replace an edited SQL draft with a review', () => {
+test('A background reply can review and replace an edited SQL draft', () => {
     const turn = sqlTurn();
     assert.equal(pendingEditorProposal([turn], 'draft', 'demo', 'SELECT 1').id, 'turn');
     for (const sql of ['SELECT 3', '', 'SELECT 1;'])
-        assert.equal(pendingEditorProposal([turn], 'draft', 'demo', sql), undefined);
+        assert.equal(pendingEditorProposal([turn], 'draft', 'demo', sql).id, 'turn');
     assert.deepEqual(assistantSqlReview(turn, { ...reviewContext, sql: 'SELECT 3' }), {
-        status: 'Draft changed',
-        message: 'The SQL draft changed. Ask again to review the current draft.',
+        status: 'Needs review',
         canOpenAlternative: true,
     });
 });
@@ -199,8 +205,6 @@ test('Only complete, undecided SQL changes open an editor review', () => {
         { ...turn.proposal, decision: 'rejected' },
         { ...turn.proposal, sql: null },
         { ...turn.proposal, sql: turn.proposal.baseSql },
-        { ...turn.proposal, action: 'explain' },
-        { ...turn.proposal, action: 'review' },
     ])
         assert.equal(
             pendingEditorProposal([sqlTurn({ proposal })], 'draft', 'demo', 'SELECT 1'),

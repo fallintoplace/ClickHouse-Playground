@@ -327,6 +327,11 @@ function AssistantExecutionOption({
                     There are no SQL statements to run.
                 </p>
             )}
+            {(outline.error || !statements.length) && (
+                <pre>
+                    <code>{sql}</code>
+                </pre>
+            )}
             <ol
                 className="assistant-execution-steps"
                 aria-label="Statements in execution order"
@@ -535,25 +540,31 @@ function AssistantOutput({
         mainOutline?.statements.some(statement => statement.operation !== 'read') ?? false;
     const proposalHasNoStatements = proposalSql !== null && mainOutline?.statements.length === 0;
     const showExecutionOptions =
-        proposalSql !== null &&
-        (proposalIsScript ||
-            alternatives.length > 0 ||
-            proposalHasNonReadStatement ||
-            Boolean(mainOutline?.error) ||
-            proposalHasNoStatements);
+        alternatives.length > 0 ||
+        (proposalSql !== null &&
+            (proposalIsScript ||
+                proposalHasNonReadStatement ||
+                Boolean(mainOutline?.error) ||
+                proposalHasNoStatements));
     const review = assistantSqlReview(
         { ...turn, proposal },
         { sql, draftId, connectionId, latestTurnId },
     );
     const openDisabled = busy || !review.canOpenAlternative;
-    const sources = (proposal.sources ?? []).flatMap(source => {
+    const sources = (proposal.sources ?? []).map(source => {
         try {
             const url = new URL(source.url);
-            return url.protocol === 'http:' || url.protocol === 'https:'
-                ? [{ ...source, url: url.href, label: source.title || url.hostname }]
-                : [];
+            const linkable =
+                (url.protocol === 'http:' || url.protocol === 'https:') &&
+                !url.username &&
+                !url.password;
+            return {
+                ...source,
+                href: linkable ? url.href : undefined,
+                label: source.title || url.hostname || source.url,
+            };
         } catch {
-            return [];
+            return { ...source, href: undefined, label: source.title || source.url };
         }
     });
     const findingCards = proposal.findings.map((item, index) => (
@@ -588,16 +599,6 @@ function AssistantOutput({
     return (
         <div className="proposal-card">
             <div className="proposal-heading">
-                {!beginner && proposalSql !== null && (
-                    <span
-                        className={cx('proposal-quality', proposal.quality?.status)}
-                        title="Automated SQL checks, not a guarantee that the query returns the right answer."
-                        aria-label={`Automated SQL check score: ${proposal.quality?.score ?? 'unavailable'}`}
-                    >
-                        {proposal.quality?.score ?? '—'}
-                        <small>CHECKS</small>
-                    </span>
-                )}
                 <div>
                     <AssistantMarkdown
                         text={proposal.summary}
@@ -665,13 +666,17 @@ function AssistantOutput({
                                 <ul>
                                     {sources.map(source => (
                                         <li key={source.url}>
-                                            <a
-                                                href={source.url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                            >
-                                                {source.label}
-                                            </a>
+                                            {source.href ? (
+                                                <a
+                                                    href={source.href}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                >
+                                                    {source.label}
+                                                </a>
+                                            ) : (
+                                                <span>{source.label}</span>
+                                            )}
                                         </li>
                                     ))}
                                 </ul>
@@ -681,35 +686,35 @@ function AssistantOutput({
                 </details>
             )}
             {proposalSql !== null && (
-                <>
-                    <AssistantSqlProposalDiff
-                        key={`${proposal.id}:${proposal.decision}`}
-                        proposal={proposal}
-                        review={review}
-                    />
-                    {showExecutionOptions && (
-                        <div className="assistant-execution-options">
-                            <AssistantExecutionOption
-                                key={`${proposal.id}:recommended`}
-                                title={getProposalLabel()}
-                                sql={proposalSql}
-                                openDisabled={openDisabled}
-                                onOpenSqlDraft={onOpenSqlDraft}
-                            />
-                            {alternatives.map((option, index) => (
-                                <AssistantExecutionOption
-                                    key={`${proposal.id}:alternative:${index}`}
-                                    title={option.title}
-                                    summary={option.summary}
-                                    sql={option.sql}
-                                    openDisabled={openDisabled}
-                                    onOpenSqlDraft={onOpenSqlDraft}
-                                    alternative
-                                />
-                            ))}
-                        </div>
+                <AssistantSqlProposalDiff
+                    key={`${proposal.id}:${proposal.decision}`}
+                    proposal={proposal}
+                    review={review}
+                />
+            )}
+            {showExecutionOptions && (
+                <div className="assistant-execution-options">
+                    {proposalSql !== null && (
+                        <AssistantExecutionOption
+                            key={`${proposal.id}:recommended`}
+                            title={getProposalLabel()}
+                            sql={proposalSql}
+                            openDisabled={openDisabled}
+                            onOpenSqlDraft={onOpenSqlDraft}
+                        />
                     )}
-                </>
+                    {alternatives.map((option, index) => (
+                        <AssistantExecutionOption
+                            key={`${proposal.id}:alternative:${index}`}
+                            title={option.title}
+                            summary={option.summary}
+                            sql={option.sql}
+                            openDisabled={openDisabled}
+                            onOpenSqlDraft={onOpenSqlDraft}
+                            alternative
+                        />
+                    ))}
+                </div>
             )}
         </div>
     );

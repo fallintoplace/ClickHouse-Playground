@@ -34,29 +34,12 @@ function isProposalDecision(value: unknown): value is Proposal['decision'] {
 }
 
 function parseSources(value: unknown): AssistantSource[] | undefined {
-    if (!Array.isArray(value) || value.length > 20) return undefined;
+    if (!Array.isArray(value)) return undefined;
     const sources: AssistantSource[] = [];
     for (const source of value) {
-        if (
-            !isRecord(source) ||
-            typeof source.title !== 'string' ||
-            source.title.length > 512 ||
-            typeof source.url !== 'string' ||
-            source.url.length > 2_048
-        )
+        if (!isRecord(source) || typeof source.title !== 'string' || typeof source.url !== 'string')
             return undefined;
-        try {
-            const url = new URL(source.url);
-            if (
-                (url.protocol !== 'http:' && url.protocol !== 'https:') ||
-                url.username ||
-                url.password
-            )
-                return undefined;
-            sources.push({ title: source.title, url: url.href });
-        } catch {
-            return undefined;
-        }
+        sources.push({ title: source.title, url: source.url });
     }
     return sources;
 }
@@ -86,19 +69,14 @@ function parseFindings(value: unknown): ProposalContent['findings'] | undefined 
 }
 
 function parseAlternatives(value: unknown): ProposalAlternative[] | undefined {
-    if (!Array.isArray(value) || value.length > 4) return undefined;
+    if (!Array.isArray(value)) return undefined;
     const alternatives: ProposalAlternative[] = [];
     for (const option of value) {
         if (
             !isRecord(option) ||
             typeof option.title !== 'string' ||
-            !option.title.trim() ||
-            option.title.length > 120 ||
             typeof option.summary !== 'string' ||
-            option.summary.length > 1_000 ||
-            typeof option.sql !== 'string' ||
-            !option.sql.trim() ||
-            option.sql.length > 100_000
+            typeof option.sql !== 'string'
         )
             return undefined;
         alternatives.push({ title: option.title, summary: option.summary, sql: option.sql });
@@ -164,7 +142,7 @@ export function parseAssistantProposal(value: unknown): Proposal | undefined {
     if (!findings) return undefined;
     const alternatives =
         value.alternatives === undefined ? [] : parseAlternatives(value.alternatives);
-    if (!alternatives || (alternatives.length > 0 && value.sql === null)) return undefined;
+    if (!alternatives) return undefined;
     const sources = value.sources === undefined ? undefined : parseSources(value.sources);
     if (value.sources !== undefined && !sources) return undefined;
     const quality = value.quality === undefined ? undefined : parseQuality(value.quality);

@@ -744,25 +744,30 @@ for (const [format, signature] of Object.entries(imageSignatures)) {
         );
     });
 }
-test('Review lane cannot return applicable SQL even if model proposes it', async () => {
-    const f = aiFixture(),
-        c = f.ai.prepare(owner, { ...f.input, action: 'review' }),
-        p = await f.ai.propose(owner, c.id, true);
-    assert.equal(p.sql, null);
-    assert.throws(() => f.ai.decide(owner, p.id, 'accepted', 'local', 'SELECT 2'), {
-        code: 'REVIEW_ONLY',
-    });
+test('Assistant preserves and accepts returned SQL regardless of the request action', async () => {
+    for (const action of ASSISTANT_ACTIONS) {
+        const alternatives = [
+            { title: 'Other query', summary: 'Another value.', sql: 'SELECT 42' },
+        ];
+        const f = aiFixture({ ...proposal, alternatives });
+        const c = f.ai.prepare(owner, { ...f.input, action });
+        const p = await f.ai.propose(owner, c.id, true);
+        assert.equal(p.sql, proposal.sql);
+        assert.deepEqual(p.alternatives, alternatives);
+        assert.equal(
+            f.ai.decide(owner, p.id, 'accepted', 'local', 'SELECT 2').decision,
+            'accepted',
+        );
+    }
 });
-test('Proposal cannot be applied to changed SQL or another connection', async () => {
+test('Proposal can replace changed SQL while remaining scoped to its connection', async () => {
     const f = aiFixture(),
         c = f.ai.prepare(owner, f.input),
         p = await f.ai.propose(owner, c.id, true);
     assert.throws(() => f.ai.decide(owner, p.id, 'accepted', 'second', 'SELECT 2'), {
         code: 'CONNECTION_MISMATCH',
     });
-    assert.throws(() => f.ai.decide(owner, p.id, 'accepted', 'local', 'SELECT 3'), {
-        code: 'DRAFT_CHANGED',
-    });
+    assert.equal(f.ai.decide(owner, p.id, 'accepted', 'local', 'SELECT 3').decision, 'accepted');
 });
 test('Accepting proposal records a decision, never creates a run', async () => {
     const f = aiFixture(),
@@ -1054,16 +1059,17 @@ test('Write SQL proposals can be applied to the draft without running them', asy
         const f = aiFixture({ ...proposal, sql });
         const c = f.ai.prepare(owner, f.input);
         const p = await f.ai.propose(owner, c.id, true);
-        assert.equal(p.quality.status, 'pass');
+        assert.equal(p.quality, undefined);
         f.ai.decide(owner, p.id, 'accepted', 'local', 'SELECT 2');
         assert.equal(f.store.count('runs'), 0);
     }
 });
-test('AssistantService grounds generated SQL against the prepared schema', async () => {
+test('AssistantService returns generated SQL without adding static content checks', async () => {
     const f = aiFixture({ ...proposal, sql: 'SELECT * FROM default.events' }),
         c = f.ai.prepare(owner, f.input),
         p = await f.ai.propose(owner, c.id, true);
-    assert.equal(p.quality.checks.find(check => check.id === 'grounding').status, 'pass');
+    assert.equal(p.sql, 'SELECT * FROM default.events');
+    assert.equal(p.quality, undefined);
 });
 test('Evaluation report counts accepted and rejected proposals without exposing SQL', async () => {
     const f = aiFixture(),
@@ -1078,7 +1084,7 @@ test('Evaluation report counts accepted and rejected proposals without exposing 
     assert.equal(report.accepted, 1);
     assert.equal(report.rejected, 1);
     assert.equal(report.acceptanceRate, 50);
-    assert.equal(report.latest[0].score, 100);
+    assert.equal(report.latest[0].score, null);
     assert.equal(Object.hasOwn(report.latest[0], 'sql'), false);
 });
 test('Static semantic checks warn on schema references that need execution evidence', () => {
@@ -1090,39 +1096,32 @@ test('Static semantic checks warn on schema references that need execution evide
     assert.equal(quality.status, 'warn');
     assert.equal(quality.checks.find(check => check.id === 'grounding').status, 'warn');
 });
-test('Assistant proposals preserve table references up to the Cloud schema limit', () => {
-    for (const count of [0, 50, 51, 499, 500]) {
+test('Assistant proposals preserve table references without a response count limit', () => {
+    for (const count of [0, 50, 51, 499, 500, 501, 1000]) {
         const tables = Array.from({ length: count }, (_, index) => `default.table_${index}`);
         assert.deepEqual(validateProposal({ ...proposal, tables }).tables, tables);
     }
 });
-test('Assistant proposals reject malformed and oversized table lists', () => {
-    for (const tables of [
-        undefined,
-        null,
-        'default.events',
-        {},
-        Array.from({ length: 501 }, (_, index) => `default.table_${index}`),
-    ])
+test('Assistant proposals reject malformed table lists but preserve long names', () => {
+    for (const tables of [undefined, null, 'default.events', {}])
         assert.throws(() => validateProposal({ ...proposal, tables }), {
             code: 'AI_OUTPUT',
             message: 'Invalid tables',
         });
-    for (const tables of [[null], [1], [{}], ['x'.repeat(4001)]])
-        assert.throws(() => validateProposal({ ...proposal, tables }), { code: 'INVALID_REQUEST' });
-    assert.deepEqual(validateProposal({ ...proposal, tables: ['x'.repeat(4000)] }).tables, [
-        'x'.repeat(4000),
+    for (const tables of [[null], [1], [{}]])
+        assert.throws(() => validateProposal({ ...proposal, tables }), { code: 'AI_OUTPUT' });
+    assert.deepEqual(validateProposal({ ...proposal, tables: ['x'.repeat(4001)] }).tables, [
+        'x'.repeat(4001),
     ]);
 });
-test('Larger table lists do not increase the assumptions and caveats limits', () => {
+test('Assistant preserves full notes without response count or length limits', () => {
     const tables = Array.from({ length: 500 }, (_, index) => `default.table_${index}`);
     for (const field of ['assumptions', 'caveats']) {
-        const notes = Array.from({ length: 50 }, (_, index) => `Note ${index}`);
-        assert.deepEqual(validateProposal({ ...proposal, tables, [field]: notes })[field], notes);
-        assert.throws(
-            () => validateProposal({ ...proposal, tables, [field]: [...notes, 'One more'] }),
-            { code: 'AI_OUTPUT', message: `Invalid ${field}` },
+        const notes = Array.from(
+            { length: 51 },
+            (_, index) => `Note ${index}: ${'x'.repeat(4001)}`,
         );
+        assert.deepEqual(validateProposal({ ...proposal, tables, [field]: notes })[field], notes);
     }
 });
 test('Assistant proposals validate named, independently runnable alternatives', () => {
@@ -1143,29 +1142,13 @@ test('Assistant proposals validate named, independently runnable alternatives', 
             sql: 'ALTER TABLE events DELETE WHERE id = 1',
         },
     ]);
-    assert.throws(
-        () =>
-            validateProposal({
-                ...proposal,
-                sql: null,
-                alternatives: [
-                    { title: 'Delete instead', summary: 'Remove rows.', sql: 'DELETE FROM events' },
-                ],
-            }),
-        { code: 'AI_OUTPUT' },
-    );
-    assert.throws(
-        () =>
-            validateProposal({
-                ...proposal,
-                alternatives: Array.from({ length: 5 }, (_, index) => ({
-                    title: `Option ${index}`,
-                    summary: '',
-                    sql: 'SELECT 1',
-                })),
-            }),
-        { code: 'AI_OUTPUT' },
-    );
+    const alternatives = Array.from({ length: 5 }, (_, index) => ({
+        title: `Option ${index}: ${'x'.repeat(121)}`,
+        summary: 'x'.repeat(1001),
+        sql: `SELECT ${index}`,
+    }));
+    const reply = { ...proposal, sql: null, alternatives, summary: 'x'.repeat(20001) };
+    assert.deepEqual(validateProposal(reply), reply);
 });
 test('Assistant grounding checks cover SQL alternatives', () => {
     const quality = evaluateProposal(

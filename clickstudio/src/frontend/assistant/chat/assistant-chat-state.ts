@@ -46,12 +46,9 @@ export interface AssistantSqlReview {
         | 'Applied'
         | 'Not applied'
         | 'Rejected'
-        | 'Review only'
         | 'No SQL changes'
         | 'Earlier proposal'
-        | 'Another query'
-        | 'Draft changed'
-        | 'Checks failed';
+        | 'Another query';
     message?: string;
     canOpenAlternative: boolean;
 }
@@ -61,47 +58,28 @@ export function assistantSqlReview(
     context: { sql: string; draftId: string; connectionId: string; latestTurnId?: string },
 ): AssistantSqlReview {
     const proposal = turn.proposal;
-    const inspectOnly = proposal.action === 'explain' || proposal.action === 'review';
     const current =
         turn.status === 'complete' &&
         turn.draftId !== undefined &&
         turn.id === context.latestTurnId &&
         proposal.connectionId === context.connectionId;
-    const canOpenAlternative =
-        current &&
-        !inspectOnly &&
-        proposal.quality?.status !== 'fail' &&
-        proposal.decision !== 'rejected';
+    const canOpenAlternative = current && proposal.decision !== 'rejected';
     if (proposal.decision === 'accepted') {
         if (turn.applied === false)
             return {
                 status: 'Not applied',
-                message:
-                    'The original SQL draft changed or closed before this proposal could be applied.',
+                message: 'The original SQL draft closed before this proposal could be applied.',
                 canOpenAlternative,
             };
         return { status: 'Applied', canOpenAlternative };
     }
     if (proposal.decision === 'rejected') return { status: 'Rejected', canOpenAlternative };
-    if (inspectOnly) return { status: 'Review only', canOpenAlternative };
-    if (proposal.sql === proposal.baseSql) return { status: 'No SQL changes', canOpenAlternative };
+    if (proposal.sql === context.sql) return { status: 'No SQL changes', canOpenAlternative };
     if (!current) return { status: 'Earlier proposal', canOpenAlternative };
     if (turn.draftId !== context.draftId)
         return {
             status: 'Another query',
             message: 'Open the original SQL tab to review this proposal.',
-            canOpenAlternative,
-        };
-    if (proposal.baseSql !== context.sql)
-        return {
-            status: 'Draft changed',
-            message: 'The SQL draft changed. Ask again to review the current draft.',
-            canOpenAlternative,
-        };
-    if (proposal.quality?.status === 'fail')
-        return {
-            status: 'Checks failed',
-            message: 'A required check failed. This proposal can’t be applied.',
             canOpenAlternative,
         };
     return { status: 'Needs review', canOpenAlternative };
@@ -120,12 +98,9 @@ export function pendingEditorProposal(
         turn.status !== 'complete' ||
         !proposal ||
         proposal.connectionId !== connectionId ||
-        proposal.baseSql !== currentSql ||
         proposal.decision !== 'pending' ||
         proposal.sql === null ||
-        proposal.sql === proposal.baseSql ||
-        proposal.action === 'explain' ||
-        proposal.action === 'review'
+        proposal.sql === currentSql
     )
         return undefined;
     return { ...turn, proposal: { ...proposal, sql: proposal.sql } };

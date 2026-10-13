@@ -271,7 +271,7 @@ test('Vercel assistant keeps non-timeout provider failures as 502 errors', async
     assert.equal(await responseErrorCode(response), 'AI_PROVIDER_ERROR');
 });
 
-test('Vercel assistant keeps malformed structured output separate from timeout errors', async t => {
+test('Vercel assistant displays returned text outside the structured format', async t => {
     const priorKey = process.env.OPENAI_API_KEY;
     const priorFetch = globalThis.fetch;
     process.env.OPENAI_API_KEY = 'test-key';
@@ -292,11 +292,11 @@ test('Vercel assistant keeps malformed structured output separate from timeout e
     });
 
     const response = await handler.fetch(request(assistantBody()));
-    assert.equal(response.status, 502);
-    assert.equal(await responseErrorCode(response), 'AI_PROVIDER_ERROR');
+    assert.equal(response.status, 201);
+    assert.equal((await responseRecord(response)).summary, '{');
 });
 
-test('Vercel assistant accepts larger table lists with matching structured-output limits', async t => {
+test('Vercel assistant accepts larger table lists without structured-output count limits', async t => {
     const priorKey = process.env.OPENAI_API_KEY;
     const priorFetch = globalThis.fetch;
     process.env.OPENAI_API_KEY = 'test-key';
@@ -360,13 +360,12 @@ test('Vercel assistant accepts larger table lists with matching structured-outpu
             Array.from({ length: 2 }, () => ({
                 type: 'array',
                 items: { type: 'string' },
-                maxItems: 500,
             })),
         );
     }
 });
 
-test('Vercel assistant rejects table lists beyond the supported limit', async t => {
+test('Vercel assistant preserves table lists beyond the previous limit', async t => {
     const priorKey = process.env.OPENAI_API_KEY;
     const priorFetch = globalThis.fetch;
     process.env.OPENAI_API_KEY = 'test-key';
@@ -397,10 +396,8 @@ test('Vercel assistant rejects table lists beyond the supported limit', async t 
     });
 
     const response = await handler.fetch(request(assistantBody()));
-    assert.equal(response.status, 502);
-    assert.deepEqual(await response.json(), {
-        error: { code: 'AI_OUTPUT', message: 'Invalid tables' },
-    });
+    assert.equal(response.status, 201);
+    assert.equal(arrayValue((await responseRecord(response)).tables).length, 501);
 });
 
 test('Vercel assistant keeps caller cancellation separate from its timeout response', async t => {
@@ -608,7 +605,7 @@ test('Vercel assistant returns a full table copy when the source is present', as
         assert.equal(response.status, 201);
         const proposal = await responseRecord(response, 'Assistant proposal');
         assert.equal(proposal.sql, sql);
-        assert.equal(jsonRecord(proposal.quality, 'Proposal quality').status, 'pass');
+        assert.equal(proposal.quality, undefined);
     } finally {
         globalThis.fetch = priorFetch;
         if (priorKey === undefined) delete process.env.OPENAI_API_KEY;

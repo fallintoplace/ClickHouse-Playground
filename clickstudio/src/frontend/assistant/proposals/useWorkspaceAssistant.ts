@@ -520,12 +520,7 @@ export function useWorkspaceAssistant({
             !proposal ||
             proposal.decision !== 'pending' ||
             proposal.connectionId !== connectionId ||
-            (decision === 'accepted' &&
-                (proposal.baseSql !== active.sql ||
-                    (turn.draftId !== undefined && turn.draftId !== active.id) ||
-                    proposal.quality?.status === 'fail' ||
-                    proposal.action === 'explain' ||
-                    proposal.action === 'review'))
+            (decision === 'accepted' && turn.draftId !== undefined && turn.draftId !== active.id)
         )
             return;
         const chatId = activeChat.id;
@@ -550,15 +545,11 @@ export function useWorkspaceAssistant({
             const currentDraft = workspaceRef.current.tabs.find(draft => draft.id === draftId);
             const reviewedSql = reviewed.sql;
             let applied = false;
-            if (
-                decision === 'accepted' &&
-                reviewedSql !== null &&
-                currentDraft?.sql === proposal.baseSql
-            ) {
+            if (decision === 'accepted' && reviewedSql !== null && currentDraft) {
                 flushSync(() => {
                     setWorkspace(current => {
                         const target = current.tabs.find(draft => draft.id === draftId);
-                        applied = target?.sql === proposal.baseSql;
+                        applied = target !== undefined;
                         if (!applied) return current;
                         return {
                             ...current,

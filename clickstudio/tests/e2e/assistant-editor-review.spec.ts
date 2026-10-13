@@ -171,7 +171,7 @@ for (const mode of ['beginner', 'expert']) {
                 await transcript.screenshot({ path: info.outputPath(`flat-chat-${width}.png`) });
             }
             const diff = cards.first().getByTestId('sql-proposal-diff');
-            const toggle = diff.locator('summary');
+            const toggle = diff.locator(':scope > summary');
             await toggle.click();
             await expect(diff.locator('.sql-proposal-diff-line.is-added')).toContainText(
                 proposedSql,
@@ -279,7 +279,7 @@ test('Script plan pages are independent and new proposals start on the first pag
     await plans.first().getByRole('button', { name: 'Next', exact: true }).click();
     await expect(plans.first().getByRole('navigation')).toContainText('6–10 of 11');
     await expect(plans.last()).not.toHaveAttribute('open', '');
-    await plans.last().locator('summary').click();
+    await plans.last().locator(':scope > summary').click();
     await expect(plans.last().getByRole('navigation')).toContainText('1–5 of 11');
     await review(page).getByRole('button', { name: 'Accept SQL changes', exact: true }).click();
     await installProposal(page, script, { id: 'new-paged-script', summary: 'New script.' });
@@ -312,12 +312,12 @@ for (const mode of ['beginner', 'expert']) {
         await expect(review(page)).toBeVisible();
         const alternativeCard = page.getByTestId('assistant-execution-option').last();
         await expect(alternativeCard).not.toHaveAttribute('open', '');
-        await expect(alternativeCard.locator('summary')).toContainText('Other query');
+        await expect(alternativeCard.locator(':scope > summary')).toContainText('Other query');
         await expect(alternativeCard.locator('.assistant-execution-steps')).toBeHidden();
         await expect(
             alternativeCard.getByRole('button', { name: 'Open in SQL tab: Other query' }),
         ).toHaveCount(0);
-        await alternativeCard.locator('summary').click();
+        await alternativeCard.locator(':scope > summary').click();
         const alternative = alternativeCard.getByRole('button', {
             name: 'Open in SQL tab: Other query',
             exact: true,
@@ -387,9 +387,7 @@ for (const [operation, sql] of [
     });
 }
 
-test('Failed SQL checks block acceptance and opening alternatives while keeping rejection available', async ({
-    page,
-}) => {
+test('Stored SQL checks do not block acceptance or opening alternatives', async ({ page }) => {
     await installProposal(page, proposedSql, {
         alternatives: [{ title: 'Other query', summary: '', sql: 'SELECT 42' }],
         quality: {
@@ -403,17 +401,15 @@ test('Failed SQL checks block acceptance and opening alternatives while keeping 
     await trust(page);
     await replaceSql(page, originalSql);
     await askForChanges(page);
-    await expect(page.getByTestId('sql-proposal-diff')).toContainText('Checks failed');
-    await expect(page.locator('.sql-proposal-review-message')).toContainText(
-        'A required check failed',
-    );
+    await expect(page.getByTestId('sql-proposal-diff')).toContainText('Needs review');
+    await expect(page.locator('.sql-proposal-review-message')).toHaveCount(0);
     const alternativeCard = page.getByTestId('assistant-execution-option').last();
     await expect(alternativeCard).not.toHaveAttribute('open', '');
-    await alternativeCard.locator('summary').click();
+    await alternativeCard.locator(':scope > summary').click();
     await expect(
         alternativeCard.getByRole('button', { name: 'Open in SQL tab: Other query' }),
-    ).toBeDisabled();
-    await expect(review(page).getByRole('button', { name: 'Accept SQL changes' })).toBeDisabled();
+    ).toBeEnabled();
+    await expect(review(page).getByRole('button', { name: 'Accept SQL changes' })).toBeEnabled();
     await review(page).getByRole('button', { name: 'Reject SQL changes' }).click();
     await expect(liveEditor(page)).toHaveText(originalSql);
 });
@@ -450,14 +446,14 @@ for (const mode of ['beginner', 'expert']) {
         if (mode === 'expert') {
             await expect(details).toHaveCount(2);
             await details
-                .locator('summary')
+                .locator(':scope > summary')
                 .filter({ hasText: /^Details/ })
                 .click();
             await expect(
                 details.getByText('The output value changes.', { exact: true }),
             ).toBeVisible();
             await details
-                .locator('summary')
+                .locator(':scope > summary')
                 .filter({ hasText: /^Assumptions, notes and sources/ })
                 .click();
             await expect(
@@ -546,6 +542,11 @@ for (const decision of ['accepted', 'rejected'] as const) {
             name: 'Open in SQL tab: Another read',
             exact: true,
         });
+        await oldCard
+            .getByTestId('assistant-execution-option')
+            .last()
+            .locator(':scope > summary')
+            .click();
         await expect(oldAlternative).toBeEnabled();
         await expect(oldCard.getByRole('button', { name: /Run/ })).toHaveCount(0);
         await installProposal(page, nextScript, { id: 'next-script', summary: 'Newer script.' });
@@ -562,6 +563,11 @@ for (const decision of ['accepted', 'rejected'] as const) {
         expect(runs).toHaveLength(0);
         await page.reload();
         await page.getByTestId('open-ai').click();
+        await oldCard
+            .getByTestId('assistant-execution-option')
+            .last()
+            .locator(':scope > summary')
+            .click();
         await expect(oldAlternative).toBeDisabled();
         await expect(
             page.locator('.proposal-card').getByRole('button', { name: /Run/ }),
@@ -703,7 +709,7 @@ test('A new proposal reveals a collapsed query and still allows manual collapse'
     await expect(review(page)).toBeVisible();
 });
 
-test('A restored proposal cannot replace or apply to a changed draft', async ({ page }) => {
+test('A restored proposal can replace an edited draft after acceptance', async ({ page }) => {
     const { decisions } = await installProposal(page);
     await trust(page);
     await replaceSql(page, originalSql);
@@ -723,20 +729,13 @@ test('A restored proposal cannot replace or apply to a changed draft', async ({ 
         localStorage.setItem(key, JSON.stringify(state));
     });
     await page.reload();
-    await expect(review(page)).toHaveCount(0);
-    await expect(liveEditor(page)).toBeVisible();
+    await expect(review(page)).toBeVisible();
     await expect(liveEditor(page)).toHaveText('SELECT 99 AS changed');
-    await page.getByTestId('open-ai').click();
-    await expect(page.locator('.assistant-sql-review')).toContainText('Draft changed');
-    await expect(page.locator('.assistant-sql-review')).toContainText(
-        'The SQL draft changed. Ask again to review the current draft.',
-    );
-    await expect(
-        page
-            .locator('.proposal-card')
-            .getByRole('button', { name: /Accept|Reject|Apply to draft/ }),
-    ).toHaveCount(0);
-    expect(decisions).toEqual([]);
+    await expect(review(page).locator('.cm-deletedChunk')).toContainText('SELECT 99 AS changed');
+    await expect(review(page).getByRole('button', { name: 'Accept SQL changes' })).toBeEnabled();
+    await review(page).getByRole('button', { name: 'Accept SQL changes' }).click();
+    await expect(liveEditor(page)).toHaveText(proposedSql);
+    expect(decisions.map(decision => decision.decision)).toEqual(['accepted']);
 });
 
 test('Detached query review shares the same draft and decision with the workspace', async ({
@@ -930,105 +929,31 @@ test('Pure deletion still opens a review and accepts an empty draft', async ({ p
     await expect(liveEditor(page)).toHaveText('');
 });
 
-test('Failed SQL checks block acceptance while allowing rejection', async ({ page }) => {
-    await installProposal(page, proposedSql, {
-        quality: {
-            evaluatorVersion: 'test',
-            evaluatedAt: '2026-10-11T00:00:00.000Z',
-            status: 'fail',
-            score: 0,
-            checks: [],
-        },
-    });
-    await trust(page);
-    await replaceSql(page, originalSql);
-    await askForChanges(page);
-    await expect(
-        review(page).getByRole('button', { name: 'Accept SQL changes', exact: true }),
-    ).toBeDisabled();
-    await expect(review(page).getByRole('alert')).toHaveText(
-        'This proposal did not pass SQL checks.',
-    );
-    await review(page).getByRole('button', { name: 'Reject SQL changes', exact: true }).click();
-    await expect(review(page)).toHaveCount(0);
-    await expect(liveEditor(page)).toHaveText(originalSql);
-});
-
-for (const [status, score, token] of [
-    ['pass', 100, '--green'],
-    ['warn', 50, '--amber'],
-    ['fail', 0, '--red'],
-] as const)
-    test(`Experimental keeps the ${status} check badge while Standard hides it in both themes`, async ({
+for (const status of ['pass', 'warn', 'fail'] as const)
+    test(`Stored ${status} checks do not change the returned answer or draft controls`, async ({
         page,
-    }, info) => {
+    }) => {
         await installProposal(page, proposedSql, {
-            quality: {
-                evaluatorVersion: 'test',
-                evaluatedAt: '2026-10-11T00:00:00.000Z',
-                status,
-                score,
-                checks: [],
-            },
+            quality: { evaluatorVersion: 'test', evaluatedAt: 'now', status, score: 0, checks: [] },
         });
         await trust(page);
         await replaceSql(page, originalSql);
         await askForChanges(page);
-        const badge = page.locator('.proposal-quality');
-        await expect(badge).toBeVisible();
-        for (const theme of ['Dark theme', 'Light theme']) {
-            await page
-                .getByRole('radiogroup', { name: 'Theme' })
-                .getByRole('radio', { name: theme })
-                .click();
-            const expectedColor = await page.evaluate(
-                variable => {
-                    const probe = document.createElement('span');
-                    probe.style.color = `var(${variable})`;
-                    document.body.append(probe);
-                    const color = getComputedStyle(probe).color;
-                    probe.remove();
-                    return color;
-                },
-                theme === 'Light theme' && status !== 'warn' ? '--status-badge-ink' : token,
-            );
-            await expect(badge).toHaveCSS('color', expectedColor);
-            if (theme === 'Light theme' && status !== 'warn') {
-                await expect(badge.locator('small')).toHaveCSS('color', expectedColor);
-                await expect(badge).toHaveCSS(
-                    'background-color',
-                    status === 'pass' ? 'rgb(0, 122, 69)' : 'rgb(197, 34, 67)',
-                );
-                await page.screenshot({ path: info.outputPath(`light-${status}-checks.png`) });
-            }
-            await setWorkspaceMode(page, 'Standard');
-            await page.getByTestId('open-ai').click();
-            await expect(page.getByTestId('assistant-proposal-summary')).toHaveText(
-                'Updated query.',
-            );
-            await expect(badge).toHaveCount(0);
-            await expect(page.getByTestId('sql-proposal-diff')).toContainText(
-                status === 'fail' ? 'Checks failed' : 'Needs review',
-            );
-            const accept = review(page).getByRole('button', {
-                name: 'Accept SQL changes',
-                exact: true,
-            });
-            if (status === 'fail') {
-                await expect(accept).toBeDisabled();
-                await expect(review(page).getByRole('alert')).toHaveText(
-                    'This proposal did not pass SQL checks.',
-                );
-            } else await expect(accept).toBeEnabled();
-            await page.screenshot({ path: info.outputPath(`${theme}-standard-no-checks.png`) });
-            await setWorkspaceMode(page, 'Experimental');
-            await expect(badge).toBeVisible();
+        for (const mode of ['Standard', 'Experimental'] as const) {
+            await setWorkspaceMode(page, mode);
+            if (mode === 'Standard') await page.getByTestId('open-ai').click();
+            await expect(page.locator('.proposal-quality')).toHaveCount(0);
+            await expect(page.getByTestId('sql-proposal-diff')).toContainText('Needs review');
+            await expect(
+                review(page).getByRole('button', { name: 'Accept SQL changes' }),
+            ).toBeEnabled();
+            await expect(review(page).getByRole('alert')).toHaveCount(0);
         }
+        await review(page).getByRole('button', { name: 'Accept SQL changes' }).click();
+        await expect(liveEditor(page)).toHaveText(proposedSql);
     });
 
 for (const reply of [
-    { name: 'explanations', sql: proposedSql, action: 'explain' },
-    { name: 'reviews', sql: proposedSql, action: 'review' },
     { name: 'unchanged SQL', sql: originalSql, action: 'ask' },
     { name: 'answers without SQL', sql: null, action: 'ask' },
 ] as const) {
@@ -1040,10 +965,68 @@ for (const reply of [
         await expect(review(page)).toHaveCount(0);
         await expect(liveEditor(page)).toBeVisible();
         await expect(liveEditor(page)).toHaveText(originalSql);
-        if (reply.action !== 'ask') {
-            await expect(page.getByTestId('sql-proposal-diff')).toContainText('Review only');
-            await expect(page.locator('.proposal-card')).not.toContainText('Needs review');
-            await expect(page.locator('.proposal-card').getByRole('button')).toHaveCount(0);
-        }
     });
 }
+
+for (const action of ['review', 'explain'] as const)
+    test(`Returned SQL remains reviewable for ${action} requests`, async ({ page }) => {
+        await installProposal(page, proposedSql, { action });
+        await trust(page);
+        await replaceSql(page, originalSql);
+        await askForChanges(page);
+        await expect(review(page)).toBeVisible();
+        await review(page).getByRole('button', { name: 'Accept SQL changes' }).click();
+        await expect(liveEditor(page)).toHaveText(proposedSql);
+    });
+
+for (const mode of ['beginner', 'expert'])
+    test(`Standalone SQL alternatives preserve the answer and open without a recommendation in ${mode}`, async ({
+        page,
+    }) => {
+        const summary = 'Here are three alternatives.';
+        const alternatives = [2, 3, 4].map(value => ({
+            title: `Option ${value}`,
+            summary: `Return ${value}.`,
+            sql: `SELECT ${value} AS value`,
+        }));
+        await installProposal(page, null, {
+            summary,
+            alternatives,
+            assumptions: ['All options return one row.'],
+            caveats: ['These queries have not run.'],
+        });
+        await trust(page, mode);
+        await replaceSql(page, originalSql);
+        await page.getByTestId('open-ai').click();
+        await page
+            .getByRole('textbox', { name: 'Ask AI', exact: true })
+            .fill('give me 3 alternatives to this one');
+        await page.getByRole('button', { name: 'Send', exact: true }).click();
+        await expect(page.getByTestId('assistant-answer-markdown')).toHaveText(summary);
+        await expect(review(page)).toHaveCount(0);
+        await expect(liveEditor(page)).toHaveText(originalSql);
+        await expect(page.getByTestId('assistant-execution-option')).toHaveCount(3);
+        await expect(page.locator('.proposal-card')).not.toContainText('Recommended option');
+        await expect
+            .poll(() =>
+                page.evaluate(() => {
+                    const value = localStorage.getItem('clickstudio:assistant-chats:demo:v1');
+                    return value?.includes('Here are three alternatives.') ?? false;
+                }),
+            )
+            .toBe(true);
+        await page.reload();
+        await page.getByTestId('open-ai').click();
+        await expect(page.getByTestId('assistant-answer-markdown')).toHaveText(summary);
+        await expect(page.getByTestId('assistant-execution-option')).toHaveCount(3);
+        const details = page.locator('.assistant-supporting-details');
+        if (mode === 'expert') {
+            await details.locator(':scope > summary').click();
+            await expect(details.getByText('All options return one row.')).toBeVisible();
+            await expect(details.getByText('These queries have not run.')).toBeVisible();
+        } else await expect(details).toHaveCount(0);
+        const option = page.getByTestId('assistant-execution-option').nth(1);
+        await option.locator(':scope > summary').click();
+        await option.getByRole('button', { name: 'Open in SQL tab: Option 3' }).click();
+        await expect(liveEditor(page)).toHaveText('SELECT 3 AS value');
+    });

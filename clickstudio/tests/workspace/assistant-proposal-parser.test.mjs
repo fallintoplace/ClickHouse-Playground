@@ -95,20 +95,10 @@ test('Assistant proposal parsing rejects missing or invalid required fields', ()
         validProposal({ assumptions: 'none' }),
         validProposal({ findings: [{ severity: 'critical', message: 'Invalid', evidence: 'x' }] }),
         validProposal({
-            alternatives: [{ title: '', summary: 'Bad choice', sql: 'DELETE FROM events' }],
+            alternatives: [{ title: 1, summary: 'Bad choice', sql: 'DELETE FROM events' }],
         }),
         validProposal({
-            alternatives: Array.from({ length: 5 }, (_, index) => ({
-                title: `Option ${index}`,
-                summary: '',
-                sql: 'SELECT 1',
-            })),
-        }),
-        validProposal({
-            alternatives: [
-                { title: 'Delete instead', summary: 'Remove rows.', sql: 'DELETE FROM events' },
-            ],
-            sql: null,
+            alternatives: [{ title: 'Other query', summary: null, sql: 42 }],
         }),
     ];
 
@@ -116,8 +106,8 @@ test('Assistant proposal parsing rejects missing or invalid required fields', ()
         assert.equal(parseAssistantProposal(proposal), undefined);
 });
 
-test('Assistant proposal parsing rejects unsafe or oversized source metadata', () => {
-    const invalidSources = [
+test('Assistant proposal parsing preserves source metadata without content restrictions', () => {
+    const sources = [
         [{ title: 'Local file', url: 'file:///etc/passwd' }],
         [{ title: 'Credential URL', url: 'https://user:secret@example.com' }],
         [{ title: 'Bad URL', url: 'not a URL' }],
@@ -126,8 +116,28 @@ test('Assistant proposal parsing rejects unsafe or oversized source metadata', (
         Array.from({ length: 21 }, () => ({ title: 'Docs', url: 'https://example.com' })),
     ];
 
-    for (const sources of invalidSources)
-        assert.equal(parseAssistantProposal(validProposal({ sources })), undefined);
+    for (const entries of sources)
+        assert.deepEqual(
+            parseAssistantProposal(validProposal({ sources: entries })).sources,
+            entries,
+        );
+    for (const entries of [
+        null,
+        {},
+        [{ title: 1, url: 'https://example.com' }],
+        [{ title: 'Docs', url: null }],
+    ])
+        assert.equal(parseAssistantProposal(validProposal({ sources: entries })), undefined);
+});
+
+test('Assistant proposal parsing preserves standalone alternatives and complete reply text', () => {
+    const alternatives = Array.from({ length: 5 }, (_, index) => ({
+        title: `Option ${index}: ${'x'.repeat(121)}`,
+        summary: 'x'.repeat(1001),
+        sql: index === 0 ? '' : `SELECT ${index}`,
+    }));
+    const proposal = validProposal({ sql: null, summary: 'x'.repeat(20001), alternatives });
+    assert.deepEqual(parseAssistantProposal(proposal), proposal);
 });
 
 test('Assistant proposal parsing validates the full optional quality report', () => {
