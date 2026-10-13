@@ -28,14 +28,11 @@ function functionTestBusy(
 
 function FunctionOutput({ value, type, rawJson }: { value: Json; type?: string; rawJson?: Json }) {
     if (type?.includes('Map(') && typeof rawJson === 'string') return <pre>{rawJson}</pre>;
-    if (Array.isArray(value) && !value.length) return <pre>[]</pre>;
     if (Array.isArray(value))
         return (
-            <div className="sql-function-output-items">
-                {value.map((item, index) => (
-                    <code key={index}>{JSON.stringify(item)}</code>
-                ))}
-            </div>
+            <pre className="sql-function-output-items">
+                {`[${value.map(item => JSON.stringify(item)).join(', ')}]`}
+            </pre>
         );
     if (value !== null && typeof value === 'object')
         return (
@@ -64,52 +61,50 @@ function FunctionInputs({
         <>
             {parameters.map((parameter, index) => (
                 <div key={parameter} className="sql-function-argument">
-                    <label htmlFor={`function-argument-${index}`}>{parameter}</label>
+                    <div className="sql-function-argument-heading">
+                        <label htmlFor={`function-argument-${index}`}>{parameter}</label>
+                        <select
+                            className="sql-function-format"
+                            aria-label={`${parameter} input format`}
+                            value={arguments_[index]!.kind}
+                            onChange={event =>
+                                onChange(index, {
+                                    ...arguments_[index]!,
+                                    kind: event.target.value === 'map' ? 'map' : 'json',
+                                })
+                            }
+                        >
+                            <option value="json">JSON</option>
+                            <option value="map">Map entries</option>
+                        </select>
+                    </div>
                     <textarea
                         id={`function-argument-${index}`}
-                        rows={
-                            arguments_[index]!.kind === 'map' ||
-                            arguments_[index]!.value.trim().startsWith('[')
-                                ? 2
-                                : 1
+                        aria-describedby={
+                            arguments_[index]!.kind === 'map'
+                                ? `function-map-hint-${index}`
+                                : 'function-input-hint'
                         }
+                        rows={Math.min(6, arguments_[index]!.value.split('\n').length)}
                         spellCheck={false}
                         value={arguments_[index]!.value}
                         onChange={event =>
                             onChange(index, { ...arguments_[index]!, value: event.target.value })
                         }
                     />
+                    {arguments_[index]!.kind === 'map' && (
+                        <small
+                            id={`function-map-hint-${index}`}
+                            className="sql-function-input-hint"
+                        >
+                            Key / value pairs: [[key, value], …].
+                        </small>
+                    )}
                 </div>
             ))}
-            <small className="sql-function-input-hint">
-                Strings use double quotes. Arrays use [1, 2, 3].
+            <small id="function-input-hint" className="sql-function-input-hint">
+                JSON values: "text", [1, 2, 3], true or null.
             </small>
-            <details className="sql-function-input-options">
-                <summary>Input options</summary>
-                <div>
-                    {parameters.map((parameter, index) => (
-                        <label key={parameter}>
-                            <span>{parameter}</span>
-                            <select
-                                aria-label={`${parameter} input format`}
-                                value={arguments_[index]!.kind}
-                                onChange={event =>
-                                    onChange(index, {
-                                        ...arguments_[index]!,
-                                        kind: event.target.value === 'map' ? 'map' : 'json',
-                                    })
-                                }
-                            >
-                                <option value="json">Value</option>
-                                <option value="map">Map entries</option>
-                            </select>
-                        </label>
-                    ))}
-                    <small className="sql-function-input-hint">
-                        Map entries use [[key, value], …].
-                    </small>
-                </div>
-            </details>
         </>
     );
 }
@@ -153,6 +148,12 @@ export function SqlFunctionDetails({
     const failure = attempt?.sql === sql ? attempt.error || evidenceForTest?.error : undefined;
     const output = result?.rows[0]?.[0];
     const busy = functionTestBusy(attempt, evidenceForTest, evidence?.busy);
+    const testError = startError || failure || (attempt?.sql === sql && run?.error?.message);
+    let resultHint = 'Run the function to see its result.';
+    if (attempt && attempt.sql !== sql)
+        resultHint = 'Arguments changed. Run again to update the result.';
+    if (!trusted) resultHint = 'Trust this connection to run the function.';
+    if (busy) resultHint = 'Waiting for ClickHouse…';
     const changeArgument = (index: number, next: FunctionArgument) => {
         setArguments(current => current.map((argument, at) => (at === index ? next : argument)));
         setStartError('');
@@ -183,67 +184,84 @@ export function SqlFunctionDetails({
     return (
         <div className="sql-function-details">
             <header>
-                <span className="sql-function-badge">
-                    <Icon name="function" />
-                    SQL UDF
-                </span>
+                <div className="sql-function-heading">
+                    <span className="sql-function-badge">
+                        <Icon name="function" />
+                        SQL UDF
+                    </span>
+                    <span>Server-wide</span>
+                </div>
                 <h3>{fn.name}</h3>
-                <p>A user-defined SQL function on this ClickHouse server.</p>
             </header>
             <section aria-label="Function tester" className="sql-function-tester">
-                <span className="sql-function-eyebrow">FUNCTION TESTER</span>
-                <FunctionInputs
-                    parameters={fn.parameters}
-                    arguments_={arguments_}
-                    onChange={changeArgument}
-                />
-                {!sql && (
-                    <p className="sql-function-error" role="status">
-                        {validation}
-                    </p>
-                )}
-                <Button variant="primary" disabled={!sql || busy || !trusted} onClick={test}>
-                    <Icon name="play" />
-                    {busy && attempt ? 'Running…' : 'Run on ClickHouse'}
-                </Button>
-                {(startError || failure || (attempt?.sql === sql && run?.error)) && (
-                    <p className="sql-function-error" role="alert">
-                        {startError || failure || run?.error?.message}
-                    </p>
-                )}
-                {output !== undefined ? (
-                    <div className="sql-function-output" aria-live="polite">
-                        <div>
-                            <span className="sql-function-eyebrow">RESULT</span>
+                <div className="sql-function-arguments">
+                    <h4>Arguments</h4>
+                    <FunctionInputs
+                        parameters={fn.parameters}
+                        arguments_={arguments_}
+                        onChange={changeArgument}
+                    />
+                    {!sql && (
+                        <p className="sql-function-error" role="status">
+                            {validation}
+                        </p>
+                    )}
+                </div>
+                <div className="sql-function-preview">
+                    <h4>Test query</h4>
+                    <pre>{sql || 'Enter valid arguments to preview SQL.'}</pre>
+                    <div className="sql-function-actions">
+                        <Button
+                            variant="ghost"
+                            className="toolbar-small"
+                            disabled={!sql}
+                            onClick={() => onCopy(sql, `function-test:${sql}`)}
+                        >
+                            <Icon name="copy" />
+                            {copiedId === `function-test:${sql}` ? 'Copied' : 'Copy SQL'}
+                        </Button>
+                        <Button
+                            className="sql-function-run"
+                            disabled={!sql || busy || !trusted}
+                            onClick={test}
+                        >
+                            <Icon name="play" />
+                            {busy && attempt ? 'Running…' : 'Run on ClickHouse'}
+                        </Button>
+                    </div>
+                </div>
+                <section
+                    aria-label="Function result"
+                    className="sql-function-result"
+                    aria-live="polite"
+                >
+                    <div className="sql-function-result-heading">
+                        <h4>Result</h4>
+                        {!testError && output !== undefined && (
                             <small>
                                 {result?.columns[0]?.type} · {Math.round(run?.elapsedMs ?? 0)} ms
                             </small>
-                        </div>
-                        <FunctionOutput
-                            value={output}
-                            type={result?.columns[0]?.type}
-                            rawJson={result?.rows[0]?.[1]}
-                        />
+                        )}
                     </div>
-                ) : (
-                    <p className="sql-function-input-hint">
-                        Run to see the server result here and in Results.
-                    </p>
-                )}
+                    {testError && (
+                        <p className="sql-function-error" role="alert">
+                            {testError}
+                        </p>
+                    )}
+                    {!testError && output !== undefined && (
+                        <div className="sql-function-output">
+                            <FunctionOutput
+                                value={output}
+                                type={result?.columns[0]?.type}
+                                rawJson={result?.rows[0]?.[1]}
+                            />
+                        </div>
+                    )}
+                    {!testError && output === undefined && (
+                        <p className="sql-function-result-empty">{resultHint}</p>
+                    )}
+                </section>
             </section>
-            <div className="sql-function-preview">
-                <span className="sql-function-eyebrow">TEST SQL</span>
-                <pre>{sql || 'Enter valid inputs to preview SQL.'}</pre>
-                <Button
-                    variant="ghost"
-                    className="toolbar-small"
-                    disabled={!sql}
-                    onClick={() => onCopy(sql, `function-test:${sql}`)}
-                >
-                    <Icon name="copy" />
-                    {copiedId === `function-test:${sql}` ? 'Copied' : 'Copy SQL'}
-                </Button>
-            </div>
             <details className="sql-function-definition">
                 <summary>Function definition</summary>
                 <pre>{fn.createQuery}</pre>

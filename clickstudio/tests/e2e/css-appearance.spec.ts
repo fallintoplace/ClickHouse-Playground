@@ -369,6 +369,9 @@ for (const theme of ['Light', 'Dark']) {
             .click();
         await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
         await expect(page.locator('.sql-function-output')).toBeVisible();
+        await expect(
+            page.getByRole('button', { name: 'Run on ClickHouse', exact: true }),
+        ).toBeEnabled();
         await expectReferenceStyles(
             page,
             info,
@@ -379,6 +382,9 @@ for (const theme of ['Light', 'Dark']) {
         await page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }).click();
         await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
         await expect(page.locator('.sql-function-output')).toBeVisible();
+        await expect(
+            page.getByRole('button', { name: 'Run on ClickHouse', exact: true }),
+        ).toBeEnabled();
         await expectReferenceStyles(
             page,
             info,

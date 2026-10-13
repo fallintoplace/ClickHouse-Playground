@@ -17,36 +17,48 @@
 
   .sql-function-details {
     display: grid;
+    min-width: 0;
     min-height: 0;
-    gap: 12px;
-    padding: 14px;
+    align-content: start;
     overflow: auto;
     border: 1px solid var(--line);
     border-radius: var(--radius-control);
     background: var(--panel);
   }
 
+  .sql-function-details > header {
+    padding: 12px 16px;
+  }
+
   .sql-function-details h3 {
-    margin: 10px 0 8px;
+    margin: 10px 0 0;
     font-family: var(--font-mono);
-    font-size: 16px;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.5;
     overflow-wrap: anywhere;
   }
 
-  .sql-function-details header p {
-    margin: 0;
+  .sql-function-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     color: var(--muted);
-    font-size: 12px;
-    line-height: 1.6;
+    font-size: 10px;
   }
 
   .sql-function-badge {
     display: inline-flex;
     gap: 6px;
     align-items: center;
-    color: var(--violet);
+    color: var(--text-soft);
     font-size: 11px;
     font-weight: 600;
+  }
+
+  .sql-function-badge svg {
+    color: var(--accent);
   }
 
   .sql-function-eyebrow {
@@ -58,12 +70,40 @@
 
   .sql-function-tester {
     display: grid;
+    min-width: 0;
+  }
+
+  .sql-function-tester h4 {
+    margin: 0;
+    color: var(--text-soft);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+
+  .sql-function-arguments {
+    display: grid;
     gap: 10px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--line);
   }
 
   .sql-function-argument {
     display: grid;
+    min-width: 0;
     gap: 6px;
+  }
+
+  .sql-function-argument-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .sql-function-argument label {
+    font-family: var(--font-mono);
+    overflow-wrap: anywhere;
   }
 
   .sql-function-argument label,
@@ -73,27 +113,20 @@
   }
 
   .sql-function-argument textarea {
+    min-height: 36px;
+    max-height: 160px;
+    field-sizing: content;
     resize: vertical;
   }
 
-  .sql-function-input-options > div {
-    display: grid;
-    gap: 8px;
-    padding: 8px 0;
-  }
-
-  .sql-function-input-options label {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    justify-content: space-between;
-    color: var(--muted);
-    font-size: 11px;
-  }
-
-  .sql-function-input-options select {
+  .sql-function-format {
+    max-width: 110px;
+    padding: 2px 5px;
+    border: 1px solid var(--line);
     border-radius: var(--radius-control);
-    padding: 3px 6px;
+    background: var(--panel);
+    color: var(--muted);
+    font-family: var(--font-sans);
     font-size: 10px;
   }
 
@@ -121,14 +154,79 @@
     line-height: 1.6;
   }
 
-  .sql-function-preview,
-  .sql-function-output {
+  .sql-function-preview {
     display: grid;
     gap: 10px;
     padding: 12px;
     border: 1px solid var(--line);
     border-radius: var(--radius-control);
     background: var(--page);
+  }
+
+  .sql-function-tester .sql-function-preview {
+    min-width: 0;
+    gap: 8px;
+    padding: 12px 16px;
+    border-width: 1px 0;
+    border-radius: 0;
+    background: var(--page-raised);
+  }
+
+  .sql-function-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .sql-function-actions .sql-function-run {
+    margin-left: auto;
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+    background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+    color: var(--accent);
+    font-size: 11px;
+    box-shadow: none;
+  }
+
+  .sql-function-actions .sql-function-run:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 22%, var(--panel));
+    color: var(--accent);
+    transform: none;
+  }
+
+  .sql-function-result {
+    display: grid;
+    min-width: 0;
+    gap: 8px;
+    padding: 12px 16px;
+  }
+
+  .sql-function-result-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px 12px;
+  }
+
+  .sql-function-result-heading small {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    overflow-wrap: anywhere;
+  }
+
+  .sql-function-result-empty {
+    margin: 0;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.6;
+  }
+
+  .sql-function-output {
+    min-width: 0;
   }
 
   .sql-function-preview pre,
@@ -141,28 +239,6 @@
     line-height: 1.7;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-  }
-
-  .sql-function-output > div:first-child {
-    display: flex;
-    gap: 8px;
-    justify-content: space-between;
-    color: var(--muted);
-    font-size: 10px;
-  }
-
-  .sql-function-output-items {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .sql-function-output-items code {
-    padding: 7px 12px;
-    border: 1px solid var(--line-bright);
-    border-radius: var(--radius-control);
-    color: var(--accent);
-    font-size: 14px;
   }
 
   .sql-function-output-map {
@@ -182,15 +258,23 @@
 
   .sql-function-output-map dd {
     margin: 0;
-    color: var(--accent);
+    color: var(--text-soft);
   }
 
-  .sql-function-definition summary,
-  .sql-function-input-options summary {
-    margin-bottom: 8px;
+  .sql-function-definition {
+    padding: 10px 16px;
+    border-top: 1px solid var(--line);
+  }
+
+  .sql-function-definition summary {
     color: var(--muted);
     font-size: 11px;
     cursor: pointer;
+  }
+
+  .sql-function-definition[open] summary {
+    margin-bottom: 10px;
+    color: var(--text-soft);
   }
 
   .sql-function-error {
