@@ -48,7 +48,6 @@ for (const mode of ['Standard', 'Experimental']) {
         );
         await page.goto('/experimental?connection=playground');
         await setWorkspaceMode(page, mode);
-        await expect(page.getByRole('button', { name: 'New table', exact: true })).toHaveCount(0);
         if (mode === 'Standard') {
             const openObjects = page
                 .locator('.icon-rail')
@@ -59,17 +58,20 @@ for (const mode of ['Standard', 'Experimental']) {
             await expect(
                 page.getByRole('button', { name: 'View dependencies', exact: true }),
             ).toHaveCount(0);
-            await expect(page.getByRole('button', { name: 'Insert row', exact: true })).toHaveCount(
-                0,
-            );
-            await expect(
-                page.getByRole('button', { name: 'Delete table', exact: true }),
-            ).toHaveCount(0);
-            return;
         }
-        await page.getByText('events', { exact: true }).first().click();
-        for (const name of ['New table', 'Insert row', 'Delete table'])
-            await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
+        await page.locator('.object-tree-row.is-database').hover();
+        await expect(
+            page.getByRole('button', { name: 'New table in github', exact: true }),
+        ).toHaveCount(0);
+        await page
+            .getByRole('tree', { name: 'Objects', exact: true })
+            .getByRole('button', { name: 'events MergeTree', exact: true })
+            .click();
+        await expect(
+            page.getByRole('button', { name: 'Actions for github.events', exact: true }),
+        ).toHaveCount(0);
+        for (const name of ['Insert row', 'Delete table'])
+            await expect(page.getByRole('menuitem', { name, exact: true })).toHaveCount(0);
     });
     test(`${mode} closes the source picker on an outside editor click`, async ({ page }) => {
         await setWorkspaceMode(page, mode);

@@ -8,6 +8,21 @@ import { ObjectTree } from './tree/ObjectTree';
 import { ObjectExplorerDialogs } from './ObjectExplorerDialogs';
 import { ObjectTableActionsMenu } from './ObjectTableActionsMenu';
 
+function ObjectExplorerEmptySearch({
+    query,
+    copy,
+}: {
+    query: string;
+    copy: ObjectExplorerProps['copy'];
+}) {
+    return (
+        <div className="object-empty-search">
+            <strong>{query ? copy.noObjectsMatch : copy.noObjectsAvailable}</strong>
+            <span>{query ? copy.noObjectsMatchHint : copy.noObjectsAvailableHint}</span>
+        </div>
+    );
+}
+
 export function ObjectExplorer(props: ObjectExplorerProps) {
     const {
         compact,
@@ -210,18 +225,7 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                                     }}
                                 />
                             ) : (
-                                <div className="object-empty-search">
-                                    <strong>
-                                        {model.query
-                                            ? copy.noObjectsMatch
-                                            : copy.noObjectsAvailable}
-                                    </strong>
-                                    <span>
-                                        {model.query
-                                            ? copy.noObjectsMatchHint
-                                            : copy.noObjectsAvailableHint}
-                                    </span>
-                                </div>
+                                <ObjectExplorerEmptySearch query={model.query} copy={copy} />
                             )}
                             {schema.truncated && schema.pagination && (
                                 <div className="schema-partial-state" role="status">

@@ -6,6 +6,7 @@ import {
     explorerDatabaseId,
     explorerRelationId,
     type ExplorerCategoryKind,
+    type ExplorerDatabase,
     type ExplorerRelation,
 } from '../object-explorer-model';
 import {
@@ -40,6 +41,14 @@ function recoverUiState(key: string): ExplorerUiState {
         return { expandedIds: [] };
     }
 }
+
+function firstDatabaseCategory(database: ExplorerDatabase): ExplorerCategoryKind | undefined {
+    if (database.tables.length) return 'table';
+    if (database.views.length) return 'view';
+    if (database.dictionaries.length) return 'dictionary';
+    return undefined;
+}
+
 export function useObjectExplorerState(props: ObjectExplorerProps) {
     const {
         copy,
@@ -210,17 +219,7 @@ export function useObjectExplorerState(props: ObjectExplorerProps) {
     useEffect(() => {
         if (search || expandedIds.size || !model.databases.length) return;
         const database = model.databases[0]!;
-        let firstCategory: ExplorerCategoryKind | undefined;
-
-        if (database.tables.length) {
-            firstCategory = 'table';
-        } else if (database.views.length) {
-            firstCategory = 'view';
-        } else if (database.dictionaries.length) {
-            firstCategory = 'dictionary';
-        } else {
-            firstCategory = undefined;
-        }
+        const firstCategory = firstDatabaseCategory(database);
         if (!firstCategory) return;
         setExpandedIds(new Set([database.id, explorerCategoryId(database.name, firstCategory)]));
     }, [expandedIds.size, model.databases, search]);
@@ -285,8 +284,7 @@ export function useObjectExplorerState(props: ObjectExplorerProps) {
     };
 
     const relationChildrenMatch = (relation: ExplorerRelation) =>
-        relation.matchedProjections.length > 0 ||
-        relation.matchedSkipIndexes.length > 0;
+        relation.matchedProjections.length > 0 || relation.matchedSkipIndexes.length > 0;
 
     const renderRelation = createRelationRenderer({
         expanded,

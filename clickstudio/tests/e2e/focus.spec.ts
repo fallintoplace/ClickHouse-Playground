@@ -68,9 +68,13 @@ for (const theme of ['Dark', 'Light']) {
         test(`${theme} keeps table fields and ${mode} search focus border-only`, async ({
             page,
         }, info) => {
+            await page.route('**/api/connections/live/table-permissions', route =>
+                route.fulfill({ json: { create: true, insert: true, drop: true } }),
+            );
             await mockWritableWorkspace(page);
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
-            await page.getByRole('button', { name: 'New table', exact: true }).click();
+            await page.locator('.object-tree-row.is-database').hover();
+            await page.getByRole('button', { name: 'New table in demo', exact: true }).click();
             const dialog = page.getByRole('dialog', { name: 'New table', exact: true });
             const name = dialog.getByRole('textbox', { name: 'Table name', exact: true });
             await expectFieldFocus(name);

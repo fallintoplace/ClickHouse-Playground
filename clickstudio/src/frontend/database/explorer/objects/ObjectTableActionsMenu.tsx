@@ -135,8 +135,7 @@ export function ObjectTableActionsMenu({
                 popoverTarget={id}
                 title={`Actions for ${qualifiedName}`}
                 onPointerDown={() => {
-                    if (menu.current?.matches(':popover-open'))
-                        restoreFocusOnClose.current = true;
+                    if (menu.current?.matches(':popover-open')) restoreFocusOnClose.current = true;
                 }}
                 onKeyDown={event => {
                     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
@@ -164,7 +163,9 @@ export function ObjectTableActionsMenu({
                         view?.requestAnimationFrame(() => {
                             if (!openedMenu.matches(':popover-open')) return;
                             openedMenu
-                                .querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')
+                                .querySelector<HTMLButtonElement>(
+                                    '[role="menuitem"]:not(:disabled)',
+                                )
                                 ?.focus({ preventScroll: true });
                         });
                     } else if (!isOpen && restoreFocusOnClose.current) {

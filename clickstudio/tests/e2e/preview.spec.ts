@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
+import { GEO_HELP_CITIES } from '../../src/frontend/help/previews/geo-help-examples.js';
 import { openBlankSql, openSqlExamples, openWorkspacePanel, replaceSql } from './helpers.js';
 import {
     previewCloudSchema,
@@ -606,6 +607,29 @@ test('Static preview includes materialized views and storage activity in sample 
 });
 
 test('Geo Help demo runs native Point values and renders twenty cities', async ({ page }) => {
+    const pointQueries: string[] = [];
+    await page.route('https://sql-clickhouse.clickhouse.com:8443/**', async route => {
+        const sql = route.request().postData() ?? '';
+        if (sql.includes('::Point')) {
+            pointQueries.push(sql);
+            const rows = GEO_HELP_CITIES.map(({ city, longitude, latitude, events }) => [
+                city,
+                `(${longitude},${latitude})`,
+                String(events),
+            ]);
+            const body = [['city', 'location', 'events'], ['String', 'Point', 'UInt64'], ...rows]
+                .map(row => JSON.stringify(row))
+                .join('\n');
+            await route.fulfill({ body: `${body}\n`, contentType: 'text/plain' });
+        } else if (sql.includes('SELECT version() AS version')) {
+            await route.fulfill({
+                body: '["version"]\n["String"]\n["26.6.1.2326"]\n',
+                contentType: 'text/plain',
+            });
+        } else {
+            await route.fulfill({ body: '[]\n[]\n', contentType: 'text/plain' });
+        }
+    });
     await page.goto('/experimental');
     await page.getByRole('button', { name: 'Help', exact: true }).click();
 
@@ -625,6 +649,8 @@ test('Geo Help demo runs native Point values and renders twenty cities', async (
     await expect(page.locator('.geo-map')).toBeVisible({ timeout: 30_000 });
     await expect(page.locator('.geo-feature.geo-point')).toHaveCount(20);
     await expect(page.locator('.geo-map-caption')).toContainText('20 valid features');
+    expect(pointQueries).toHaveLength(1);
+    expect(pointQueries[0]).toContain('::Point AS location');
     await expect(
         page.getByText(
             'No returned rows contain valid longitude/latitude geometry for this selection.',
@@ -835,7 +861,8 @@ test('ClickHouse Cloud insert row leaves defaulted columns out and needs no type
         .getByRole('button', { name: 'Objects' })
         .click();
     await page.getByRole('button', { name: 'events MergeTree', exact: true }).click();
-    await page.getByRole('button', { name: 'Insert row', exact: true }).click();
+    await page.getByRole('button', { name: 'Actions for default.events', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Insert row', exact: true }).click();
 
     const dialog = page.getByRole('dialog', { name: 'Insert row', exact: true });
     await dialog.getByLabel('day').fill('2026-09-28');

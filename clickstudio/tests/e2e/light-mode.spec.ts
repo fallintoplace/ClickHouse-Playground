@@ -342,12 +342,16 @@ test('Mounted candlesticks update their marks and labels when the theme changes'
 test('Light mode preserves invalid field borders before and after focus with the brown accent', async ({
     page,
 }) => {
+    await page.route('**/api/connections/live/table-permissions', route =>
+        route.fulfill({ json: { create: true, insert: true, drop: true } }),
+    );
     await mockWritableWorkspace(page);
     await page.getByRole('radio', { name: 'Light theme', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'New table', exact: true });
     const name = dialog.getByRole('textbox', { name: 'Table name', exact: true });
 
-    await page.getByRole('button', { name: 'New table', exact: true }).click();
+    await page.locator('.object-tree-row.is-database').hover();
+    await page.getByRole('button', { name: 'New table in demo', exact: true }).click();
     await name.fill('bad-name');
     await dialog.getByRole('textbox', { name: 'Column 1 name', exact: true }).focus();
     await expect(name).toHaveAttribute('aria-invalid', 'true');

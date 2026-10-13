@@ -159,6 +159,25 @@ function databaseSort(preferredDatabase: string) {
     };
 }
 
+function addRelationChildSelections(
+    selectionById: Map<string, ExplorerSelection>,
+    table: SchemaTable,
+    columns: readonly SchemaColumn[],
+) {
+    for (const column of columns) {
+        const id = explorerColumnId(table.database, table.name, column.name);
+        selectionById.set(id, { id, kind: 'column', table, column });
+    }
+    for (const projection of table.projections ?? []) {
+        const id = explorerProjectionId(table.database, table.name, projection.name);
+        selectionById.set(id, { id, kind: 'projection', table, projection });
+    }
+    for (const index of table.skipIndexes ?? []) {
+        const id = explorerSkipIndexId(table.database, table.name, index.name);
+        selectionById.set(id, { id, kind: 'skip-index', table, index });
+    }
+}
+
 export function buildObjectExplorer(
     schema: Schema | undefined,
     search: string,
@@ -210,18 +229,7 @@ export function buildObjectExplorer(
             table,
             columns,
         });
-        for (const column of columns) {
-            const id = explorerColumnId(table.database, table.name, column.name);
-            selectionById.set(id, { id, kind: 'column', table, column });
-        }
-        for (const projection of table.projections ?? []) {
-            const id = explorerProjectionId(table.database, table.name, projection.name);
-            selectionById.set(id, { id, kind: 'projection', table, projection });
-        }
-        for (const index of table.skipIndexes ?? []) {
-            const id = explorerSkipIndexId(table.database, table.name, index.name);
-            selectionById.set(id, { id, kind: 'skip-index', table, index });
-        }
+        addRelationChildSelections(selectionById, table, columns);
 
         const relationMatches = !query || relationSearchText(table).includes(query);
         const matchedColumns = query

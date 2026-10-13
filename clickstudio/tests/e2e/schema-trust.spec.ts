@@ -148,6 +148,12 @@ async function replaceSql(page: Page, sql: string) {
     await expect(editor).toContainText(sql);
 }
 
+function tableObject(page: Page, name = 'events') {
+    return page
+        .getByRole('tree', { name: 'Objects', exact: true })
+        .getByRole('button', { name: `${name} MergeTree`, exact: true });
+}
+
 for (const mode of ['beginner', 'expert']) {
     test(`${mode} keeps denied table writes outside its available object actions`, async ({
         page,
@@ -166,18 +172,24 @@ for (const mode of ['beginner', 'expert']) {
                 .click();
             await expect(page.locator('.object-explorer-section')).toBeVisible();
         }
+        await page.locator('.object-tree-row.is-database').hover();
         await expect.poll(() => permissionRequests).toBeGreaterThan(0);
-        await expect(page.getByRole('button', { name: 'New table', exact: true })).toHaveCount(0);
-        await page
-            .getByRole('tree', { name: 'Objects', exact: true })
-            .getByRole('button', { name: 'events MergeTree', exact: true })
-            .click();
-        await expect(page.getByRole('button', { name: 'Insert row', exact: true })).toHaveCount(0);
-        await expect(page.getByRole('button', { name: 'Delete table', exact: true })).toHaveCount(
+        await expect(
+            page.getByRole('button', { name: 'New table in analytics', exact: true }),
+        ).toHaveCount(0);
+        await tableObject(page).click();
+        await expect.poll(() => permissionRequests).toBeGreaterThan(1);
+        await expect(
+            page.getByRole('button', { name: 'Actions for analytics.events', exact: true }),
+        ).toHaveCount(0);
+        await expect(page.getByRole('menuitem', { name: 'Insert row', exact: true })).toHaveCount(
+            0,
+        );
+        await expect(page.getByRole('menuitem', { name: 'Delete table', exact: true })).toHaveCount(
             0,
         );
         await expect(page.getByRole('button', { name: 'Preview rows', exact: true })).toBeVisible();
-        await expect(page.locator('.object-action-context')).toContainText('analytics.events');
+        await expect(page.locator('.object-details-hero > code')).toHaveText('analytics.events');
     });
 }
 
@@ -188,14 +200,20 @@ test('Insert-only permissions hide create and drop while preserving the insert d
         route.fulfill({ json: { create: false, insert: true, drop: false } }),
     );
     await mockLiveWorkspace(page, route => route.fulfill({ json: schema }));
-    await page.getByText('events', { exact: true }).first().click();
-    await expect(page.getByRole('button', { name: 'New table', exact: true })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Delete table', exact: true })).toHaveCount(0);
-    await page.getByRole('button', { name: 'Insert row', exact: true }).click();
+    await page.locator('.object-tree-row.is-database').hover();
+    await expect(
+        page.getByRole('button', { name: 'New table in analytics', exact: true }),
+    ).toHaveCount(0);
+    await tableObject(page).click();
+    await page.getByRole('button', { name: 'Actions for analytics.events', exact: true }).click();
+    await expect(page.getByRole('menuitem', { name: 'Delete table', exact: true })).toHaveCount(0);
+    await page.getByRole('menuitem', { name: 'Insert row', exact: true }).click();
     await expect(page.getByRole('dialog', { name: 'Insert row', exact: true })).toBeVisible();
 });
 
-test('Unavailable permission checks retain the existing table actions', async ({ page }) => {
+test('Unavailable permission checks hide create while retaining selected-table actions', async ({
+    page,
+}) => {
     let permissionRequests = 0;
     await page.route('**/api/connections/live/table-permissions', async route => {
         permissionRequests++;
@@ -205,10 +223,16 @@ test('Unavailable permission checks retain the existing table actions', async ({
         });
     });
     await mockLiveWorkspace(page, route => route.fulfill({ json: schema }));
-    await page.getByText('events', { exact: true }).first().click();
+    await page.locator('.object-tree-row.is-database').hover();
+    await expect.poll(() => permissionRequests).toBeGreaterThan(0);
+    await expect(
+        page.getByRole('button', { name: 'New table in analytics', exact: true }),
+    ).toHaveCount(0);
+    await tableObject(page).click();
     await expect.poll(() => permissionRequests).toBeGreaterThan(1);
-    for (const name of ['New table', 'Insert row', 'Delete table'])
-        await expect(page.getByRole('button', { name, exact: true })).toBeEnabled();
+    await page.getByRole('button', { name: 'Actions for analytics.events', exact: true }).click();
+    for (const name of ['Insert row', 'Delete table'])
+        await expect(page.getByRole('menuitem', { name, exact: true })).toBeEnabled();
 });
 
 test('A late denial closes an open write dialog and cannot reopen it', async ({ page }) => {
@@ -220,13 +244,17 @@ test('A late denial closes an open write dialog and cannot reopen it', async ({ 
         await route.fulfill({ json: { create: false, insert: false, drop: false } });
     });
     await mockLiveWorkspace(page, route => route.fulfill({ json: schema }));
-    await page.getByRole('button', { name: 'New table', exact: true }).click();
-    const dialog = page.getByRole('dialog', { name: 'New table', exact: true });
+    await tableObject(page).click();
+    await page.getByRole('button', { name: 'Actions for analytics.events', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Insert row', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Insert row', exact: true });
     await expect(dialog).toBeVisible();
     await expect.poll(() => Boolean(deny)).toBe(true);
     deny!();
     await expect(dialog).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'New table', exact: true })).toHaveCount(0);
+    await expect(
+        page.getByRole('button', { name: 'Actions for analytics.events', exact: true }),
+    ).toHaveCount(0);
 });
 
 test('A late denial for a previous table does not hide the current table actions', async ({
@@ -256,15 +284,18 @@ test('A late denial for a previous table does not hide the current table actions
             },
         }),
     );
-    await page.getByText('events', { exact: true }).first().click();
+    await tableObject(page).click();
     await expect.poll(() => Boolean(denyPrevious)).toBe(true);
     await page.getByRole('button', { name: '‹ Objects', exact: true }).click();
-    await page.getByText('new_events', { exact: true }).first().click();
+    await tableObject(page, 'new_events').click();
     denyPrevious!();
     await expect.poll(() => previousResolved && currentResolved).toBe(true);
-    await expect(page.locator('.object-action-context')).toContainText('analytics.new_events');
-    for (const name of ['New table', 'Insert row', 'Delete table'])
-        await expect(page.getByRole('button', { name, exact: true })).toBeEnabled();
+    await expect(page.locator('.object-details-hero > code')).toHaveText('analytics.new_events');
+    await page
+        .getByRole('button', { name: 'Actions for analytics.new_events', exact: true })
+        .click();
+    for (const name of ['Insert row', 'Delete table'])
+        await expect(page.getByRole('menuitem', { name, exact: true })).toBeEnabled();
 });
 
 async function hoverToken(page: Page, token: string) {
@@ -289,7 +320,7 @@ async function hoverToken(page: Page, token: string) {
 
 test('Revoking trust removes loaded schema from editor completion and hover', async ({ page }) => {
     await mockLiveWorkspace(page, route => route.fulfill({ json: schema }));
-    await expect(page.getByText('events', { exact: true }).first()).toBeVisible();
+    await expect(tableObject(page)).toBeVisible();
     await replaceSql(page, 'SELECT day FROM events');
     await hoverToken(page, 'day');
     await expect(page.locator('.sql-hover')).toContainText('Date');
@@ -311,7 +342,7 @@ test('Object explorer shows ClickHouse metadata, searchable children, and genera
     await mockLiveWorkspace(page, route => route.fulfill({ json: schema }));
 
     await expect(page.getByRole('tree', { name: 'Objects' })).toBeVisible();
-    const eventsObject = page.getByText('events', { exact: true }).first();
+    const eventsObject = tableObject(page);
     await expect(eventsObject).toBeVisible();
     await eventsObject.click();
     await expect(page.getByLabel('Selected object')).toContainText('MergeTree');
@@ -369,7 +400,9 @@ test('Object explorer keeps selection while browsing and restores expansion afte
     await page.reload();
     await expect(table).toBeVisible();
     await expect(table).toHaveAttribute('aria-expanded', 'true');
-    await expect(page.getByText('day', { exact: true }).first()).toBeVisible();
+    await expect(
+        page.getByRole('button', { name: 'Expand projections', exact: true }),
+    ).toBeVisible();
 });
 
 test('Column details show the type once and keep comments readable', async ({ page }) => {
@@ -378,9 +411,11 @@ test('Column details show the type once and keep comments readable', async ({ pa
     const table = page.locator(
         '[role="treeitem"][data-database="analytics"][data-table-name="events"]',
     );
-    await table.locator('.object-tree-toggle').click();
-    await page.locator('.object-tree-row.is-group.is-column .object-tree-toggle').click();
-    await page.locator('.object-tree-row.is-leaf.is-column .object-tree-main').click();
+    await table.locator('.object-tree-main').click();
+    await page
+        .getByRole('region', { name: 'Selected object', exact: true })
+        .getByRole('button', { name: 'day', exact: true })
+        .click();
 
     const details = page.getByRole('region', { name: 'Selected object', exact: true });
     await expect(details.locator('.object-details-hero > small')).toHaveText('Type · Date');
@@ -472,7 +507,7 @@ test('Standard loads schema and opens Objects only on demand', async ({ page }) 
     await expect(page.getByTestId('schema-search')).toBeVisible();
     await setWorkspaceMode(page, 'Experimental');
     await expect(inspector.getByRole('heading', { name: 'Objects', exact: true })).toBeVisible();
-    await page.getByText('events', { exact: true }).first().click();
+    await tableObject(page).click();
     await expect(page.getByLabel('Selected object')).toContainText('analytics.events');
     await expect(page.getByRole('button', { name: 'Preview rows', exact: true })).toBeVisible();
 });
@@ -498,7 +533,7 @@ test('Preview Rows reuses the same draft and keeps the saved query panel prefere
     const originalTabName = await sqlTabs.getByRole('tab').first().getAttribute('aria-label');
     await page.locator('button[aria-controls="sql-editor-content"]').click();
     await expect(page.locator('#sql-editor-content')).toBeHidden();
-    await page.getByText('events', { exact: true }).first().click();
+    await tableObject(page).click();
     await page.getByRole('button', { name: 'Preview rows', exact: true }).click();
     await expect(sqlTabs.getByRole('tab').last()).toHaveAttribute(
         'aria-label',
@@ -509,7 +544,6 @@ test('Preview Rows reuses the same draft and keeps the saved query panel prefere
     await sqlTabs.getByRole('tab', { name: originalTabName!, exact: true }).click();
     await expect(page.locator('#sql-editor-content')).toBeHidden();
 
-    await page.getByText('events', { exact: true }).first().click();
     const repeatedRun = page.waitForResponse(
         response =>
             response.request().method() === 'POST' &&
@@ -539,7 +573,7 @@ test('Preview Rows keeps an edited preview draft and opens a fresh one', async (
     });
 
     const sqlTabs = page.getByRole('tablist', { name: 'SQL documents', exact: true });
-    await page.getByText('events', { exact: true }).first().click();
+    await tableObject(page).click();
     const firstRun = page.waitForResponse(
         response =>
             response.request().method() === 'POST' &&
@@ -554,7 +588,6 @@ test('Preview Rows keeps an edited preview draft and opens a fresh one', async (
     if (await queryEditor.isHidden()) await queryToggle.click();
     await replaceSql(page, 'SELECT 42');
 
-    await page.getByText('events', { exact: true }).first().click();
     const secondRun = page.waitForResponse(
         response =>
             response.request().method() === 'POST' &&
@@ -654,12 +687,13 @@ test('Deleting a table preserves its cached preview rows without a status pill',
         await route.fallback();
     });
 
-    await page.getByText('events', { exact: true }).first().click();
+    await tableObject(page).click();
     await page.getByRole('button', { name: 'Preview rows', exact: true }).click();
     const results = page.getByRole('region', { name: 'Query results', exact: true });
     await expect(results.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Delete table', exact: true }).click();
+    await page.getByRole('button', { name: 'Actions for analytics.events', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Delete table', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Delete table', exact: true });
     await dialog
         .getByRole('textbox', { name: 'Type analytics.events to confirm' })
@@ -747,7 +781,7 @@ test('MergeTree storage opens a selectable, metric-switchable D3 parts explorer'
         }),
     );
 
-    await page.getByText('events', { exact: true }).first().click();
+    await tableObject(page).click();
     await page.getByRole('button', { name: 'Visualize parts', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'MergeTree parts', exact: true });
     await expect(dialog).toBeVisible();

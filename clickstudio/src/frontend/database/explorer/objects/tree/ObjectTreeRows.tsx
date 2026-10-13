@@ -26,6 +26,9 @@ export function ExplorerGroupRow({
     onInteract?: () => void;
 }) {
     const hasChildren = count > 0;
+    const toggleLabel = expanded ? `Collapse ${label}` : `Expand ${label}`;
+    const hasActionSlot = database || Boolean(action);
+    const countBadge = <small className="object-tree-count">{count.toLocaleString()}</small>;
     return (
         <div
             role="treeitem"
@@ -45,9 +48,7 @@ export function ExplorerGroupRow({
             <button
                 type="button"
                 className="object-tree-toggle"
-                aria-label={
-                    hasChildren ? (expanded ? `Collapse ${label}` : `Expand ${label}`) : label
-                }
+                aria-label={hasChildren ? toggleLabel : label}
                 disabled={!hasChildren}
                 onClick={onToggle}
             >
@@ -68,10 +69,14 @@ export function ExplorerGroupRow({
                 <span className="object-tree-label">
                     <strong>{label}</strong>
                 </span>
-                {!action && <small className="object-tree-count">{count.toLocaleString()}</small>}
+                {!hasActionSlot && countBadge}
             </button>
-            {action}
-            {action && <small className="object-tree-count">{count.toLocaleString()}</small>}
+            {hasActionSlot && (
+                <span className="object-tree-group-actions">
+                    <span className="object-tree-group-action">{action}</span>
+                    {countBadge}
+                </span>
+            )}
         </div>
     );
 }
