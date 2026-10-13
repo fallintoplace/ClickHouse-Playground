@@ -154,7 +154,7 @@ function tableObject(page: Page, name = 'events') {
         .getByRole('button', { name: `${name} MergeTree`, exact: true });
 }
 
-test('available object actions stay visible without hovering their rows', async ({ page }) => {
+test('object actions stay visible at rest without column insert buttons', async ({ page }) => {
     let permissionRequests = 0;
     await page.route('**/api/connections/live/table-permissions', async route => {
         permissionRequests++;
@@ -170,10 +170,9 @@ test('available object actions stay visible without hovering their rows', async 
 
     await tableObject(page).click();
     await expect.poll(() => permissionRequests).toBeGreaterThan(1);
-    const columnInsert = page.locator('.object-column-insert');
-    await expect(columnInsert).toBeVisible();
+    await expect(page.locator('.object-column-insert')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Insert name', exact: true })).toBeVisible();
     await page.mouse.move(0, 0);
-    await expect(columnInsert).toHaveCSS('opacity', '1');
 
     await page.getByRole('button', { name: '‹ Objects', exact: true }).click();
     const tableActions = page.getByRole('button', {

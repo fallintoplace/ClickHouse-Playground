@@ -46,11 +46,6 @@
   outline-offset: 2px;
 }
 
-.object-column-list-row:focus-within .object-column-insert {
-  opacity: 1;
-}
-
-.object-column-insert:focus-visible,
 .object-tree-inline-action:focus-visible {
   outline: 2px solid
     color-mix(in srgb, var(--tree-kind-color, var(--object-detail-accent)) 72%, var(--line-bright));

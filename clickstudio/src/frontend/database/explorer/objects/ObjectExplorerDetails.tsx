@@ -428,7 +428,6 @@ function RelationDetails({
                     search={columnSearch}
                     onSearch={setColumnSearch}
                     copy={copy}
-                    onInsert={onInsert}
                     onSelectColumn={column =>
                         onSelect(explorerColumnId(column.database, column.table, column.name))
                     }
@@ -456,14 +455,12 @@ function TableColumnsPanel({
     search,
     onSearch,
     copy,
-    onInsert,
     onSelectColumn,
 }: {
     columns: readonly SchemaColumn[];
     search: string;
     onSearch: (value: string) => void;
     copy: Copy['common'];
-    onInsert: (value: string) => void;
     onSelectColumn: (column: SchemaColumn) => void;
 }) {
     const viewport = useRef<HTMLDivElement>(null);
@@ -545,15 +542,6 @@ function TableColumnsPanel({
                                         {column.defaultKind && <small>DEFAULT</small>}
                                     </span>
                                     <code title={column.type}>{column.type}</code>
-                                    <button
-                                        type="button"
-                                        className="object-column-insert"
-                                        title={`${copy.insertName}: ${column.name}`}
-                                        aria-label={`${copy.insertName}: ${column.name}`}
-                                        onClick={() => onInsert(quoteIdentifier(column.name))}
-                                    >
-                                        <Icon name="plus" />
-                                    </button>
                                 </div>
                             ))}
                         </div>

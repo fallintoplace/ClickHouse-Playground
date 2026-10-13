@@ -1264,26 +1264,6 @@
   font-weight: 650;
   letter-spacing: 0.04em;
 }
-.object-column-insert {
-  display: grid;
-  width: 24px;
-  height: 24px;
-  place-items: center;
-  border: 1px solid transparent;
-  border-radius: var(--radius-control);
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-}
-.object-column-insert:hover {
-  border-color: color-mix(in srgb, var(--object-detail-accent) 40%, var(--line));
-  background: color-mix(in srgb, var(--object-detail-accent) 9%, var(--panel-raised));
-  color: var(--object-detail-accent);
-}
-.object-column-insert svg {
-  width: 13px;
-  height: 13px;
-}
 .object-columns-empty {
   display: grid;
   min-height: 56px;
