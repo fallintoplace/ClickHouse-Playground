@@ -9,10 +9,12 @@ export function NativeExplorerDialog({
     onClose,
     children,
     closeLabel = 'Close explorer',
+    eyebrow = 'CLICKHOUSE NATIVE',
     className,
 }: {
     className?: string;
     closeLabel?: string;
+    eyebrow?: string;
     title: string;
     description?: string;
     onClose: () => void;
@@ -38,7 +40,7 @@ export function NativeExplorerDialog({
             >
                 <header className="native-heading">
                     <div>
-                        <span className="eyebrow">CLICKHOUSE NATIVE</span>
+                        <span className="eyebrow">{eyebrow}</span>
                         <h2>{title}</h2>
                         {description && <p>{description}</p>}
                     </div>

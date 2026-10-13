@@ -20,12 +20,164 @@ test('Materialized views have selectable dependency edges and refresh details', 
     await expect(dialog.getByLabel('Selected object')).toContainText('EVERY 10 MINUTE');
     await expect(dialog.getByLabel('Selected object')).toContainText('8,400 ms');
     await expect(dialog.locator('.native-edge.edge-catalog-dependency')).toHaveCount(1);
+    await expect(dialog.getByRole('button', { name: /^Reset zoom/ })).toBeInViewport();
     await page.screenshot({ path: info.outputPath('clickstudio-materialized-views.png') });
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
     await expect(
         page.getByRole('button', { name: 'View dependencies', exact: true }),
     ).toBeFocused();
+});
+
+for (const theme of ['Dark', 'Light']) {
+    for (const width of [1280, 760]) {
+        test(`Empty dependency map explains the database in ${theme} at ${width}px`, async ({
+            page,
+        }, info) => {
+            await page.setViewportSize({ width, height: 900 });
+            await trust(page);
+            await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+            await page.route('**/api/connections/demo/native-explorer', route =>
+                route.fulfill({
+                    json: {
+                        kind: 'lineage',
+                        database: 'demo',
+                        observedAt: '2026-10-13T21:27:00.000Z',
+                        source: 'clickhouse',
+                        nodes: [],
+                        edges: [],
+                        truncated: false,
+                        notes: [
+                            'Metadata from the connected server. This map does not show complete SELECT lineage.',
+                        ],
+                    },
+                }),
+            );
+            if (width < 850) {
+                const objects = page
+                    .getByRole('complementary', { name: 'Workspace tools' })
+                    .getByRole('button', { name: 'Objects', exact: true });
+                if ((await objects.getAttribute('aria-pressed')) !== 'true') await objects.click();
+            }
+            await page.getByRole('button', { name: 'View dependencies', exact: true }).click();
+            const dialog = page.getByRole('dialog', {
+                name: 'Materialized view dependencies',
+                exact: true,
+            });
+            const empty = dialog.getByRole('status');
+            await expect(empty).toContainText('No dependencies yet');
+            await expect(empty).toContainText('demo');
+            await expect(dialog.getByLabel('Map guide')).toBeVisible();
+            await expect(dialog.getByLabel('Relationship types')).toBeInViewport();
+            await expect(dialog).not.toContainText('SAMPLE DATA');
+            await expect(dialog.locator('.native-lineage-node')).toHaveCount(0);
+            await expect(dialog.getByRole('button', { name: 'Zoom in' })).toHaveCount(0);
+            await dialog.getByText('About this map', { exact: true }).click();
+            await expect(dialog.locator('.native-lineage-notes')).toHaveAttribute('open', '');
+            expect(
+                await dialog.evaluate(element => element.scrollWidth - element.clientWidth),
+            ).toBeLessThanOrEqual(1);
+            await page.screenshot({
+                path: info.outputPath(`dependencies-empty-${theme.toLowerCase()}-${width}.png`),
+            });
+        });
+    }
+}
+
+test('Dependency search keeps connected objects and recovers from no matches', async ({ page }) => {
+    await trust(page);
+    await page.getByRole('button', { name: 'View dependencies', exact: true }).click();
+    const dialog = page.getByRole('dialog', {
+        name: 'Materialized view dependencies',
+        exact: true,
+    });
+    const nodes = dialog.locator('.native-lineage-node');
+    await expect(nodes).toHaveCount(5);
+    const search = dialog.getByRole('searchbox', { name: 'Find an object', exact: true });
+    await search.fill('  MONTHLY_REPORT_MV  ');
+    await expect(nodes).toHaveCount(3);
+    await expect(dialog.getByLabel('Selected object')).toContainText('monthly_report_mv');
+    await search.fill('unmatched_object');
+    await expect(dialog.getByRole('status')).toContainText('No matching objects');
+    await expect(dialog.getByRole('status')).toContainText('unmatched_object');
+    await expect(dialog.getByLabel('Selected object')).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Clear search', exact: true }).click();
+    await expect(search).toHaveValue('');
+    await expect(search).toBeFocused();
+    await expect(nodes).toHaveCount(5);
+    await search.fill('   ');
+    await expect(nodes).toHaveCount(5);
+});
+
+test('Dependency zoom is bounded and keyboard selection updates the inspector', async ({
+    page,
+}) => {
+    await trust(page);
+    await page.getByRole('button', { name: 'View dependencies', exact: true }).click();
+    const dialog = page.getByRole('dialog', {
+        name: 'Materialized view dependencies',
+        exact: true,
+    });
+    const graph = dialog.getByRole('group', { name: 'Dependency graph', exact: true });
+    const originalWidth = await graph.getAttribute('width');
+    const zoomIn = dialog.getByRole('button', { name: 'Zoom in', exact: true });
+    const zoomOut = dialog.getByRole('button', { name: 'Zoom out', exact: true });
+    const reset = dialog.getByRole('button', { name: /^Reset zoom/ });
+    await zoomIn.click();
+    await expect(reset).toHaveText('125%');
+    await zoomIn.click();
+    await expect(reset).toHaveText('150%');
+    await expect(zoomIn).toBeDisabled();
+    expect(Number(await graph.getAttribute('width'))).toBe(Number(originalWidth) * 1.5);
+    for (let index = 0; index < 4; index++) await zoomOut.click();
+    await expect(reset).toHaveText('50%');
+    await expect(zoomOut).toBeDisabled();
+    await reset.click();
+    await expect(graph).toHaveAttribute('width', originalWidth ?? '');
+    const monthly = dialog.getByRole('button', {
+        name: 'demo.monthly_report_mv: Refreshable MV',
+        exact: true,
+    });
+    await monthly.focus();
+    await page.keyboard.press('Space');
+    await expect(monthly).toHaveAttribute('aria-pressed', 'true');
+    await expect(dialog.getByLabel('Selected object')).toContainText('EVERY 10 MINUTE');
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(
+        page.getByRole('button', { name: 'View dependencies', exact: true }),
+    ).toBeFocused();
+});
+
+test('Dependency refresh keeps the previous graph on error and can recover', async ({ page }) => {
+    await trust(page);
+    await page.getByRole('button', { name: 'View dependencies', exact: true }).click();
+    const dialog = page.getByRole('dialog', {
+        name: 'Materialized view dependencies',
+        exact: true,
+    });
+    await expect(dialog.locator('.native-lineage-node')).toHaveCount(5);
+    let fail = true;
+    await page.route('**/api/connections/demo/native-explorer', route =>
+        fail
+            ? route.fulfill({
+                  status: 403,
+                  json: {
+                      error: {
+                          code: 'CLICKHOUSE_PERMISSION',
+                          message: 'Not enough privileges to read system.tables',
+                      },
+                  },
+              })
+            : route.continue(),
+    );
+    await dialog.getByRole('button', { name: 'Refresh metadata', exact: true }).click();
+    await expect(dialog.getByRole('alert')).toContainText('The previous snapshot is shown below.');
+    await expect(dialog.locator('.native-lineage-node')).toHaveCount(5);
+    fail = false;
+    await dialog.getByRole('button', { name: 'Refresh metadata', exact: true }).click();
+    await expect(dialog.getByRole('alert')).toHaveCount(0);
+    await expect(dialog.locator('.native-lineage-node')).toHaveCount(5);
 });
 
 test('Storage tabs show merge flow and honest mutation completion', async ({ page }, info) => {

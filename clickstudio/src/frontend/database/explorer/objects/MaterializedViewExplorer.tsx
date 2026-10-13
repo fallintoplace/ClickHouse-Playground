@@ -1,5 +1,5 @@
 import { linkHorizontal } from 'd3';
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Connection } from '../../../../shared/database/connections/types';
 import {
     layoutLineage,
@@ -157,6 +157,80 @@ function LineagePrimer() {
         </section>
     );
 }
+function LineageGuide() {
+    const descriptions: Record<LineageEdge['kind'], string> = {
+        'insert-trigger': 'New inserts in a source table run the view.',
+        'writes-to': 'The view stores its result in this table.',
+        'refresh-dependency': 'A scheduled view waits for another view to refresh.',
+        'catalog-dependency': 'An object reference reported by the server.',
+    };
+    return (
+        <aside className="native-lineage-guide" aria-label="Map guide">
+            <span className="eyebrow">MAP GUIDE</span>
+            <h3>Follow your data</h3>
+            <p>Explore how materialized views connect your tables.</p>
+            <dl>
+                {edgeKinds.map(kind => (
+                    <div key={kind}>
+                        <dt className={`edge-${kind}`}>{edgeLabels[kind]}</dt>
+                        <dd>{descriptions[kind]}</dd>
+                    </div>
+                ))}
+            </dl>
+            <div className="native-lineage-guide-note">
+                <Icon name="info" />
+                <p>Server-reported dependencies may not include every table used by a query.</p>
+            </div>
+        </aside>
+    );
+}
+function LineageEmpty({
+    database,
+    search,
+    onClear,
+}: {
+    database: string;
+    search: string;
+    onClear: () => void;
+}) {
+    return (
+        <div className="native-lineage-empty" role="status">
+            <div className="native-lineage-empty-flow" aria-hidden="true">
+                <span>
+                    <Icon name="table" />
+                </span>
+                <i />
+                <span className="is-view">
+                    <Icon name="view" />
+                </span>
+                <i />
+                <span>
+                    <Icon name="database" />
+                </span>
+            </div>
+            <h3>{search ? 'No matching objects' : 'No dependencies yet'}</h3>
+            <p>
+                {search ? (
+                    <>
+                        No objects match <strong>“{search.trim()}”</strong>.
+                    </>
+                ) : (
+                    <>
+                        No materialized-view relationships were found in <strong>{database}</strong>
+                        .
+                    </>
+                )}
+            </p>
+            {search ? (
+                <Button variant="secondary" onClick={onClear}>
+                    Clear search
+                </Button>
+            ) : (
+                <small>Choose another database or refresh the metadata to check again.</small>
+            )}
+        </div>
+    );
+}
 function NodeDetails({
     node,
     snapshot,
@@ -210,10 +284,25 @@ function NodeDetails({
             className={`native-node-details${beginner ? ' is-beginner' : ''}`}
             aria-label="Selected object"
         >
-            <span className="eyebrow">{beginner ? role : nodeLabel(node)}</span>
-            <h3>
-                {node.database}.{node.table}
-            </h3>
+            {beginner ? (
+                <>
+                    <span className="eyebrow">{role}</span>
+                    <h3>
+                        {node.database}.{node.table}
+                    </h3>
+                </>
+            ) : (
+                <header className="native-node-heading">
+                    <span className="native-node-icon">
+                        <Icon name={node.kind === 'materialized-view' ? 'view' : 'table'} />
+                    </span>
+                    <div>
+                        <span className="eyebrow">{nodeLabel(node)}</span>
+                        <h3>{node.table}</h3>
+                        <p>{node.database}</p>
+                    </div>
+                </header>
+            )}
             {beginner && (
                 <p className="native-node-explanation">
                     {beginnerNodeDescription(node, snapshot.edges)}
@@ -311,9 +400,63 @@ function NodeDetails({
         </aside>
     );
 }
+function LineageFrame({
+    beginner,
+    className,
+    children,
+}: {
+    beginner: boolean;
+    className: string;
+    children: ReactNode;
+}) {
+    return beginner ? <>{children}</> : <div className={className}>{children}</div>;
+}
+function LineageCanvasFooter({ zoom, onZoom }: { zoom?: number; onZoom: (zoom: number) => void }) {
+    return (
+        <div className="native-lineage-canvas-footer">
+            <div className="native-lineage-legend" aria-label="Relationship types">
+                {edgeKinds.map(kind => (
+                    <span key={kind} className={`edge-${kind}`}>
+                        {edgeLabels[kind]}
+                    </span>
+                ))}
+            </div>
+            {zoom !== undefined && (
+                <div className="native-lineage-zoom" role="group" aria-label="Map zoom">
+                    <button
+                        type="button"
+                        aria-label="Zoom out"
+                        disabled={zoom <= 0.5}
+                        onClick={() => onZoom(Math.max(0.5, zoom - 0.25))}
+                    >
+                        −
+                    </button>
+                    <button
+                        type="button"
+                        aria-label={`Reset zoom, current zoom ${Math.round(zoom * 100)}%`}
+                        title="Reset zoom"
+                        onClick={() => onZoom(1)}
+                    >
+                        {Math.round(zoom * 100)}%
+                    </button>
+                    <button
+                        type="button"
+                        aria-label="Zoom in"
+                        disabled={zoom >= 1.5}
+                        onClick={() => onZoom(Math.min(1.5, zoom + 0.25))}
+                    >
+                        +
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
 function LineageGraph({ snapshot, beginner }: { snapshot: LineageSnapshot; beginner: boolean }) {
     const [search, setSearch] = useState(''),
-        [selected, setSelected] = useState('');
+        [selected, setSelected] = useState(''),
+        [zoom, setZoom] = useState(1);
+    const searchInput = useRef<HTMLInputElement>(null);
     const marker = useId().replace(/[^a-zA-Z0-9]/g, '');
     const graph = useMemo(() => {
         const query = search.trim().toLowerCase();
@@ -359,167 +502,229 @@ function LineageGraph({ snapshot, beginner }: { snapshot: LineageSnapshot; begin
     return (
         <>
             {beginner && <LineagePrimer />}
-            <div className="native-toolbar native-lineage-controls">
-                <label className="native-search">
-                    Find an object
-                    <input
-                        value={search}
-                        onChange={event => setSearch(event.target.value)}
-                        placeholder="Search database or table"
-                    />
-                </label>
-                <span>
-                    {graph.nodes.length} objects · {graph.edges.length} links
-                </span>
-            </div>
-            <div className="native-lineage-map-heading">
-                <strong>Data map</strong>
-                <span>
-                    {beginner
-                        ? 'Select an object to see what it does.'
-                        : 'Select an object to inspect its relationships.'}
-                </span>
-            </div>
-            <div className="native-lineage-legend">
-                {Object.entries(beginner ? beginnerEdgeLabels : edgeLabels).map(([kind, label]) => (
-                    <span key={kind} className={`edge-${kind}`}>
-                        {label}
-                    </span>
-                ))}
-            </div>
-            {(graph.clipped || snapshot.truncated) && (
-                <p className="native-warning">
-                    {beginner
-                        ? 'Large map: search by database or table to focus the objects shown.'
-                        : 'This graph is bounded. Search to focus the displayed objects; metadata outside the snapshot remains unavailable.'}
-                </p>
-            )}
-            {graph.hasCycle && (
-                <p className="native-notes">
-                    {beginner
-                        ? 'Some links form a loop. These objects appear in the last column.'
-                        : 'Cyclic or unresolved dependencies appear in the final column.'}
-                </p>
-            )}
-            {!graph.nodes.length ? (
-                <div className="native-empty">{getEmptyMessage()}</div>
-            ) : (
-                <div className="native-lineage-layout">
-                    <div
-                        className="native-lineage-canvas"
-                        tabIndex={0}
-                        aria-label={
-                            beginner
-                                ? 'Materialized view data flow map. Scroll to explore.'
-                                : 'Materialized view dependency graph. Scroll to explore.'
-                        }
-                    >
-                        <svg
-                            width={graph.width}
-                            height={graph.height}
-                            role="group"
-                            aria-label={beginner ? 'Data flow graph' : 'Dependency graph'}
-                        >
-                            <defs>
-                                {edgeKinds.map(kind => (
-                                    <marker
-                                        key={kind}
-                                        id={`${marker}-${kind}`}
-                                        className={`native-edge-marker edge-${kind}`}
-                                        viewBox="0 0 10 10"
-                                        refX="9"
-                                        refY="5"
-                                        markerWidth="7"
-                                        markerHeight="7"
-                                        orient="auto-start-reverse"
-                                    >
-                                        <path d="M 0 0 L 10 5 L 0 10 z" />
-                                    </marker>
-                                ))}
-                            </defs>
-                            {graph.edges.map(edge => {
-                                const from = positions.get(edge.source)!,
-                                    to = positions.get(edge.target)!;
-                                return (
-                                    <path
-                                        key={JSON.stringify(edge)}
-                                        className={`native-edge edge-${edge.kind}`}
-                                        d={
-                                            curve({
-                                                source: [from.x + 224, from.y + 36],
-                                                target: [to.x - 3, to.y + 36],
-                                            }) ?? ''
-                                        }
-                                        markerEnd={`url(#${marker}-${edge.kind})`}
-                                    >
-                                        <title>
-                                            {
-                                                (beginner ? beginnerEdgeLabels : edgeLabels)[
-                                                    edge.kind
-                                                ]
-                                            }
-                                            : {from.table} → {to.table}
-                                        </title>
-                                    </path>
-                                );
-                            })}
-                            {graph.nodes.map(node => {
-                                const role = beginnerNodeRole(node, graph.edges),
-                                    hint = beginnerNodeHint(node, graph.edges);
-                                const label = beginner ? role : nodeLabel(node);
-                                let variant: '' | 'input-table' | 'result-table';
-
-                                if (beginner && role === 'Input table') {
-                                    variant = 'input-table';
-                                } else if (beginner && role === 'Result table') {
-                                    variant = 'result-table';
-                                } else {
-                                    variant = '';
-                                }
-                                const className = `native-lineage-node ${node.kind}${beginner ? ' beginner-node' : ''} ${variant} ${node.id === selectedNode?.id ? 'is-selected' : ''}`;
-                                const ariaLabel = `${node.database}.${node.table}: ${label}`;
-                                return (
-                                    <g
-                                        key={node.id}
-                                        transform={`translate(${node.x},${node.y})`}
-                                        className={className}
-                                        tabIndex={0}
-                                        role="button"
-                                        aria-label={ariaLabel}
-                                        aria-pressed={node.id === selectedNode?.id}
-                                        onClick={() => setSelected(node.id)}
-                                        onKeyDown={event => {
-                                            if (event.key === 'Enter' || event.key === ' ') {
-                                                event.preventDefault();
-                                                setSelected(node.id);
-                                            }
-                                        }}
-                                    >
-                                        <title>{ariaLabel}</title>
-                                        <rect width="224" height="74" rx="12" />
-                                        <text x="14" y="21" className="native-node-kind">
-                                            {label.slice(0, 30)}
-                                        </text>
-                                        <text x="14" y="43">
-                                            {node.table.length > 26
-                                                ? `${node.table.slice(0, 25)}…`
-                                                : node.table}
-                                        </text>
-                                        <text x="14" y="61" className="native-node-meta">
-                                            {beginner
-                                                ? hint
-                                                : (node.refresh?.status ?? node.database)}
-                                        </text>
-                                    </g>
-                                );
-                            })}
-                        </svg>
-                    </div>
-                    {selectedNode && (
-                        <NodeDetails node={selectedNode} snapshot={snapshot} beginner={beginner} />
+            <LineageFrame beginner={beginner} className="native-lineage-workspace">
+                <div className="native-toolbar native-lineage-controls">
+                    {!beginner && (
+                        <div className="native-lineage-map-title">
+                            <Icon name="pipeline" />
+                            <strong>Data map</strong>
+                            <span>
+                                {graph.nodes.length} objects<span aria-hidden="true"> · </span>
+                                {graph.edges.length} links
+                            </span>
+                        </div>
+                    )}
+                    <label className="native-search">
+                        {beginner ? 'Find an object' : <Icon name="search" />}
+                        <input
+                            ref={searchInput}
+                            type="search"
+                            aria-label="Find an object"
+                            value={search}
+                            onChange={event => setSearch(event.target.value)}
+                            placeholder="Search database or table"
+                        />
+                    </label>
+                    {beginner && (
+                        <span>
+                            {graph.nodes.length} objects · {graph.edges.length} links
+                        </span>
                     )}
                 </div>
-            )}
+                {beginner && (
+                    <>
+                        <div className="native-lineage-map-heading">
+                            <strong>Data map</strong>
+                            <span>
+                                {beginner
+                                    ? 'Select an object to see what it does.'
+                                    : 'Select an object to inspect its relationships.'}
+                            </span>
+                        </div>
+                        <div className="native-lineage-legend">
+                            {Object.entries(beginner ? beginnerEdgeLabels : edgeLabels).map(
+                                ([kind, label]) => (
+                                    <span key={kind} className={`edge-${kind}`}>
+                                        {label}
+                                    </span>
+                                ),
+                            )}
+                        </div>
+                    </>
+                )}
+                {(graph.clipped || snapshot.truncated) && (
+                    <p className="native-warning">
+                        {beginner
+                            ? 'Large map: search by database or table to focus the objects shown.'
+                            : 'This graph is bounded. Search to focus the displayed objects; metadata outside the snapshot remains unavailable.'}
+                    </p>
+                )}
+                {graph.hasCycle && (
+                    <p className="native-notes">
+                        {beginner
+                            ? 'Some links form a loop. These objects appear in the last column.'
+                            : 'Cyclic or unresolved dependencies appear in the final column.'}
+                    </p>
+                )}
+                {beginner && !graph.nodes.length ? (
+                    <div className="native-empty">{getEmptyMessage()}</div>
+                ) : (
+                    <div className="native-lineage-layout">
+                        <LineageFrame beginner={beginner} className="native-lineage-stage">
+                            <div
+                                className="native-lineage-canvas"
+                                tabIndex={graph.nodes.length ? 0 : undefined}
+                                aria-label={
+                                    beginner
+                                        ? 'Materialized view data flow map. Scroll to explore.'
+                                        : 'Materialized view dependency graph. Scroll to explore.'
+                                }
+                            >
+                                {!graph.nodes.length ? (
+                                    <LineageEmpty
+                                        database={snapshot.database}
+                                        search={search.trim()}
+                                        onClear={() => {
+                                            setSearch('');
+                                            searchInput.current?.focus();
+                                        }}
+                                    />
+                                ) : (
+                                    <svg
+                                        width={graph.width * zoom}
+                                        height={graph.height * zoom}
+                                        viewBox={`0 0 ${graph.width} ${graph.height}`}
+                                        role="group"
+                                        aria-label={
+                                            beginner ? 'Data flow graph' : 'Dependency graph'
+                                        }
+                                    >
+                                        <defs>
+                                            {edgeKinds.map(kind => (
+                                                <marker
+                                                    key={kind}
+                                                    id={`${marker}-${kind}`}
+                                                    className={`native-edge-marker edge-${kind}`}
+                                                    viewBox="0 0 10 10"
+                                                    refX="9"
+                                                    refY="5"
+                                                    markerWidth="7"
+                                                    markerHeight="7"
+                                                    orient="auto-start-reverse"
+                                                >
+                                                    <path d="M 0 0 L 10 5 L 0 10 z" />
+                                                </marker>
+                                            ))}
+                                        </defs>
+                                        {graph.edges.map(edge => {
+                                            const from = positions.get(edge.source)!,
+                                                to = positions.get(edge.target)!;
+                                            return (
+                                                <path
+                                                    key={JSON.stringify(edge)}
+                                                    className={`native-edge edge-${edge.kind}`}
+                                                    d={
+                                                        curve({
+                                                            source: [from.x + 224, from.y + 36],
+                                                            target: [to.x - 3, to.y + 36],
+                                                        }) ?? ''
+                                                    }
+                                                    markerEnd={`url(#${marker}-${edge.kind})`}
+                                                >
+                                                    <title>
+                                                        {
+                                                            (beginner
+                                                                ? beginnerEdgeLabels
+                                                                : edgeLabels)[edge.kind]
+                                                        }
+                                                        : {from.table} → {to.table}
+                                                    </title>
+                                                </path>
+                                            );
+                                        })}
+                                        {graph.nodes.map(node => {
+                                            const role = beginnerNodeRole(node, graph.edges),
+                                                hint = beginnerNodeHint(node, graph.edges);
+                                            const label = beginner ? role : nodeLabel(node);
+                                            let variant: '' | 'input-table' | 'result-table';
+
+                                            if (beginner && role === 'Input table') {
+                                                variant = 'input-table';
+                                            } else if (beginner && role === 'Result table') {
+                                                variant = 'result-table';
+                                            } else {
+                                                variant = '';
+                                            }
+                                            const className = `native-lineage-node ${node.kind}${beginner ? ' beginner-node' : ''} ${variant} ${node.id === selectedNode?.id ? 'is-selected' : ''}`;
+                                            const ariaLabel = `${node.database}.${node.table}: ${label}`;
+                                            return (
+                                                <g
+                                                    key={node.id}
+                                                    transform={`translate(${node.x},${node.y})`}
+                                                    className={className}
+                                                    tabIndex={0}
+                                                    role="button"
+                                                    aria-label={ariaLabel}
+                                                    aria-pressed={node.id === selectedNode?.id}
+                                                    onClick={() => setSelected(node.id)}
+                                                    onKeyDown={event => {
+                                                        if (
+                                                            event.key === 'Enter' ||
+                                                            event.key === ' '
+                                                        ) {
+                                                            event.preventDefault();
+                                                            setSelected(node.id);
+                                                        }
+                                                    }}
+                                                >
+                                                    <title>{ariaLabel}</title>
+                                                    <rect width="224" height="74" rx="12" />
+                                                    <text
+                                                        x="14"
+                                                        y="21"
+                                                        className="native-node-kind"
+                                                    >
+                                                        {label.slice(0, 30)}
+                                                    </text>
+                                                    <text x="14" y="43">
+                                                        {node.table.length > 26
+                                                            ? `${node.table.slice(0, 25)}…`
+                                                            : node.table}
+                                                    </text>
+                                                    <text
+                                                        x="14"
+                                                        y="61"
+                                                        className="native-node-meta"
+                                                    >
+                                                        {beginner
+                                                            ? hint
+                                                            : (node.refresh?.status ??
+                                                              node.database)}
+                                                    </text>
+                                                </g>
+                                            );
+                                        })}
+                                    </svg>
+                                )}
+                            </div>
+                            {!beginner && (
+                                <LineageCanvasFooter
+                                    zoom={graph.nodes.length ? zoom : undefined}
+                                    onZoom={setZoom}
+                                />
+                            )}
+                        </LineageFrame>
+                        {selectedNode && (
+                            <NodeDetails
+                                node={selectedNode}
+                                snapshot={snapshot}
+                                beginner={beginner}
+                            />
+                        )}
+                        {!beginner && !selectedNode && <LineageGuide />}
+                    </div>
+                )}
+            </LineageFrame>
         </>
     );
 }
@@ -558,13 +763,29 @@ export function MaterializedViewExplorer({
 
         return 'SERVER METADATA';
     };
+    const sourceMeta = embedded ? (
+        <span className="native-snapshot-meta">
+            {getSourceLabel()}
+            {current && ` · Updated ${nativeTime(current.observedAt)}`}
+        </span>
+    ) : (
+        <span className="native-snapshot-meta">
+            <span className="native-lineage-source">{getSourceLabel()}</span>
+            {current && (
+                <time dateTime={current.observedAt} title={nativeTime(current.observedAt)}>
+                    Updated{' '}
+                    {new Date(current.observedAt).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                    })}
+                </time>
+            )}
+        </span>
+    );
     const content = (
         <>
             <div className="native-toolbar native-lineage-meta-toolbar">
-                <span className="native-snapshot-meta">
-                    {getSourceLabel()}
-                    {current && ` · Updated ${nativeTime(current.observedAt)}`}
-                </span>
+                {embedded && sourceMeta}
                 <label className="native-lineage-database">
                     Database
                     <select
@@ -579,7 +800,9 @@ export function MaterializedViewExplorer({
                         ))}
                     </select>
                 </label>
+                {!embedded && sourceMeta}
                 <Button onClick={refresh} disabled={loading}>
+                    {!embedded && <Icon name="refresh" />}
                     {embedded ? 'Refresh map' : 'Refresh metadata'}
                 </Button>
             </div>
@@ -602,7 +825,7 @@ export function MaterializedViewExplorer({
             )}
             {current && (
                 <>
-                    <LineageGraph snapshot={current} beginner={embedded} />
+                    <LineageGraph key={selectedDatabase} snapshot={current} beginner={embedded} />
                     {embedded ? (
                         <footer className="native-notes">
                             <details className="native-lineage-notes">
@@ -618,9 +841,14 @@ export function MaterializedViewExplorer({
                         </footer>
                     ) : (
                         <footer className="native-notes">
-                            {current.notes.map(note => (
-                                <p key={note}>{note}</p>
-                            ))}
+                            <details className="native-lineage-notes">
+                                <summary>
+                                    <Icon name="info" /> About this map
+                                </summary>
+                                {current.notes.map(note => (
+                                    <p key={note}>{note}</p>
+                                ))}
+                            </details>
                         </footer>
                     )}
                 </>
@@ -632,7 +860,8 @@ export function MaterializedViewExplorer({
     ) : (
         <NativeExplorerDialog
             title="Materialized view dependencies"
-            description={`${selectedDatabase} · Insert triggers, write targets, and refresh schedules`}
+            eyebrow="DATABASE EXPLORER"
+            description="Explore how data moves between your tables and views."
             onClose={() => onClose?.()}
             className="native-lineage-dialog"
         >

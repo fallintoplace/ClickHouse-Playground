@@ -72,17 +72,20 @@
   background: color-mix(in srgb, var(--accent) 8%, var(--panel));
 }
 .native-dialog.native-lineage-dialog {
-  --lineage-highlight: color-mix(in srgb, var(--accent) 42%, var(--line-bright));
+  --lineage-highlight: var(--accent-cyan);
   --lineage-write: color-mix(in srgb, var(--green) 58%, var(--muted));
   --lineage-refresh: color-mix(in srgb, var(--violet) 58%, var(--muted));
-  gap: 12px;
-  border-color: var(--line-bright);
+  width: min(1320px, calc(100vw - 48px));
+  height: min(780px, calc(100dvh - 32px));
+  min-height: 0;
+  gap: 0;
+  padding: 0;
+  border-color: var(--line);
   background: var(--panel);
 }
 .native-dialog.native-lineage-dialog > .native-heading {
   align-items: center;
-  padding: 2px 0 12px;
-  border-bottom: 1px solid var(--line);
+  padding: 22px 24px 18px;
 }
 .native-dialog.native-lineage-dialog > .native-heading .eyebrow {
   color: var(--muted);
@@ -91,15 +94,15 @@
   letter-spacing: 0.1em;
 }
 .native-dialog.native-lineage-dialog > .native-heading h2 {
-  margin: 4px 0 5px;
+  margin: 7px 0 6px;
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 650;
   letter-spacing: -0.015em;
 }
 .native-dialog.native-lineage-dialog > .native-heading p {
   margin: 0;
-  font-size: 11px;
+  font-size: 12px;
 }
 .native-dialog.native-lineage-dialog > .native-heading .button-base {
   min-height: 32px;
@@ -292,18 +295,18 @@
   letter-spacing: 0.02em;
 }
 .native-lineage-dialog .native-lineage-meta-toolbar {
-  gap: 8px 14px;
-  padding-bottom: 11px;
-  border-bottom: 1px solid var(--line);
+  gap: 10px 16px;
+  padding: 0 24px 18px;
 }
 .native-lineage-dialog .native-snapshot-meta {
-  min-width: 220px;
+  align-items: center;
+  gap: 12px;
   flex: 1;
 }
 .native-lineage-dialog .native-lineage-meta-toolbar > .button-base {
   min-height: 32px;
   padding-inline: 12px;
-  font-size: 10px;
+  font-size: 11px;
 }
 .native-notes {
   color: var(--muted);
@@ -375,7 +378,15 @@
   font: inherit;
 }
 .native-lineage-dialog .native-lineage-database {
-  font-size: 10px;
+  color: var(--text-soft);
+  font-size: 11px;
+}
+.native-lineage-dialog .native-lineage-database select {
+  min-width: 180px;
+  min-height: 32px;
+  padding: 5px 10px;
+  border-color: var(--line);
+  background: var(--panel-raised);
 }
 .native-lineage-primer {
   display: grid;
@@ -621,18 +632,26 @@
   border-color: var(--muted);
   border-top-style: dotted;
 }
-.native-lineage-dialog .native-lineage-map-heading {
-  margin-top: 2px;
-}
 .native-lineage-dialog .native-lineage-layout {
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 272px;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+  gap: 0;
 }
 .native-lineage-dialog .native-lineage-canvas {
-  background: var(--canvas);
+  min-height: 0;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+  background-color: var(--canvas);
+  background-image: radial-gradient(var(--line) 0.7px, transparent 0.7px);
+  background-size: 20px 20px;
 }
 .native-lineage-dialog .native-edge {
   stroke: var(--lineage-highlight);
+  stroke-width: 1.5;
+  opacity: 0.8;
 }
 .native-lineage-dialog .native-edge.edge-writes-to {
   stroke: var(--lineage-write);
@@ -652,6 +671,21 @@
 .native-lineage-dialog .native-lineage-node.materialized-view rect {
   stroke: var(--lineage-refresh);
 }
+.native-lineage-dialog .native-lineage-node rect {
+  fill: var(--panel);
+  stroke-width: 1;
+}
+.native-lineage-dialog .native-lineage-node:hover rect {
+  fill: var(--panel-hover);
+}
+.native-lineage-dialog .native-lineage-node text {
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+.native-lineage-dialog .native-lineage-node .native-node-kind,
+.native-lineage-dialog .native-lineage-node .native-node-meta {
+  font-weight: 400;
+}
 .native-lineage-dialog .native-lineage-node.input-table rect {
   stroke: var(--lineage-highlight);
 }
@@ -661,6 +695,7 @@
 .native-lineage-dialog .native-lineage-node.is-selected rect {
   stroke: var(--lineage-highlight);
   stroke-width: 2;
+  fill: color-mix(in srgb, var(--lineage-highlight) 8%, var(--panel));
 }
 .native-lineage-dialog .native-lineage-node.beginner-node.input-table .native-node-kind {
   fill: var(--lineage-highlight);
@@ -672,10 +707,8 @@
   fill: var(--lineage-write);
 }
 .native-lineage-dialog .native-lineage-legend {
-  gap: 10px 14px;
-  padding-bottom: 9px;
-  border-bottom: 1px solid var(--line);
-  font-size: 10px;
+  gap: 8px 12px;
+  font-size: 9px;
 }
 .native-lineage-dialog .native-lineage-legend span::before {
   width: 16px;
@@ -694,8 +727,13 @@
   padding: 15px;
 }
 .native-lineage-dialog .native-node-details {
-  border-color: var(--line);
-  background: var(--panel-raised);
+  min-height: 0;
+  max-height: none;
+  padding: 18px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--panel);
 }
 .native-node-details h3 {
   font-size: 16px;
@@ -706,6 +744,10 @@
 }
 .native-lineage-dialog .native-node-details .native-metrics dd {
   font-size: 20px;
+}
+.native-lineage-dialog .native-node-details h3 {
+  margin: 5px 0;
+  font-size: 15px;
 }
 .native-lineage-dialog .native-node-details:not(.is-beginner) .native-metrics {
   display: grid;
@@ -771,8 +813,7 @@
   border-top: 1px solid var(--line);
 }
 .native-lineage-dialog > footer.native-notes {
-  padding-top: 5px;
-  border-top: 1px solid var(--line);
+  padding: 10px 24px;
   font-size: 10px;
 }
 .native-relationships p {
@@ -790,7 +831,312 @@
   cursor: pointer;
   padding-block: 8px;
 }
+@layer components {
+  .native-lineage-workspace {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    margin: 0 24px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-panel);
+  }
+  .native-lineage-workspace .native-lineage-controls {
+    flex: none;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+  }
+  .native-lineage-map-title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .native-lineage-map-title > svg {
+    width: 16px;
+    height: 16px;
+    color: var(--lineage-highlight);
+  }
+  .native-lineage-map-title strong {
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .native-lineage-map-title > span {
+    margin-left: 8px;
+    color: var(--muted);
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+  }
+  .native-lineage-workspace .native-search {
+    position: relative;
+    width: min(280px, 100%);
+  }
+  .native-lineage-workspace .native-search > svg {
+    position: absolute;
+    left: 10px;
+    width: 14px;
+    height: 14px;
+    pointer-events: none;
+  }
+  .native-lineage-source {
+    padding: 4px 6px;
+    border-radius: var(--radius-label);
+    background: var(--panel-raised);
+    color: var(--text-soft);
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+  }
+  .native-lineage-stage {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    flex-direction: column;
+  }
+  .native-lineage-stage > .native-lineage-canvas {
+    flex: 1;
+  }
+  .native-lineage-canvas-footer {
+    display: flex;
+    min-height: 44px;
+    flex: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 14px;
+    border-top: 1px solid var(--line);
+    background: var(--panel);
+  }
+  .native-lineage-zoom {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+  }
+  .native-lineage-zoom button {
+    min-width: 26px;
+    height: 26px;
+    padding: 0 6px;
+    border: 0;
+    color: var(--text-soft);
+    background: transparent;
+    font: inherit;
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+  }
+  .native-lineage-zoom button + button {
+    border-left: 1px solid var(--line);
+  }
+  .native-lineage-zoom button:hover:not(:disabled) {
+    background: var(--panel-hover);
+    color: var(--text);
+  }
+  .native-lineage-zoom button:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+  .native-lineage-empty {
+    display: flex;
+    min-height: min(350px, 40dvh);
+    height: 100%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 38px 24px;
+    text-align: center;
+  }
+  .native-lineage-empty-flow {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .native-lineage-empty-flow > span {
+    display: grid;
+    width: 44px;
+    height: 40px;
+    place-items: center;
+    border: 1px solid var(--line-bright);
+    border-radius: var(--radius-control);
+    color: var(--muted);
+    background: var(--panel);
+  }
+  .native-lineage-empty-flow > .is-view {
+    width: 52px;
+    height: 48px;
+    border-color: color-mix(in srgb, var(--lineage-highlight) 50%, var(--line));
+    color: var(--lineage-highlight);
+    background: color-mix(in srgb, var(--lineage-highlight) 8%, var(--panel));
+  }
+  .native-lineage-empty-flow svg {
+    width: 18px;
+    height: 18px;
+  }
+  .native-lineage-empty-flow > i {
+    width: 36px;
+    border-top: 1px dashed var(--line-bright);
+  }
+  .native-lineage-empty h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .native-lineage-empty p {
+    max-width: 350px;
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+  .native-lineage-empty strong {
+    color: var(--text-soft);
+    font-weight: 500;
+  }
+  .native-lineage-empty small {
+    max-width: 300px;
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1.6;
+  }
+  .native-lineage-guide {
+    padding: 22px 18px;
+    border-left: 1px solid var(--line);
+    background: var(--panel);
+  }
+  .native-lineage-guide > .eyebrow {
+    color: var(--muted);
+    font-size: 8px;
+    letter-spacing: 0.08em;
+  }
+  .native-lineage-guide h3 {
+    margin: 8px 0;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .native-lineage-guide p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.65;
+  }
+  .native-lineage-guide dl {
+    display: grid;
+    gap: 18px;
+    margin: 24px 0;
+  }
+  .native-lineage-guide dt {
+    color: var(--text-soft);
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .native-lineage-guide dt::before {
+    content: "";
+    display: inline-block;
+    width: 14px;
+    margin-right: 7px;
+    border-top: 2px solid var(--lineage-highlight);
+    vertical-align: middle;
+  }
+  .native-lineage-guide .edge-writes-to::before {
+    border-color: var(--lineage-write);
+  }
+  .native-lineage-guide .edge-refresh-dependency::before {
+    border-color: var(--lineage-refresh);
+    border-top-style: dashed;
+  }
+  .native-lineage-guide .edge-catalog-dependency::before {
+    border-color: var(--muted);
+    border-top-style: dotted;
+  }
+  .native-lineage-guide dd {
+    margin: 5px 0 0 21px;
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1.6;
+  }
+  .native-lineage-guide-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+  }
+  .native-lineage-guide-note > svg {
+    width: 13px;
+    height: 13px;
+    flex: none;
+    margin-top: 2px;
+    color: var(--muted);
+  }
+  .native-node-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .native-node-heading > div {
+    min-width: 0;
+  }
+  .native-node-heading p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 10px;
+    overflow-wrap: anywhere;
+  }
+  .native-node-icon {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    flex: none;
+    place-items: center;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    color: var(--lineage-highlight);
+    background: var(--panel-raised);
+  }
+  .native-node-icon svg {
+    width: 15px;
+    height: 15px;
+  }
+  .native-lineage-dialog .native-lineage-notes summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: fit-content;
+  }
+  .native-lineage-dialog .native-lineage-notes summary > svg {
+    width: 12px;
+    height: 12px;
+  }
+  .native-lineage-dialog .native-lineage-notes[open] summary {
+    color: var(--text-soft);
+  }
+}
+.native-lineage-workspace .native-search input {
+  width: 100%;
+  min-height: 30px;
+  padding: 6px 10px 6px 30px;
+  border-color: var(--line);
+  background: var(--canvas);
+  font-size: 11px;
+}
 @media (max-width: 850px) {
+  .native-dialog.native-lineage-dialog {
+    height: auto;
+  }
+  .native-lineage-workspace {
+    flex: none;
+  }
+  .native-lineage-dialog .native-lineage-canvas {
+    min-height: 330px;
+    max-height: 360px;
+  }
   .native-lineage-layout {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -802,12 +1148,50 @@
   }
   .native-dialog.native-lineage-dialog .native-node-details {
     max-height: none;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+  .native-lineage-guide {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+  .native-lineage-guide dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .native-lineage-canvas {
     max-height: 360px;
   }
 }
 @media (max-width: 560px) {
+  .native-dialog.native-lineage-dialog {
+    width: calc(100vw - 16px);
+    padding: 0;
+  }
+  .native-dialog.native-lineage-dialog > .native-heading {
+    padding: 18px 16px;
+  }
+  .native-dialog.native-lineage-dialog > .native-heading h2 {
+    font-size: 18px;
+  }
+  .native-lineage-dialog .native-lineage-meta-toolbar {
+    padding: 0 16px 16px;
+  }
+  .native-lineage-dialog .native-snapshot-meta {
+    flex-basis: 100%;
+    order: 1;
+  }
+  .native-lineage-workspace {
+    margin-inline: 16px;
+  }
+  .native-lineage-workspace .native-search {
+    width: 100%;
+  }
+  .native-lineage-canvas-footer {
+    flex-wrap: wrap;
+  }
+  .native-lineage-dialog > footer.native-notes {
+    padding-inline: 16px;
+  }
   .native-dialog {
     width: 100vw;
     max-height: 100dvh;
@@ -855,7 +1239,7 @@
 }
 
 :root[data-theme="click-light"] .native-dialog.native-lineage-dialog {
-  --lineage-highlight: var(--accent);
+  --lineage-highlight: var(--accent-cyan);
   --lineage-write: var(--green);
   --lineage-refresh: var(--violet);
   border-color: var(--line-bright);
