@@ -40,7 +40,13 @@ function isCircularNode(node: PartsLayoutNode): node is HierarchyCircularNode<Ce
 
 const width = 1_000;
 const height = 510;
-const palette = ['var(--accent)', 'var(--violet)', 'var(--green)', 'var(--amber)', 'var(--cyan)'];
+const palette = [
+    'var(--parts-highlight)',
+    'var(--violet)',
+    'var(--green)',
+    'var(--amber)',
+    'var(--accent-cyan)',
+];
 
 function exactCount(value: string) {
     try {
@@ -507,7 +513,9 @@ function renderPartsDialog({
         >
             <header className="parts-explorer-header">
                 <div>
-                    <span className="eyebrow">{copy.partsExplorerTitle.toUpperCase()}</span>
+                    {!embedded && (
+                        <span className="eyebrow">{copy.partsExplorerTitle.toUpperCase()}</span>
+                    )}
                     <h2>
                         {table.database}.{table.name}
                     </h2>
@@ -524,6 +532,14 @@ function renderPartsDialog({
                     </Button>
                 )}
             </header>
+            {snapshot && (
+                <PartsOverview
+                    snapshot={snapshot}
+                    copy={copy}
+                    stateIsTruncated={Boolean(stateIsTruncated)}
+                    visibleTotals={visibleTotals}
+                />
+            )}
             <div className="parts-explorer-toolbar">
                 <div className="parts-view-control" role="group" aria-label={copy.partsStateFilter}>
                     {(['all', 'active', 'inactive'] as const).map(value => {
@@ -662,13 +678,7 @@ function renderPartsDialog({
                                 </>
                             )}
                         </span>
-                        <span>
-                            {stateIsTruncated && `${copy.partsLoaded} · `}
-                            {copy.partsMetricSize}:{' '}
-                            <strong>{exactBytes(visibleTotals.compressedBytes.toString())}</strong>{' '}
-                            · {copy.partsMetricRows}:{' '}
-                            <strong>{exactCount(visibleTotals.rows.toString())}</strong>
-                        </span>
+                        {showingText && <span>{showingText}</span>}
                     </div>
                     {renderPartsGraph({
                         layoutMode,
@@ -826,6 +836,166 @@ function renderPartInspector({
     );
 }
 
+function PartsOverview({
+    snapshot,
+    copy,
+    stateIsTruncated,
+    visibleTotals,
+}: {
+    snapshot: MergeTreePartsSnapshot;
+    copy: Copy['common'];
+    stateIsTruncated: boolean;
+    visibleTotals: { rows: bigint; compressedBytes: bigint };
+}) {
+    return (
+        <dl className="parts-overview">
+            <div>
+                <dt>{copy.partsStateActive}</dt>
+                <dd>{exactCount(snapshot.activeParts)}</dd>
+            </div>
+            <div>
+                <dt>{copy.partsStateInactive}</dt>
+                <dd>{exactCount(snapshot.inactiveParts)}</dd>
+            </div>
+            <div>
+                <dt>
+                    {stateIsTruncated && `${copy.partsLoaded} · `}
+                    {copy.partsMetricSize}
+                </dt>
+                <dd>{exactBytes(visibleTotals.compressedBytes.toString())}</dd>
+            </div>
+            <div>
+                <dt>
+                    {stateIsTruncated && `${copy.partsLoaded} · `}
+                    {copy.partsMetricRows}
+                </dt>
+                <dd>{exactCount(visibleTotals.rows.toString())}</dd>
+            </div>
+        </dl>
+    );
+}
+
+function PartsMap({
+    copy,
+    visiblePartitionGroups,
+    zoomedPartition,
+    handleCell,
+    metricByPart,
+    metricScale,
+    selectedPart,
+    setSelectedPart,
+    metric,
+    activeMetricLabel,
+}: {
+    copy: Copy['common'];
+    visiblePartitionGroups: { id: string; partition: string; parts: MergeTreePart[] }[];
+    zoomedPartition: string | undefined;
+    handleCell: (id: string, part?: MergeTreePart) => void;
+    metricByPart: Map<string, number>;
+    metricScale: ScaleLinear<number, number, never>;
+    selectedPart: MergeTreePart | undefined;
+    setSelectedPart: import('react').Dispatch<
+        import('react').SetStateAction<MergeTreePart | undefined>
+    >;
+    metric: PartsMetric;
+    activeMetricLabel: string;
+}) {
+    const secondaryMetrics: PartsMetric[] = (['compressedBytes', 'rows', 'marks'] as const).filter(
+        value => value !== metric,
+    );
+    const metricLabels = {
+        compressedBytes: copy.partsMetricSize,
+        rows: copy.partsMetricRows,
+        marks: copy.partsMetricMarks,
+    };
+    return (
+        <div className="parts-horizontal-map" role="list" aria-label={copy.partsMap}>
+            <div className="parts-map-columns" aria-hidden="true">
+                <span className="parts-map-identity">
+                    <span>{copy.partsPart}</span>
+                    <span>
+                        {copy.partsStateFilter} / {copy.partsLevel}
+                    </span>
+                </span>
+                <span className="parts-map-metrics">
+                    <span>{activeMetricLabel}</span>
+                    {secondaryMetrics.map(value => (
+                        <span key={value}>{metricLabels[value]}</span>
+                    ))}
+                </span>
+            </div>
+            {visiblePartitionGroups.map(group => (
+                <section className="parts-map-partition" key={group.id} role="listitem">
+                    <button
+                        type="button"
+                        className="parts-map-partition-heading"
+                        aria-label={copy.partsZoomPartition.replace('{partition}', group.partition)}
+                        aria-pressed={zoomedPartition === group.id}
+                        onClick={() => handleCell(group.id)}
+                    >
+                        <strong>{group.partition}</strong>
+                        <span>
+                            {group.parts.length} {copy.parts} ·{' '}
+                            {exactBytes(
+                                group.parts
+                                    .reduce((sum, part) => sum + BigInt(part.compressedBytes), 0n)
+                                    .toString(),
+                            )}
+                        </span>
+                    </button>
+                    <div className="parts-map-partition-rows">
+                        {group.parts.map(part => {
+                            const size = metricByPart.get(partId(part)) ?? 0;
+                            const barWidth = size === 0 ? 0 : Math.max(1.5, metricScale(size));
+                            const selected =
+                                selectedPart?.name === part.name &&
+                                selectedPart.partition === part.partition &&
+                                selectedPart.active === part.active;
+                            return (
+                                <button
+                                    key={partId(part)}
+                                    type="button"
+                                    className={`parts-map-row${part.active ? ' is-active' : ' is-inactive'}${selected ? ' is-selected' : ''}`}
+                                    title={tooltip(part)}
+                                    aria-label={tooltip(part)}
+                                    aria-pressed={Boolean(selected)}
+                                    onClick={() => setSelectedPart(part)}
+                                >
+                                    <span className="parts-map-identity">
+                                        <i aria-hidden="true" />
+                                        <code>{part.name}</code>
+                                        <small>
+                                            {part.active
+                                                ? copy.partsStateActive
+                                                : copy.partsStateInactive}{' '}
+                                            · L{part.level}
+                                        </small>
+                                    </span>
+                                    <span className="parts-map-metrics">
+                                        <span className="parts-map-size">
+                                            <i>
+                                                <b
+                                                    style={{
+                                                        width: `${barWidth}%`,
+                                                    }}
+                                                />
+                                            </i>
+                                            <strong>{metricText(part, metric)}</strong>
+                                        </span>
+                                        {secondaryMetrics.map(value => (
+                                            <span key={value}>{metricText(part, value)}</span>
+                                        ))}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </section>
+            ))}
+        </div>
+    );
+}
+
 function renderPartsGraph({
     layoutMode,
     copy,
@@ -864,89 +1034,18 @@ function renderPartsGraph({
     return (
         <div className={`parts-graph-viewport is-${layoutMode}`}>
             {layoutMode === 'map' ? (
-                <div className="parts-horizontal-map" role="list" aria-label={copy.partsMap}>
-                    {visiblePartitionGroups.map(group => (
-                        <section className="parts-map-partition" key={group.id} role="listitem">
-                            <button
-                                type="button"
-                                className="parts-map-partition-heading"
-                                aria-label={copy.partsZoomPartition.replace(
-                                    '{partition}',
-                                    group.partition,
-                                )}
-                                aria-pressed={zoomedPartition === group.id}
-                                onClick={() => handleCell(group.id)}
-                            >
-                                <strong>{group.partition}</strong>
-                                <span>
-                                    {group.parts.length} parts ·{' '}
-                                    {exactBytes(
-                                        group.parts
-                                            .reduce(
-                                                (sum, part) => sum + BigInt(part.compressedBytes),
-                                                0n,
-                                            )
-                                            .toString(),
-                                    )}
-                                </span>
-                            </button>
-                            <div className="parts-map-partition-rows">
-                                {group.parts.map(part => {
-                                    const size = metricByPart.get(partId(part)) ?? 0;
-                                    const barWidth =
-                                        size === 0 ? 0 : Math.max(1.5, metricScale(size));
-                                    const selected =
-                                        selectedPart?.name === part.name &&
-                                        selectedPart.partition === part.partition &&
-                                        selectedPart.active === part.active;
-                                    return (
-                                        <button
-                                            key={partId(part)}
-                                            type="button"
-                                            className={`parts-map-row${part.active ? ' is-active' : ' is-inactive'}${selected ? ' is-selected' : ''}`}
-                                            title={tooltip(part)}
-                                            aria-label={tooltip(part)}
-                                            aria-pressed={Boolean(selected)}
-                                            onClick={() => setSelectedPart(part)}
-                                        >
-                                            <span className="parts-map-identity">
-                                                <i aria-hidden="true" />
-                                                <code>{part.name}</code>
-                                                <small>
-                                                    {part.active
-                                                        ? copy.partsStateActive
-                                                        : copy.partsStateInactive}{' '}
-                                                    · L{part.level}
-                                                </small>
-                                            </span>
-                                            <span className="parts-map-metrics">
-                                                <span className="parts-map-size">
-                                                    <i>
-                                                        <b
-                                                            style={{
-                                                                width: `${barWidth}%`,
-                                                            }}
-                                                        />
-                                                    </i>
-                                                    <strong>{metricText(part, metric)}</strong>
-                                                </span>
-                                                <span>
-                                                    {exactCount(part.rows)}{' '}
-                                                    {copy.partsRows.toLowerCase()}
-                                                </span>
-                                                <span>{exactBytes(part.compressedBytes)}</span>
-                                                <span>
-                                                    {exactCount(part.marks)}{' '}
-                                                    {copy.partsMarks.toLowerCase()}
-                                                </span>
-                                            </span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </section>
-                    ))}
-                </div>
+                <PartsMap
+                    copy={copy}
+                    visiblePartitionGroups={visiblePartitionGroups}
+                    zoomedPartition={zoomedPartition}
+                    handleCell={handleCell}
+                    metricByPart={metricByPart}
+                    metricScale={metricScale}
+                    selectedPart={selectedPart}
+                    setSelectedPart={setSelectedPart}
+                    metric={metric}
+                    activeMetricLabel={activeMetricLabel}
+                />
             ) : (
                 <svg
                     viewBox={`0 0 ${width} ${height}`}
@@ -1105,15 +1204,15 @@ function renderPartsGraph({
                     </g>
                 </svg>
             )}
-            <div className="parts-legend">
-                <span>
-                    <i className="parts-legend-square" />
-                    {layoutMode === 'map'
-                        ? `${copy.partsBarWidth}: ${activeMetricLabel}`
-                        : activeMetricLabel}
-                </span>
-                {showingText && <span>{showingText}</span>}
-            </div>
+            {layoutMode !== 'map' && (
+                <div className="parts-legend">
+                    <span>
+                        <i className="parts-legend-square" />
+                        {activeMetricLabel}
+                    </span>
+                    {showingText && <span>{showingText}</span>}
+                </div>
+            )}
         </div>
     );
 }

@@ -935,7 +935,7 @@ test('MergeTree storage opens a selectable, metric-switchable D3 parts explorer'
     await expect(dialog).toBeVisible();
     await expect(dialog.locator('.parts-map-row')).toHaveCount(3);
     await expect(dialog.locator('.parts-map-row.is-inactive')).toHaveCount(1);
-    await expect(dialog.locator('.parts-graph-meta')).toContainText('6.5 KiB');
+    await expect(dialog.locator('.parts-overview')).toContainText('6.5 KiB');
 
     const stateFilter = dialog.getByRole('group', { name: 'Part state' });
     await stateFilter.getByRole('button', { name: 'Inactive 1', exact: true }).click();

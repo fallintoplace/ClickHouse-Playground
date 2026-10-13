@@ -31,45 +31,62 @@
   background: color-mix(in srgb, var(--panel-raised) 72%, transparent);
 }
 .native-dialog.native-storage-dialog {
-  gap: 12px;
-  padding: 16px;
-  border-color: var(--line-bright);
+  width: min(1240px, calc(100vw - 48px));
+  height: min(880px, calc(100dvh - 48px));
+  min-height: 0;
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
+  border-color: var(--line);
   background: var(--panel);
 }
 .native-dialog.native-storage-dialog > .native-heading {
+  flex: none;
   align-items: center;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--line);
+  padding: 20px 24px 16px;
 }
 .native-dialog.native-storage-dialog > .native-heading .eyebrow {
   color: var(--muted);
   font-size: 9px;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: 0.1em;
 }
 .native-dialog.native-storage-dialog > .native-heading h2 {
-  margin: 4px 0;
+  margin: 6px 0 0;
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 650;
-  letter-spacing: -0.015em;
-}
-.native-dialog.native-storage-dialog > .native-heading p {
-  margin: 0;
-  font-size: 11px;
+  letter-spacing: -0.025em;
 }
 .native-dialog.native-storage-dialog .native-tabs {
-  gap: 4px;
-  margin-bottom: 8px;
-  padding-bottom: 6px;
+  flex: none;
+  gap: 24px;
+  margin: 0;
+  padding: 0 24px;
 }
 .native-dialog.native-storage-dialog .native-tabs button {
-  min-height: 32px;
-  padding: 5px 13px;
+  min-height: 40px;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 550;
 }
-.native-dialog.native-storage-dialog .native-tabs button[aria-pressed="true"] {
-  border-color: color-mix(in srgb, var(--accent) 42%, var(--line));
-  background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+.native-dialog.native-storage-dialog .native-tabs button:hover {
+  color: var(--text);
+}
+.native-dialog.native-storage-dialog .native-storage .native-tabs button[aria-pressed="true"] {
+  border-bottom-color: var(--parts-highlight);
+  background: transparent;
+  color: var(--parts-highlight);
+}
+.native-dialog.native-storage-dialog .native-storage > .parts-explorer-embedded {
+  min-height: 0;
+}
+.native-dialog.native-storage-dialog .native-activity {
+  padding: 18px 24px;
 }
 .native-dialog.native-lineage-dialog {
   --lineage-highlight: var(--accent-cyan);
@@ -1244,4 +1261,22 @@
   --lineage-refresh: var(--violet);
   border-color: var(--line-bright);
   background: var(--panel);
+}
+
+@media (max-width: 650px) {
+  .native-dialog.native-storage-dialog {
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: var(--radius-shell);
+  }
+  .native-dialog.native-storage-dialog > .native-heading {
+    padding: 16px 14px;
+  }
+  .native-dialog.native-storage-dialog .native-tabs {
+    padding-inline: 14px;
+  }
+  .native-dialog.native-storage-dialog .native-activity {
+    padding: 14px;
+  }
 }

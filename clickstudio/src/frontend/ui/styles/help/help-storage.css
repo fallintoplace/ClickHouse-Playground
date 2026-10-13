@@ -223,6 +223,13 @@
 .workspace-help-storage .parts-map-partition-heading span {
   font-size: 8px;
 }
+.workspace-help-storage .parts-map-columns {
+  gap: 12px;
+  padding-inline: 9px;
+}
+.workspace-help-storage .parts-map-columns .parts-map-metrics {
+  gap: 9px;
+}
 .workspace-help-storage .parts-map-row {
   min-height: 36px;
   gap: 12px;
