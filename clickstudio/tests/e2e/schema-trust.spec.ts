@@ -1,6 +1,7 @@
 import { workspacePath, setWorkspaceMode } from './helpers.js';
 import { test, expect, type Page, type Route } from '@playwright/test';
 import { jsonRecord } from '../helpers/type-guards.js';
+import { expectReferenceStyles } from './style-reference.js';
 
 const schema = {
     connectionId: 'live',
@@ -487,6 +488,70 @@ test('Column details show the type once and keep comments readable', async ({ pa
 });
 
 for (const mode of ['Standard', 'Experimental']) {
+    for (const engine of ['MergeTree', 'View']) {
+        test(`${engine} Overview metadata fills the ${mode} sidebar after resizing`, async ({
+            page,
+        }, info) => {
+            await mockLiveWorkspace(
+                page,
+                route =>
+                    route.fulfill({
+                        json: {
+                            ...schema,
+                            tables: [{ ...schema.tables[0], engine }],
+                        },
+                    }),
+                mode,
+            );
+            if (mode === 'Standard')
+                await page
+                    .locator('.icon-rail')
+                    .getByRole('button', { name: 'Objects', exact: true })
+                    .click();
+            await page
+                .locator('[role="treeitem"][data-table-name="events"] .object-tree-main')
+                .click();
+
+            const details = page.getByRole('region', { name: 'Selected object', exact: true });
+            await details.getByRole('tab', { name: 'Overview', exact: true }).click();
+            const overview = details.getByRole('tabpanel', { name: 'Overview', exact: true });
+            await expect(overview.locator('.schema-stat')).toHaveCount(4);
+            await expect(overview.locator('.schema-key')).toHaveCount(4);
+
+            for (const theme of ['Light', 'Dark']) {
+                await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+                for (const size of [
+                    { width: 1440, height: 1000 },
+                    { width: 1100, height: 560 },
+                    { width: 1600, height: 1000 },
+                ]) {
+                    await page.setViewportSize(size);
+                    await expect
+                        .poll(() =>
+                            overview.evaluate(element => {
+                                const metadata = element.querySelector('.schema-table-metadata')!;
+                                return Math.abs(
+                                    element.clientWidth - metadata.getBoundingClientRect().width,
+                                );
+                            }),
+                        )
+                        .toBeLessThanOrEqual(1);
+                    await expect
+                        .poll(() =>
+                            overview.evaluate(element => element.scrollWidth - element.clientWidth),
+                        )
+                        .toBeLessThanOrEqual(1);
+                }
+                await expectReferenceStyles(page, info, `overview-${theme}`, overview);
+            }
+            await details.getByRole('tab', { name: 'Columns 1', exact: true }).click();
+            await expect(overview).toBeHidden();
+            await expect(details.getByRole('button', { name: 'day', exact: true })).toBeVisible();
+            await details.getByRole('tab', { name: 'Overview', exact: true }).click();
+            await expect(overview).toBeVisible();
+        });
+    }
+
     test(`Table columns fill the ${mode} sidebar and stay complete after resizing and filtering`, async ({
         page,
     }) => {
