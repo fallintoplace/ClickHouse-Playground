@@ -486,6 +486,91 @@ test('Column details show the type once and keep comments readable', async ({ pa
     await expect(details.locator('.object-fact > code')).toHaveText(['Event date']);
 });
 
+for (const mode of ['Standard', 'Experimental']) {
+    test(`Table columns fill the ${mode} sidebar and stay complete after resizing and filtering`, async ({
+        page,
+    }) => {
+        const columns = Array.from({ length: 100 }, (_, index) => ({
+            ...schema.columns[0],
+            name: `column_${index}`,
+        }));
+        await page.setViewportSize({ width: 1440, height: 1200 });
+        await mockLiveWorkspace(
+            page,
+            route => route.fulfill({ json: { ...schema, columns } }),
+            mode,
+        );
+        if (mode === 'Standard')
+            await page
+                .locator('.icon-rail')
+                .getByRole('button', { name: 'Objects', exact: true })
+                .click();
+        await tableObject(page).click();
+
+        const details = page.getByRole('region', { name: 'Selected object', exact: true });
+        const viewport = details.locator('.object-column-list-viewport');
+        const search = details.getByRole('textbox', { name: /^Search columns/ });
+        for (const height of [1200, 560, 1200]) {
+            await page.setViewportSize({ width: 1440, height });
+            await expect
+                .poll(() =>
+                    viewport.evaluate(element => {
+                        const sidebar = element.closest('.object-explorer-section')!;
+                        return (
+                            sidebar.getBoundingClientRect().bottom -
+                            element.getBoundingClientRect().bottom
+                        );
+                    }),
+                )
+                .toBeLessThan(24);
+            await expect
+                .poll(() =>
+                    viewport.evaluate(element => {
+                        const list = element.querySelector('.object-column-list-window')!;
+                        return (
+                            list.getBoundingClientRect().bottom >=
+                            element.getBoundingClientRect().bottom
+                        );
+                    }),
+                )
+                .toBe(true);
+            await viewport.evaluate(element => {
+                element.scrollTop = element.scrollHeight;
+            });
+            await expect(
+                details.getByRole('button', { name: 'column_99', exact: true }),
+            ).toBeVisible();
+            await viewport.evaluate(element => {
+                element.scrollTop = 0;
+            });
+            await expect(
+                details.getByRole('button', { name: 'column_0', exact: true }),
+            ).toBeVisible();
+        }
+
+        await search.fill('column_99');
+        await expect(viewport.getByRole('listitem')).toHaveCount(1);
+        await expect(details.getByRole('button', { name: 'column_99', exact: true })).toBeVisible();
+        await expect
+            .poll(() => viewport.evaluate(element => element.scrollHeight <= element.clientHeight))
+            .toBe(true);
+        await expect
+            .poll(() => details.evaluate(element => element.getBoundingClientRect().height))
+            .toBeLessThan(400);
+        await search.fill('missing_column');
+        await expect(viewport).toHaveCount(0);
+        await expect(details.locator('.object-columns-empty')).toBeVisible();
+        await search.fill('');
+        await expect(details.getByRole('button', { name: 'column_0', exact: true })).toBeVisible();
+        await expect(details.getByRole('button', { name: 'column_20', exact: true })).toBeVisible();
+        await details.getByRole('tab', { name: 'Overview', exact: true }).click();
+        await expect(viewport).toBeHidden();
+        await expect(details).toContainText('ORDER BY');
+        await details.getByRole('tab', { name: 'Columns 100', exact: true }).click();
+        await expect(details.getByRole('button', { name: 'column_20', exact: true })).toBeVisible();
+    });
+}
+
 test('Object explorer explains when the loaded schema has no visible objects', async ({ page }) => {
     await mockLiveWorkspace(page, route =>
         route.fulfill({ json: { ...schema, tables: [], columns: [], dictionaries: [] } }),

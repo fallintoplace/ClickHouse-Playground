@@ -1,4 +1,12 @@
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+    useEffect,
+    useId,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
+    type ReactNode,
+} from 'react';
 import type { SchemaColumn, SchemaTable } from '../../../../shared/database/schema/types';
 import {
     explorerColumnId,
@@ -422,7 +430,6 @@ function RelationDetails({
 }
 
 const COLUMN_ROW_HEIGHT = 36;
-const COLUMN_VIEWPORT_HEIGHT = 228;
 const COLUMN_OVERSCAN = 5;
 
 function TableColumnsPanel({
@@ -439,6 +446,7 @@ function TableColumnsPanel({
     onSelectColumn: (column: SchemaColumn) => void;
 }) {
     const viewport = useRef<HTMLDivElement>(null);
+    const [viewportHeight, setViewportHeight] = useState(0);
     const [scrollTop, setScrollTop] = useState(0);
     const filtered = useMemo(() => {
         const query = search.trim().toLowerCase();
@@ -449,14 +457,24 @@ function TableColumnsPanel({
                 .includes(query),
         );
     }, [columns, search]);
+    const hasColumns = filtered.length > 0;
     const totalHeight = filtered.length * COLUMN_ROW_HEIGHT;
-    const visibleCount =
-        Math.ceil(COLUMN_VIEWPORT_HEIGHT / COLUMN_ROW_HEIGHT) + COLUMN_OVERSCAN * 2;
+    const visibleCount = Math.ceil(viewportHeight / COLUMN_ROW_HEIGHT) + COLUMN_OVERSCAN * 2;
     const start = Math.min(
         Math.max(0, Math.floor(scrollTop / COLUMN_ROW_HEIGHT) - COLUMN_OVERSCAN),
         Math.max(0, filtered.length - visibleCount),
     );
     const visible = filtered.slice(start, start + visibleCount);
+
+    useLayoutEffect(() => {
+        const element = viewport.current;
+        if (!element) return;
+        const measure = () => setViewportHeight(element.clientHeight);
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(element);
+        return () => observer.disconnect();
+    }, [hasColumns]);
 
     useEffect(() => {
         if (viewport.current) viewport.current.scrollTop = 0;
@@ -483,7 +501,11 @@ function TableColumnsPanel({
                 <div
                     className="object-column-list-viewport"
                     ref={viewport}
-                    style={{ height: Math.min(totalHeight, COLUMN_VIEWPORT_HEIGHT) }}
+                    style={
+                        {
+                            '--object-column-list-height': `${totalHeight}px`,
+                        } as React.CSSProperties
+                    }
                     onScroll={event => setScrollTop(event.currentTarget.scrollTop)}
                 >
                     <div className="object-column-list" role="list" style={{ height: totalHeight }}>

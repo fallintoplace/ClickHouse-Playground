@@ -770,29 +770,30 @@
   min-height: 130px;
   flex: 1;
   overflow: auto;
-  padding: 6px;
-  border: 1px solid var(--explorer-tree-border);
-  border-radius: var(--radius-panel);
-  background: var(--explorer-tree-surface);
   box-shadow: none;
   scrollbar-color: var(--scrollbar-thumb) transparent;
   scrollbar-gutter: stable;
 }
+.object-tree-scroll {
+  padding: 2px 0;
+  background: transparent;
+}
+.reference-results {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--explorer-tree-border);
+  border-radius: var(--radius-panel);
+  background: var(--explorer-tree-surface);
+}
 .object-tree,
 .object-tree-branch,
 .object-tree-children,
-.object-tree [role="group"],
-.reference-results {
+.object-tree [role="group"] {
   display: grid;
   align-content: start;
-  gap: 4px;
-  min-width: 0;
-}
-.object-tree {
-  gap: 2px;
-}
-.object-tree-children {
-  gap: 2px;
   min-width: 0;
 }
 .object-tree-row,
@@ -800,11 +801,7 @@
   position: relative;
   display: flex;
   min-width: 0;
-  min-height: 40px;
   align-items: center;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-control);
-  background-color: var(--panel);
   color: var(--text-soft);
   transition:
     border-color 0.14s ease,
@@ -816,14 +813,10 @@
 .object-tree-row {
   --tree-kind-color: var(--muted);
   --explorer-row-accent: var(--tree-kind-color);
+  min-height: 28px;
   padding-left: var(--tree-indent, 0px);
-  background-image: linear-gradient(
-    color-mix(in srgb, var(--tree-kind-color) 80%, transparent),
-    color-mix(in srgb, var(--tree-kind-color) 80%, transparent)
-  );
-  background-repeat: no-repeat;
-  background-position: left center;
-  background-size: 2px calc(100% - 14px);
+  border-radius: var(--radius-control);
+  background: transparent;
 }
 .object-tree-row.is-table {
   --tree-kind-color: var(--explorer-table);
@@ -854,29 +847,20 @@
   border-color: color-mix(in srgb, var(--explorer-row-accent) 58%, var(--line));
   background-color: color-mix(in srgb, var(--explorer-row-accent) 12%, var(--panel-raised));
   color: var(--text);
+}
+.reference-result.is-active {
   box-shadow: var(--active-inset);
 }
 .object-tree-row.is-selected {
-  background-size: 3px calc(100% - 14px);
+  box-shadow: inset 2px 0 var(--tree-kind-color);
 }
 .object-tree-row[aria-level]:not([aria-level="1"])::before {
   position: absolute;
   z-index: 0;
-  top: -1px;
-  bottom: -1px;
+  top: 0;
+  bottom: 0;
   left: calc(var(--tree-indent, 0px) + 3px);
-  border-left: 1px solid color-mix(in srgb, var(--tree-kind-color) 26%, transparent);
-  content: "";
-  pointer-events: none;
-}
-.object-tree-row[aria-level]:not([aria-level="1"])::after {
-  position: absolute;
-  z-index: 0;
-  top: 50%;
-  left: calc(var(--tree-indent, 0px) + 3px);
-  width: 6px;
-  height: 1px;
-  background: color-mix(in srgb, var(--tree-kind-color) 30%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--line-bright) 38%, transparent);
   content: "";
   pointer-events: none;
 }
@@ -907,11 +891,6 @@
     box-shadow: inset 3px 0 var(--tree-kind-color);
   }
 }
-.object-tree-row.is-database,
-.object-tree-row.is-group.is-table,
-.object-tree-row.is-group.is-view {
-  min-height: 32px;
-}
 .object-tree-row.is-database {
   --tree-kind-color: var(--explorer-database);
   margin-top: 0;
@@ -919,8 +898,8 @@
 }
 .object-tree-toggle {
   display: grid;
-  width: 25px;
-  height: 30px;
+  width: 24px;
+  height: 28px;
   flex: none;
   place-items: center;
   border: 0;
@@ -928,10 +907,6 @@
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-}
-.object-tree-row:is(.is-database, .is-group.is-table, .is-group.is-view) .object-tree-toggle {
-  width: 22px;
-  height: 24px;
 }
 .object-tree-toggle:disabled {
   cursor: default;
@@ -947,8 +922,8 @@
   line-height: 1;
 }
 .object-tree-toggle > span > svg {
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
   transform: rotate(-90deg);
   transition: transform 0.16s ease;
 }
@@ -961,73 +936,51 @@
 .object-tree-main {
   display: flex;
   min-width: 0;
-  min-height: 31px;
+  min-height: 28px;
   flex: 1;
   align-items: center;
-  gap: 7px;
-  padding: 2px 5px 2px 1px;
+  gap: 6px;
+  padding: 0 6px 0 0;
   border: 0;
   background: transparent;
   color: inherit;
   text-align: left;
   cursor: pointer;
 }
-.object-tree-row:is(.is-database, .is-group.is-table, .is-group.is-view) .object-tree-main {
-  min-height: 24px;
-  gap: 6px;
-  padding-block: 0;
-}
 .object-tree-main:disabled {
   color: inherit;
   cursor: default;
 }
 .object-kind-glyph > svg {
-  width: 15px;
-  height: 15px;
-  stroke-width: 1.9;
-}
-.object-tree-row:is(.is-database, .is-group.is-table, .is-group.is-view) .object-kind-glyph {
-  width: 21px;
-  height: 21px;
-}
-.object-tree-row:is(.is-database, .is-group.is-table, .is-group.is-view) .object-kind-glyph > svg {
   width: 14px;
   height: 14px;
+  stroke-width: 1.7;
 }
 .object-tree-row.is-group:not(.is-database) .object-tree-label strong {
   color: color-mix(in srgb, var(--tree-kind-color) 68%, var(--muted));
   font-family: var(--font-sans);
-  font-size: 9.5px;
-  font-weight: 720;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 550;
 }
 .object-tree-row.is-database .object-tree-label strong {
   font-family: var(--font-sans);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  font-size: 11.5px;
+  font-weight: 600;
 }
 .object-tree-count {
   display: inline-flex;
-  min-width: 24px;
-  height: 18px;
+  min-width: 20px;
+  height: 16px;
   flex: none;
   align-items: center;
   justify-content: center;
-  padding: 0 6px;
-  border: 1px solid color-mix(in srgb, var(--tree-kind-color) 36%, transparent);
-  border-radius: var(--radius-label);
-  background: color-mix(in srgb, var(--tree-kind-color) 11%, var(--explorer-tree-surface));
+  padding: 0 5px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tree-kind-color) 10%, transparent);
   color: var(--tree-kind-color);
   font-family: var(--font-mono);
-  font-size: 9px;
-  font-variant-numeric: tabular-nums;
-}
-.object-tree-row:is(.is-database, .is-group.is-table, .is-group.is-view) .object-tree-count {
-  min-width: 22px;
-  height: 16px;
   font-size: 8px;
+  font-variant-numeric: tabular-nums;
 }
 .object-tree-group-actions {
   display: flex;
@@ -1174,6 +1127,16 @@
   background: var(--panel-raised);
   box-shadow: none;
 }
+.object-explorer-section.is-detail-mode
+  .object-details:is([data-kind="table"], [data-kind="view"]) {
+  display: flex;
+  min-height: 0;
+  max-height: none;
+  flex-direction: column;
+}
+.object-explorer-section.is-detail-mode .object-details > * {
+  flex-shrink: 0;
+}
 .object-details-hero {
   display: grid;
   min-width: 0;
@@ -1285,6 +1248,12 @@
 .object-detail-tab-panel[hidden] {
   display: none;
 }
+.object-explorer-section.is-detail-mode .object-detail-tab-panel:not([hidden]) {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+}
 .object-column-parent-action {
   display: inline-flex;
   width: max-content;
@@ -1306,13 +1275,19 @@
   height: 12px;
 }
 .object-columns-panel {
-  display: grid;
+  display: flex;
   min-width: 0;
+  min-height: 0;
+  flex-direction: column;
   gap: 6px;
+}
+.object-explorer-section.is-detail-mode .object-columns-panel {
+  flex: 1 1 auto;
 }
 .object-columns-toolbar {
   display: flex;
   min-width: 0;
+  flex: none;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
@@ -1357,14 +1332,20 @@
   color: var(--muted);
 }
 .object-column-list-viewport {
+  height: calc(var(--object-column-list-height) + 2px);
   min-height: 0;
+  max-height: 228px;
   max-width: 100%;
+  flex-shrink: 1;
   overflow: auto;
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
   background: var(--panel);
   scrollbar-color: var(--scrollbar-thumb) transparent;
   scrollbar-gutter: stable;
+}
+.object-explorer-section.is-detail-mode .object-column-list-viewport {
+  max-height: none;
 }
 .object-column-list {
   position: relative;
@@ -1699,9 +1680,13 @@
 .reference-result {
   --reference-kind-color: var(--accent);
   --explorer-row-accent: var(--reference-kind-color);
+  min-height: 40px;
   gap: 9px;
   overflow: hidden;
   padding: 5px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background-color: var(--panel);
   text-align: left;
   cursor: pointer;
 }
@@ -1750,14 +1735,20 @@
 .object-kind-glyph,
 .reference-result-glyph {
   display: grid;
-  width: 25px;
-  height: 25px;
   flex: none;
   place-items: center;
+  color: var(--explorer-row-accent);
+}
+.object-kind-glyph {
+  width: 16px;
+  height: 16px;
+}
+.reference-result-glyph {
+  width: 25px;
+  height: 25px;
   border: 1px solid color-mix(in srgb, var(--explorer-row-accent) 42%, var(--line));
   border-radius: var(--radius-panel);
   background: color-mix(in srgb, var(--explorer-row-accent) 11%, var(--page));
-  color: var(--explorer-row-accent);
 }
 .reference-result-glyph svg {
   width: 14px;
@@ -1765,23 +1756,38 @@
 }
 .object-tree-label,
 .reference-result-copy {
-  display: grid;
   min-width: 0;
   flex: 1;
+}
+.object-tree-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.reference-result-copy {
+  display: grid;
   gap: 3px;
 }
 .object-tree-label strong,
 .reference-result-copy strong {
   overflow: hidden;
   color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.object-tree-label strong {
+  min-width: 0;
+  flex: 1;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+}
+.reference-result-copy strong {
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 640;
   letter-spacing: -0.01em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
-.object-tree-label small,
 .reference-result-copy small {
   width: fit-content;
   max-width: 100%;
@@ -1794,6 +1800,17 @@
   font-size: 7px;
   font-weight: 680;
   letter-spacing: 0.025em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.object-tree-label small {
+  max-width: 40%;
+  flex: none;
+  overflow: hidden;
+  color: color-mix(in srgb, var(--tree-kind-color) 55%, var(--muted));
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 450;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1821,19 +1838,17 @@
   background: color-mix(in srgb, var(--reference-kind-color) 10%, var(--panel));
   color: var(--reference-kind-color);
 }
-:root[data-theme="click-light"] :is(.object-kind-glyph, .reference-result-glyph) {
+:root[data-theme="click-light"] .reference-result-glyph {
   border-color: var(--explorer-row-accent);
   background: var(--explorer-row-accent);
   color: var(--panel);
 }
-:root[data-theme="click-light"]
-  :is(.object-tree-row.is-database, .reference-result.is-engine)
-  :is(.object-kind-glyph, .reference-result-glyph) {
+:root[data-theme="click-light"] .reference-result.is-engine .reference-result-glyph {
   border-color: color-mix(in srgb, var(--accent) 36%, var(--line-bright));
   background: var(--accent-action);
   color: var(--accent);
 }
-:root[data-theme="click-light"] :is(.object-tree-label, .reference-result-copy) small {
+:root[data-theme="click-light"] .reference-result-copy small {
   border-color: color-mix(in srgb, var(--explorer-row-accent) 42%, var(--line));
   background: color-mix(in srgb, var(--explorer-row-accent) 11%, var(--panel));
 }
@@ -1842,10 +1857,6 @@
   .object-tree-label
   strong {
   color: var(--tree-kind-color);
-}
-:root[data-theme="click-light"] .object-tree-count {
-  border-color: color-mix(in srgb, var(--tree-kind-color) 48%, var(--line));
-  background: color-mix(in srgb, var(--tree-kind-color) 12%, var(--panel));
 }
 :root[data-theme="click-light"] :is(.object-tree-row:hover, .reference-result:hover) {
   border-color: color-mix(in srgb, var(--explorer-row-accent) 60%, var(--line));
