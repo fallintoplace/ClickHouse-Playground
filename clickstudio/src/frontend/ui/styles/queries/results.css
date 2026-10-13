@@ -413,25 +413,6 @@
     font-size: var(--font-size-result-column);
     font-weight: var(--font-weight-emphasis);
   }
-  .result-column-heading > small {
-    --result-badge-tint: 8%;
-    flex: 0 1 auto;
-    padding: 1px 4px;
-    border: 1px solid color-mix(in srgb, var(--result-type-accent) 28%, var(--line));
-    border-radius: var(--radius-label);
-    background: color-mix(
-      in srgb,
-      var(--result-type-accent) var(--result-badge-tint),
-      var(--panel-raised)
-    );
-    color: var(--result-type-accent);
-    font-family: var(--font-mono);
-    font-size: var(--font-size-result-type);
-    font-weight: var(--font-weight-regular);
-  }
-  :root[data-theme="click-light"] .result-column-heading > small {
-    --result-badge-tint: 4%;
-  }
   .data-table td {
     max-width: 330px;
     padding: 9px 13px;

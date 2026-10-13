@@ -11,6 +11,7 @@ import type { Copy } from '../../../ui/copy';
 import { Button, cx } from '../../../ui/components/primitives';
 import { formatBytes, formatCount } from '../../../browser/metric-formatters';
 import { Icon } from '../../../ui/components/icons';
+import { resultTypeGroup } from '../../../queries/results/result-type-group';
 
 type ObjectDetailsProps = {
     copy: Copy['common'];
@@ -541,7 +542,13 @@ function TableColumnsPanel({
                                         </button>
                                         {column.defaultKind && <small>DEFAULT</small>}
                                     </span>
-                                    <code title={column.type}>{column.type}</code>
+                                    <code
+                                        className="result-type-badge"
+                                        data-type-group={resultTypeGroup(column.type)}
+                                        title={column.type}
+                                    >
+                                        {column.type}
+                                    </code>
                                 </div>
                             ))}
                         </div>

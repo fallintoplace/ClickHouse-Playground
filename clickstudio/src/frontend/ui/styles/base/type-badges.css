@@ -1,0 +1,48 @@
+.result-type-badge,
+.object-column-list-row > code.result-type-badge {
+  --result-type-accent: var(--muted);
+  --result-badge-tint: 8%;
+  display: block;
+  max-width: 100%;
+  min-width: 0;
+  flex: 0 1 auto;
+  padding: 1px 4px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--result-type-accent) 28%, var(--line));
+  border-radius: var(--radius-label);
+  background: color-mix(
+    in srgb,
+    var(--result-type-accent) var(--result-badge-tint),
+    var(--panel-raised)
+  );
+  color: var(--result-type-accent);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-result-type);
+  font-weight: var(--font-weight-regular);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.object-column-list-row > code.result-type-badge {
+  justify-self: start;
+}
+.result-type-badge[data-type-group="number"] {
+  --result-type-accent: var(--accent-cyan);
+}
+.result-type-badge[data-type-group="text"] {
+  --result-type-accent: var(--green);
+}
+.result-type-badge[data-type-group="temporal"] {
+  --result-type-accent: var(--violet);
+}
+.result-type-badge[data-type-group="boolean"] {
+  --result-type-accent: var(--amber);
+}
+.result-type-badge[data-type-group="complex"] {
+  --result-type-accent: var(--signal-accent);
+}
+:root[data-theme="click-light"] .result-type-badge {
+  --result-badge-tint: 4%;
+}
+:root[data-theme="click-light"] .result-type-badge[data-type-group="text"] {
+  --result-type-accent: color-mix(in srgb, var(--green) 90%, var(--text));
+}
