@@ -65,16 +65,7 @@ export function SqlFlowModeTabs({
                 className={mode === 'flow' ? 'is-active' : ''}
                 onClick={() => onModeChange('flow')}
             >
-                <span className="sql-flow-mode-name">
-                    {copy.sqlFlowLogicalMode}
-                    <span
-                        className="info-dot"
-                        title={copy.sqlFlowLogicalModeDescription}
-                        aria-hidden="true"
-                    >
-                        i
-                    </span>
-                </span>
+                <span className="sql-flow-mode-name">{copy.sqlFlowLogicalMode}</span>
                 <span id={`${descriptionId}-flow`} className="sr-only">
                     {copy.sqlFlowLogicalModeDescription}
                 </span>
@@ -86,19 +77,10 @@ export function SqlFlowModeTabs({
                 aria-pressed={mode === 'ast'}
                 className={mode === 'ast' ? 'is-active' : ''}
                 disabled={!ast.available && mode !== 'ast'}
-                title={!ast.available ? ast.unavailableReason : copy.sqlFlowNativeAst}
+                title={!ast.available ? ast.unavailableReason : undefined}
                 onClick={() => onModeChange('ast')}
             >
-                <span className="sql-flow-mode-name">
-                    {copy.sqlFlowNativeAst}
-                    <span
-                        className="info-dot"
-                        title={copy.sqlFlowNativeAstDescription}
-                        aria-hidden="true"
-                    >
-                        i
-                    </span>
-                </span>
+                <span className="sql-flow-mode-name">{copy.sqlFlowNativeAst}</span>
                 <span id={`${descriptionId}-ast`} className="sr-only">
                     {copy.sqlFlowNativeAstDescription}
                 </span>
@@ -110,19 +92,10 @@ export function SqlFlowModeTabs({
                 aria-pressed={mode === 'analyzer'}
                 className={mode === 'analyzer' ? 'is-active' : ''}
                 disabled={!analyzerAvailable}
-                title={!analyzerAvailable ? analyzerUnavailableReason : copy.queryTreeGraphHint}
+                title={!analyzerAvailable ? analyzerUnavailableReason : undefined}
                 onClick={() => onModeChange('analyzer')}
             >
-                <span className="sql-flow-mode-name">
-                    {copy.sqlFlowAnalyzer}
-                    <span
-                        className="info-dot"
-                        title={copy.sqlFlowAnalyzerDescription}
-                        aria-hidden="true"
-                    >
-                        i
-                    </span>
-                </span>
+                <span className="sql-flow-mode-name">{copy.sqlFlowAnalyzer}</span>
                 <span id={`${descriptionId}-analyzer`} className="sr-only">
                     {copy.sqlFlowAnalyzerDescription}
                 </span>

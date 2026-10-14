@@ -106,13 +106,10 @@ export const copy = {
         helpExplain: 'EXPLAIN',
         helpExplainDescription: 'Learn what ClickHouse plans, skips, and runs for your query.',
         helpExplainIndexesDescription:
-            'Shows which data ClickHouse can skip. Use this to see if an index saves work.',
-        helpExplainPlanDescription:
-            'Shows the steps ClickHouse plans before the query runs. Use this to spot extra work.',
-        helpExplainPipelineDescription:
-            'Shows how ClickHouse splits work into steps that can run at the same time.',
-        helpExplainAnalyzeDescription:
-            'Runs the query and measures each step. Use this to find where the query is slow.',
+            'See whether an index can skip data and speed up this query.',
+        helpExplainPlanDescription: 'See what ClickHouse plans to do before it runs your query.',
+        helpExplainPipelineDescription: 'See which query steps can run at the same time.',
+        helpExplainAnalyzeDescription: 'See which query steps take the most time.',
         helpStorage: 'Storage',
         helpStorageDescription:
             'Explore MergeTree parts, live merges, and mutations from ClickHouse system metadata.',
@@ -427,12 +424,9 @@ export const copy = {
         queryTreeTruncatedWarning:
             'This query tree is large. The view shows a bounded set of analyzer nodes.',
         sqlFlowLogicalMode: 'Logical flow',
-        sqlFlowLogicalModeDescription:
-            'Shows the main steps in your query. Use it to see how those steps build the result.',
-        sqlFlowNativeAstDescription:
-            'Shows how ClickHouse breaks your SQL into parts. Use it to check how it reads your query.',
-        sqlFlowAnalyzerDescription:
-            'Shows which tables and columns ClickHouse found. Use it to check what the query reads.',
+        sqlFlowLogicalModeDescription: 'Follow each query step to see how it builds the result.',
+        sqlFlowNativeAstDescription: 'See how ClickHouse breaks your SQL into parts.',
+        sqlFlowAnalyzerDescription: 'Check which tables and columns ClickHouse will use.',
         sqlAstClickNode: 'Select a node to inspect its parser fields.',
         sqlAstGraphHint: 'Select a node to inspect it. Double-click to expand or collapse.',
         sqlAstUnavailable: 'Native AST is unavailable for this statement.',

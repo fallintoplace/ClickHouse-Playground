@@ -512,23 +512,7 @@
   .run-option-title {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
     line-height: 1;
-  }
-  .info-dot {
-    display: inline-flex;
-    width: 11px;
-    height: 11px;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid var(--muted);
-    border-radius: 50%;
-    color: var(--muted);
-    font-size: 7px;
-    font-weight: 700;
-    line-height: 1;
-    cursor: help;
   }
   .run-explain-actions .run-option-button:not(:disabled) {
     transform: none;

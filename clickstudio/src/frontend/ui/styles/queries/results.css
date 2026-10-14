@@ -69,10 +69,27 @@
     min-width: 0;
     gap: 1px;
   }
+  .results-title .results-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+  }
   .results-title h2 {
+    flex: none;
     margin: 0;
     font-size: var(--font-size-panel-title);
     font-weight: var(--font-weight-emphasis);
+    white-space: nowrap;
+  }
+  .results-title-description {
+    min-width: 0;
+    max-width: min(320px, 32vw);
+    overflow: hidden;
+    color: var(--text-soft);
+    font-size: 8px;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .results-title > .inline-flex {
     margin-left: 5px;
