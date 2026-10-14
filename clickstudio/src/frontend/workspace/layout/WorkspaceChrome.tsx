@@ -64,8 +64,13 @@ function RunActionLabel({
 
     return (
         <span className="run-option-content">
-            <span className="run-option-title">{label}</span>
-            <span id={descriptionId} className="run-option-description">
+            <span className="run-option-title">
+                {label}
+                <span className="info-dot" title={action.description} aria-hidden="true">
+                    i
+                </span>
+            </span>
+            <span id={descriptionId} className="sr-only">
                 {action.description}
             </span>
         </span>

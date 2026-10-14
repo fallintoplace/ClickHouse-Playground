@@ -104,11 +104,15 @@ export const copy = {
         helpGeoDescription:
             'Explore a 20-city hotspot map, flight paths, and delivery zones with native ClickHouse geometry.',
         helpExplain: 'EXPLAIN',
-        helpExplainDescription: 'See the steps ClickHouse plans and how long your query takes.',
-        helpExplainIndexesDescription: 'See which data ClickHouse can skip.',
-        helpExplainPlanDescription: 'See the steps ClickHouse plans to run.',
-        helpExplainPipelineDescription: 'See how ClickHouse splits the work.',
-        helpExplainAnalyzeDescription: 'Run the query and see where time is spent.',
+        helpExplainDescription: 'Learn what ClickHouse plans, skips, and runs for your query.',
+        helpExplainIndexesDescription:
+            'Shows which data ClickHouse can skip. Use this to see if an index saves work.',
+        helpExplainPlanDescription:
+            'Shows the steps ClickHouse plans before the query runs. Use this to spot extra work.',
+        helpExplainPipelineDescription:
+            'Shows how ClickHouse splits work into steps that can run at the same time.',
+        helpExplainAnalyzeDescription:
+            'Runs the query and measures each step. Use this to find where the query is slow.',
         helpStorage: 'Storage',
         helpStorageDescription:
             'Explore MergeTree parts, live merges, and mutations from ClickHouse system metadata.',
@@ -423,9 +427,12 @@ export const copy = {
         queryTreeTruncatedWarning:
             'This query tree is large. The view shows a bounded set of analyzer nodes.',
         sqlFlowLogicalMode: 'Logical flow',
-        sqlFlowLogicalModeDescription: 'Follow the main steps in your query.',
-        sqlFlowNativeAstDescription: 'See how ClickHouse reads your SQL.',
-        sqlFlowAnalyzerDescription: 'Check which tables and columns your query uses.',
+        sqlFlowLogicalModeDescription:
+            'Shows the main steps in your query. Use it to see how those steps build the result.',
+        sqlFlowNativeAstDescription:
+            'Shows how ClickHouse breaks your SQL into parts. Use it to check how it reads your query.',
+        sqlFlowAnalyzerDescription:
+            'Shows which tables and columns ClickHouse found. Use it to check what the query reads.',
         sqlAstClickNode: 'Select a node to inspect its parser fields.',
         sqlAstGraphHint: 'Select a node to inspect it. Double-click to expand or collapse.',
         sqlAstUnavailable: 'Native AST is unavailable for this statement.',

@@ -475,7 +475,7 @@
   .run-explain-actions {
     display: grid;
     min-width: 0;
-    width: 176px;
+    width: 100%;
     max-width: 100%;
     flex: none;
     grid-template-columns: minmax(0, 1fr);
@@ -492,9 +492,9 @@
   }
   .run-explain-actions .run-option-button {
     width: 100%;
-    min-height: 38px;
+    min-height: 26px;
     justify-content: flex-start;
-    padding: 5px 8px;
+    padding: 0 8px;
     border: 1px solid var(--line);
     border-radius: var(--radius-compact);
     background: var(--panel-raised);
@@ -505,26 +505,30 @@
     box-shadow: none;
   }
   .run-option-content {
-    display: flex;
-    width: 100%;
+    display: inline-flex;
     min-width: 0;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 3px;
-    text-align: left;
+    align-items: center;
   }
   .run-option-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     line-height: 1;
   }
-  .run-option-description {
+  .info-dot {
+    display: inline-flex;
+    width: 11px;
+    height: 11px;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--muted);
+    border-radius: 50%;
     color: var(--muted);
     font-size: 7px;
-    font-weight: 400;
-    letter-spacing: normal;
-    line-height: 1.25;
-    text-align: left;
-    text-transform: none;
-    white-space: normal;
+    font-weight: 700;
+    line-height: 1;
+    cursor: help;
   }
   .run-explain-actions .run-option-button:not(:disabled) {
     transform: none;
