@@ -1674,7 +1674,9 @@ test('Native parser can be retried after a temporary worker failure', async ({ p
     await retry.click();
     await page.setViewportSize({ width: 1440, height: 900 });
     await openWorkspacePanel(page, 'parser');
-    await expect(page.getByText('Ready · local WebAssembly', { exact: true })).toBeVisible();
+    await expect(
+        page.getByRole('status', { name: 'ClickHouse native parser: Ready' }),
+    ).toBeVisible();
     await expect
         .poll(() => page.evaluate(() => Number(window.__parserParseCount ?? 0)))
         .toBeGreaterThan(0);
@@ -1879,7 +1881,9 @@ test('Failed async formatting does not overwrite edits typed while it was pendin
     await trust(page);
     await replaceSql(page, 'select old_value from old_table');
     await openWorkspacePanel(page, 'parser');
-    await expect(page.getByText('Ready · local WebAssembly', { exact: true })).toBeVisible();
+    await expect(
+        page.getByRole('status', { name: 'ClickHouse native parser: Ready' }),
+    ).toBeVisible();
     await page.getByTestId('format-sql').click();
     await expect.poll(() => page.evaluate(() => Boolean(window.__pendingParserFormat))).toBe(true);
     await replaceSql(page, 'select new_value from new_table');
@@ -1898,7 +1902,9 @@ test('Experimental formatting preserves SQL comments when native formatting fall
         .poll(() => page.evaluate(() => Number(window.__parserParseCount ?? 0)))
         .toBeGreaterThan(0);
     await openWorkspacePanel(page, 'parser');
-    await expect(page.getByText('Ready · local WebAssembly', { exact: true })).toBeVisible();
+    await expect(
+        page.getByRole('status', { name: 'ClickHouse native parser: Ready' }),
+    ).toBeVisible();
     await page.getByTestId('format-sql').click();
     await expect(page.locator('.cm-content .cm-line')).toHaveText([
         '-- keep this comment',

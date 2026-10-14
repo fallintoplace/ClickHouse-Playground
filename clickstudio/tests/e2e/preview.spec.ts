@@ -348,8 +348,11 @@ test('Static production preview loads the native parser and exports retained sam
     expect(Array.from((await wasmResponse.body()).subarray(0, 4))).toEqual([0, 97, 115, 109]);
 
     await openWorkspacePanel(page, 'parser');
-    await expect(page.getByText('Ready · local WebAssembly')).toBeVisible();
-    await expect(page.getByText('Valid ClickHouse SQL')).toBeVisible();
+    await expect(
+        page.getByRole('status', { name: 'ClickHouse native parser: Ready' }),
+    ).toBeVisible();
+    await expect(page.getByRole('status', { name: 'SQL lexer: ClickHouse ready' })).toBeVisible();
+    await expect(page.getByText('Syntax valid')).toBeVisible();
 
     await page.getByRole('button', { name: 'More workspace panels' }).click();
     await page.getByRole('menuitem', { name: 'Reference' }).click();

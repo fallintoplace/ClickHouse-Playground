@@ -29,9 +29,9 @@ export function NativeParserInspector({ status, snapshot, onRetry }: Props) {
     const getParserStatusLabel = () => {
         switch (status) {
             case 'ready':
-                return 'Ready · local WebAssembly';
+                return 'Ready';
             case 'loading':
-                return 'Loading parser…';
+                return 'Loading';
             default:
                 return 'Unavailable';
         }
@@ -43,36 +43,62 @@ export function NativeParserInspector({ status, snapshot, onRetry }: Props) {
             aria-label="ClickHouse parser details"
         >
             <div className={cx('parser-status-card', `parser-status-${status}`)}>
-                <div className="parser-status-main">
-                    <span className={cx('status-light', getParserTone())} aria-hidden="true" />
-                    <div>
+                <div
+                    className="parser-status-main"
+                    role="status"
+                    aria-label={`ClickHouse native parser: ${getParserStatusLabel()}`}
+                >
+                    <div className="parser-status-copy">
                         <strong>ClickHouse native parser</strong>
-                        <small>{getParserStatusLabel()}</small>
+                        <small>Local WebAssembly</small>
+                    </div>
+                    <div className="parser-status-meta">
+                        <span className={cx('parser-status-state', getParserTone())}>
+                            <span
+                                className={cx('status-light', getParserTone())}
+                                aria-hidden="true"
+                            />
+                            {getParserStatusLabel()}
+                        </span>
+                        {snapshot && (
+                            <span
+                                className="parser-duration"
+                                aria-label={`Native parser time: ${snapshot.elapsedMs.toFixed(1)} ms`}
+                            >
+                                {snapshot.elapsedMs.toFixed(1)} ms
+                            </span>
+                        )}
+                        {status === 'unavailable' && (
+                            <Button variant="ghost" className="toolbar-small" onClick={onRetry}>
+                                Retry
+                            </Button>
+                        )}
                     </div>
                 </div>
-                {snapshot && (
-                    <span className="parser-duration">{snapshot.elapsedMs.toFixed(1)} ms</span>
-                )}
-                {status === 'unavailable' && (
-                    <Button variant="ghost" className="toolbar-small" onClick={onRetry}>
-                        Retry
-                    </Button>
-                )}
                 <div
                     className="parser-lexer-status"
                     role="status"
                     aria-label={`SQL lexer: ${nativeLexerReady ? 'ClickHouse ready' : 'fallback active'}`}
                 >
+                    <div className="parser-status-copy">
+                        <strong>SQL lexer</strong>
+                        <small>{nativeLexerReady ? 'ClickHouse' : 'Fallback'}</small>
+                    </div>
                     <span
                         className={cx(
-                            'status-light',
+                            'parser-status-state',
                             nativeLexerReady ? 'is-trusted' : 'is-warning',
                         )}
-                        aria-hidden="true"
-                    />
-                    <span>SQL lexer</span>
-                    <strong>{nativeLexerReady ? 'ClickHouse' : 'Fallback'}</strong>
-                    <small>{nativeLexerReady ? 'Ready' : 'Active'}</small>
+                    >
+                        <span
+                            className={cx(
+                                'status-light',
+                                nativeLexerReady ? 'is-trusted' : 'is-warning',
+                            )}
+                            aria-hidden="true"
+                        />
+                        {nativeLexerReady ? 'Ready' : 'Fallback active'}
+                    </span>
                 </div>
             </div>
 
@@ -126,7 +152,7 @@ export function NativeParserInspector({ status, snapshot, onRetry }: Props) {
                             key={`${statement.from}-${index}`}
                         >
                             <header className="parser-statement-heading">
-                                <span>STATEMENT {index + 1}</span>
+                                <span>Statement {index + 1}</span>
                                 <span
                                     className={cx(
                                         'parser-validity',
@@ -134,7 +160,7 @@ export function NativeParserInspector({ status, snapshot, onRetry }: Props) {
                                     )}
                                 >
                                     <span className="status-light" />
-                                    {result.error ? 'Invalid SQL' : 'Valid ClickHouse SQL'}
+                                    {result.error ? 'Syntax error' : 'Syntax valid'}
                                 </span>
                             </header>
                             {result.error ? (
@@ -142,7 +168,7 @@ export function NativeParserInspector({ status, snapshot, onRetry }: Props) {
                                     <strong>{result.error.message}</strong>
                                     {result.error.expected?.length ? (
                                         <div className="parser-expected">
-                                            <span>EXPECTED</span>
+                                            <span>Expected</span>
                                             <div>
                                                 {result.error.expected.slice(0, 12).map(token => (
                                                     <code key={token}>{token}</code>
@@ -159,15 +185,15 @@ export function NativeParserInspector({ status, snapshot, onRetry }: Props) {
                             ) : (
                                 <dl className="parser-facts">
                                     <div>
-                                        <dt>Statement</dt>
+                                        <dt>AST type</dt>
                                         <dd>{astType ?? 'Parsed successfully'}</dd>
                                     </div>
                                     <div>
-                                        <dt>Native tokens</dt>
+                                        <dt>Syntax highlights</dt>
                                         <dd>{result.highlights?.length ?? 0}</dd>
                                     </div>
                                     <div>
-                                        <dt>AST JSON</dt>
+                                        <dt>AST data</dt>
                                         <dd>
                                             {astJson
                                                 ? 'Available'
@@ -179,7 +205,7 @@ export function NativeParserInspector({ status, snapshot, onRetry }: Props) {
                             )}
                             {functions.length > 0 && (
                                 <div className="parser-functions">
-                                    <span>FUNCTIONS</span>
+                                    <span>Functions</span>
                                     <div>
                                         {functions.slice(0, 20).map(name => (
                                             <code key={name}>{name}</code>
@@ -193,7 +219,7 @@ export function NativeParserInspector({ status, snapshot, onRetry }: Props) {
                             {astPreview && (
                                 <details className="parser-ast">
                                     <summary>
-                                        <span>View native AST</span>
+                                        <span>View AST</span>
                                         <code>JSON</code>
                                     </summary>
                                     <pre>{astPreview}</pre>

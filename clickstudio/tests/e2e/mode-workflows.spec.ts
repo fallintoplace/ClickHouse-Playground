@@ -255,7 +255,9 @@ test('Experimental Format stays available while WASM loads', async ({ page }) =>
         ]);
         releaseParser();
         await openWorkspacePanel(page, 'parser');
-        await expect(page.getByText('Ready · local WebAssembly', { exact: true })).toBeVisible();
+        await expect(
+            page.getByRole('status', { name: 'ClickHouse native parser: Ready' }),
+        ).toBeVisible();
     } finally {
         releaseParser();
     }

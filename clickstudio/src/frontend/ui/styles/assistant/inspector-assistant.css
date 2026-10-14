@@ -217,68 +217,85 @@
   }
   .parser-status-card {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     min-width: 0;
     align-items: center;
-    gap: 9px 10px;
-    padding: 11px;
+    gap: 0;
+    padding: 2px 12px;
     border: 1px solid var(--line);
     border-radius: var(--radius-panel);
     background: var(--panel-raised);
   }
-  .parser-status-main {
-    display: flex;
+  .parser-status-main,
+  .parser-lexer-status {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     min-width: 0;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
   }
-  .parser-status-main > div {
+  .parser-status-main {
+    min-height: 44px;
+  }
+  .parser-status-copy {
     display: grid;
     min-width: 0;
-    flex: 1;
     gap: 3px;
   }
-  .parser-status-main strong {
+  .parser-status-copy strong {
     color: var(--text-soft);
-    font-size: 10px;
+    font-size: 11px;
+    line-height: 1.35;
   }
-  .parser-status-main small,
+  .parser-status-copy small,
   .parser-duration {
     color: var(--muted);
-    font-size: 8px;
+    font-size: 9px;
+    line-height: 1.4;
+  }
+  .parser-status-meta {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+  .parser-status-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 9px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .parser-status-state.is-trusted {
+    color: var(--green);
+  }
+  .parser-status-state.is-warning {
+    color: var(--amber);
+  }
+  .parser-status-state.is-running {
+    color: var(--accent);
+  }
+  .parser-status-state .status-light {
+    width: 7px;
+    height: 7px;
+  }
+  .parser-duration {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
   .parser-lexer-status {
-    display: flex;
     grid-column: 1 / -1;
-    min-width: 0;
-    align-items: center;
-    gap: 7px;
+    min-height: 40px;
     padding-top: 8px;
     border-top: 1px solid var(--line);
-    color: var(--muted);
-    font-size: 8px;
-  }
-  .parser-lexer-status .status-light {
-    width: 6px;
-    height: 6px;
-  }
-  .parser-lexer-status strong {
-    margin-left: auto;
-    color: var(--text-soft);
-    font-family: var(--font-mono);
-    font-size: 8px;
-    font-weight: 560;
-  }
-  .parser-lexer-status small {
-    color: var(--muted);
-    font-size: 8px;
   }
   .parser-statement-card {
     display: grid;
     align-content: start;
-    gap: 10px;
+    gap: 11px;
     min-width: 0;
-    padding: 11px;
+    padding: 12px;
     border: 1px solid var(--line);
     border-radius: var(--radius-panel);
     background: var(--panel);
@@ -289,15 +306,16 @@
     justify-content: space-between;
     gap: 8px;
     color: var(--muted);
-    font-size: 7px;
-    font-weight: 750;
-    letter-spacing: 0.12em;
+    font-size: 9px;
+    font-weight: 650;
+    letter-spacing: 0.02em;
   }
   .parser-validity {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    letter-spacing: 0.02em;
+    font-size: 10px;
+    font-weight: 600;
     text-transform: none;
   }
   .parser-validity.is-valid {
@@ -307,8 +325,8 @@
     color: var(--red);
   }
   .parser-validity .status-light {
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
     background: var(--green);
     color: var(--green);
   }
@@ -319,7 +337,7 @@
   }
   .parser-facts {
     display: grid;
-    gap: 7px;
+    gap: 8px;
     margin: 0;
   }
   .parser-facts > div {
@@ -330,7 +348,8 @@
   .parser-facts dt,
   .parser-facts dd {
     margin: 0;
-    font-size: 8px;
+    font-size: 9px;
+    line-height: 1.4;
   }
   .parser-facts dt {
     color: var(--muted);
@@ -349,9 +368,9 @@
   .parser-functions > span,
   .parser-expected > span {
     color: var(--muted);
-    font-size: 7px;
-    font-weight: 750;
-    letter-spacing: 0.12em;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
   }
   .parser-functions > div,
   .parser-expected > div {
@@ -361,19 +380,19 @@
   }
   .parser-functions code,
   .parser-expected code {
-    padding: 4px 6px;
+    padding: 4px 7px;
     border: 1px solid var(--line);
     border-radius: var(--radius-label);
     background: var(--page-raised);
     color: var(--accent);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: 9px;
   }
   .parser-functions small,
   .parser-expected small {
     align-self: center;
     color: var(--muted);
-    font-size: 8px;
+    font-size: 9px;
   }
   .parser-error {
     display: grid;
@@ -395,14 +414,14 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding: 9px 0 3px;
+    padding: 10px 0 3px;
     color: var(--text-soft);
-    font-size: 9px;
+    font-size: 10px;
     cursor: pointer;
   }
   .parser-ast summary code {
     color: var(--muted);
-    font-size: 7px;
+    font-size: 8px;
   }
   .parser-ast pre {
     max-height: 420px;
@@ -414,14 +433,14 @@
     background: var(--page);
     color: var(--text-soft);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: 9px;
     line-height: 1.55;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
   .parser-ast > small {
     color: var(--muted);
-    font-size: 7px;
+    font-size: 8px;
   }
   .inspector-section:has(> .inspector-empty) {
     display: flex;
