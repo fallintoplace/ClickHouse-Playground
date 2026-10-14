@@ -249,80 +249,93 @@ export function PipelineGraph({
     const title = graphTitle(graphKind, runtime, pipeline.source, terminology);
     const description = graphDescription(graphKind, runtime, pipeline.source, copy);
     const truncationMessage = graphTruncationMessage(graphKind, copy);
+    const subheadingText = subheading ?? description;
+    const graphHeading =
+        graphKind !== 'explain-plan' ? (
+            <div className="pipeline-graph-heading">
+                <div>
+                    <span className="eyebrow">{heading ?? title}</span>
+                    <strong>
+                        {(graphKind === 'index-analysis'
+                            ? pipeline.nodes.filter(node => node.kind === 'filter').length
+                            : pipeline.nodes.length
+                        ).toLocaleString()}{' '}
+                        {terminology.item} <i>·</i> {pipeline.edges.length.toLocaleString()}{' '}
+                        {connectionLabel}
+                    </strong>
+                </div>
+                {subheadingText && <small>{subheadingText}</small>}
+            </div>
+        ) : null;
+    const graphControls = (
+        <div
+            className="pipeline-graph-controls"
+            role="group"
+            aria-label={copy?.pipelineZoomControls ?? 'Graph view controls'}
+        >
+            <button
+                type="button"
+                aria-label={copy?.pipelineZoomOut ?? 'Zoom out'}
+                title={copy?.pipelineZoomOut ?? 'Zoom out'}
+                disabled={zoom <= 0.02}
+                onClick={() => zoomTo(Math.max(0.02, zoom / 1.2))}
+            >
+                −
+            </button>
+            <output aria-label={copy?.pipelineZoomLevel ?? 'Zoom level'}>
+                {Math.round(zoom * 100)}%
+            </output>
+            <button
+                type="button"
+                aria-label={copy?.pipelineZoomIn ?? 'Zoom in'}
+                title={copy?.pipelineZoomIn ?? 'Zoom in'}
+                disabled={zoom >= 2.5}
+                onClick={() => zoomTo(Math.min(2.5, zoom * 1.2))}
+            >
+                +
+            </button>
+            <button
+                type="button"
+                className="pipeline-control-action pipeline-focus-node"
+                aria-label={copy?.pipelineFocusNode ?? 'Focus node'}
+                title={copy?.pipelineFocusNode ?? 'Focus node'}
+                onClick={focusSelectedNode}
+            >
+                <Icon name="focus" />
+                <span>{copy?.pipelineFocusNode ?? 'Focus node'}</span>
+            </button>
+            <button
+                type="button"
+                className="pipeline-control-action pipeline-zoom-fit"
+                aria-label={copy?.pipelineFit ?? 'Fit graph'}
+                title={copy?.pipelineFit ?? 'Fit graph'}
+                onClick={fitGraph}
+            >
+                <Icon name="fit" />
+                <span>{copy?.pipelineFit ?? 'Fit graph'}</span>
+            </button>
+        </div>
+    );
     return (
         <div
-            className={`pipeline-graph-card grid gap-3 rounded-xl border p-3${runtime ? ' is-runtime-graph' : ''}`}
+            className={`pipeline-graph-card grid ${graphKind === 'sql-flow' ? 'gap-2 is-sql-flow-graph' : 'gap-3'} rounded-xl border p-3${runtime ? ' is-runtime-graph' : ''}`}
             role="group"
             aria-label={terminology.graph}
         >
-            {graphKind !== 'explain-plan' && (
-                <div className="pipeline-graph-heading">
-                    <div>
-                        <span className="eyebrow">{heading ?? title}</span>
-                        <strong>
-                            {(graphKind === 'index-analysis'
-                                ? pipeline.nodes.filter(node => node.kind === 'filter').length
-                                : pipeline.nodes.length
-                            ).toLocaleString()}{' '}
-                            {terminology.item} <i>·</i> {pipeline.edges.length.toLocaleString()}{' '}
-                            {connectionLabel}
-                        </strong>
-                    </div>
-                    <small>{subheading ?? description}</small>
+            {graphKind === 'sql-flow' ? (
+                <div className="pipeline-graph-toolbar">
+                    {graphHeading}
+                    {graphControls}
                 </div>
+            ) : (
+                graphHeading
             )}
             {pipeline.truncated && graphKind !== 'explain-plan' && (
                 <p className="pipeline-graph-warning" role="status">
                     {truncationMessage}
                 </p>
             )}
-            <div
-                className="pipeline-graph-controls"
-                role="group"
-                aria-label={copy?.pipelineZoomControls ?? 'Graph view controls'}
-            >
-                <button
-                    type="button"
-                    aria-label={copy?.pipelineZoomOut ?? 'Zoom out'}
-                    title={copy?.pipelineZoomOut ?? 'Zoom out'}
-                    disabled={zoom <= 0.02}
-                    onClick={() => zoomTo(Math.max(0.02, zoom / 1.2))}
-                >
-                    −
-                </button>
-                <output aria-label={copy?.pipelineZoomLevel ?? 'Zoom level'}>
-                    {Math.round(zoom * 100)}%
-                </output>
-                <button
-                    type="button"
-                    aria-label={copy?.pipelineZoomIn ?? 'Zoom in'}
-                    title={copy?.pipelineZoomIn ?? 'Zoom in'}
-                    disabled={zoom >= 2.5}
-                    onClick={() => zoomTo(Math.min(2.5, zoom * 1.2))}
-                >
-                    +
-                </button>
-                <button
-                    type="button"
-                    className="pipeline-control-action pipeline-focus-node"
-                    aria-label={copy?.pipelineFocusNode ?? 'Focus node'}
-                    title={copy?.pipelineFocusNode ?? 'Focus node'}
-                    onClick={focusSelectedNode}
-                >
-                    <Icon name="focus" />
-                    <span>{copy?.pipelineFocusNode ?? 'Focus node'}</span>
-                </button>
-                <button
-                    type="button"
-                    className="pipeline-control-action pipeline-zoom-fit"
-                    aria-label={copy?.pipelineFit ?? 'Fit graph'}
-                    title={copy?.pipelineFit ?? 'Fit graph'}
-                    onClick={fitGraph}
-                >
-                    <Icon name="fit" />
-                    <span>{copy?.pipelineFit ?? 'Fit graph'}</span>
-                </button>
-            </div>
+            {graphKind !== 'sql-flow' && graphControls}
             {renderPipelineGraphViewport({
                 setGraphViewport,
                 viewportLabel,

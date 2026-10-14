@@ -16,7 +16,11 @@ import { ExplainAnalyzeView } from '../inspection/performance/ExplainAnalyzeView
 import { ExplainIndexesView } from '../inspection/plans/ExplainIndexesView';
 import { ExplainPlanView } from '../inspection/plans/ExplainPlanView';
 import { PipelineGraph } from '../inspection/diagrams/PipelineGraph';
-import { SqlFlowView } from '../inspection/diagrams/SqlFlowView';
+import {
+    SqlFlowModeTabs,
+    SqlFlowView,
+    type StructureView,
+} from '../inspection/diagrams/SqlFlowView';
 import { Button, cx, Spinner } from '../../ui/components/primitives';
 import { Icon } from '../../ui/components/icons';
 import { ScriptResultsSelector, ScriptRunningResults } from './ScriptResultsSelector';
@@ -79,6 +83,7 @@ export function WorkspaceResultsPanel({
 }) {
     const [tableToolbar, setTableToolbar] = useState<HTMLDivElement | null>(null);
     const [tableRowCount, setTableRowCount] = useState<HTMLSpanElement | null>(null);
+    const [structureMode, setStructureMode] = useState<StructureView>('flow');
     const {
         copy,
         run,
@@ -153,6 +158,8 @@ export function WorkspaceResultsPanel({
                 actions,
                 viewState,
                 state,
+                structureMode,
+                onStructureModeChange: setStructureMode,
             })}
             <WorkspaceInlineNotice feedback={state.readFeedback} onRetry={actions.onRetryRead} />
             {runningScript && visibleResultsView === 'results' && !panels.resultsCollapsed && (
@@ -188,6 +195,7 @@ export function WorkspaceResultsPanel({
                         rowsUnavailable={rowsUnavailable}
                         tableToolbar={tableToolbar}
                         tableRowCount={tableRowCount}
+                        structureMode={structureMode}
                     />
                 )}
             </ScrollEdgeFrame>
@@ -212,6 +220,7 @@ type WorkspaceResultsBodyProps = {
     rowsUnavailable: boolean;
     tableToolbar: HTMLDivElement | null;
     tableRowCount: HTMLSpanElement | null;
+    structureMode: StructureView;
 };
 
 function WorkspaceResultsBody({
@@ -231,6 +240,7 @@ function WorkspaceResultsBody({
     rowsUnavailable,
     tableToolbar,
     tableRowCount,
+    structureMode,
 }: WorkspaceResultsBodyProps) {
     const {
         active,
@@ -277,6 +287,9 @@ function WorkspaceResultsBody({
                     parameters={active.parameters}
                     analyzerAvailable={queryTreeAvailable}
                     analyzerUnavailableReason={queryTreeUnavailableReason}
+                    mode={structureMode}
+                    showHeading={false}
+                    showModeTabs={false}
                     onRevealRange={actions.onRevealRange}
                 />
             )}
@@ -578,6 +591,8 @@ function renderResultsHeader({
     actions,
     viewState,
     state,
+    structureMode,
+    onStructureModeChange,
 }: {
     showFailure: boolean;
     setTableToolbar: import('react').Dispatch<
@@ -591,6 +606,8 @@ function renderResultsHeader({
     actions: WorkspaceResultsPanelActions;
     viewState: WorkspaceViewState;
     state: WorkspaceResultsPanelState;
+    structureMode: StructureView;
+    onStructureModeChange: (mode: StructureView) => void;
 }) {
     const {
         visibleResultsView,
@@ -638,6 +655,17 @@ function renderResultsHeader({
                         <h2>{resultsTitle}</h2>
                     </div>
                 )}
+                {visibleResultsView === 'sqlmap' && (
+                    <SqlFlowModeTabs
+                        copy={copy.common}
+                        mode={structureMode}
+                        onModeChange={onStructureModeChange}
+                        parseResult={viewState.sqlMapParseStatement?.result}
+                        parserStatus={state.nativeParserStatus}
+                        analyzerAvailable={viewState.queryTreeAvailable}
+                        analyzerUnavailableReason={viewState.queryTreeUnavailableReason}
+                    />
+                )}
                 {queryCard}
                 <span
                     ref={setTableRowCount}
@@ -674,7 +702,10 @@ function renderResultsHeader({
                                 role="tab"
                                 aria-selected={visibleResultsView === tab}
                                 type="button"
-                                onClick={() => actions.onSelectView(tab)}
+                                onClick={() => {
+                                    if (tab !== 'sqlmap') onStructureModeChange('flow');
+                                    actions.onSelectView(tab);
+                                }}
                             >
                                 {resultsTabLabel(tab, copy.common)}
                             </button>

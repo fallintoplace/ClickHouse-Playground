@@ -39,13 +39,12 @@ for (const theme of ['Dark', 'Light'])
         await expect(page.locator('.sql-flow-view')).toHaveCount(0);
         await button.click();
         const structure = page.locator('.sql-flow-view');
+        const modes = page.locator('.results-title .sql-flow-mode-tabs');
         await expect(structure).toBeVisible();
         await expect(
-            structure.getByRole('button', { name: 'Logical flow', exact: true }),
+            modes.getByRole('button', { name: 'Logical flow', exact: true }),
         ).toHaveAttribute('aria-pressed', 'true');
-        await expect(
-            structure.getByRole('button', { name: 'Analyzer', exact: true }),
-        ).toBeDisabled();
+        await expect(modes.getByRole('button', { name: 'Analyzer', exact: true })).toBeDisabled();
         for (const width of [1440, 900]) {
             await page.setViewportSize({ width, height: 900 });
             await expect(button).toBeVisible();
@@ -131,9 +130,10 @@ test('SQL Map requests server analysis only after choosing Analyzer', async ({ p
     });
     await page.getByTestId('run-action-sql-map').click();
     const structure = page.locator('.sql-flow-view');
+    const modes = page.locator('.results-title .sql-flow-mode-tabs');
     await expect(structure).toBeVisible();
     expect(requests).toEqual([]);
-    await structure.getByRole('button', { name: 'Analyzer', exact: true }).click();
+    await modes.getByRole('button', { name: 'Analyzer', exact: true }).click();
     await expect(structure.locator('[data-query-tree-type="QUERY"]')).toBeVisible();
     expect(requests).toEqual(['/api/connections/demo/query-tree']);
 });

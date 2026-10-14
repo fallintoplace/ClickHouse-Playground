@@ -1772,29 +1772,19 @@ test('SQL structure switches from logical flow to native AST', async ({ page }) 
 
     await page.getByTestId('run-action-sql-map').click();
     const structure = page.locator('.sql-flow-view');
-    const flow = structure.getByRole('button', { name: 'Logical flow', exact: true });
-    const nativeAst = structure.getByRole('button', { name: 'Native AST', exact: true });
+    const modes = page.locator('.results-title .sql-flow-mode-tabs');
+    const flow = modes.getByRole('button', { name: 'Logical flow', exact: true });
+    const nativeAst = modes.getByRole('button', { name: 'Native AST', exact: true });
     await expect(flow).toHaveAttribute('aria-pressed', 'true');
+    await expect(modes).toBeVisible();
+    await expect(structure.locator('.sql-flow-mode-tabs')).toHaveCount(0);
+    await expect(structure.locator('.sql-flow-heading')).toHaveCount(0);
     await expect(structure.locator('.pipeline-node-face').first()).toHaveCSS('rx', '4px');
     await expect(structure.locator('.pipeline-node-shadow').first()).toHaveCSS('rx', '4px');
     await expect(nativeAst).toBeEnabled();
-    await expect(structure.locator('.sql-flow-heading p')).toHaveText(
-        'Click a stage to jump to its SQL.',
-    );
-    await expect(structure.locator('.sql-flow-heading')).not.toContainText(
-        'not a server execution plan',
-    );
-    const headingHeight = await structure
-        .locator('.sql-flow-heading')
-        .evaluate(element => element.getBoundingClientRect().height);
-    expect(headingHeight).toBeLessThan(64);
 
     await nativeAst.click();
     await expect(nativeAst).toHaveAttribute('aria-pressed', 'true');
-    await expect(structure.locator('.sql-flow-heading p')).toHaveText(
-        'Select a node to inspect its parser fields.',
-    );
-    await expect(structure.locator('.sql-flow-heading')).not.toContainText('server execution plan');
     await expect(structure.locator('[data-ast-node-type="SelectWithUnionQuery"]')).toBeVisible();
     await expect(structure.locator('.ast-graph-node rect').first()).toHaveCSS('rx', '4px');
     const selectList = structure.locator(
@@ -1830,13 +1820,12 @@ test('SQL structure loads the server analyzer tree', async ({ page }) => {
     await runButton(page).click();
     await page.getByRole('tab', { name: 'SQL map', exact: true }).click();
     const structure = page.locator('.sql-flow-view');
-    const analyzer = structure.getByRole('button', { name: 'Analyzer', exact: true });
+    const modes = page.locator('.results-title .sql-flow-mode-tabs');
+    const analyzer = modes.getByRole('button', { name: 'Analyzer', exact: true });
     await expect(analyzer).toBeEnabled();
     await analyzer.click();
     await expect(analyzer).toHaveAttribute('aria-pressed', 'true');
-    await expect(structure.locator('.sql-flow-heading p')).toHaveText(
-        'Select a node to inspect resolved analyzer fields.',
-    );
+    await expect(structure.locator('.sql-flow-heading')).toHaveCount(0);
     await expect(structure.locator('[data-query-tree-type="QUERY"]')).toBeVisible();
     await expect(structure.locator('.ast-graph-node rect').first()).toHaveCSS('rx', '4px');
     const table = structure.locator('[data-query-tree-type="TABLE"]');
@@ -1845,7 +1834,7 @@ test('SQL structure loads the server analyzer tree', async ({ page }) => {
     await expect(structure.locator('.query-tree-node-inspector')).toContainText('demo.events');
     await structure.getByRole('button', { name: 'Zoom in', exact: true }).click();
     await expect(structure.getByLabel('Zoom level', { exact: true })).toHaveText('120%');
-    await structure.getByRole('button', { name: 'Logical flow', exact: true }).click();
+    await modes.getByRole('button', { name: 'Logical flow', exact: true }).click();
     await analyzer.click();
     await expect(structure.getByLabel('Zoom level', { exact: true })).toHaveText('120%');
     await expect(structure.locator('.query-tree-node-inspector')).toContainText('demo.events');
@@ -3289,7 +3278,10 @@ for (const outcome of ['failed', 'pending'] as const) {
             await runButton(page).click();
             await page.getByRole('tab', { name: 'SQL map', exact: true }).click();
             const structure = page.locator('.sql-flow-view');
-            await structure.getByRole('button', { name: 'Analyzer', exact: true }).click();
+            await page
+                .locator('.results-title .sql-flow-mode-tabs')
+                .getByRole('button', { name: 'Analyzer', exact: true })
+                .click();
             const table = structure.locator('[data-query-tree-type="TABLE"]');
             await expect(table).toContainText('demo.events');
             await replaceSql(page, secondSql);

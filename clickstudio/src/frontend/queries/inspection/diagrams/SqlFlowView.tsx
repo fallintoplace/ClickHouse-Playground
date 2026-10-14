@@ -7,7 +7,86 @@ import { PipelineGraph } from './PipelineGraph';
 import { ScrollEdgeFrame } from '../../../ui/components/ScrollEdgeShadows';
 import type { Copy } from '../../../ui/copy';
 
-type StructureView = 'flow' | 'ast' | 'analyzer';
+export type StructureView = 'flow' | 'ast' | 'analyzer';
+
+export type SqlFlowModeTabsProps = {
+    copy: Copy['common'];
+    mode: StructureView;
+    onModeChange: (mode: StructureView) => void;
+    parseResult?: NativeParseResult;
+    parserStatus: NativeParserStatus;
+    analyzerAvailable: boolean;
+    analyzerUnavailableReason?: string;
+};
+
+function nativeAstAvailability(
+    copy: Copy['common'],
+    parserStatus: NativeParserStatus,
+    parseResult: NativeParseResult | undefined,
+) {
+    const available = Boolean(parserStatus === 'ready' && !parseResult?.error && parseResult?.ast);
+    let unavailableReason: string;
+
+    switch (parserStatus) {
+        case 'loading':
+            unavailableReason = copy.sqlFlowParserStarting;
+            break;
+        case 'unavailable':
+            unavailableReason = copy.sqlFlowParserUnavailable;
+            break;
+        default:
+            unavailableReason =
+                parseResult?.error?.message ?? parseResult?.ast_error ?? copy.sqlAstUnavailable;
+            break;
+    }
+
+    return { available, unavailableReason };
+}
+
+export function SqlFlowModeTabs({
+    copy,
+    mode,
+    onModeChange,
+    parseResult,
+    parserStatus,
+    analyzerAvailable,
+    analyzerUnavailableReason,
+}: SqlFlowModeTabsProps) {
+    const ast = nativeAstAvailability(copy, parserStatus, parseResult);
+
+    return (
+        <div className="sql-flow-mode-tabs" role="group" aria-label={copy.sqlStructure}>
+            <button
+                type="button"
+                aria-pressed={mode === 'flow'}
+                className={mode === 'flow' ? 'is-active' : ''}
+                onClick={() => onModeChange('flow')}
+            >
+                {copy.sqlFlowLogicalMode}
+            </button>
+            <button
+                type="button"
+                aria-pressed={mode === 'ast'}
+                className={mode === 'ast' ? 'is-active' : ''}
+                disabled={!ast.available && mode !== 'ast'}
+                title={!ast.available ? ast.unavailableReason : copy.sqlFlowNativeAst}
+                onClick={() => onModeChange('ast')}
+            >
+                {copy.sqlFlowNativeAst}
+            </button>
+            <button
+                type="button"
+                aria-pressed={mode === 'analyzer'}
+                className={mode === 'analyzer' ? 'is-active' : ''}
+                disabled={!analyzerAvailable}
+                title={!analyzerAvailable ? analyzerUnavailableReason : copy.queryTreeGraphHint}
+                onClick={() => onModeChange('analyzer')}
+            >
+                {copy.sqlFlowAnalyzer}
+            </button>
+        </div>
+    );
+}
 
 export type SqlFlowViewProps = {
     copy: Copy['common'];
@@ -20,6 +99,10 @@ export type SqlFlowViewProps = {
     parseResult?: NativeParseResult;
     parserStatus: NativeParserStatus;
     parseDurationMs?: number;
+    mode?: StructureView;
+    onModeChange?: (mode: StructureView) => void;
+    showHeading?: boolean;
+    showModeTabs?: boolean;
     onRevealRange: (from: number, to: number) => void;
 };
 
@@ -30,13 +113,22 @@ export function SqlFlowView({
     parseResult,
     parserStatus,
     parseDurationMs,
+    mode: controlledMode,
+    onModeChange,
+    showHeading = true,
+    showModeTabs = true,
     connectionId,
     parameters,
     analyzerAvailable,
     analyzerUnavailableReason,
     onRevealRange,
 }: SqlFlowViewProps) {
-    const [view, setView] = useState<StructureView>('flow');
+    const [localMode, setLocalMode] = useState<StructureView>('flow');
+    const view = controlledMode ?? localMode;
+    const changeMode = (mode: StructureView) => {
+        if (controlledMode === undefined) setLocalMode(mode);
+        onModeChange?.(mode);
+    };
     const model = useMemo(
         () => buildSqlFlow(sql, parseResult, sourceOffset),
         [sql, parseResult, sourceOffset],
@@ -55,23 +147,7 @@ export function SqlFlowView({
     } else {
         parserLabel = copy.sqlFlowKeywordEstimate;
     }
-    const astAvailable = Boolean(
-        parserStatus === 'ready' && !parseResult?.error && parseResult?.ast,
-    );
-    let astUnavailableReason: string;
-
-    switch (parserStatus) {
-        case 'loading':
-            astUnavailableReason = copy.sqlFlowParserStarting;
-            break;
-        case 'unavailable':
-            astUnavailableReason = copy.sqlFlowParserUnavailable;
-            break;
-        default:
-            astUnavailableReason =
-                parseResult?.error?.message ?? parseResult?.ast_error ?? copy.sqlAstUnavailable;
-            break;
-    }
+    const ast = nativeAstAvailability(copy, parserStatus, parseResult);
 
     return (
         <ScrollEdgeFrame<HTMLElement> className="sql-flow-view-frame">
@@ -94,60 +170,37 @@ export function SqlFlowView({
                         className="sql-flow-view"
                         aria-label={copy.visualizeSqlStructure}
                     >
-                        <header className="sql-flow-heading">
-                            <div>
-                                <span className="eyebrow">{copy.sqlStructure.toUpperCase()}</span>
-                                <h3>{copy.sqlFlowTitle}</h3>
-                                <p>{getSelectionHint()}</p>
-                            </div>
-                            <span
-                                className={`sql-flow-parser-state ${view === 'analyzer' || model.mode === 'native AST' ? 'is-native' : ''}`}
-                            >
-                                <span className="status-light" />
-                                {parserLabel}
-                                {duration && view !== 'analyzer' && model.mode === 'native AST'
-                                    ? ` · ${duration}`
-                                    : ''}
-                            </span>
-                        </header>
-                        <div
-                            className="sql-flow-mode-tabs"
-                            role="group"
-                            aria-label={copy.sqlStructure}
-                        >
-                            <button
-                                type="button"
-                                aria-pressed={view === 'flow'}
-                                className={view === 'flow' ? 'is-active' : ''}
-                                onClick={() => setView('flow')}
-                            >
-                                {copy.sqlFlowLogicalMode}
-                            </button>
-                            <button
-                                type="button"
-                                aria-pressed={view === 'ast'}
-                                className={view === 'ast' ? 'is-active' : ''}
-                                disabled={!astAvailable && view !== 'ast'}
-                                title={!astAvailable ? astUnavailableReason : copy.sqlFlowNativeAst}
-                                onClick={() => setView('ast')}
-                            >
-                                {copy.sqlFlowNativeAst}
-                            </button>
-                            <button
-                                type="button"
-                                aria-pressed={view === 'analyzer'}
-                                className={view === 'analyzer' ? 'is-active' : ''}
-                                disabled={!analyzerAvailable}
-                                title={
-                                    !analyzerAvailable
-                                        ? analyzerUnavailableReason
-                                        : copy.queryTreeGraphHint
-                                }
-                                onClick={() => setView('analyzer')}
-                            >
-                                {copy.sqlFlowAnalyzer}
-                            </button>
-                        </div>
+                        {showHeading && (
+                            <header className="sql-flow-heading">
+                                <div>
+                                    <span className="eyebrow">
+                                        {copy.sqlStructure.toUpperCase()}
+                                    </span>
+                                    <h3>{copy.sqlFlowTitle}</h3>
+                                    <p>{getSelectionHint()}</p>
+                                </div>
+                                <span
+                                    className={`sql-flow-parser-state ${view === 'analyzer' || model.mode === 'native AST' ? 'is-native' : ''}`}
+                                >
+                                    <span className="status-light" />
+                                    {parserLabel}
+                                    {duration && view !== 'analyzer' && model.mode === 'native AST'
+                                        ? ` · ${duration}`
+                                        : ''}
+                                </span>
+                            </header>
+                        )}
+                        {showModeTabs && (
+                            <SqlFlowModeTabs
+                                copy={copy}
+                                mode={view}
+                                onModeChange={changeMode}
+                                parseResult={parseResult}
+                                parserStatus={parserStatus}
+                                analyzerAvailable={analyzerAvailable}
+                                analyzerUnavailableReason={analyzerUnavailableReason}
+                            />
+                        )}
                         {view === 'flow' && model.parserError && (
                             <div className="sql-flow-parse-note" role="status">
                                 {model.mode === 'native AST'
@@ -161,11 +214,11 @@ export function SqlFlowView({
                         ) : (
                             <>
                                 {view === 'ast' &&
-                                    (astAvailable ? (
+                                    (ast.available ? (
                                         <AstGraph ast={parseResult!.ast} copy={copy} />
                                     ) : (
                                         <div className="pipeline-graph-empty" role="status">
-                                            {astUnavailableReason}
+                                            {ast.unavailableReason}
                                         </div>
                                     ))}
                                 {view === 'flow' && (
@@ -178,7 +231,7 @@ export function SqlFlowView({
                                                 ? copy.sqlFlowNativeHeading
                                                 : copy.sqlFlowFallbackHeading
                                         }
-                                        subheading={copy.sqlFlowGraphHint}
+                                        subheading={showHeading ? copy.sqlFlowGraphHint : ''}
                                         onSelectNode={node => {
                                             const range = model.sourceRanges.get(node.id);
                                             if (range) onRevealRange(range.from, range.to);

@@ -353,6 +353,34 @@
     cursor: not-allowed;
     opacity: 0.46;
   }
+  .results-title .sql-flow-mode-tabs {
+    flex: none;
+    gap: 1px;
+    padding: 2px;
+  }
+  .results-title .sql-flow-mode-tabs button {
+    min-height: 26px;
+    padding-inline: 9px;
+    font-size: 8px;
+  }
+  .pipeline-graph-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 12px;
+    flex-wrap: wrap;
+  }
+  .pipeline-graph-toolbar .pipeline-graph-heading {
+    min-width: 0;
+    flex: 1;
+  }
+  .pipeline-graph-toolbar .pipeline-graph-controls {
+    flex: none;
+  }
+  .is-sql-flow-graph .pipeline-graph-controls button {
+    min-height: 28px;
+    padding-inline: 7px;
+  }
   .pipeline-graph-heading {
     display: flex;
     align-items: center;
