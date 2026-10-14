@@ -861,7 +861,7 @@ export function MaterializedViewExplorer({
         <NativeExplorerDialog
             title="Materialized view dependencies"
             eyebrow="DATABASE EXPLORER"
-            description="See where each view gets its data and where the results go, so you know what a change could affect."
+            description="A materialized view uses data from tables and saves the results in a table. This map shows those links, so you can see what else may change before you edit a table."
             onClose={() => onClose?.()}
             className="native-lineage-dialog"
         >
