@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import {
     PYTHON_FUNCTION_CUSTOM_DRAFT,
     PYTHON_FUNCTION_TEMPLATES,
@@ -24,6 +24,7 @@ export function CreatePythonFunctionDialog({
     onPublished: () => void;
     deployAllowed: boolean;
 }) {
+    const nameIssueId = useId();
     const nameInput = useRef<HTMLInputElement>(null);
     const [template, setTemplate] = useState('custom');
     const [draft, setDraft] = useState<PythonFunctionDraft>(() =>
@@ -33,6 +34,10 @@ export function CreatePythonFunctionDialog({
     const [showValidation, setShowValidation] = useState(false);
     const [busy, setBusy] = useState(false);
     const validation = pythonDraftSchema.safeParse(draft);
+    const nameIssue = validation.success
+        ? ''
+        : (validation.error.issues.find(issue => issue.path[0] === 'name')?.message ?? '');
+    const visibleNameIssue = showValidation ? nameIssue : '';
     const sourceIssue = validation.success ? pythonSourceIssue(validation.data) : '';
     const update = (patch: Partial<PythonFunctionDraft>) => {
         setDraft(current => ({ ...current, ...patch }));
@@ -105,6 +110,8 @@ export function CreatePythonFunctionDialog({
                         ref={nameInput}
                         className="creation-dialog-control"
                         value={draft.name}
+                        aria-invalid={visibleNameIssue ? true : undefined}
+                        aria-describedby={visibleNameIssue ? nameIssueId : undefined}
                         onChange={event => update({ name: event.target.value })}
                         maxLength={128}
                         placeholder="e.g. py_semver_compare"
@@ -268,8 +275,18 @@ export function CreatePythonFunctionDialog({
                 </p>
             )}
             {showValidation && !validation.success && (
-                <p className="sql-function-error" role="status">
-                    {validation.error.issues[0]?.message}
+                <p
+                    id={visibleNameIssue ? nameIssueId : undefined}
+                    className="sql-function-error"
+                    role="status"
+                >
+                    {visibleNameIssue ? (
+                        <>
+                            <strong>Function name:</strong> {visibleNameIssue}
+                        </>
+                    ) : (
+                        validation.error.issues[0]?.message
+                    )}
                 </p>
             )}
             {error && (

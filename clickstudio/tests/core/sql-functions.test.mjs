@@ -5,6 +5,7 @@ import {
     SQL_FUNCTION_TEMPLATES,
     SQL_FUNCTION_CREATION_TEMPLATES,
     createSqlFunctionQuery,
+    sqlFunctionNameIssue,
     sqlFunctionParameters,
     functionArgumentSql,
     changeFunctionArgumentKind,
@@ -112,6 +113,16 @@ test('Create SQL validates identifiers, unique bounded parameters and one expres
         }),
         /\n;$/,
     );
+});
+
+test('SQL function name validation accepts bounded identifiers and explains invalid names', () => {
+    for (const name of ['a', '_private', 'name_2', 'a'.repeat(128)])
+        assert.equal(sqlFunctionNameIssue(name), '');
+    for (const name of ['', '2starts_with_number', 'not-valid', 'a'.repeat(129), 'münchen'])
+        assert.equal(
+            sqlFunctionNameIssue(name),
+            'Use a function name with letters, numbers and underscores.',
+        );
 });
 
 test('Canonical definitions expose their parameters without confusing inner lambdas', () => {

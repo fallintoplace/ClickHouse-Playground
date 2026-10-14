@@ -1,7 +1,8 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useId, useRef, useState, type FormEvent } from 'react';
 import {
     SQL_FUNCTION_CREATION_TEMPLATES,
     createSqlFunctionQuery,
+    sqlFunctionNameIssue,
     type SqlFunction,
 } from '../../../shared/database/functions/sql-functions';
 import { createClickHouseCloudFunction } from '../connections/cloud-connection';
@@ -90,6 +91,7 @@ export function CreateSqlFunctionDialog({
     onClose: () => void;
     onCreated: (fn: SqlFunction) => void;
 }) {
+    const nameIssueId = useId();
     const nameInput = useRef<HTMLInputElement>(null);
     const nextParameterId = useRef(1);
     const [template, setTemplate] = useState('custom');
@@ -112,6 +114,7 @@ export function CreateSqlFunctionDialog({
     const hasInput = Boolean(
         fields.name || fields.expression || parameters.some(parameter => parameter.name),
     );
+    const visibleNameIssue = hasInput ? sqlFunctionNameIssue(input.name) : '';
 
     const changeField = (field: keyof typeof fields, value: string) => {
         setFields(current => ({ ...current, [field]: value }));
@@ -203,6 +206,8 @@ export function CreateSqlFunctionDialog({
                         value={fields.name}
                         disabled={busy}
                         aria-label="Function name"
+                        aria-invalid={visibleNameIssue ? true : undefined}
+                        aria-describedby={visibleNameIssue ? nameIssueId : undefined}
                         maxLength={128}
                         placeholder="e.g. udf_array_remove_at"
                         onChange={event => changeField('name', event.target.value)}
@@ -253,8 +258,18 @@ export function CreateSqlFunctionDialog({
                 </div>
             </div>
             {validation && hasInput && (
-                <p className="sql-function-error" role="status">
-                    {validation}
+                <p
+                    id={visibleNameIssue ? nameIssueId : undefined}
+                    className="sql-function-error"
+                    role="status"
+                >
+                    {visibleNameIssue ? (
+                        <>
+                            <strong>Function name:</strong> {visibleNameIssue}
+                        </>
+                    ) : (
+                        validation
+                    )}
                 </p>
             )}
             {error && (

@@ -92,9 +92,15 @@ export const SQL_FUNCTION_CREATION_TEMPLATES = [
 
 const identifier = /^[A-Za-z_][A-Za-z0-9_]{0,127}$/;
 
+export function sqlFunctionNameIssue(name: string): string {
+    return identifier.test(name)
+        ? ''
+        : 'Use a function name with letters, numbers and underscores.';
+}
+
 export function createSqlFunctionQuery(input: SqlFunctionInput): string {
-    if (!identifier.test(input.name))
-        throw new Error('Use a function name with letters, numbers and underscores.');
+    const nameIssue = sqlFunctionNameIssue(input.name);
+    if (nameIssue) throw new Error(nameIssue);
     if (
         !input.parameters.length ||
         input.parameters.length > 16 ||

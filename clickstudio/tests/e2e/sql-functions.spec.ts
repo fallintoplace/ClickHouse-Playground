@@ -245,7 +245,18 @@ test('Invalid creation fields and raw SQL tester input never reach the server', 
     const { requests } = await functionsWorkspace(page, { existing: true });
     await page.getByRole('button', { name: 'Create SQL UDF', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Create SQL Function', exact: true });
-    await dialog.getByLabel('Function name', { exact: true }).fill('valid_function');
+    const name = dialog.getByLabel('Function name', { exact: true });
+    await name.fill('invalid-name');
+    const nameIssue = dialog.getByRole('status');
+    await expect(nameIssue).toHaveText(
+        'Function name: Use a function name with letters, numbers and underscores.',
+    );
+    await expect(name).toHaveAttribute('aria-invalid', 'true');
+    await expect(name).toHaveAccessibleDescription(
+        'Function name: Use a function name with letters, numbers and underscores.',
+    );
+    await name.fill('valid_function');
+    await expect(name).not.toHaveAttribute('aria-invalid');
     await dialog.getByLabel('Parameter 1 name', { exact: true }).fill('value');
     await dialog.getByLabel('Expression', { exact: true }).fill('1; DROP TABLE events');
     await expect(dialog.getByRole('button', { name: 'Create UDF', exact: true })).toBeDisabled();
