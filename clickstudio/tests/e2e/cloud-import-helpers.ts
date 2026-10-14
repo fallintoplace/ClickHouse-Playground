@@ -171,6 +171,10 @@ export async function mockCloudEndpoint(
             await route.fulfill({ json: previewCloudConnectionTest });
             return;
         }
+        if (body.action === 'table-permissions') {
+            await route.fulfill({ json: { create: true, insert: true, drop: true } });
+            return;
+        }
         if (body.action === 'functions') {
             await route.fulfill({
                 json: {

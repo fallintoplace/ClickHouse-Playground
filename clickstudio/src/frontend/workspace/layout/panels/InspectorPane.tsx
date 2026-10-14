@@ -330,7 +330,7 @@ export function InspectorPane({
     };
 
     return (
-        <aside className={cx('inspector-pane', docked && 'is-docked-inspector')}>
+        <aside className={cx('inspector-pane', docked && 'is-docked-inspector')} aria-label={title}>
             <InspectorPaneHeading
                 title={title}
                 copy={copy}

@@ -19,7 +19,7 @@ test('Experimental mode keeps Objects and AI primary and moves Reference into Mo
     await expect(rail.getByRole('button', { name: 'AI', exact: true })).toBeVisible();
     await expect(inspector).toBeVisible();
     await expect(inspector.locator('.inspector-tabs')).toBeVisible();
-    await expect(inspector.getByRole('heading', { name: 'Objects', exact: true })).toBeVisible();
+    await expect(inspector).toHaveAccessibleName('Objects');
     await expect(inspector.getByRole('button', { name: 'Objects', exact: true })).toBeVisible();
     await expect(inspector.getByRole('button', { name: 'Reference', exact: true })).toHaveCount(0);
     await expect(inspector.getByRole('button', { name: 'AI', exact: true })).toBeVisible();
@@ -43,14 +43,16 @@ test('Experimental mode keeps Objects and AI primary and moves Reference into Mo
 
     await page.setViewportSize({ width: 1280, height: 720 });
     const browser = inspector.getByRole('navigation', { name: 'Workspace browser', exact: true });
-    await expect(browser.getByRole('button')).toHaveText(['Objects', 'AI', 'More']);
+    await expect(browser.getByRole('button')).toHaveCount(4);
+    for (const name of ['Objects', 'AI', 'More workspace panels', 'Close inspector'])
+        await expect(browser.getByRole('button', { name, exact: true })).toBeVisible();
     await browser.getByRole('button', { name: 'More workspace panels', exact: true }).click();
     await expect(page.getByRole('menuitem', { name: 'Reference', exact: true })).toBeVisible();
     await expect(page.getByRole('menuitem', { name: 'Query history', exact: true })).toHaveCount(0);
     await page.getByRole('menuitem', { name: 'Reference', exact: true }).click();
-    await expect(inspector.getByRole('heading', { name: 'Reference', exact: true })).toBeVisible();
+    await expect(inspector).toHaveAccessibleName('Reference');
     await rail.getByRole('button', { name: 'AI', exact: true }).click();
-    await expect(inspector.getByRole('heading', { name: 'AI', exact: true })).toBeVisible();
+    await expect(inspector).toHaveAccessibleName('AI');
     await expect(page.locator('.assistant-panel')).toBeVisible();
 
     await inspector.getByRole('button', { name: 'Close inspector', exact: true }).click();
@@ -61,7 +63,7 @@ test('Experimental mode keeps Objects and AI primary and moves Reference into Mo
     );
     await rail.getByRole('button', { name: 'AI', exact: true }).click();
     await expect(inspector).toBeVisible();
-    await expect(inspector.getByRole('heading', { name: 'AI', exact: true })).toBeVisible();
+    await expect(inspector).toHaveAccessibleName('AI');
 
     await inspector.getByRole('button', { name: 'More workspace panels', exact: true }).click();
     await expect(page.getByRole('menuitem', { name: 'Query history', exact: true })).toHaveCount(0);
@@ -69,9 +71,7 @@ test('Experimental mode keeps Objects and AI primary and moves Reference into Mo
         page.getByRole('menuitem', { name: 'Version history', exact: true }),
     ).toBeVisible();
     await page.getByRole('menuitem', { name: 'Saved queries', exact: true }).click();
-    await expect(
-        inspector.getByRole('heading', { name: 'Saved queries', exact: true }),
-    ).toBeVisible();
+    await expect(inspector).toHaveAccessibleName('Saved queries');
     await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Run', exact: true })).toBeVisible();
 });
@@ -155,7 +155,7 @@ for (const panel of ['Objects', 'Reference', 'Saved queries', 'Version history']
                 .click();
             await page.getByRole('menuitem', { name: panel, exact: true }).click();
         }
-        await expect(inspector.getByRole('heading', { name: panel, exact: true })).toBeVisible();
+        await expect(inspector).toHaveAccessibleName(panel);
         const sql = await page.locator('.cm-content').innerText();
         await setWorkspaceMode(page, 'Standard');
         await expect(inspector).toHaveCount(0);
@@ -175,7 +175,7 @@ for (const panel of ['Objects', 'Reference', 'Saved queries', 'Version history']
         await expect(inspector.locator('.assistant-panel')).toBeVisible();
         await expect(inspector.locator('.inspector-tabs')).toHaveCount(0);
         await setWorkspaceMode(page, 'Experimental');
-        await expect(inspector.getByRole('heading', { name: panel, exact: true })).toBeVisible();
+        await expect(inspector).toHaveAccessibleName(panel);
         await expect(page.locator('.cm-content')).toHaveText(sql, { useInnerText: true });
     });
 }
@@ -341,9 +341,7 @@ test('EXPLAIN PLAN opens a graph with a tree view and keeps the raw result avail
     await expect(plan).toContainText('Expression');
     await expect(plan).toContainText('ReadFromFixture');
     await expect(plan).toContainText('Fixture only; the SQL was not evaluated.');
-    await expect(plan.locator('.explain-plan-heading')).not.toContainText(
-        'no runtime measurements',
-    );
+    await expect(plan.locator('.results-header')).not.toContainText('no runtime measurements');
     await expect(plan.getByRole('button', { name: 'Graph', exact: true })).toHaveAttribute(
         'aria-pressed',
         'true',
@@ -381,9 +379,9 @@ test('EXPLAIN PLAN opens a graph with a tree view and keeps the raw result avail
     );
     await expect(controls.getByLabel('Zoom level')).toHaveText(zoomBeforeEditorFocus);
 
-    await expect(plan.locator('.explain-plan-heading-actions > strong')).toBeVisible();
+    await expect(plan.locator('.results-plan-controls > strong')).toBeVisible();
     const headingHeight = await plan
-        .locator('.explain-plan-heading')
+        .locator('.results-plan-controls')
         .evaluate(element => element.getBoundingClientRect().height);
     expect(headingHeight).toBeLessThan(56);
     await plan.getByRole('button', { name: 'Tree', exact: true }).click();
@@ -498,10 +496,10 @@ test('Reference stays in More while Objects and AI stay primary', async ({ page 
     await expect(page.getByRole('menuitem', { name: 'Reference', exact: true })).toBeVisible();
     await expect(page.getByRole('menuitem', { name: 'Query history', exact: true })).toHaveCount(0);
     await page.getByRole('menuitem', { name: 'Reference', exact: true }).click();
-    await expect(page.locator('.inspector-header h2')).toHaveText('Reference');
+    await expect(page.getByRole('complementary', { name: 'Reference', exact: true })).toBeVisible();
 
     await page.locator('.icon-rail').getByRole('button', { name: 'AI', exact: true }).click();
-    await expect(page.locator('.inspector-header h2')).toHaveText('AI');
+    await expect(page.getByRole('complementary', { name: 'AI', exact: true })).toBeVisible();
     await expect(page.locator('.assistant-panel')).toBeVisible();
     await expect(page.locator('.cm-content')).toContainText('SELECT');
 });

@@ -275,7 +275,7 @@ test('Insert-only permissions hide create and drop while preserving the insert d
     await expect(page.getByRole('dialog', { name: 'Insert row', exact: true })).toBeVisible();
 });
 
-test('Unavailable permission checks hide create while retaining selected-table details actions', async ({
+test('Unavailable permission checks hide writes while retaining selected-table read actions', async ({
     page,
 }) => {
     let permissionRequests = 0;
@@ -295,6 +295,8 @@ test('Unavailable permission checks hide create while retaining selected-table d
     await tableObject(page).click();
     await expect.poll(() => permissionRequests).toBeGreaterThan(1);
     for (const name of ['Insert row', 'Delete table'])
+        await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
+    for (const name of ['Preview rows', 'Copy name'])
         await expect(page.getByRole('button', { name, exact: true })).toBeEnabled();
 });
 
@@ -863,7 +865,7 @@ test('Standard loads schema and opens Objects only on demand', async ({ page }) 
     await expect(inspector).toBeVisible();
     await expect(page.getByTestId('schema-search')).toBeVisible();
     await setWorkspaceMode(page, 'Experimental');
-    await expect(inspector.getByRole('heading', { name: 'Objects', exact: true })).toBeVisible();
+    await expect(inspector).toHaveAccessibleName('Objects');
     await tableObject(page).click();
     await expect(page.getByLabel('Selected object')).toContainText('analytics.events');
     await expect(page.getByRole('button', { name: 'Preview rows', exact: true })).toBeVisible();
@@ -965,6 +967,9 @@ test('Deleting a table preserves its cached preview rows without a status pill',
     page,
 }) => {
     let tableExists = true;
+    await page.route('**/api/connections/live/table-permissions', route =>
+        route.fulfill({ json: { create: false, insert: false, drop: true } }),
+    );
     await mockLiveWorkspace(page, route =>
         route.fulfill({
             json: {

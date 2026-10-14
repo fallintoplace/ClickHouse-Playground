@@ -1709,7 +1709,7 @@ test('Experimental parser inspector shows native AST, UTF-8 semantic highlights,
 
     await openWorkspacePanel(page, 'parser');
     await expect(page.getByText('SelectWithUnionQuery', { exact: true })).toBeVisible();
-    await page.getByText('View native AST', { exact: true }).click();
+    await page.getByText('View AST', { exact: true }).click();
     await expect(page.getByText(/"type": "SelectWithUnionQuery"/)).toBeVisible();
 
     const invalidSql = 'SELECT 1 +';
@@ -1724,7 +1724,7 @@ test('Experimental parser inspector shows native AST, UTF-8 semantic highlights,
         };
     });
     await replaceSql(page, invalidSql);
-    await expect(page.getByText('Syntax error', { exact: true })).toBeVisible();
+    await expect(page.getByRole('alert').getByText('Syntax error', { exact: true })).toBeVisible();
     await expect(page.getByText('GROUP BY', { exact: true })).toBeVisible();
 });
 

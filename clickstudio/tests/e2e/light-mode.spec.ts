@@ -1,5 +1,5 @@
 import { test, expect, type Locator } from '@playwright/test';
-import { runButton, trust } from './helpers.js';
+import { openWorkspacePanel, runButton, trust } from './helpers.js';
 import { mockWritableWorkspace } from './import-helpers.js';
 import { chooseChartOption } from './chart-control-helpers.js';
 
@@ -154,7 +154,12 @@ test(`Light mode keeps workspace and help text readable with brown accent`, asyn
     await storage.getByRole('button', { name: 'Close', exact: true }).click();
 
     for (const panel of ['Reference', 'AI']) {
-        await page.locator('.icon-rail').getByRole('button', { name: panel, exact: true }).click();
+        if (panel === 'Reference') await openWorkspacePanel(page, 'reference');
+        else
+            await page
+                .locator('.icon-rail')
+                .getByRole('button', { name: panel, exact: true })
+                .click();
         await expect(page.locator('.inspector-pane')).toBeVisible();
         await expectReadableText(page.locator('.inspector-pane'), panel);
         if (panel === 'Reference') {

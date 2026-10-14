@@ -136,7 +136,10 @@ for (const mode of ['Standard', 'Experimental']) {
             await expect(page.locator('.python-functions-tree')).toBeVisible();
             await expect(
                 page.getByRole('button', { name: 'Create Python UDF', exact: true }),
-            ).toBeDisabled();
+            ).toHaveCount(0);
+            await expect(
+                page.getByRole('status', { name: 'Loading Python UDFs', exact: true }),
+            ).toBeVisible();
             schema.release();
             await expect(table(page, 'events', 'ReplacingMergeTree')).toBeVisible();
             await expect(refreshButton(page)).toBeDisabled();
@@ -147,6 +150,12 @@ for (const mode of ['Standard', 'Experimental']) {
             await expect(refreshButton(page)).toBeDisabled();
             python.release();
             await expect(refreshButton(page)).toBeEnabled();
+            await expect(
+                page.getByRole('button', { name: 'Create Python UDF', exact: true }),
+            ).toBeEnabled();
+            await expect(
+                page.getByRole('status', { name: 'Loading Python UDFs', exact: true }),
+            ).toHaveCount(0);
             expect(requests.sort()).toEqual(['executable-functions', 'functions', 'schema']);
         } finally {
             schema.release();

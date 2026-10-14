@@ -14,10 +14,13 @@ function gate() {
     return { promise, release };
 }
 
-async function expectSingleLoader(page: Page) {
+async function expectInitialLoading(page: Page, pythonPending = false) {
     const explorer = page.locator('.object-explorer-section');
     await expect(explorer.locator('.object-refresh-action.is-loading')).toHaveCount(1);
-    await expect(explorer.locator('.loading-orbit')).toHaveCount(0);
+    await expect(explorer.locator('.loading-orbit')).toHaveCount(pythonPending ? 1 : 0);
+    await expect(
+        explorer.getByRole('status', { name: 'Loading Python UDFs', exact: true }),
+    ).toHaveCount(pythonPending ? 1 : 0);
     await expect(explorer.locator('.object-refresh-action')).toHaveAttribute('aria-busy', 'true');
     await expect(explorer.locator('.object-refresh-action')).toHaveAttribute(
         'aria-label',
@@ -28,7 +31,7 @@ async function expectSingleLoader(page: Page) {
 
 for (const mode of ['Standard', 'Experimental']) {
     for (const first of ['schema', 'functions']) {
-        test(`${mode} initial Cloud load has one indicator when ${first} finishes first`, async ({
+        test(`${mode} initial Cloud load keeps object and Python loading states when ${first} finishes first`, async ({
             page,
         }) => {
             await functionsWorkspace(page, { existing: true, path: workspacePath(mode) });
@@ -50,7 +53,7 @@ for (const mode of ['Standard', 'Experimental']) {
                         .locator('.icon-rail')
                         .getByRole('button', { name: 'Objects', exact: true })
                         .click();
-                await expectSingleLoader(page);
+                await expectInitialLoading(page, true);
                 if (first === 'schema') {
                     schema.release();
                     await expect(
@@ -62,7 +65,7 @@ for (const mode of ['Standard', 'Experimental']) {
                         page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }),
                     ).toBeVisible();
                 }
-                await expectSingleLoader(page);
+                await expectInitialLoading(page, true);
                 schema.release();
                 functions.release();
                 await expect(
@@ -71,7 +74,7 @@ for (const mode of ['Standard', 'Experimental']) {
                 await expect(
                     page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }),
                 ).toBeVisible();
-                if (mode === 'Experimental') await expectSingleLoader(page);
+                if (mode === 'Experimental') await expectInitialLoading(page, true);
                 python.release();
                 await expect(page.locator('.object-refresh-action')).toBeEnabled();
                 await expect(page.locator('.object-refresh-action')).not.toHaveClass(/is-loading/);
@@ -84,7 +87,7 @@ for (const mode of ['Standard', 'Experimental']) {
         });
     }
 
-    test(`${mode} initial Playground load uses the same single indicator`, async ({ page }) => {
+    test(`${mode} initial Playground load uses one object loading indicator`, async ({ page }) => {
         const pending = gate();
         await page.route('https://sql-clickhouse.clickhouse.com:8443/**', route => route.abort());
         await page.route('**/api/connections', route =>
@@ -101,7 +104,7 @@ for (const mode of ['Standard', 'Experimental']) {
                     .locator('.icon-rail')
                     .getByRole('button', { name: 'Objects', exact: true })
                     .click();
-            await expectSingleLoader(page);
+            await expectInitialLoading(page);
             pending.release();
             await expect(
                 page.getByRole('button', { name: 'events MergeTree', exact: true }),
@@ -113,7 +116,7 @@ for (const mode of ['Standard', 'Experimental']) {
         }
     });
 
-    test(`${mode} initial Cloud schema failure keeps one indicator until functions settle`, async ({
+    test(`${mode} initial Cloud schema failure keeps loading states until functions settle`, async ({
         page,
     }) => {
         await functionsWorkspace(page, { existing: true, path: workspacePath(mode) });
@@ -140,7 +143,7 @@ for (const mode of ['Standard', 'Experimental']) {
             await expect(page.locator('.object-explorer-section .callout-error')).toContainText(
                 'Schema unavailable.',
             );
-            await expectSingleLoader(page);
+            await expectInitialLoading(page, true);
             pending.release();
             await expect(
                 page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }),

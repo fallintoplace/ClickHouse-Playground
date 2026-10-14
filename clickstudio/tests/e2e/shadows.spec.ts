@@ -55,7 +55,6 @@ async function expectNeutralWorkspace(page: Page) {
         '.document-tabs',
         '.editor-heading',
         '.results-header',
-        '.inspector-header',
         '.inspector-pane',
     ]) {
         await expect(page.locator(selector)).toHaveCSS('background-image', 'none');
@@ -70,7 +69,9 @@ async function expectNeutralWorkspace(page: Page) {
         .locator('.editor-heading')
         .evaluate(element => getComputedStyle(element).backgroundColor);
     await expect(page.locator('.results-header')).toHaveCSS('background-color', header);
-    await expect(page.locator('.inspector-header')).toHaveCSS('background-color', header);
+    await expect(page.locator('.inspector-header')).toHaveCount(0);
+    await expect(page.locator('.inspector-tabs')).toHaveCSS('background-image', 'none');
+    await expect(page.locator('.inspector-tabs')).toHaveCSS('border-bottom-color', line);
     const lightTheme = await page
         .locator('html')
         .evaluate(element => element.dataset.theme === 'click-light');

@@ -254,9 +254,7 @@ for (const mode of ['beginner', 'expert']) {
             await expect(inspector.locator('.inspector-tabs')).toHaveCount(0);
             await setWorkspaceMode(page, 'Experimental');
         }
-        await expect(
-            inspector.getByRole('heading', { name: 'Objects', exact: true }),
-        ).toBeVisible();
+        await expect(inspector).toHaveAccessibleName('Objects');
         await expect(inspector.getByLabel('Selected object')).toContainText('demo.events');
     });
 }
