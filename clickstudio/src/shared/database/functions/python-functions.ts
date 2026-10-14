@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { parser as pythonParser } from '@lezer/python';
 import { quoteIdentifier, quoteStringLiteral } from '../../sql/sql.js';
+import { TOKENIZER_SOURCE } from './python-tokenizer.js';
 
 export const PYTHON_SCALAR_TYPES = [
     'String',
@@ -101,13 +102,10 @@ export const PYTHON_FUNCTION_TEMPLATES = [
     {
         label: 'LLM token count',
         name: 'count_tokens',
-        arguments: [
-            { name: 'model', type: 'String' },
-            { name: 'prompt', type: 'String' },
-        ],
+        arguments: [{ name: 'text', type: 'String' }],
         returnType: 'UInt64',
         requirements: 'tiktoken==0.14.0\n',
-        source: 'import os\nfrom pathlib import Path\nimport tiktoken\n\nos.environ["TIKTOKEN_CACHE_DIR"] = str(Path(__file__).parent / "tiktoken_cache")\n\ndef transform(model, prompt):\n    if model not in ("gpt-4o", "gpt-4o-mini"):\n        raise ValueError("This package supports gpt-4o and gpt-4o-mini")\n    encoding = tiktoken.encoding_for_model(model)\n    return len(encoding.encode(prompt))\n',
+        source: TOKENIZER_SOURCE,
     },
 ] satisfies Array<PythonFunctionDraft & { label: string }>;
 

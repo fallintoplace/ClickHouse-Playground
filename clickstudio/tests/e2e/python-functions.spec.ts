@@ -29,6 +29,7 @@ test('Python ZIP export includes offline tokenizer assets without management cre
     expect(tokenizerPath).toBeTruthy();
     const files = unzipSync(new Uint8Array(await readFile(tokenizerPath!)));
     expect(Object.keys(files).some(name => name.startsWith('tiktoken_cache/'))).toBe(true);
+    expect(strFromU8(files['main.py']!)).toContain('read_asset');
     expect(strFromU8(files['requirements.txt']!)).toContain('tiktoken==0.14.0');
 });
 

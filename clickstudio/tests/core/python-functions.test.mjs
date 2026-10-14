@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { unzipSync, strFromU8 } from 'fflate';
+import { gunzipSync, unzipSync, strFromU8 } from 'fflate';
+import { randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import {
     PYTHON_FUNCTION_TEMPLATES,
@@ -16,6 +17,7 @@ import {
     pythonUdfZip,
     pythonUdfArtifact,
     pythonFunctionXml,
+    pythonAdapter,
 } from '../../.core-build/src/shared/database/functions/python-udf-package.js';
 
 const draft = PYTHON_FUNCTION_TEMPLATES[1];
@@ -164,7 +166,8 @@ test('Token counter packages a verified offline vocabulary and rejects corrupt d
         ),
     );
     assert.equal(Object.keys(files).filter(name => name.startsWith('tiktoken_cache/')).length, 1);
-    assert.match(strFromU8(files['main.py']), /TIKTOKEN_CACHE_DIR/);
+    assert.match(strFromU8(files['main.py']), /read_asset/);
+    assert.doesNotMatch(strFromU8(files['main.py']), /TIKTOKEN_CACHE_DIR/);
     assert.match(strFromU8(files['tiktoken-LICENSE.txt']), /MIT License/);
     await assert.rejects(
         pythonUdfArtifact(template, async () => new Uint8Array([1])),
@@ -174,4 +177,19 @@ test('Token counter packages a verified offline vocabulary and rejects corrupt d
         throw new Error('Unexpected asset load');
     });
     assert.ok(unzipSync(plain)['main.py']);
+});
+
+test('Large embedded assets survive encoding without becoming separate ZIP entries', () => {
+    const bytes = randomBytes(100000);
+    const files = unzipSync(pythonUdfZip(draft, {}, { 'binary.dat': bytes }));
+    assert.equal('binary.dat' in files, false);
+    const main = strFromU8(files['main.py']);
+    const literal = main.match(/^ASSETS = json.loads\((.+)\)$/m)?.[1];
+    assert.ok(literal);
+    const assets = JSON.parse(JSON.parse(literal));
+    assert.deepEqual(
+        gunzipSync(Buffer.from(assets['binary.dat'], 'base64')),
+        new Uint8Array(bytes),
+    );
+    assert.match(pythonAdapter(draft), /"read_asset": read_asset/);
 });

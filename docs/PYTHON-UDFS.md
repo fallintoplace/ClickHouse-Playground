@@ -27,10 +27,18 @@ every scalar, writes one `result` object per row, and flushes each chunk. It pre
 to stderr. Invalid input, invalid return values and Python exceptions fail the query.
 The backend never runs submitted Python.
 
+Packaged assets can be embedded in `main.py` and read as bytes with `read_asset(name)`
+from the authored source. This works when the runtime copies only `main.py` into its
+script directory. Asset reads do not depend on the working directory or write files.
+
 Templates include string similarity, `python_double`, and token counting with
-`tiktoken`. The token-counting template supports `gpt-4o` and `gpt-4o-mini`. Its ZIP
-includes a SHA-256-verified `o200k_base` vocabulary in the tiktoken cache directory,
-so the deployed function does not need outbound network access. The vocabulary is
+`tiktoken`. The token-counting template takes one `text String` argument and uses
+`o200k_base`: `SELECT count_tokens('Hello world')` returns `2`. Its ZIP
+embeds a SHA-256-verified `o200k_base` vocabulary in `main.py`, so the deployed function
+does not need a cache directory or outbound network access. It constructs the pinned
+tokenizer directly in memory and counts special-token-looking text as ordinary input.
+The ZIP also retains the cache file for older source snippets and self-hosted installs.
+The vocabulary and tokenizer pattern are
 from [tiktoken's public encoding files](https://github.com/openai/tiktoken/blob/main/tiktoken_ext/openai_public.py)
 and its MIT license is in `clickstudio/public/udf-assets/LICENSE.txt`.
 

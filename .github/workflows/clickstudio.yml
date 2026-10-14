@@ -46,7 +46,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Generated Python protocol fixtures
-        run: npm run test:python
+        run: python -m pip install tiktoken==0.14.0 && npm run test:python
       - name: Build application
         run: npm run build:app
       - name: Install Chromium

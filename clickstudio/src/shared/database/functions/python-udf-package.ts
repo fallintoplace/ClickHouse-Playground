@@ -1,13 +1,29 @@
-import { strToU8, zipSync } from 'fflate';
+import { gzipSync, strToU8, zipSync } from 'fflate';
 import {
     pythonCloudDefinition,
     pythonDraftSchema,
     type PythonFunctionDraft,
 } from './python-functions.js';
 
-export function pythonAdapter(input: PythonFunctionDraft): string {
+function encodeAsset(bytes: Uint8Array): string {
+    const compressed = gzipSync(bytes);
+    let binary = '';
+    for (let offset = 0; offset < compressed.length; offset += 32768)
+        binary += String.fromCharCode(...compressed.subarray(offset, offset + 32768));
+    return btoa(binary);
+}
+
+export function pythonAdapter(
+    input: PythonFunctionDraft,
+    embeddedAssets: Record<string, Uint8Array> = {},
+): string {
     const draft = pythonDraftSchema.parse(input);
-    return `import contextlib
+    const assets = Object.fromEntries(
+        Object.entries(embeddedAssets).map(([name, bytes]) => [name, encodeAsset(bytes)]),
+    );
+    return `import base64
+import contextlib
+import gzip
 import inspect
 import json
 import math
@@ -17,6 +33,12 @@ import sys
 SOURCE = ${JSON.stringify(draft.source)}
 ARGUMENTS = json.loads(${JSON.stringify(JSON.stringify(draft.arguments))})
 RETURN_TYPE = ${JSON.stringify(draft.returnType)}
+ASSETS = json.loads(${JSON.stringify(JSON.stringify(assets))})
+
+def read_asset(name):
+    if name not in ASSETS:
+        raise FileNotFoundError("Bundled asset is unavailable: " + name)
+    return gzip.decompress(base64.b64decode(ASSETS[name], validate=True))
 
 def scalar(value, kind, output=False):
     if kind == "String":
@@ -45,7 +67,7 @@ def scalar(value, kind, output=False):
 
 def main():
     wire = sys.stdout
-    namespace = {"__name__": "udf", "__file__": __file__}
+    namespace = {"__name__": "udf", "__file__": __file__, "read_asset": read_asset}
     with contextlib.redirect_stdout(sys.stderr):
         exec(compile(SOURCE, "user_function.py", "exec"), namespace)
         transform = namespace.get("transform")
@@ -88,10 +110,13 @@ export function pythonFunctionXml(input: PythonFunctionDraft): string {
     return `<clickhouse>\n  <function>\n    <name>${draft.name}</name>\n    <type>executable_pool</type>\n${arguments_}\n    <return_type>${draft.returnType}</return_type>\n    <return_name>result</return_name>\n    <format>JSONEachRow</format>\n    <command>python3 /var/lib/clickhouse/user_scripts/${draft.name}/main.py</command>\n    <execute_direct>0</execute_direct>\n    <send_chunk_header>1</send_chunk_header>\n    <pool_size>3</pool_size>\n    <max_command_execution_time>10</max_command_execution_time>\n  </function>\n</clickhouse>\n`;
 }
 
-export function pythonPackageFiles(input: PythonFunctionDraft): Record<string, string> {
+export function pythonPackageFiles(
+    input: PythonFunctionDraft,
+    embeddedAssets: Record<string, Uint8Array> = {},
+): Record<string, string> {
     const draft = pythonDraftSchema.parse(input);
     return {
-        'main.py': pythonAdapter(draft),
+        'main.py': pythonAdapter(draft, embeddedAssets),
         'function.json': JSON.stringify(pythonCloudDefinition(draft), null, 2) + '\n',
         'function.xml': pythonFunctionXml(draft),
         ...(draft.requirements.trim()
@@ -103,10 +128,11 @@ export function pythonPackageFiles(input: PythonFunctionDraft): Record<string, s
 export function pythonUdfZip(
     draft: PythonFunctionDraft,
     assets: Record<string, Uint8Array> = {},
+    embeddedAssets: Record<string, Uint8Array> = {},
 ): Uint8Array<ArrayBuffer> {
     return zipSync({
         ...Object.fromEntries(
-            Object.entries(pythonPackageFiles(draft)).map(([name, value]) => [
+            Object.entries(pythonPackageFiles(draft, embeddedAssets)).map(([name, value]) => [
                 name,
                 strToU8(value),
             ]),
@@ -161,8 +187,12 @@ export async function pythonUdfArtifact(
     )
         throw new Error('Tokenizer vocabulary integrity check failed.');
     const cacheKey = hex(await crypto.subtle.digest('SHA-1', strToU8(tokenizerUrl)));
-    return pythonUdfZip(draft, {
-        [`tiktoken_cache/${cacheKey}`]: bytes,
-        'tiktoken-LICENSE.txt': strToU8(tokenizerLicense),
-    });
+    return pythonUdfZip(
+        draft,
+        {
+            [`tiktoken_cache/${cacheKey}`]: bytes,
+            'tiktoken-LICENSE.txt': strToU8(tokenizerLicense),
+        },
+        { [TOKENIZER_ASSET]: bytes },
+    );
 }

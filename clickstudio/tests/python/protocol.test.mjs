@@ -11,13 +11,40 @@ const fixture = {
     requirements: '',
     source: 'def transform(value):\n    return value * 2\n',
 };
-function run(input, patch = {}) {
+function run(input, patch = {}, embeddedAssets = {}) {
     return spawnSync(
         'python3',
-        ['-c', '__file__ = "main.py"\n' + pythonAdapter({ ...fixture, ...patch })],
+        [
+            '-c',
+            '__file__ = "/scripts/main.py"\n' +
+                pythonAdapter({ ...fixture, ...patch }, embeddedAssets),
+        ],
         { input, encoding: 'utf8', timeout: 1500 },
     );
 }
+test('Embedded assets preserve arbitrary bytes without filesystem access', () => {
+    const result = run(
+        '2\n{"value":1}\n{"value":2}\n',
+        {
+            returnType: 'String',
+            source: 'def transform(value):\n    return read_asset("data.bin").hex()\n',
+        },
+        { 'data.bin': new Uint8Array([0, 9, 10, 13, 34, 39, 92, 127, 128, 255]) },
+    );
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(result.stdout.trim().split('\n').map(JSON.parse), [
+        { result: '00090a0d22275c7f80ff' },
+        { result: '00090a0d22275c7f80ff' },
+    ]);
+});
+test('Missing embedded assets fail explicitly without trying a file path', () => {
+    const result = run('1\n{"value":1}\n', {
+        source: 'def transform(value):\n    return len(read_asset("missing.bin"))\n',
+    });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /Bundled asset is unavailable: missing.bin/);
+    assert.equal(result.stdout, '');
+});
 test('Adapter handles multiple chunks and 64-bit integers without precision loss', () => {
     const result = run('2\n{"value":"21"}\n{"value":-2}\n0\n1\n{"value":"4611686018427387903"}\n');
     assert.equal(result.status, 0, result.stderr);

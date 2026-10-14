@@ -65,9 +65,11 @@ for (const mode of ['Standard', 'Experimental']) {
         expect(downloadPath).toBeTruthy();
         const files = unzipSync(new Uint8Array(await readFile(downloadPath!)));
         expect(Object.keys(files).some(name => name.startsWith('tiktoken_cache/'))).toBe(true);
+        expect(strFromU8(files['main.py']!)).toContain('read_asset');
         expect(strFromU8(files['requirements.txt']!)).toContain('tiktoken==0.14.0');
         expect(JSON.parse(strFromU8(files['function.json']!))).toMatchObject({
             functionName: 'count_tokens',
+            arguments: [{ name: 'text', type: 'String' }],
             returnType: 'UInt64',
             format: 'JSONEachRow',
             sendChunkHeader: true,
