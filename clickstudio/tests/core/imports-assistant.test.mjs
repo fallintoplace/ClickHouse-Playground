@@ -13,6 +13,7 @@ import {
     isPreparedContext,
     MAX_ASSISTANT_CONVERSATION_MESSAGES,
     validateAssistantConversation,
+    validateAssistantImages,
     validateImage,
     validateProposal,
 } from '../../.core-build/src/backend/assistant/proposals/assistant.js';
@@ -714,6 +715,54 @@ test('Assistant keeps the per-image size limit without a daily total limit', () 
     assert.throws(() => f.ai.prepare(owner, { ...f.input, image: imageDataUri(2_000_001) }), {
         code: 'IMAGE_SIZE',
     });
+});
+
+test('Assistant prepares every attached image and deletes image data after the request', async () => {
+    const f = aiFixture();
+    const images = [imageDataUri(8), imageDataUri(8), imageDataUri(8)];
+    const context = f.ai.prepare(owner, { ...f.input, images });
+
+    assert.deepEqual(context.payload.images, images);
+    assert.equal(context.payload.image, undefined);
+    assert.ok(context.summary.some(summary => summary.startsWith('3 attached images included.')));
+    await f.ai.propose(owner, context.id, true);
+    assert.equal(
+        f.store.get('ai-contexts', context.id, isPreparedContext).payload.images,
+        undefined,
+    );
+});
+
+test('Assistant keeps the single-image request shape working during rollout', () => {
+    const f = aiFixture();
+    const image = imageDataUri(8);
+    const context = f.ai.prepare(owner, { ...f.input, image });
+
+    assert.deepEqual(context.payload.images, [image]);
+});
+
+test('Assistant rejects too many images and aggregate image data over six MB', () => {
+    const f = aiFixture();
+    assert.throws(
+        () =>
+            f.ai.prepare(owner, {
+                ...f.input,
+                images: Array.from({ length: 13 }, () => imageDataUri(8)),
+            }),
+        { code: 'IMAGE_COUNT' },
+    );
+    assert.throws(
+        () =>
+            f.ai.prepare(owner, {
+                ...f.input,
+                images: Array.from({ length: 4 }, () => imageDataUri(1_600_001)),
+            }),
+        { code: 'IMAGE_SIZE' },
+    );
+});
+
+test('Assistant accepts a batch at the six MB aggregate limit', () => {
+    const images = Array.from({ length: 3 }, () => imageDataUri(2_000_000));
+    assert.equal(validateAssistantImages(images).length, 3);
 });
 
 const imageSignatures = {

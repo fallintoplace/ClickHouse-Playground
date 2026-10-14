@@ -1,5 +1,9 @@
 import { ASSISTANT_ACTIONS, PROPOSAL_DECISION_ACTIONS } from '../../../shared/assistant/actions.js';
 import { MAX_SQL_CHARS } from '../../../shared/queries/execution/limits.js';
+import {
+    MAX_ASSISTANT_IMAGE_COUNT,
+    MAX_ASSISTANT_REQUEST_BYTES,
+} from '../../../shared/assistant/images.js';
 import { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../../shared/database/connections/cloud-policy.js';
 import type express from 'express';
 import { type Express } from 'express';
@@ -25,6 +29,18 @@ import { principal, body, id } from '../../system/requests/request-accessors.js'
 import { assistantReferenceDocs } from '../context/reference.js';
 import type { createSecretGuards } from '../../system/requests/secrets.js';
 import { assistantConnectionAuthorized } from '../context/authorization.js';
+
+function assistantImages(value: unknown): string[] | undefined {
+    if (value === undefined) return undefined;
+    requireThat(Array.isArray(value), 400, 'IMAGE_TYPE', 'Images must be a list');
+    requireThat(
+        value.length <= MAX_ASSISTANT_IMAGE_COUNT,
+        400,
+        'IMAGE_COUNT',
+        `Attach at most ${MAX_ASSISTANT_IMAGE_COUNT} images`,
+    );
+    return value.map((image, index) => text(image, `image ${index + 1}`, 2_900_000));
+}
 
 function registerAssistantSqlRoute(
     app: Express,
@@ -60,13 +76,20 @@ function registerAssistantSqlRoute(
                 'Trust this connection before sharing context',
             );
             const browserCloud = connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID;
-            if (browserCloud)
+            if (browserCloud) {
+                const withoutImages = { ...v };
+                delete withoutImages.image;
+                delete withoutImages.images;
+                const hasImages = v.image !== undefined || v.images !== undefined;
                 requireThat(
-                    Buffer.byteLength(JSON.stringify(v)) <= 300_000,
+                    Buffer.byteLength(JSON.stringify(withoutImages)) <= 300_000 &&
+                        Buffer.byteLength(JSON.stringify(v)) <=
+                            (hasImages ? MAX_ASSISTANT_REQUEST_BYTES : 300_000),
                     413,
                     'REQUEST_SIZE',
                     'The assistant request is too large.',
                 );
+            }
             const question = text(v.question, 'question', 4000),
                 sql = text(v.sql, 'SQL', MAX_SQL_CHARS, true);
             const conversation = validateAssistantConversation(v.conversation);
@@ -160,6 +183,8 @@ function registerAssistantSqlRoute(
                 serverVersion,
                 documentation,
                 sensitiveColumns: config.sensitiveColumns,
+                image: v.image === undefined ? undefined : text(v.image, 'image', 2_900_000),
+                images: assistantImages(v.images),
             });
             preparedContextId = context.id;
             if (!secretFree(context.payload)) {
@@ -265,6 +290,7 @@ export function registerAssistantRoutes({
             documentation,
             sensitiveColumns: config.sensitiveColumns,
             image: v.image === undefined ? undefined : text(v.image, 'image', 2900000),
+            images: assistantImages(v.images),
         });
         if (!secretFree(context.payload)) {
             store.delete('ai-contexts', context.id);

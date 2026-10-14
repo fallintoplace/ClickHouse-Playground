@@ -24,6 +24,11 @@ import { AssistantChatHistory } from '../chat/AssistantChatHistory';
 import { ScrollEdgeFrame } from '../../ui/components/ScrollEdgeShadows';
 import { Button, cx, Spinner } from '../../ui/components/primitives';
 import { Icon } from '../../ui/components/icons';
+import {
+    AssistantImageAttachments,
+    useAssistantImageAttachments,
+    type AssistantImageAttachment,
+} from './assistant-image-attachments';
 
 export type AssistantWorkflowProps = {
     mode: ExperienceLevel;
@@ -46,7 +51,7 @@ export type AssistantWorkflowProps = {
     error: string;
     notice: string;
     trusted: boolean;
-    onAskAI: () => void;
+    onAskAI: (images: readonly AssistantImageAttachment[]) => void;
     onCancelRequest: () => void;
 };
 
@@ -655,8 +660,20 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
     } = props;
     const transcriptViewport = useRef<HTMLDivElement>(null);
     const [questionInput, setQuestionInput] = useState<HTMLTextAreaElement | null>(null);
+    const {
+        images: imageAttachments,
+        isReading: isReadingImages,
+        error: pasteError,
+        clear: clearImageAttachments,
+        remove: removeImageAttachment,
+        onPaste: pasteImages,
+    } = useAssistantImageAttachments(activeChatId, onQuestionChange);
     const activeChat = chats.find(chat => chat.id === activeChatId);
-    const canSubmit = !busy && trusted && Boolean(question.trim());
+    const canSubmit =
+        !busy &&
+        !isReadingImages &&
+        trusted &&
+        (Boolean(question.trim()) || imageAttachments.length > 0);
     const latestTurnIds = useMemo(
         () => new Map(turns.map(turn => [turn.draftId, turn.id])),
         [turns],
@@ -687,7 +704,10 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
     }, [question, questionInput]);
 
     const ask = () => {
-        void onAskAI();
+        if (!canSubmit) return;
+        const images = imageAttachments;
+        clearImageAttachments();
+        void onAskAI(images);
     };
     const sendOnEnter = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
         if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -787,6 +807,23 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
                                     <div className="assistant-user-message">
                                         <span>You</span>
                                         <p>{turn.question}</p>
+                                        {turn.images?.length ? (
+                                            <div
+                                                className="assistant-user-image-attachments"
+                                                aria-label={`${turn.images.length} attached images`}
+                                            >
+                                                {turn.images.map((name, index) => (
+                                                    <span
+                                                        className="assistant-image-chip"
+                                                        key={`${name}:${index}`}
+                                                        title={name}
+                                                    >
+                                                        <Icon name="image" />
+                                                        <span>{name}</span>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        ) : null}
                                     </div>
                                     <div className="assistant-response">
                                         <span className="assistant-response-label">Assistant</span>
@@ -816,12 +853,24 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
                         {notice}
                     </div>
                 )}
+                {pasteError && (
+                    <div className="assistant-feedback callout callout-error" role="alert">
+                        {pasteError}
+                    </div>
+                )}
                 {!trusted && (
                     <div className="assistant-feedback callout">
                         Trust this connection before sharing its schema with the assistant.
                     </div>
                 )}
                 <div className="assistant-chat-composer">
+                    {(imageAttachments.length > 0 || isReadingImages) && (
+                        <AssistantImageAttachments
+                            images={imageAttachments}
+                            isReading={isReadingImages}
+                            onRemove={removeImageAttachment}
+                        />
+                    )}
                     <ScrollEdgeFrame<HTMLTextAreaElement>
                         className="assistant-question-frame"
                         onViewport={setQuestionInput}
@@ -836,6 +885,7 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
                                 value={question}
                                 onChange={event => onQuestionChange(event.target.value)}
                                 onKeyDown={sendOnEnter}
+                                onPaste={pasteImages}
                                 placeholder="Ask about your SQL…"
                                 title="Enter to send. Shift+Enter for a new line."
                                 rows={1}

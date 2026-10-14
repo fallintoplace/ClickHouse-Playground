@@ -226,6 +226,22 @@ test('Restored proposals retain query ownership without assigning legacy turns',
     assert.equal(pendingEditorProposal(turns, 'draft', 'demo', 'SELECT 1').id, 'turn');
 });
 
+test('Restored turns retain attachment labels without storing image data', () => {
+    const state = createAssistantChatState();
+    state.chats[0].turns = [
+        sqlTurn({ images: ['snowflake.png', 'databricks.png', 'data:image/png;base64,abc'] }),
+    ];
+
+    assert.deepEqual(recoverAssistantChatState(state).chats[0].turns[0].images, [
+        'snowflake.png',
+        'databricks.png',
+    ]);
+    state.chats[0].turns = [
+        sqlTurn({ images: Array.from({ length: 13 }, (_, index) => `${index}.png`) }),
+    ];
+    assert.equal(recoverAssistantChatState(state).chats[0].turns[0].images, undefined);
+});
+
 test('Assistant chats restore the selected thread and keep every conversation', () => {
     const first = {
         id: 'first',

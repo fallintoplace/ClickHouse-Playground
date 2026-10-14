@@ -19,6 +19,7 @@ import type {
     AssistantChatTurn,
 } from '../../../assistant/chat/assistant-chat-state';
 import { AssistantWorkflow } from '../../../assistant/proposals/AssistantWorkflow';
+import type { AssistantImageAttachment } from '../../../assistant/proposals/assistant-image-attachments';
 import { Button, cx, Spinner } from '../../../ui/components/primitives';
 import { formatBytes } from '../../../browser/metric-formatters';
 import { Icon } from '../../../ui/components/icons';
@@ -106,7 +107,12 @@ export type InspectorPaneProps = {
     nativeParserStatus: NativeParserStatus;
     nativeParseSnapshot?: NativeParseSnapshot;
     onRetryParser: () => void;
-    onAskAI: (schema?: Schema, serverVersion?: string, database?: string) => void;
+    onAskAI: (
+        schema?: Schema,
+        serverVersion?: string,
+        database?: string,
+        images?: readonly AssistantImageAttachment[],
+    ) => void;
     onCancelAssistantRequest: () => void;
     expert?: boolean;
     docked?: boolean;
@@ -495,7 +501,9 @@ export function InspectorPane({
                         error={assistantError}
                         notice={assistantNotice}
                         trusted={trusted}
-                        onAskAI={() => onAskAI(schema, assistantServerVersion, connection.database)}
+                        onAskAI={images =>
+                            onAskAI(schema, assistantServerVersion, connection.database, images)
+                        }
                         onCancelRequest={onCancelAssistantRequest}
                     />
                 )}

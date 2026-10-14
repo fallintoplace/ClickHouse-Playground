@@ -10,6 +10,7 @@ import type { Draft, WorkspaceState } from '../../../queries/editor/drafts/works
 import { terminal } from '../../../queries/execution/status';
 import type { useWorkspaceController, WorkspaceProps } from '../../useWorkspaceController';
 import type { InspectorPaneProps } from './InspectorPane';
+import type { AssistantImageAttachment } from '../../../assistant/proposals/assistant-image-attachments';
 
 async function loadAssistantRunContext(
     run: Run | undefined,
@@ -246,12 +247,18 @@ export function createInspectorProps({
         nativeParserStatus,
         nativeParseSnapshot,
         onRetryParser: () => editor.current?.retryNativeParser(),
-        onAskAI: (currentSchema?: Schema, serverVersion?: string, database?: string) =>
+        onAskAI: (
+            currentSchema?: Schema,
+            serverVersion?: string,
+            database?: string,
+            images?: readonly AssistantImageAttachment[],
+        ) =>
             void requestAssistantSql(
                 currentSchema,
                 serverVersion,
                 database,
                 includeRun ? signal => loadAssistantRunContext(run, snapshot, signal) : undefined,
+                images?.length ? { images } : undefined,
             ),
         onCancelAssistantRequest: cancelAssistantRequest,
         expert: experience === 'expert',

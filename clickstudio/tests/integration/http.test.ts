@@ -681,11 +681,14 @@ test('Ask AI uses a validated Playground server version supplied by the browser'
 
 test('Ask AI uses browser Cloud schema and run evidence without resolving a local connection', async t => {
     let sentContext: Record<string, unknown> | undefined;
+    let sentImages: string[] | undefined;
+    const tinyPng = `data:image/png;base64,${Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).toString('base64')}`;
     const assistant: AssistantDriver = {
         available: true,
         model: 'fixture',
         propose: async context => {
             sentContext = jsonRecord(JSON.parse(context.payload.context), 'Assistant context');
+            sentImages = context.payload.images;
             return {
                 content: {
                     sql: 'SELECT player FROM default.world_cup_golden_boot',
@@ -736,10 +739,12 @@ test('Ask AI uses browser Cloud schema and run evidence without resolving a loca
             createdAt: '2026-09-29T12:00:00.000Z',
         },
         evidenceSql: 'SELECT player FROM default.world_cup_golden_boot',
+        images: [tinyPng, tinyPng],
     });
     assert.equal(response.status, 201);
     assert.deepEqual(driver.schemaCalls, []);
     assert.equal(sentContext?.serverVersion, '25.8.4.5');
+    assert.deepEqual(sentImages, [tinyPng, tinyPng]);
     assert.deepEqual(sentContext?.tables, [{ database: 'default', name: 'world_cup_golden_boot' }]);
     assert.deepEqual(sentContext?.schema, [
         { database: 'default', table: 'world_cup_golden_boot', name: 'player', type: 'String' },
@@ -771,6 +776,50 @@ test('Ask AI uses browser Cloud schema and run evidence without resolving a loca
     });
     assert.equal(invalidSchema.status, 400);
     assert.equal(driver.schemaCalls.length, 0);
+});
+
+test('Ask AI accepts multiple image data over the default JSON body limit', async t => {
+    let receivedImageSizes: number[] | undefined;
+    const assistant: AssistantDriver = {
+        available: true,
+        model: 'fixture',
+        propose: async context => {
+            receivedImageSizes = context.payload.images?.map(
+                image => Buffer.from(image.slice(image.indexOf(',') + 1), 'base64').length,
+            );
+            return {
+                content: {
+                    sql: null,
+                    summary: 'I reviewed the screenshots.',
+                    assumptions: [],
+                    tables: [],
+                    caveats: [],
+                    clarification: null,
+                    findings: [],
+                },
+                responseId: 'fixture-images',
+            };
+        },
+    };
+    const app = await start(undefined, undefined, new DemoDriver(), assistant);
+    t.after(() => app.stop());
+    await app.call('/connections/demo/trust', { trusted: true, confirmation: 'demo' });
+
+    const imageBytes = Buffer.alloc(1_200_000);
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).copy(imageBytes);
+    const image = `data:image/png;base64,${imageBytes.toString('base64')}`;
+    const request = {
+        connectionId: 'clickhouse-cloud',
+        question: 'Compare these screenshots.',
+        sql: 'SELECT 1',
+        database: 'default',
+        images: [image, image],
+    };
+    assert.ok(Buffer.byteLength(JSON.stringify(request)) > 3 * 1024 * 1024);
+    const response = await app.call('/assistant/sql', request);
+
+    assert.equal(response.status, 201);
+    assert.deepEqual(receivedImageSizes, [1_200_000, 1_200_000]);
 });
 
 for (const connectionId of ['demo', 'clickhouse-cloud'])
@@ -1206,7 +1255,7 @@ test('Import preview transport keeps the source byte limit and other JSON body l
     });
     assert.equal(preview.status, 413);
     assert.equal((await preview.json()).error.code, 'IMPORT_BYTE_LIMIT');
-    const other = await app.call('/assistant/sql', { source: 'a'.repeat(3 * 1024 * 1024) });
+    const other = await app.call('/assistant/context', { source: 'a'.repeat(3 * 1024 * 1024) });
     assert.equal(other.status, 413);
     assert.equal((await other.json()).error.message, 'request entity too large');
 });

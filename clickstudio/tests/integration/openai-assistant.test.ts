@@ -140,6 +140,48 @@ test('OpenAI receives prior chat messages before the fresh SQL context', async t
     });
 });
 
+test('OpenAI receives every attached image with the current message', async t => {
+    const originalFetch = globalThis.fetch;
+    let requestBody: Record<string, unknown> | undefined;
+    globalThis.fetch = async (input, init) => {
+        const body = jsonRecord(jsonValue(String(init?.body)), 'OpenAI request');
+        if (String(input).endsWith('/responses/input_tokens'))
+            return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
+        requestBody = body;
+        return Response.json({
+            id: 'response-images',
+            status: 'completed',
+            output_text: 'I reviewed the screenshots.',
+            output: [],
+        });
+    };
+    t.after(() => {
+        globalThis.fetch = originalFetch;
+    });
+    const images = ['data:image/png;base64,c25vd2ZsYWtl', 'data:image/png;base64,ZGF0YWJyaWNrcw=='];
+    const driver = new OpenAIDriver('test-key', 'test-model');
+
+    await driver.propose(
+        assistantContext({
+            instructions: 'Use the attached screenshots.',
+            question: 'Compare these database screenshots.',
+            context: JSON.stringify({ sql: 'SELECT 1' }),
+            images,
+        }),
+        new AbortController().signal,
+    );
+
+    const input = arrayValue(requestBody?.input, 'OpenAI input');
+    const message = jsonRecord(input[0], 'Current message');
+    const content = arrayValue(message.content, 'Current message content').map(item =>
+        jsonRecord(item, 'Current message item'),
+    );
+    assert.deepEqual(
+        content.filter(item => item.type === 'input_image'),
+        images.map(image => ({ type: 'input_image', image_url: image, detail: 'auto' })),
+    );
+});
+
 test('OpenAI replies preserve complete scripts without local output limits', async t => {
     const priorFetch = globalThis.fetch;
     t.after(() => {

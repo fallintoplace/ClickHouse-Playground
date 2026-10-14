@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 
 import { flushSync } from 'react-dom';
 import { assistantReplyFrom, parseAssistantProposal } from './assistant-proposal-parser';
 import type { AssistantConversationMessage } from '../../../shared/assistant/types';
+import type { AssistantImageAttachment } from './assistant-image-attachments';
 import type { Result } from '../../../shared/queries/results/types';
 import type { Schema } from '../../../shared/database/schema/types';
 import { apiResponses, isFrontendDemoPreview, message, post } from '../../api/client';
@@ -69,6 +70,7 @@ function detailedConversationTurn(turn: AssistantChatTurn): AssistantConversatio
                 question: turn.question,
                 sql: turn.contextSql,
                 includeRun: turn.includeRun,
+                ...(turn.images?.length ? { images: turn.images } : {}),
                 ...(turn.runId ? { runId: turn.runId } : {}),
                 ...(turn.runContext ? { runContext: turn.runContext } : {}),
             }),
@@ -138,6 +140,7 @@ type AssistantRunContext = { result?: Result; evidenceSql?: string; error?: stri
 type AssistantRunContextLoader = (signal: AbortSignal) => Promise<AssistantRunContext>;
 type AssistantRequestOptions = {
     repair?: AssistantRepairContext;
+    images?: readonly AssistantImageAttachment[];
 };
 type AssistantActivity = { turnId: string; phase: AssistantPhase };
 type ActiveAssistantRequest = {
@@ -196,7 +199,10 @@ function createAssistantSqlRequestHandler(context: AssistantSqlRequestContext) {
         const requestIncludesRun = includeRun && !repair;
         const question = repair
             ? 'Fix this query error and return the updated SQL draft, keeping the other statements unchanged.'
-            : assistantQuestion.trim();
+            : assistantQuestion.trim() ||
+              (options?.images?.length
+                  ? 'Please analyze the attached images and explain any relevant SQL, database UI, or error details.'
+                  : '');
         if (!question) {
             setAssistantError('Ask a question or describe the SQL you want first.');
             return;
@@ -216,6 +222,7 @@ function createAssistantSqlRequestHandler(context: AssistantSqlRequestContext) {
             question,
             contextSql: active.sql,
             includeRun: requestIncludesRun,
+            ...(options?.images?.length ? { images: options.images.map(image => image.name) } : {}),
             ...(requestIncludesRun && activeRunId ? { runId: activeRunId } : {}),
             status: 'pending' as const,
         };
@@ -311,6 +318,9 @@ function createAssistantSqlRequestHandler(context: AssistantSqlRequestContext) {
                     result: storedRunContext?.result,
                     evidenceSql: storedRunContext?.evidenceSql,
                     error: storedRunContext?.error,
+                    ...(options?.images?.length
+                        ? { images: options.images.map(image => image.dataUrl) }
+                        : {}),
                 },
                 apiResponses.isUnknown,
                 { signal: controller.signal, allowTextResponse: true },

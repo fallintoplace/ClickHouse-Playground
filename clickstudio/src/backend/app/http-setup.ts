@@ -1,4 +1,5 @@
 import { MAX_IMPORT_SOURCE_CHARS } from '../../shared/database/imports/limits.js';
+import { MAX_ASSISTANT_REQUEST_BYTES } from '../../shared/assistant/images.js';
 import express, { type Express } from 'express';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
@@ -91,6 +92,7 @@ export function configureHttp(
         next();
     });
     app.post('/api/imports/preview', express.json({ limit: MAX_IMPORT_SOURCE_CHARS * 6 + 1024 }));
+    app.post('/api/assistant/sql', express.json({ limit: MAX_ASSISTANT_REQUEST_BYTES }));
     app.use(express.json({ limit: '3mb' }));
     app.use('/api', telemetry);
     app.get('/api/health', (_req, res) =>

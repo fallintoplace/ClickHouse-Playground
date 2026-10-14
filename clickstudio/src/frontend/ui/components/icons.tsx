@@ -49,6 +49,13 @@ const iconPaths = {
             <circle cx="12" cy="12" r="3" />
         </>
     ),
+    image: (
+        <>
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <path d="m21 15-5-5L5 21" />
+        </>
+    ),
     column: (
         <>
             <rect width="18" height="18" x="3" y="3" rx="2" />

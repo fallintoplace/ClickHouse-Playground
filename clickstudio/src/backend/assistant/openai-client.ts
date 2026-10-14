@@ -155,8 +155,10 @@ export class OpenAIDriver implements AssistantDriver {
                 }),
             },
         ];
-        if (context.payload.image)
-            content.push({ type: 'input_image', image_url: context.payload.image, detail: 'auto' });
+        const images =
+            context.payload.images ?? (context.payload.image ? [context.payload.image] : []);
+        for (const image of images)
+            content.push({ type: 'input_image', image_url: image, detail: 'auto' });
         const tools = [{ type: 'web_search' as const }];
         let conversation: OpenAI.Responses.ResponseInput = (context.payload.conversation ?? []).map(
             message => ({ role: message.role, content: message.content }),
