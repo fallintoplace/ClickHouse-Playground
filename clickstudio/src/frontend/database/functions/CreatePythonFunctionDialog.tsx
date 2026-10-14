@@ -148,6 +148,22 @@ export function CreatePythonFunctionDialog({
             </div>
             <div className="function-creation-workspace">
                 <div className="python-function-settings">
+                    <label className="creation-dialog-field python-function-dependencies">
+                        <span className="function-creation-section-heading">
+                            <span>requirements.txt</span>
+                            <span className="function-creation-meta">Optional</span>
+                        </span>
+                        <textarea
+                            className="creation-dialog-control"
+                            aria-label="Python dependencies"
+                            value={draft.requirements}
+                            onChange={event => update({ requirements: event.target.value })}
+                            placeholder="No dependencies"
+                            rows={4}
+                            maxLength={16000}
+                            spellCheck={false}
+                        />
+                    </label>
                     <section className="python-function-arguments" aria-label="Arguments">
                         <div className="function-creation-section-heading">
                             <h3>Arguments</h3>
@@ -231,22 +247,6 @@ export function CreatePythonFunctionDialog({
                             </div>
                         ))}
                     </section>
-                    <label className="creation-dialog-field python-function-dependencies">
-                        <span className="function-creation-section-heading">
-                            <span>requirements.txt</span>
-                            <span className="function-creation-meta">Optional</span>
-                        </span>
-                        <textarea
-                            className="creation-dialog-control"
-                            aria-label="Python dependencies"
-                            value={draft.requirements}
-                            onChange={event => update({ requirements: event.target.value })}
-                            placeholder="No dependencies"
-                            rows={4}
-                            maxLength={16000}
-                            spellCheck={false}
-                        />
-                    </label>
                 </div>
                 <div className="creation-dialog-field function-creation-source">
                     <span className="function-creation-section-heading">
