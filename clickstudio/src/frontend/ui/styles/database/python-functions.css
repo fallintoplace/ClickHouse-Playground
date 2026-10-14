@@ -25,14 +25,7 @@
     display: grid;
     min-width: 0;
     gap: 10px;
-    padding-block: 12px;
-    border-top: 1px solid var(--line);
-  }
-
-  .python-deployment-panel h3 {
-    margin: 0;
-    font-size: 12px;
-    font-weight: 600;
+    padding-block: 8px 12px;
   }
 
   .python-function-checkbox {

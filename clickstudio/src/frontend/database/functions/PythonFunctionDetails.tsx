@@ -46,6 +46,7 @@ export function PythonFunctionDetails({
                 parameters: arguments_.map(argument => argument.name),
             }}
             pythonTypes={arguments_.map(argument => argument.type)}
+            showDefinition={Boolean(fn.createQuery.trim())}
             evidence={evidence}
             trusted={trusted}
             onRun={onRun}

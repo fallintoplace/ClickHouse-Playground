@@ -18,6 +18,9 @@ import { testPythonFunctionQuery } from '../../../shared/database/functions/pyth
 export type FunctionTestEvidence = { busy: boolean };
 type TestAttempt = { id: string; sql: string; submitting: boolean; runId?: string; error?: string };
 type FunctionDetailsTab = 'test' | 'definition' | 'deployment';
+function visibleFunctionTab(tab: FunctionDetailsTab, showDefinition: boolean): FunctionDetailsTab {
+    return !showDefinition && tab === 'definition' ? 'test' : tab;
+}
 
 function FunctionDeleteAction({
     allowed,
@@ -50,16 +53,18 @@ function FunctionDetailsTabs({
     id,
     active,
     onChange,
+    definition,
     deployment,
 }: {
     id: string;
     active: FunctionDetailsTab;
     onChange: (tab: FunctionDetailsTab) => void;
+    definition: boolean;
     deployment: boolean;
 }) {
     const tabs: Array<{ key: FunctionDetailsTab; label: string }> = [
         { key: 'test', label: 'Test' },
-        { key: 'definition', label: 'Definition' },
+        ...(definition ? [{ key: 'definition' as const, label: 'Definition' }] : []),
         ...(deployment ? [{ key: 'deployment' as const, label: 'Deployment' }] : []),
     ];
     return (
@@ -205,6 +210,7 @@ export function SqlFunctionDetails({
     onDelete,
     pythonTypes,
     deployment,
+    showDefinition = true,
     argumentActions,
     onPythonTypeChange,
     manualSignature = false,
@@ -221,6 +227,7 @@ export function SqlFunctionDetails({
     onDelete: () => void;
     pythonTypes?: string[];
     deployment?: ReactNode;
+    showDefinition?: boolean;
     argumentActions?: ReactNode;
     onPythonTypeChange?: (index: number, type: string) => void;
     manualSignature?: boolean;
@@ -235,6 +242,7 @@ export function SqlFunctionDetails({
         setStartError('');
     }, [input.signature, fn.createQuery]);
     const [activeTab, setActiveTab] = useState<FunctionDetailsTab>('test');
+    const visibleTab = visibleFunctionTab(activeTab, showDefinition);
     const tabsId = useId();
     let sql = '',
         validation = '';
@@ -322,14 +330,15 @@ export function SqlFunctionDetails({
             </div>
             <FunctionDetailsTabs
                 id={tabsId}
-                active={activeTab}
+                active={visibleTab}
                 onChange={setActiveTab}
+                definition={showDefinition}
                 deployment={Boolean(deployment)}
             />
             <div
                 className="sql-function-panel"
                 role="tabpanel"
-                hidden={activeTab !== 'test'}
+                hidden={visibleTab !== 'test'}
                 id={`${tabsId}-test-panel`}
                 aria-labelledby={`${tabsId}-test-tab`}
             >
@@ -404,34 +413,36 @@ export function SqlFunctionDetails({
                     </details>
                 </section>
             </div>
-            <div
-                className="sql-function-panel"
-                role="tabpanel"
-                hidden={activeTab !== 'definition'}
-                id={`${tabsId}-definition-panel`}
-                aria-labelledby={`${tabsId}-definition-tab`}
-            >
-                <div className="sql-function-definition">
-                    <h4>Function definition</h4>
-                    <pre>{fn.createQuery}</pre>
-                    <Button
-                        variant="secondary"
-                        className="toolbar-small"
-                        onClick={() =>
-                            onCopy(fn.createQuery, `function-definition:${fn.createQuery}`)
-                        }
-                    >
-                        {copiedId === `function-definition:${fn.createQuery}`
-                            ? 'Copied'
-                            : 'Copy definition'}
-                    </Button>
+            {showDefinition && (
+                <div
+                    className="sql-function-panel"
+                    role="tabpanel"
+                    hidden={visibleTab !== 'definition'}
+                    id={`${tabsId}-definition-panel`}
+                    aria-labelledby={`${tabsId}-definition-tab`}
+                >
+                    <div className="sql-function-definition">
+                        <h4>Function definition</h4>
+                        <pre>{fn.createQuery}</pre>
+                        <Button
+                            variant="secondary"
+                            className="toolbar-small"
+                            onClick={() =>
+                                onCopy(fn.createQuery, `function-definition:${fn.createQuery}`)
+                            }
+                        >
+                            {copiedId === `function-definition:${fn.createQuery}`
+                                ? 'Copied'
+                                : 'Copy definition'}
+                        </Button>
+                    </div>
                 </div>
-            </div>
+            )}
             {deployment && (
                 <div
                     className="sql-function-panel"
                     role="tabpanel"
-                    hidden={activeTab !== 'deployment'}
+                    hidden={visibleTab !== 'deployment'}
                     id={`${tabsId}-deployment-panel`}
                     aria-labelledby={`${tabsId}-deployment-tab`}
                 >

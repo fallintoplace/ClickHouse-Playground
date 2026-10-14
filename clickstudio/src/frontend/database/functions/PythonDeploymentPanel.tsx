@@ -111,7 +111,6 @@ export function PythonDeploymentPanel({
     const selected = status?.versions.find(version => String(version.version) === selectedVersion);
     return (
         <section className="python-deployment-panel" aria-label="Cloud deployment">
-            <h3>Deployment</h3>
             {!allowed && (
                 <p className="sql-function-input-hint">
                     Deployment is unavailable for this connection. ZIP export remains available.
