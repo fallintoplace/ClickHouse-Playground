@@ -385,26 +385,16 @@
   color: var(--muted);
   font-size: 10px;
 }
-.native-lineage-database select {
+.native-lineage-database .chart-select {
   min-width: 132px;
-  min-height: 36px;
-  color: var(--text);
-  background: var(--panel);
-  border: 1px solid var(--line-bright);
-  border-radius: var(--radius-control);
-  padding: 7px 10px;
-  font: inherit;
+  max-width: 280px;
 }
 .native-lineage-dialog .native-lineage-database {
   color: var(--text-soft);
   font-size: 11px;
 }
-.native-lineage-dialog .native-lineage-database select {
+.native-lineage-dialog .native-lineage-database .chart-select {
   min-width: 180px;
-  min-height: 32px;
-  padding: 5px 10px;
-  border-color: var(--line);
-  background: var(--panel-raised);
 }
 .native-lineage-primer {
   display: grid;

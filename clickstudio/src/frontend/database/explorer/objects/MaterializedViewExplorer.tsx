@@ -12,6 +12,7 @@ import { useNativeExplorer } from '../useNativeExplorer';
 import { NativeExplorerDialog } from '../NativeExplorerDialog';
 import { Button } from '../../../ui/components/primitives';
 import { Icon } from '../../../ui/components/icons';
+import { SelectControl } from '../../../ui/components/SelectControl';
 
 const modeLabels = {
     incremental: 'Incremental MV',
@@ -744,6 +745,9 @@ export function MaterializedViewExplorer({
     active?: boolean;
 }) {
     const [selectedDatabase, setSelectedDatabase] = useState(database);
+    const databaseOptions = [...new Set([database, ...databases])]
+        .filter(Boolean)
+        .map(value => ({ value, label: value }));
     useEffect(() => setSelectedDatabase(database), [database]);
     const { snapshot, loading, error, refresh } = useNativeExplorer(
         connection.id,
@@ -786,20 +790,16 @@ export function MaterializedViewExplorer({
         <>
             <div className="native-toolbar native-lineage-meta-toolbar">
                 {embedded && sourceMeta}
-                <label className="native-lineage-database">
-                    Database
-                    <select
-                        aria-label="Lineage database"
+                <div className="native-lineage-database">
+                    <span>Database</span>
+                    <SelectControl
+                        label="Lineage database"
                         value={selectedDatabase}
-                        onChange={event => setSelectedDatabase(event.target.value)}
-                    >
-                        {databases.map(value => (
-                            <option key={value} value={value}>
-                                {value}
-                            </option>
-                        ))}
-                    </select>
-                </label>
+                        options={databaseOptions}
+                        onChange={setSelectedDatabase}
+                        searchable
+                    />
+                </div>
                 {!embedded && sourceMeta}
                 <Button onClick={refresh} disabled={loading}>
                     {!embedded && <Icon name="refresh" />}

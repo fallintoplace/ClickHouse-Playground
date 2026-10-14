@@ -11,6 +11,79 @@ import {
     chooseExistingCloudTable,
 } from './cloud-import-helpers.js';
 
+test('Playground dependencies reload legacy schema caches and list empty databases', async ({
+    page,
+}) => {
+    await page.addInitScript(() =>
+        localStorage.setItem(
+            'clickstudio:playground-schema:v1',
+            JSON.stringify({
+                savedAt: Date.now(),
+                schema: {
+                    connectionId: 'playground',
+                    fetchedAt: '2026-10-14',
+                    tables: [],
+                    columns: [],
+                    warnings: [],
+                    truncated: false,
+                },
+            }),
+        ),
+    );
+    let catalogRequests = 0;
+    await page.route('https://sql-clickhouse.clickhouse.com:8443/**', route => {
+        const sql = route.request().postData() ?? '';
+        let body = '[]\n[]\n';
+        if (sql.includes('FROM system.databases')) {
+            catalogRequests++;
+            body = '["name"]\n["String"]\n["github"]\n["empty_db"]\n["analytics"]\n';
+        } else if (sql.includes('sorting_key, primary_key, partition_key, sampling_key')) {
+            body = [
+                JSON.stringify([
+                    'database',
+                    'name',
+                    'engine',
+                    'sorting_key',
+                    'primary_key',
+                    'partition_key',
+                    'sampling_key',
+                    'total_rows',
+                    'total_bytes',
+                    'total_bytes_uncompressed',
+                ]),
+                JSON.stringify(Array.from({ length: 10 }, () => 'String')),
+                JSON.stringify([
+                    'github',
+                    'events',
+                    'MergeTree',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '1',
+                    '100',
+                    '200',
+                ]),
+                '',
+            ].join('\n');
+        }
+        return route.fulfill({ body, contentType: 'text/plain' });
+    });
+    await page.goto('/experimental?connection=playground');
+    await page.getByRole('button', { name: 'View dependencies', exact: true }).click();
+    const dialog = page.getByRole('dialog', {
+        name: 'Materialized view dependencies',
+        exact: true,
+    });
+    const database = dialog.getByRole('combobox', { name: 'Lineage database', exact: true });
+    await database.click();
+    await expect(dialog.getByRole('option')).toHaveText(['github', 'empty_db', 'analytics']);
+    await dialog.getByRole('option', { name: 'empty_db', exact: true }).click();
+    await expect(database).toHaveAttribute('data-value', 'empty_db');
+    await expect(dialog.getByRole('status')).toContainText('empty_db');
+    expect(catalogRequests).toBe(1);
+});
+
 test('Static preview opens Standard at root and shares SQL with the Experimental URL', async ({
     page,
 }) => {

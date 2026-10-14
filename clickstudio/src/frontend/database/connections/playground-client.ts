@@ -1,4 +1,4 @@
-import { isRecord } from '../../../shared/common/values.js';
+import { isRecord, isStringArray } from '../../../shared/common/values.js';
 import type { Column, Json, Row } from '../../../shared/common/values.js';
 import { type Schema } from '../../../shared/database/schema/types.js';
 import {
@@ -17,6 +17,7 @@ import { decodeClickHouseStringValue } from './playground-value-decoder.js';
 import { ClickHouseError, createClient } from '@clickhouse/client-web';
 import {
     PLAYGROUND_CONNECTION_ID,
+    PLAYGROUND_CONNECTION,
     PLAYGROUND_URL,
 } from '../../../shared/database/connections/playground.js';
 export {
@@ -41,6 +42,7 @@ const MAX_RESPONSE_BYTES = 2_000_000;
 const RESPONSE_BYTE_WARNING_THRESHOLD = 0.9;
 const SCHEMA_MAX_TABLES = 1_000;
 const SCHEMA_MAX_COLUMNS = 1_000;
+const SCHEMA_MAX_DATABASES = 1_000;
 const SCHEMA_CACHE_KEY = 'clickstudio:playground-schema:v1';
 const SCHEMA_CACHE_AGE_MS = 60 * 60 * 1_000;
 const NULL_MARKER = 'ᴺᵁᴸᴸ';
@@ -336,6 +338,10 @@ export async function loadPlaygroundTableParts(
     return parseMergeTreeParts(database, table, result.rows);
 }
 
+const databasesSql = `SELECT name FROM system.databases
+WHERE lower(name) NOT IN ('system', 'information_schema')
+ORDER BY name
+LIMIT ${SCHEMA_MAX_DATABASES + 1}`;
 const tablesSql = `SELECT database, name, engine, sorting_key, primary_key, partition_key, sampling_key,
        total_rows, total_bytes, total_bytes_uncompressed
 FROM system.tables
@@ -368,6 +374,7 @@ function cachedSchema(): Schema | undefined {
             age < 0 ||
             age > SCHEMA_CACHE_AGE_MS ||
             !isSchema(schema) ||
+            !isStringArray(schema.databases) ||
             schema.connectionId !== PLAYGROUND_CONNECTION_ID
         )
             return undefined;
@@ -383,17 +390,34 @@ export async function loadPlaygroundSchema(signal?: AbortSignal, refresh = false
         if (cached) return cached;
     }
 
-    const [tableResult, columnResult] = await Promise.all([
+    const [databaseResult, tableResult, columnResult] = await Promise.all([
+        executePlaygroundQuery(databasesSql, signal, SCHEMA_MAX_DATABASES + 1, 1_000_000).catch(
+            error => {
+                if (signal?.aborted) throw error;
+                return undefined;
+            },
+        ),
         executePlaygroundQuery(tablesSql, signal, SCHEMA_MAX_TABLES + 1, 4_000_000),
         executePlaygroundQuery(columnsSql, signal, SCHEMA_MAX_COLUMNS + 1, 6_000_000),
     ]);
     const tableRows = tableResult.rows.slice(0, SCHEMA_MAX_TABLES);
     const columnRows = columnResult.rows.slice(0, SCHEMA_MAX_COLUMNS);
     const truncated =
-        tableResult.rows.length >= MAX_RESULT_ROWS || columnResult.rows.length >= MAX_RESULT_ROWS;
+        (databaseResult?.rows.length ?? 0) > SCHEMA_MAX_DATABASES ||
+        tableResult.rows.length >= MAX_RESULT_ROWS ||
+        columnResult.rows.length >= MAX_RESULT_ROWS;
     const schema: Schema = {
         connectionId: PLAYGROUND_CONNECTION_ID,
         fetchedAt: new Date().toISOString(),
+        databases: [
+            ...new Set([
+                PLAYGROUND_CONNECTION.database,
+                ...(databaseResult?.rows.slice(0, SCHEMA_MAX_DATABASES) ?? []).map(row =>
+                    text(row[0]),
+                ),
+                ...tableRows.map(row => text(row[0])),
+            ]),
+        ].filter(name => name && !['system', 'information_schema'].includes(name.toLowerCase())),
         tables: tableRows.map(row => ({
             database: text(row[0]),
             name: text(row[1]),
@@ -414,11 +438,18 @@ export async function loadPlaygroundSchema(signal?: AbortSignal, refresh = false
             defaultKind: text(row[4]),
             comment: text(row[5]),
         })),
-        warnings: truncated
-            ? [
-                  `The public Playground returned its ${MAX_RESULT_ROWS.toLocaleString()}-row limit. Some tables or columns may be missing.`,
-              ]
-            : [],
+        warnings: [
+            ...(databaseResult
+                ? []
+                : [
+                      'Database metadata is unavailable. Only databases from loaded tables are listed.',
+                  ]),
+            ...(truncated
+                ? [
+                      `The public Playground returned its ${MAX_RESULT_ROWS.toLocaleString()}-row limit. Some databases, tables or columns may be missing.`,
+                  ]
+                : []),
+        ],
         truncated,
     };
     try {
