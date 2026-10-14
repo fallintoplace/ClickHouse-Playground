@@ -41,30 +41,19 @@ test('Python ZIP export includes offline tokenizer assets without management cre
     expect(strFromU8(files['requirements.txt']!)).toContain('tiktoken==0.14.0');
 });
 
-test('Python function name errors identify the field while it is scrolled out of view', async ({
-    page,
-}) => {
+test('Invalid Python UDF names use a red input border without a message', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await functionsWorkspace(page);
+    await page.getByRole('radio', { name: 'Dark theme', exact: true }).click();
     await page.getByRole('button', { name: 'Create Python UDF', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Create Python UDF', exact: true });
     const name = dialog.getByLabel('Function name', { exact: true });
     await name.fill('_invalid');
 
-    const nameIssue = dialog.getByRole('status');
-    await expect(nameIssue).toHaveText(
-        'Function name: Use a letter first, then letters, numbers or underscores.',
-    );
     await expect(name).toHaveAttribute('aria-invalid', 'true');
-    await expect(name).toHaveAccessibleDescription(
-        'Function name: Use a letter first, then letters, numbers or underscores.',
-    );
-
-    await dialog
-        .locator('.function-creation-scroll')
-        .evaluate(element => (element.scrollTop = element.scrollHeight));
-    await expect(nameIssue).toBeInViewport();
-    await expect(name).not.toBeInViewport();
+    await expect(name).toHaveCSS('border-top-color', 'rgb(255, 107, 117)');
+    await expect(name).not.toHaveAttribute('aria-describedby');
+    await expect(dialog.locator('.sql-function-error[role="status"]')).toHaveCount(0);
 });
 
 for (const mode of ['Standard', 'Experimental']) {

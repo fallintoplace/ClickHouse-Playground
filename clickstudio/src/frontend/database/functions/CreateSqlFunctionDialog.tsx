@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import {
     SQL_FUNCTION_CREATION_TEMPLATES,
     createSqlFunctionQuery,
@@ -91,7 +91,6 @@ export function CreateSqlFunctionDialog({
     onClose: () => void;
     onCreated: (fn: SqlFunction) => void;
 }) {
-    const nameIssueId = useId();
     const nameInput = useRef<HTMLInputElement>(null);
     const nextParameterId = useRef(1);
     const [template, setTemplate] = useState('custom');
@@ -207,7 +206,6 @@ export function CreateSqlFunctionDialog({
                         disabled={busy}
                         aria-label="Function name"
                         aria-invalid={visibleNameIssue ? true : undefined}
-                        aria-describedby={visibleNameIssue ? nameIssueId : undefined}
                         maxLength={128}
                         placeholder="e.g. udf_array_remove_at"
                         onChange={event => changeField('name', event.target.value)}
@@ -257,19 +255,9 @@ export function CreateSqlFunctionDialog({
                     />
                 </div>
             </div>
-            {validation && hasInput && (
-                <p
-                    id={visibleNameIssue ? nameIssueId : undefined}
-                    className="sql-function-error"
-                    role="status"
-                >
-                    {visibleNameIssue ? (
-                        <>
-                            <strong>Function name:</strong> {visibleNameIssue}
-                        </>
-                    ) : (
-                        validation
-                    )}
+            {validation && hasInput && !visibleNameIssue && (
+                <p className="sql-function-error" role="status">
+                    {validation}
                 </p>
             )}
             {error && (

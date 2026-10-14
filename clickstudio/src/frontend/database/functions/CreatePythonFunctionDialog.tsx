@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
     PYTHON_FUNCTION_CUSTOM_DRAFT,
     PYTHON_FUNCTION_TEMPLATES,
@@ -24,7 +24,6 @@ export function CreatePythonFunctionDialog({
     onPublished: () => void;
     deployAllowed: boolean;
 }) {
-    const nameIssueId = useId();
     const nameInput = useRef<HTMLInputElement>(null);
     const [template, setTemplate] = useState('custom');
     const [draft, setDraft] = useState<PythonFunctionDraft>(() =>
@@ -111,7 +110,6 @@ export function CreatePythonFunctionDialog({
                         className="creation-dialog-control"
                         value={draft.name}
                         aria-invalid={visibleNameIssue ? true : undefined}
-                        aria-describedby={visibleNameIssue ? nameIssueId : undefined}
                         onChange={event => update({ name: event.target.value })}
                         maxLength={128}
                         placeholder="e.g. py_semver_compare"
@@ -274,19 +272,9 @@ export function CreatePythonFunctionDialog({
                     {sourceIssue}
                 </p>
             )}
-            {showValidation && !validation.success && (
-                <p
-                    id={visibleNameIssue ? nameIssueId : undefined}
-                    className="sql-function-error"
-                    role="status"
-                >
-                    {visibleNameIssue ? (
-                        <>
-                            <strong>Function name:</strong> {visibleNameIssue}
-                        </>
-                    ) : (
-                        validation.error.issues[0]?.message
-                    )}
+            {showValidation && !validation.success && !visibleNameIssue && (
+                <p className="sql-function-error" role="status">
+                    {validation.error.issues[0]?.message}
                 </p>
             )}
             {error && (
