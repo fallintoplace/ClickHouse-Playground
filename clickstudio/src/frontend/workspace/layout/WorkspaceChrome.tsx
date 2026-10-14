@@ -225,6 +225,7 @@ export function ExecutionBar({
     eventState,
     onOpenDetails,
     scriptRunning,
+    standardMode,
     serverLabel,
     helpHint,
     helpButton,
@@ -236,6 +237,7 @@ export function ExecutionBar({
     eventState: RunEventState;
     onOpenDetails?: () => void;
     scriptRunning: boolean;
+    standardMode: boolean;
     serverLabel: string;
     helpHint?: string;
     helpButton: ReactNode;
@@ -372,7 +374,11 @@ export function ExecutionBar({
     return (
         <footer
             ref={footerRef}
-            className={cx('execution-bar', executionInProgress && 'is-running')}
+            className={cx(
+                'execution-bar',
+                standardMode && 'is-standard',
+                executionInProgress && 'is-running',
+            )}
             data-run-status={failedAttempt ? 'failed' : (currentRun?.status ?? 'ready')}
             data-query-id={currentRun?.queryId}
         >

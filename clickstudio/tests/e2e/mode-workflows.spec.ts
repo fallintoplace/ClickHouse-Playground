@@ -987,3 +987,25 @@ for (const theme of ['Dark', 'Light'])
         await expect(page.locator('.sql-flow-view')).toBeVisible();
         expect(executions).toBe(1);
     });
+
+test('Help stays at the bottom-right of the footer in Standard mode', async ({ page }) => {
+    await trust(page);
+    const footer = page.locator('.execution-bar');
+    const helpButton = page.getByRole('button', { name: 'Help', exact: true });
+
+    for (const width of [1440, 800]) {
+        await page.setViewportSize({ width, height: 900 });
+        await setWorkspaceMode(page, 'Standard');
+        await expect(footer).toHaveClass(/is-standard/);
+        await expect(helpButton).toBeVisible();
+
+        const bounds = await Promise.all([
+            footer.evaluate(element => element.getBoundingClientRect().right),
+            helpButton.evaluate(element => element.getBoundingClientRect().right),
+        ]);
+        expect(bounds[0] - bounds[1]).toBeLessThanOrEqual(20);
+    }
+
+    await useAdvancedMode(page);
+    await expect(footer).not.toHaveClass(/is-standard/);
+});

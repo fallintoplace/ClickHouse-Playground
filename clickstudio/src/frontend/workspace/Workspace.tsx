@@ -716,6 +716,7 @@ function renderWorkspaceOverlays({
                 eventState={eventState}
                 onOpenDetails={experience === 'expert' ? () => showInspector('details') : undefined}
                 scriptRunning={script?.status === 'running'}
+                standardMode={experience === 'beginner'}
                 serverLabel={serverLabel}
                 helpHint={experience === 'expert' ? helpHint : undefined}
                 copy={copy.common}

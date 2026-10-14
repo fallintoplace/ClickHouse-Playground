@@ -2433,6 +2433,9 @@
     min-width: 0;
     flex: 1;
   }
+  .execution-bar.is-standard .execution-right {
+    justify-content: flex-end;
+  }
   .execution-help-hint {
     min-width: 0;
     flex: 1 1 auto;
