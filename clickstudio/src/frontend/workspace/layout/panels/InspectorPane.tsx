@@ -1,6 +1,8 @@
 import type { OpenSqlDraft } from '../../../queries/execution/sql-draft-observer';
 import type { FunctionTestEvidence } from '../../../database/functions/SqlFunctionDetails';
 import type { SqlFunctionCatalogState } from '../../../database/functions/useSqlFunctionCatalog';
+import type { PythonFunctionCatalogState } from '../../../database/functions/usePythonFunctionCatalog';
+import type { TablePermissionCatalogState } from '../../../database/tables/useTablePermissionCatalog';
 import { RunComparisonLauncher } from '../../../queries/history/RunComparison';
 import {
     useCallback,
@@ -44,6 +46,8 @@ export type InspectorPaneProps = {
     setInspector: (inspector: Inspector) => void;
     connection: Connected;
     functionCatalog: SqlFunctionCatalogState;
+    pythonFunctionCatalog: PythonFunctionCatalogState;
+    tablePermissionCatalog: TablePermissionCatalogState;
     serverVersion?: string;
     schema?: Schema;
     schemaLoading: boolean;
@@ -220,6 +224,8 @@ export function InspectorPane({
     setInspector,
     connection,
     functionCatalog,
+    pythonFunctionCatalog,
+    tablePermissionCatalog,
     serverVersion,
     schema,
     schemaLoading,
@@ -375,6 +381,8 @@ export function InspectorPane({
                         expert={isExpert}
                         functionTest={functionTest}
                         functionCatalog={functionCatalog}
+                        pythonFunctionCatalog={pythonFunctionCatalog}
+                        tablePermissionCatalog={tablePermissionCatalog}
                         schema={schema}
                         schemaLoading={schemaLoading}
                         schemaLoadingMore={schemaLoadingMore}

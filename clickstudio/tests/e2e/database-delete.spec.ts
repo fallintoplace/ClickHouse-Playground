@@ -106,6 +106,17 @@ for (const mode of ['Standard', 'Experimental']) {
         const plusBounds = await plus.boundingBox();
         expect(trashBounds!.x).toBeLessThan(plusBounds!.x);
         expect(Math.abs(trashBounds!.y - plusBounds!.y)).toBeLessThan(1);
+        const permissionRequests = requests.filter(body => body.action === 'table-permissions');
+        await page.getByTestId('open-ai').click();
+        await page
+            .locator('.icon-rail')
+            .getByRole('button', { name: 'Objects', exact: true })
+            .click();
+        await expect(trash).toBeVisible();
+        await expect(plus).toBeVisible();
+        expect(requests.filter(body => body.action === 'table-permissions')).toEqual(
+            permissionRequests,
+        );
         for (const protectedName of ['default', 'system', 'INFORMATION_SCHEMA'])
             await expect(
                 page.getByRole('button', { name: `Delete database ${protectedName}`, exact: true }),

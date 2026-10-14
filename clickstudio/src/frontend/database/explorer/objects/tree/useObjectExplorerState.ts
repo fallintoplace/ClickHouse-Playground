@@ -61,6 +61,7 @@ export function useObjectExplorerState(props: ObjectExplorerProps) {
         search,
         setSearch,
         trusted,
+        tablePermissionCatalog,
         onRefreshSchema,
         onLoadMoreSchema,
         importedTableTarget,
@@ -236,8 +237,7 @@ export function useObjectExplorerState(props: ObjectExplorerProps) {
     const selectedTable =
         selected?.kind === 'relation' && selected.relationKind === 'table' ? selected : undefined;
     const tablePermissions = useTablePermissions(
-        connection,
-        trusted,
+        tablePermissionCatalog,
         selectedTable?.table.database ?? connection.database,
         selectedTable?.table.name,
         Boolean(selectedTable),
@@ -304,6 +304,7 @@ export function useObjectExplorerState(props: ObjectExplorerProps) {
         showCompactDetails,
         selectedTable,
         tablePermissions,
+        tablePermissionCatalog,
         connection,
         trusted,
         copy,

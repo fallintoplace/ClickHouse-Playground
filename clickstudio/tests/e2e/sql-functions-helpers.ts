@@ -14,6 +14,7 @@ import { cloudConnectionTest, cloudSchema } from '../helpers/cloud-fixtures.js';
 import { jsonRecord, stringValue } from '../helpers/type-guards.js';
 import { connectPreviewCloud } from './cloud-import-helpers.js';
 import type { ExecutableFunction } from '../../src/shared/database/functions/python-functions.js';
+import type { TablePermissions } from '../../src/shared/database/tables/permissions.js';
 
 type FunctionTestState = {
     executableFunctions: ExecutableFunction[];
@@ -192,10 +193,12 @@ export async function functionsWorkspace(
         metadataDelay?: number;
         waitForFunctions?: boolean;
         openObjects?: boolean;
+        executableFunctions?: ExecutableFunction[];
+        tablePermissions?: TablePermissions;
     } = {},
 ) {
     const state: FunctionTestState = {
-        executableFunctions: [],
+        executableFunctions: options.executableFunctions ?? [],
         executableError: options.executableError ?? false,
         canCreate: options.canCreate ?? true,
         canDrop: options.canDrop ?? true,
@@ -284,7 +287,9 @@ export async function functionsWorkspace(
         if (action === 'drop-function') return fulfillFunctionDrop(route, body, state, liveClient);
         if (action === 'run') return fulfillFunctionRun(route, body, state, liveClient);
         if (action === 'table-permissions')
-            return route.fulfill({ json: { create: false, insert: false, drop: false } });
+            return route.fulfill({
+                json: options.tablePermissions ?? { create: false, insert: false, drop: false },
+            });
         return route.fulfill({
             status: 409,
             json: { error: { code: 'UNEXPECTED_ACTION', message: `Unexpected ${String(action)}` } },

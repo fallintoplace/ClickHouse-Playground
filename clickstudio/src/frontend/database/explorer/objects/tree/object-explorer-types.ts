@@ -1,6 +1,8 @@
 import type { OpenSqlDraft } from '../../../../queries/execution/sql-draft-observer';
 import type { FunctionTestEvidence } from '../../../functions/SqlFunctionDetails';
 import type { SqlFunctionCatalogState } from '../../../functions/useSqlFunctionCatalog';
+import type { PythonFunctionCatalogState } from '../../../functions/usePythonFunctionCatalog';
+import type { TablePermissionCatalogState } from '../../../tables/useTablePermissionCatalog';
 import type { Schema, SchemaTable } from '../../../../../shared/database/schema/types';
 import type { Connected, ImportedTableTarget } from '../../../../workspace/workspace-types';
 import type { Copy } from '../../../../ui/copy';
@@ -8,6 +10,8 @@ import type { Copy } from '../../../../ui/copy';
 export type ObjectExplorerProps = {
     functionTest?: FunctionTestEvidence;
     functionCatalog: SqlFunctionCatalogState;
+    pythonFunctionCatalog: PythonFunctionCatalogState;
+    tablePermissionCatalog: TablePermissionCatalogState;
     copy: Copy['common'];
     connection: Connected;
     expert: boolean;

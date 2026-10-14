@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { SchemaDictionary } from '../../../../../shared/database/schema/types';
 import { useTablePermissions } from '../../../tables/useTablePermissions';
 import { Icon } from '../../../../ui/components/icons';
+import { Spinner } from '../../../../ui/components/primitives';
 import {
     explorerCategoryId,
     explorerDictionaryId,
@@ -21,8 +22,7 @@ export function ObjectTree({
     renderRelation,
     selectedId,
     selectObject,
-    connection,
-    trusted,
+    tablePermissionCatalog,
     onCreateTable,
     onDeleteDatabase,
     functionsSlot,
@@ -36,8 +36,7 @@ export function ObjectTree({
     renderRelation: (relation: ExplorerRelation, level: number) => import('react').ReactElement;
     selectedId: string | undefined;
     selectObject: (id: string) => void;
-    connection: ObjectExplorerProps['connection'];
-    trusted: boolean;
+    tablePermissionCatalog: ObjectExplorerProps['tablePermissionCatalog'];
     onCreateTable: (database: string) => void;
     onDeleteDatabase: (database: string) => void;
 }) {
@@ -53,8 +52,7 @@ export function ObjectTree({
                                 count={database.visibleObjectCount}
                                 expanded={databaseExpanded}
                                 onToggle={() => toggle(database.id)}
-                                connection={connection}
-                                trusted={trusted}
+                                tablePermissionCatalog={tablePermissionCatalog}
                                 copy={copy}
                                 onCreateTable={onCreateTable}
                                 onDeleteDatabase={onDeleteDatabase}
@@ -116,8 +114,7 @@ function DatabaseRow({
     count,
     expanded,
     onToggle,
-    connection,
-    trusted,
+    tablePermissionCatalog,
     copy,
     onCreateTable,
     onDeleteDatabase,
@@ -126,15 +123,17 @@ function DatabaseRow({
     count: number;
     expanded: boolean;
     onToggle: () => void;
-    connection: ObjectExplorerProps['connection'];
-    trusted: boolean;
+    tablePermissionCatalog: ObjectExplorerProps['tablePermissionCatalog'];
     copy: ObjectExplorerProps['copy'];
     onCreateTable: (database: string) => void;
     onDeleteDatabase: (database: string) => void;
 }) {
-    const permissions = useTablePermissions(connection, trusted, database);
+    const permissions = useTablePermissions(tablePermissionCatalog, database);
     const action = (
         <>
+            {permissions.loading && (
+                <Spinner size={12} label={`Checking database actions for ${database}`} />
+            )}
             {permissions.dropDatabase === true && canDropDatabase(database) && (
                 <button
                     type="button"

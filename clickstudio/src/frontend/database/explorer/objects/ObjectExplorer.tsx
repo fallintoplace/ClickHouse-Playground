@@ -34,6 +34,10 @@ function ObjectExplorerEmptySearch({
     );
 }
 
+function refreshObjectMetadata(...catalogs: { refresh: () => void }[]) {
+    for (const catalog of catalogs) catalog.refresh();
+}
+
 export function ObjectExplorer(props: ObjectExplorerProps) {
     const state = useObjectExplorerState(props);
     const [deleteDatabaseTarget, setDeleteDatabaseTarget] = useState<{
@@ -94,6 +98,7 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
         !connection.readonly &&
             (connection.id !== CLICKHOUSE_CLOUD_CONNECTION_ID ||
                 functions.catalog?.canCreate === true),
+        props.pythonFunctionCatalog,
         functions.loading || Boolean(functions.error),
     );
     const functionDetails = functions.selected || python.selected;
@@ -259,10 +264,9 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                     functionsVisible={Boolean(functionsSlot)}
                     functionsLoading={functions.loading || python.loading}
                     refreshErrors={functionRefreshErrors(functions, python)}
-                    onRefreshFunctions={() => {
-                        functions.refresh();
-                        python.refresh();
-                    }}
+                    onRefreshFunctions={() =>
+                        refreshObjectMetadata(functions, python, props.tablePermissionCatalog)
+                    }
                 />
             )}
             {trusted && deleteDatabaseTarget?.connectionKey === connectionKey && (
@@ -366,7 +370,6 @@ function ObjectExplorerBrowser({
 }) {
     const {
         compact,
-        connection,
         trusted,
         copy,
         setCreateTableDatabase,
@@ -396,6 +399,7 @@ function ObjectExplorerBrowser({
         schemaLoadingMore,
         onLoadMoreSchema,
         detailsOpen,
+        tablePermissionCatalog,
     } = state;
     const busy = schemaLoading || functionsLoading;
     const refreshing = useRef(false);
@@ -470,8 +474,7 @@ function ObjectExplorerBrowser({
                                 renderRelation,
                                 selectedId,
                                 selectObject,
-                                connection,
-                                trusted,
+                                tablePermissionCatalog,
                                 onCreateTable: setCreateTableDatabase,
                                 onDeleteDatabase,
                             }}

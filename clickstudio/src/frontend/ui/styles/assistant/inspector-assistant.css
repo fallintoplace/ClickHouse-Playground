@@ -754,7 +754,9 @@
     color: var(--text-soft);
     text-align: left;
     cursor: pointer;
-    transition: border-color 0.16s ease, background-color 0.16s ease;
+    transition:
+      border-color 0.16s ease,
+      background-color 0.16s ease;
   }
   .revision-item:hover,
   .revision-item.is-selected {

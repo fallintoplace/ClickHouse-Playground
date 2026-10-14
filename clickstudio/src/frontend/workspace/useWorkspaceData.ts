@@ -17,6 +17,8 @@ import {
 import type { WorkspaceState } from '../queries/editor/drafts/workspace-state';
 import { startVisiblePolling } from '../browser/visible-polling';
 import { useSqlFunctionCatalog } from '../database/functions/useSqlFunctionCatalog';
+import { usePythonFunctionCatalog } from '../database/functions/usePythonFunctionCatalog';
+import { useTablePermissionCatalog } from '../database/tables/useTablePermissionCatalog';
 import { useWorkspaceSchema } from '../database/schema/useWorkspaceSchema';
 import type { Connected } from './workspace-types';
 
@@ -37,6 +39,8 @@ export function useWorkspaceData({
 }) {
     const connectionId = connection.id;
     const functions = useSqlFunctionCatalog(connection, trusted, objectsOpen);
+    const pythonFunctions = usePythonFunctionCatalog(connection, trusted, objectsOpen);
+    const tablePermissions = useTablePermissionCatalog(connection, trusted);
     const { schema, schemaLoading, schemaLoadingMore, schemaError, loadSchema, loadMoreSchema } =
         useWorkspaceSchema(connection, trusted);
     const [playgroundServerVersion, setPlaygroundServerVersion] = useState<string>();
@@ -191,6 +195,8 @@ export function useWorkspaceData({
 
     return {
         functions,
+        pythonFunctions,
+        tablePermissions,
         schema,
         schemaLoading,
         schemaError,

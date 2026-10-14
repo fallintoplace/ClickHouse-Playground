@@ -1,5 +1,6 @@
 import type { ExecutableFunction } from '../../../shared/database/functions/python-functions';
 import { Icon } from '../../ui/components/icons';
+import { Spinner } from '../../ui/components/primitives';
 import { ExplorerGroupRow, ObjectLeafRow } from '../explorer/objects/tree/ObjectTreeRows';
 import type { usePythonFunctions } from './usePythonFunctions';
 
@@ -31,18 +32,22 @@ export function PythonFunctionsTree({
                 expanded={expanded || Boolean(search.trim())}
                 onToggle={onToggle}
                 action={
-                    state.canCreate ? (
-                        <button
-                            type="button"
-                            className="object-tree-inline-action"
-                            aria-label="Create Python UDF"
-                            title="Create Python UDF"
-                            disabled={state.creationPending}
-                            onClick={state.create}
-                        >
-                            <Icon name="plus" />
-                        </button>
-                    ) : undefined
+                    state.loading ? (
+                        <Spinner size={12} label="Loading Python UDFs" />
+                    ) : (
+                        state.canCreate && (
+                            <button
+                                type="button"
+                                className="object-tree-inline-action"
+                                aria-label="Create Python UDF"
+                                title="Create Python UDF"
+                                disabled={state.creationPending}
+                                onClick={state.create}
+                            >
+                                <Icon name="plus" />
+                            </button>
+                        )
+                    )
                 }
             />
             {(expanded || search.trim()) && (
@@ -58,9 +63,6 @@ export function PythonFunctionsTree({
                             onSelect={() => onSelect(fn)}
                         />
                     ))}
-                    {state.loading && !state.available && (
-                        <p className="sql-functions-status">Loading executable functions...</p>
-                    )}
                     {state.available && !functions.length && (
                         <p className="sql-functions-status">
                             {search

@@ -254,7 +254,7 @@ export async function connectPreviewCloud(page: Page, path = '/experimental') {
     await dialog.getByLabel('Username').fill('demo');
     await dialog.getByLabel('Password').fill('demo-password');
     await dialog.getByRole('button', { name: 'Connect service' }).click();
-    await expect(page.locator('.connection-trigger')).toContainText('CLICKHOUSE CLOUD');
+    await expect(page.locator('.connection-trigger .connection-env.is-cloud')).toHaveText('CLOUD');
     await expect(page.getByRole('button', { name: 'Disconnect Cloud' })).toBeVisible();
 }
 

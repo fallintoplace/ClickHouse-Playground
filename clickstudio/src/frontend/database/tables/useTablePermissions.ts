@@ -1,41 +1,16 @@
-import { useEffect, useState } from 'react';
-import {
-    NO_TABLE_PERMISSIONS,
-    type TablePermissions,
-} from '../../../shared/database/tables/permissions';
-import { PLAYGROUND_CONNECTION_ID } from '../../../shared/database/connections/playground';
-import { apiResponses, post } from '../../api/client';
-import type { Connected } from '../../workspace/workspace-types';
+import { useEffect } from 'react';
+import { NO_TABLE_PERMISSIONS } from '../../../shared/database/tables/permissions';
+import type { TablePermissionCatalogState } from './useTablePermissionCatalog';
 
 export function useTablePermissions(
-    connection: Connected,
-    trusted: boolean,
+    catalog: TablePermissionCatalogState,
     database: string,
     table?: string,
     enabled = true,
 ) {
-    const { id, host, username, dataSource } = connection;
-    const testedAt = connection.manifest?.testedAt;
-    const key = JSON.stringify([id, host, username, testedAt, database, table]);
-    const [loaded, setLoaded] = useState<{ key: string; permissions: TablePermissions }>();
-    const readOnlySource = id === PLAYGROUND_CONNECTION_ID || dataSource === 'fixture';
-
+    const { request, revision } = catalog;
     useEffect(() => {
-        if (!enabled || !trusted || readOnlySource) return;
-        const controller = new AbortController();
-        void post(
-            `/connections/${encodeURIComponent(id)}/table-permissions`,
-            { database, ...(table === undefined ? {} : { table }) },
-            apiResponses.isTablePermissions,
-            { signal: controller.signal },
-        )
-            .then(permissions => {
-                if (!controller.signal.aborted) setLoaded({ key, permissions });
-            })
-            .catch(() => {});
-        return () => controller.abort();
-    }, [id, database, table, key, enabled, trusted, readOnlySource]);
-
-    if (readOnlySource) return NO_TABLE_PERMISSIONS;
-    return trusted && loaded?.key === key ? loaded.permissions : {};
+        if (enabled) request(database, table);
+    }, [request, revision, database, table, enabled]);
+    return enabled ? catalog.get(database, table) : { ...NO_TABLE_PERMISSIONS, loading: false };
 }
