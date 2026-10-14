@@ -9,35 +9,31 @@
     var(--help-surface) 62%
   );
 }
-.workspace-help-compare .native-run-picker > span {
+.workspace-help-compare .native-run-picker-heading {
   display: inline-flex;
   align-items: center;
   gap: 7px;
+}
+.workspace-help-compare .native-run-picker-label {
   color: var(--text-soft);
   font-size: var(--help-text-meta);
 }
-.workspace-help-compare .native-run-picker > span::before {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--comparison-run-accent);
-  box-shadow: var(--status-ring);
-  content: "";
-  color: var(--comparison-run-accent);
+.workspace-help-compare .native-run-picker[data-side="before"] {
+  --run-accent: var(--accent-cyan);
 }
-.workspace-help-compare .native-run-picker:first-child {
-  --comparison-run-accent: var(--accent-cyan);
+.workspace-help-compare .native-run-picker[data-side="after"] {
+  --run-accent: var(--violet);
 }
-.workspace-help-compare .native-run-picker:nth-child(2) {
-  --comparison-run-accent: var(--violet);
-}
-.workspace-help-compare .native-run-picker select {
+.workspace-help-compare .native-run-picker .chart-select-trigger {
   min-height: 40px;
-  border-color: color-mix(in srgb, var(--comparison-run-accent) 34%, var(--help-border-strong));
+  border-color: color-mix(in srgb, var(--run-accent) 34%, var(--help-border-strong));
   border-radius: var(--help-radius-control);
   background-color: color-mix(in srgb, var(--help-code-surface) 86%, var(--panel));
   font-size: var(--help-text-small);
-  text-overflow: ellipsis;
+}
+.workspace-help-compare .native-run-picker .chart-select-trigger:not(:disabled):hover,
+.workspace-help-compare .native-run-picker .chart-select-trigger:not(:disabled)[data-state="open"] {
+  border-color: color-mix(in srgb, var(--run-accent) 54%, var(--help-border-strong));
 }
 .workspace-help-compare .native-run-pickers > .button-base {
   min-height: 40px;
@@ -142,10 +138,10 @@
     var(--help-surface) 62%
   );
 }
-.workspace-help-compare .native-run-summary:first-child {
+.workspace-help-compare .native-run-summary[data-side="before"] {
   --comparison-run-accent: var(--accent-cyan);
 }
-.workspace-help-compare .native-run-summary:nth-child(2) {
+.workspace-help-compare .native-run-summary[data-side="after"] {
   --comparison-run-accent: var(--violet);
 }
 .workspace-help-compare .native-run-summary::before {

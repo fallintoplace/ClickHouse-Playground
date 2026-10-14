@@ -19,6 +19,7 @@ import { NativeExplorerDialog } from '../../database/explorer/NativeExplorerDial
 import { OverlayPortal } from '../../ui/components/OverlayPortal';
 import { PipelineGraph } from '../inspection/diagrams/PipelineGraph';
 import { Button } from '../../ui/components/primitives';
+import { SelectControl, type SelectControlOption } from '../../ui/components/SelectControl';
 
 export interface RunComparisonProps {
     connectionId: string;
@@ -248,9 +249,16 @@ function ComparisonBody({
                     { name: 'Before', run: before },
                     { name: 'After', run: after },
                 ].map(({ name, run }) => (
-                    <article key={name} className="native-run-summary">
+                    <article
+                        key={name}
+                        className="native-run-summary"
+                        data-side={name.toLowerCase()}
+                    >
                         <h4>
-                            {name} · {run.status}
+                            <span>{name}</span>
+                            <span className="native-run-status" data-status={run.status}>
+                                {run.status}
+                            </span>
                         </h4>
                         <time>{nativeTime(run.createdAt)}</time>
                         <code className="native-query-id">{run.queryId}</code>
@@ -296,6 +304,16 @@ export function RunComparisonView(props: RunComparisonProps) {
             ? props.initialRun.id
             : (runs[0]?.id ?? '');
     const initialBefore = runs.find(run => run.id !== initialAfter)?.id ?? '';
+    const runOptions = useMemo<SelectControlOption[]>(
+        () =>
+            runs.map(run => ({
+                value: run.id,
+                label: runOptionLabel(run),
+                title: run.sql,
+                searchText: run.sql,
+            })),
+        [runs],
+    );
     const [beforeId, setBeforeId] = useState(initialBefore),
         [afterId, setAfterId] = useState(initialAfter);
 
@@ -314,28 +332,36 @@ export function RunComparisonView(props: RunComparisonProps) {
         </div>
     ) : (
         <>
-            <div className="native-run-pickers">
-                {[
-                    { name: 'Before', value: beforeId, change: setBeforeId },
-                    { name: 'After', value: afterId, change: setAfterId },
-                ].map(picker => (
-                    <label key={picker.name} className="native-run-picker">
-                        <span>{picker.name}</span>
-                        <select
-                            aria-label={picker.name + ' run'}
-                            title={runs.find(run => run.id === picker.value)?.sql}
-                            value={picker.value}
-                            onChange={event => picker.change(event.target.value)}
-                        >
-                            {runs.map(run => (
-                                <option key={run.id} value={run.id}>
-                                    {runOptionLabel(run)}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
-                ))}
+            <div className="native-run-pickers" role="group" aria-label="Choose runs to compare">
+                <div className="native-run-picker" data-side="before">
+                    <div className="native-run-picker-heading">
+                        <span className="native-run-picker-label">Before</span>
+                        {before && (
+                            <span className="native-run-status" data-status={before.status}>
+                                {before.status}
+                            </span>
+                        )}
+                    </div>
+                    <SelectControl
+                        label="Before run"
+                        value={beforeId}
+                        options={runOptions}
+                        onChange={setBeforeId}
+                        searchable
+                        className="native-run-select"
+                    />
+                    {before && (
+                        <div className="native-run-picker-meta">
+                            <span>Client elapsed</span>
+                            <strong>
+                                {metricValue(String(Math.round(before.elapsedMs)), 'ms')}
+                            </strong>
+                        </div>
+                    )}
+                </div>
                 <Button
+                    className="native-run-swap"
+                    title="Swap before and after runs"
                     onClick={() => {
                         setBeforeId(afterId);
                         setAfterId(beforeId);
@@ -343,6 +369,32 @@ export function RunComparisonView(props: RunComparisonProps) {
                 >
                     Swap ⇄
                 </Button>
+                <div className="native-run-picker" data-side="after">
+                    <div className="native-run-picker-heading">
+                        <span className="native-run-picker-label">After</span>
+                        {after && (
+                            <span className="native-run-status" data-status={after.status}>
+                                {after.status}
+                            </span>
+                        )}
+                    </div>
+                    <SelectControl
+                        label="After run"
+                        value={afterId}
+                        options={runOptions}
+                        onChange={setAfterId}
+                        searchable
+                        className="native-run-select"
+                    />
+                    {after && (
+                        <div className="native-run-picker-meta">
+                            <span>Client elapsed</span>
+                            <strong>
+                                {metricValue(String(Math.round(after.elapsedMs)), 'ms')}
+                            </strong>
+                        </div>
+                    )}
+                </div>
             </div>
             {before && after && before.id !== after.id ? (
                 <ComparisonBody
