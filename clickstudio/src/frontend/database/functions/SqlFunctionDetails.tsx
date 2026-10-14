@@ -1,9 +1,9 @@
 import type { OpenSqlDraft } from '../../queries/execution/sql-draft-observer';
 import { terminal } from '../../queries/execution/status';
 import { useFunctionTestResult } from './useFunctionTestResult';
+import { FunctionInputs, useFunctionArguments } from './FunctionInputs';
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import {
-    SQL_FUNCTION_TEMPLATES,
     testSqlFunctionQuery,
     type FunctionArgument,
     type SqlFunction,
@@ -13,10 +13,7 @@ import { message } from '../../api/client';
 import { Button } from '../../ui/components/primitives';
 import { Icon } from '../../ui/components/icons';
 import { resultTypeGroup } from '../../queries/results/result-type-group';
-import {
-    testPythonFunctionQuery,
-    type PythonScalar,
-} from '../../../shared/database/functions/python-functions';
+import { testPythonFunctionQuery } from '../../../shared/database/functions/python-functions';
 
 export type FunctionTestEvidence = { busy: boolean };
 type TestAttempt = { id: string; sql: string; submitting: boolean; runId?: string; error?: string };
@@ -134,114 +131,6 @@ function FunctionOutput({ value, type, rawJson }: { value: Json; type?: string; 
     return <pre>{JSON.stringify(value)}</pre>;
 }
 
-function FunctionInputs({
-    parameters,
-    arguments_,
-    onChange,
-    types,
-}: {
-    parameters: string[];
-    arguments_: FunctionArgument[];
-    onChange: (index: number, argument: FunctionArgument) => void;
-    types?: PythonScalar[];
-}) {
-    return (
-        <>
-            {parameters.map((parameter, index) => (
-                <div key={parameter} className="sql-function-argument">
-                    <div className="sql-function-argument-heading">
-                        <label htmlFor={`function-argument-${index}`}>{parameter}</label>
-                        {types ? (
-                            <code>{types[index]}</code>
-                        ) : (
-                            <select
-                                className="sql-function-format"
-                                aria-label={`${parameter} input format`}
-                                value={arguments_[index]!.kind}
-                                onChange={event =>
-                                    onChange(index, {
-                                        ...arguments_[index]!,
-                                        kind: event.target.value === 'map' ? 'map' : 'json',
-                                    })
-                                }
-                            >
-                                <option value="json">JSON</option>
-                                <option value="map">Map entries</option>
-                            </select>
-                        )}
-                    </div>
-                    <textarea
-                        id={`function-argument-${index}`}
-                        aria-describedby={
-                            arguments_[index]!.kind === 'map'
-                                ? `function-map-hint-${index}`
-                                : 'function-input-hint'
-                        }
-                        rows={Math.min(6, arguments_[index]!.value.split('\n').length)}
-                        spellCheck={false}
-                        value={arguments_[index]!.value}
-                        onChange={event =>
-                            onChange(index, { ...arguments_[index]!, value: event.target.value })
-                        }
-                    />
-                    {arguments_[index]!.kind === 'map' && (
-                        <small
-                            id={`function-map-hint-${index}`}
-                            className="sql-function-input-hint"
-                        >
-                            Key / value pairs: [[key, value], …].
-                        </small>
-                    )}
-                </div>
-            ))}
-            {!types && (
-                <small id="function-input-hint" className="sql-function-input-hint">
-                    JSON values: "text", [1, 2, 3], true or null.
-                </small>
-            )}
-        </>
-    );
-}
-
-function initialFunctionArguments(fn: SqlFunction, types?: PythonScalar[]): FunctionArgument[] {
-    const template = types
-        ? undefined
-        : SQL_FUNCTION_TEMPLATES.find(
-              template =>
-                  template.name === fn.name &&
-                  template.parameters.length === fn.parameters.length &&
-                  template.parameters.every(
-                      (parameter, index) => parameter === fn.parameters[index],
-                  ),
-          );
-    return fn.parameters.map(
-        (_, index) =>
-            template?.arguments[index] ?? {
-                value: types?.[index] === 'Bool' ? 'false' : '0',
-                kind: 'json',
-            },
-    );
-}
-
-function useFunctionArguments(fn: SqlFunction, types?: PythonScalar[]) {
-    const signature = JSON.stringify([fn.name, fn.parameters, types]);
-    const [state, setState] = useState(() => ({
-        signature,
-        values: initialFunctionArguments(fn, types),
-    }));
-    const values =
-        state.signature === signature ? state.values : initialFunctionArguments(fn, types);
-    return {
-        signature,
-        values,
-        change: (index: number, next: FunctionArgument) =>
-            setState({
-                signature,
-                values: values.map((argument, at) => (at === index ? next : argument)),
-            }),
-    };
-}
-
 function functionResultHint(
     attempt: TestAttempt | undefined,
     sql: string,
@@ -252,6 +141,33 @@ function functionResultHint(
     if (!trusted) return 'Trust this connection to run the function.';
     if (attempt && attempt.sql !== sql) return 'Arguments changed. Run again to update the result.';
     return 'Run the function to see its result.';
+}
+
+function FunctionDetailsHero({
+    fn,
+    executable,
+    manual,
+}: {
+    fn: SqlFunction;
+    executable: boolean;
+    manual: boolean;
+}) {
+    return (
+        <header className="object-details-hero">
+            <div className="object-details-title">
+                <span className="object-kind-badge">
+                    {executable ? 'Executable UDF' : 'SQL UDF'}
+                </span>
+                <h3>{fn.name}</h3>
+            </div>
+            <small>
+                Server-wide ·{' '}
+                {manual
+                    ? 'Signature unavailable'
+                    : `${fn.parameters.length} ${fn.parameters.length === 1 ? 'argument' : 'arguments'}`}
+            </small>
+        </header>
+    );
 }
 
 export function SqlFunctionDetails({
@@ -266,7 +182,10 @@ export function SqlFunctionDetails({
     onDelete,
     pythonTypes,
     deployment,
-    testSetup,
+    argumentActions,
+    onPythonTypeChange,
+    manualSignature = false,
+    onRefreshSignature,
 }: {
     fn: SqlFunction;
     evidence?: FunctionTestEvidence;
@@ -277,9 +196,12 @@ export function SqlFunctionDetails({
     canDelete: boolean;
     deleteReason: string;
     onDelete: () => void;
-    pythonTypes?: PythonScalar[];
+    pythonTypes?: string[];
     deployment?: ReactNode;
-    testSetup?: ReactNode;
+    argumentActions?: ReactNode;
+    onPythonTypeChange?: (index: number, type: string) => void;
+    manualSignature?: boolean;
+    onRefreshSignature?: () => void;
 }) {
     const input = useFunctionArguments(fn, pythonTypes);
     const arguments_ = input.values;
@@ -348,18 +270,11 @@ export function SqlFunctionDetails({
             data-kind="function"
             aria-label="Selected function"
         >
-            <header className="object-details-hero">
-                <div className="object-details-title">
-                    <span className="object-kind-badge">
-                        {pythonTypes ? 'Executable UDF' : 'SQL UDF'}
-                    </span>
-                    <h3>{fn.name}</h3>
-                </div>
-                <small>
-                    Server-wide · {fn.parameters.length}{' '}
-                    {fn.parameters.length === 1 ? 'argument' : 'arguments'}
-                </small>
-            </header>
+            <FunctionDetailsHero
+                fn={fn}
+                executable={pythonTypes !== undefined}
+                manual={manualSignature}
+            />
             <div className="object-relation-actions">
                 <div className="object-action-grid sql-function-actions">
                     <Button
@@ -396,15 +311,36 @@ export function SqlFunctionDetails({
                 aria-labelledby={`${tabsId}-test-tab`}
             >
                 <section aria-label="Function tester" className="sql-function-tester">
-                    {testSetup}
                     <div className="sql-function-arguments">
-                        <h4>Arguments</h4>
+                        <div className="sql-function-arguments-heading">
+                            <h4>Arguments</h4>
+                            <div className="sql-function-signature-status">
+                                <small className="sql-function-input-hint">
+                                    {manualSignature
+                                        ? 'Manual signature'
+                                        : `${fn.parameters.length} detected`}
+                                </small>
+                                {onRefreshSignature && (
+                                    <Button
+                                        variant="secondary"
+                                        className="toolbar-small sql-function-refresh-signature"
+                                        onClick={onRefreshSignature}
+                                        title="Refresh signature"
+                                        aria-label="Refresh signature"
+                                    >
+                                        <Icon name="refresh" />
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
                         <FunctionInputs
                             parameters={fn.parameters}
                             arguments_={arguments_}
                             onChange={changeArgument}
                             types={pythonTypes}
+                            onTypeChange={onPythonTypeChange}
                         />
+                        {argumentActions}
                         {!sql && (
                             <p className="sql-function-error" role="status">
                                 {validation}
@@ -453,10 +389,10 @@ export function SqlFunctionDetails({
                             <p className="sql-function-result-empty">{resultHint}</p>
                         )}
                     </section>
-                    <div className="sql-function-preview">
-                        <h4>Test query</h4>
+                    <details className="sql-function-preview">
+                        <summary>Test query</summary>
                         <pre>{sql || 'Enter valid arguments to preview SQL.'}</pre>
-                    </div>
+                    </details>
                 </section>
             </div>
             <div

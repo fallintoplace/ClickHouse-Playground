@@ -1,14 +1,11 @@
 import { useState } from 'react';
 import {
-    PYTHON_SCALAR_TYPES,
     pythonArgumentSchema,
     type ExecutableFunction,
-    type PythonScalar,
 } from '../../../shared/database/functions/python-functions';
 import type { OpenSqlDraft } from '../../queries/execution/sql-draft-observer';
 import { quoteIdentifier } from '../../../shared/sql/sql';
 import { Icon } from '../../ui/components/icons';
-import { SelectControl } from '../../ui/components/SelectControl';
 import { SqlFunctionDetails, type FunctionTestEvidence } from './SqlFunctionDetails';
 import { PythonDeploymentPanel } from './PythonDeploymentPanel';
 
@@ -29,9 +26,16 @@ export function PythonFunctionDetails({
     onCopy: (value: string, id: string) => void;
     onRefresh: () => void;
 }) {
-    const [arguments_, setArguments] = useState<Array<{ name: string; type: PythonScalar }>>([
-        { name: 'arg1', type: 'String' },
-    ]);
+    const [manual, setManual] = useState({
+        name: fn.name,
+        arguments: [{ name: 'arg1', type: 'String' }],
+    });
+    const detected = fn.arguments !== undefined;
+    const arguments_ =
+        fn.arguments ??
+        (manual.name === fn.name ? manual.arguments : [{ name: 'arg1', type: 'String' }]);
+    const changeSignature = (arguments_: Array<{ name: string; type: string }>) =>
+        setManual({ name: fn.name, arguments: arguments_ });
     return (
         <SqlFunctionDetails
             fn={{
@@ -49,46 +53,29 @@ export function PythonFunctionDetails({
             canDelete={false}
             deleteReason=""
             onDelete={() => {}}
-            testSetup={
-                <div className="python-function-signature">
-                    <h4>Test signature</h4>
-                    {arguments_.map((argument, index) => (
-                        <div key={index} className="creation-dialog-field">
-                            <span>{argument.name}</span>
-                            <SelectControl
-                                className="select-control-field"
-                                label={`Test argument ${index + 1} type`}
-                                value={argument.type}
-                                options={PYTHON_SCALAR_TYPES.map(type => ({
-                                    value: type,
-                                    label: type,
-                                }))}
-                                onChange={value =>
-                                    setArguments(current =>
-                                        current.map((argument, at) =>
-                                            at === index
-                                                ? {
-                                                      ...argument,
-                                                      type: PYTHON_SCALAR_TYPES.find(
-                                                          type => type === value,
-                                                      )!,
-                                                  }
-                                                : argument,
-                                        ),
-                                    )
-                                }
-                            />
-                        </div>
-                    ))}
-                    <div className="python-deployment-actions">
+            manualSignature={!detected}
+            onRefreshSignature={onRefresh}
+            onPythonTypeChange={
+                detected
+                    ? undefined
+                    : (index, type) =>
+                          changeSignature(
+                              arguments_.map((argument, at) =>
+                                  at === index ? { ...argument, type } : argument,
+                              ),
+                          )
+            }
+            argumentActions={
+                !detected && (
+                    <div className="sql-function-signature-actions">
                         <button
                             type="button"
                             className="creation-dialog-button"
                             disabled={arguments_.length >= 16}
                             onClick={() =>
-                                setArguments(current => [
-                                    ...current,
-                                    { name: `arg${current.length + 1}`, type: 'String' },
+                                changeSignature([
+                                    ...arguments_,
+                                    { name: `arg${arguments_.length + 1}`, type: 'String' },
                                 ])
                             }
                         >
@@ -99,13 +86,13 @@ export function PythonFunctionDetails({
                             type="button"
                             className="creation-dialog-button"
                             disabled={arguments_.length <= 1}
-                            onClick={() => setArguments(current => current.slice(0, -1))}
+                            onClick={() => changeSignature(arguments_.slice(0, -1))}
                         >
                             <Icon name="trash" />
                             Remove argument
                         </button>
                     </div>
-                </div>
+                )
             }
             deployment={
                 <>
@@ -115,7 +102,8 @@ export function PythonFunctionDetails({
                         onChanged={onRefresh}
                         onSignature={value => {
                             const parsed = pythonArgumentSchema.array().safeParse(value);
-                            if (parsed.success && parsed.data.length) setArguments(parsed.data);
+                            if (!detected && parsed.success && parsed.data.length)
+                                changeSignature(parsed.data);
                         }}
                     />
                     <button

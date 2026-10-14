@@ -75,7 +75,13 @@ export function pythonSourceIssue(draft: PythonFunctionDraft): string {
         return 'transform parameters must match the argument names and order.';
     return '';
 }
-export const executableFunctionSchema = z.object({ name: z.string(), createQuery: z.string() });
+export const executableArgumentSchema = z.object({ name: z.string(), type: z.string().min(1) });
+export const executableFunctionSchema = z.object({
+    name: z.string(),
+    createQuery: z.string(),
+    arguments: z.array(executableArgumentSchema).optional(),
+    returnType: z.string().optional(),
+});
 export type ExecutableFunction = z.infer<typeof executableFunctionSchema>;
 export const executableCatalogSchema = z.object({ functions: z.array(executableFunctionSchema) });
 
@@ -158,11 +164,19 @@ export function pythonArgumentSql(type: PythonScalar, value: string): string {
 
 export function testPythonFunctionQuery(
     name: string,
-    arguments_: Array<{ type: PythonScalar; value: string }>,
+    arguments_: Array<{ type: string; value: string }>,
 ) {
     z.string().min(1).max(1024).parse(name);
-    if (arguments_.length < 1 || arguments_.length > 16) throw new Error('Enter 1-16 arguments.');
-    return `SELECT ${quoteIdentifier(name)}(${arguments_.map(argument => pythonArgumentSql(argument.type, argument.value)).join(', ')}) AS result, toJSONString(result) AS result_json;`;
+    if (arguments_.length > 16) throw new Error('Enter at most 16 arguments.');
+    const inputs = arguments_.map(argument => {
+        const type = pythonScalarSchema.safeParse(argument.type);
+        if (!type.success)
+            throw new Error(
+                `The tester does not support ${argument.type}. Call this function in the SQL editor.`,
+            );
+        return pythonArgumentSql(type.data, argument.value);
+    });
+    return `SELECT ${quoteIdentifier(name)}(${inputs.join(', ')}) AS result, toJSONString(result) AS result_json;`;
 }
 
 export const managedVersionSchema = z.object({

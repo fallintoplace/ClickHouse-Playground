@@ -21,8 +21,7 @@
     resize: vertical;
   }
 
-  .python-deployment-panel,
-  .python-function-signature {
+  .python-deployment-panel {
     display: grid;
     min-width: 0;
     gap: 10px;
@@ -30,8 +29,7 @@
     border-top: 1px solid var(--line);
   }
 
-  .python-deployment-panel h3,
-  .python-function-signature h4 {
+  .python-deployment-panel h3 {
     margin: 0;
     font-size: 12px;
     font-weight: 600;

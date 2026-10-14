@@ -153,7 +153,10 @@ test('Typed SQL inputs preserve full integer ranges and quote strings without SQ
         testPythonFunctionQuery('_installed', [{ type: 'Int64', value: '21' }]),
         /`_installed`/,
     );
-    assert.throws(() => testPythonFunctionQuery('valid', []));
+    assert.equal(
+        testPythonFunctionQuery('valid', []),
+        'SELECT `valid`() AS result, toJSONString(result) AS result_json;',
+    );
     assert.throws(() => pythonArgumentSql('String', 'a'.repeat(8193)));
 });
 

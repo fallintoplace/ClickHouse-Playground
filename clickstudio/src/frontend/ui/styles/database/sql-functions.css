@@ -42,6 +42,7 @@
   .sql-function-panel {
     min-width: 0;
     min-height: 0;
+    container: function-panel / inline-size;
   }
 
   .sql-function-panel[hidden] {
@@ -65,7 +66,7 @@
 
   .sql-function-arguments {
     display: grid;
-    gap: 10px;
+    gap: 8px;
     padding: 10px;
     border: 1px solid var(--line);
     border-radius: var(--radius-control);
@@ -75,17 +76,21 @@
   .sql-function-argument {
     display: grid;
     min-width: 0;
-    gap: 6px;
+    grid-template-columns: minmax(48px, 0.6fr) minmax(80px, 0.8fr) minmax(100px, 1.6fr);
+    align-items: start;
+    gap: 8px;
   }
 
-  .sql-function-argument-heading {
+  .sql-function-arguments-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 4px 8px;
   }
 
   .sql-function-argument label {
+    padding-block: 7px;
     font-family: var(--font-mono);
     overflow-wrap: anywhere;
     font-size: 12px;
@@ -93,13 +98,13 @@
   }
 
   .sql-function-argument textarea {
-    min-height: 36px;
+    min-height: 32px;
     max-height: 160px;
     field-sizing: content;
     resize: vertical;
     width: 100%;
     min-width: 0;
-    padding: 9px 10px;
+    padding: 6px 8px;
     border: 1px solid var(--line);
     border-radius: var(--radius-control);
     background: var(--page);
@@ -109,15 +114,57 @@
     line-height: 1.5;
   }
 
-  .sql-function-format {
-    max-width: 110px;
-    padding: 2px 5px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-control);
-    background: var(--panel);
+  .sql-function-argument-type {
+    min-width: 0;
+    padding: 8px 0;
     color: var(--muted);
-    font-family: var(--font-sans);
-    font-size: 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .sql-function-type-control {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .sql-function-argument > .sql-function-input-hint {
+    grid-column: 1 / -1;
+  }
+
+  .sql-function-signature-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .sql-function-refresh-signature {
+    min-height: 24px;
+    padding: 4px;
+  }
+
+  .sql-function-signature-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .sql-function-signature-actions .creation-dialog-button {
+    min-height: 32px;
+    padding-inline: 8px;
+    font-size: 11px;
+  }
+
+  @container function-panel (width < 340px) {
+    .sql-function-argument {
+      grid-template-columns: minmax(0, 1fr) minmax(72px, 104px);
+      gap: 4px 8px;
+    }
+
+    .sql-function-argument textarea {
+      grid-column: 1 / -1;
+    }
   }
 
   .sql-function-input-hint {
@@ -138,10 +185,22 @@
   }
 
   .sql-function-tester .sql-function-preview {
+    display: block;
     min-width: 0;
     gap: 8px;
     padding: 10px;
     background: var(--panel);
+  }
+
+  .sql-function-preview summary {
+    color: var(--text-soft);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .sql-function-preview[open] summary {
+    margin-bottom: 8px;
   }
 
   .sql-function-result {

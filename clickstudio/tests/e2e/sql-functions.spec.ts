@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { SQL_FUNCTION_TEMPLATES } from '../../src/shared/database/functions/sql-functions.js';
 import { functionsWorkspace } from './sql-functions-helpers.js';
 import { workspacePath } from './helpers.js';
+import { chooseChartOption as chooseSelectOption } from './chart-control-helpers.js';
 
 test('Existing demo SQL UDFs appear in Objects and execute on ClickHouse', async ({
     page,
@@ -238,10 +239,10 @@ test('Map tester preserves duplicate keys in the server-produced output', async 
     await page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }).click();
     const format = page.getByRole('combobox', { name: 'entries input format', exact: true });
     await expect(format).toBeVisible();
-    await expect(format).toHaveValue('map');
-    await format.selectOption('json');
+    await expect(format).toHaveAttribute('data-value', 'map');
+    await chooseSelectOption(page, format, 'json');
     await expect(page.locator('.sql-function-preview pre')).not.toContainText('map(');
-    await format.selectOption('map');
+    await chooseSelectOption(page, format, 'map');
     await expect(page.locator('.sql-function-preview pre')).toContainText('map(');
     await page.getByLabel('entries', { exact: true }).fill('[["a", 1], ["a", 2], ["b", 3]]');
     await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
@@ -391,7 +392,7 @@ for (const theme of ['Dark', 'Light']) {
         await expect(details.locator('.sql-function-preview pre')).toContainText(
             '[10, 20, 30, 40]',
         );
-        await expect(input).toHaveAttribute('aria-describedby', 'function-input-hint');
+        await expect(input).toHaveAttribute('aria-describedby', /-input-hint$/);
         await expect(input).toHaveAccessibleDescription(
             'JSON values: "text", [1, 2, 3], true or null.',
         );

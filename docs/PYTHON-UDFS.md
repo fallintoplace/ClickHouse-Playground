@@ -72,9 +72,9 @@ The public hosted API is export-only; it has no management route.
 6. Select the version, confirm the target service and rolling-restart warning, and
    attach it. The first executable UDF attachment causes a rolling restart.
 7. Refresh Objects until the connected server lists the executable function.
-8. Open its **Deployment** tab, select the version to populate supported test argument
-   types, and open **Reload pool SQL** after a version update. Review and run the
-   generated `SYSTEM RELOAD FUNCTION ON CLUSTER default ...` statement.
+8. Open its **Deployment** tab and open **Reload pool SQL** after a version update.
+   If server signature metadata is unavailable, select a version to populate the manual
+   test signature. Review and run the generated `SYSTEM RELOAD FUNCTION ON CLUSTER default ...` statement.
 9. Use **Test > Run on ClickHouse** and inspect the actual database result.
 
 Defaults: Python 3.11, `executable_pool`, JSONEachRow, `result` return field, chunk
@@ -97,10 +97,18 @@ credentials, arbitrary runtime selection, or performance dashboard.
 
 ## Self-hosted ClickHouse
 
-Discovery queries `system.functions` for `origin = 'ExecutableUserDefined'`. The
-Python section can also contain installed executable functions implemented in other
-languages; SQL metadata alone does not identify their runtime. Test signatures can
-be entered manually when Cloud metadata is unavailable.
+Discovery reads loaded functions from `system.user_defined_functions`, including
+argument names, types and return types. The tester displays one row per argument,
+with fixed names and types from the server. Unnamed arguments use `arg1`, `arg2`,
+and so on. Unsupported argument types remain visible with a message to use the
+SQL editor. The tester supports up to 16 arguments from the six scalar types above, including
+functions with no arguments.
+
+Older servers or restricted metadata access fall back to `system.functions` with
+`origin = 'ExecutableUserDefined'`. These functions use an explicitly labeled
+manual signature with editable types and argument controls. The Python section
+can also contain executable functions implemented in other languages; SQL metadata
+alone does not identify their runtime.
 
 An operator can extract the ZIP into
 `/var/lib/clickhouse/user_scripts/<function_name>/`, install Python dependencies in
