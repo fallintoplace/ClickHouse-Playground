@@ -211,7 +211,7 @@ test('Fix with AI uses the Results header after viewing an EXPLAIN pipeline', as
     await page.getByTestId('run-action-explain-pipeline').click();
     const header = page.locator('.results-header');
     await expect(
-        header.getByRole('heading', { name: 'ClickHouse pipeline', exact: true }),
+        header.getByRole('heading', { name: 'Explain pipeline', exact: true }),
     ).toBeVisible();
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'succeeded');
     const failedSql = 'SELECT event_count FROM demo.events';

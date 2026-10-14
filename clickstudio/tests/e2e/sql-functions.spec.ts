@@ -597,7 +597,7 @@ test('Function tester never adopts a running EXPLAIN action as its result', asyn
     await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
     await expect(page.locator('.sql-function-output')).toBeVisible();
     state.runDelay = 1500;
-    await page.getByRole('button', { name: 'EXPLAIN PLAN', exact: true }).click();
+    await page.getByRole('button', { name: 'Explain plan', exact: true }).click();
     await expect.poll(() => requests.filter(body => body.action === 'run').length).toBe(2);
     await page.getByRole('tab', { name: 'Getting started.sql', exact: true }).click();
     await page.locator('.object-back-button').click();

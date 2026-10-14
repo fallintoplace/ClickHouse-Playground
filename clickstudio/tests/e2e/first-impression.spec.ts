@@ -276,14 +276,14 @@ test('One Run button and the explain actions stay visible in Experimental mode',
     await expect(run).toBeVisible();
     await expect(actions.getByRole('button', { name: 'Run script', exact: true })).toHaveCount(0);
     await expect(
-        actions.getByRole('button', { name: 'EXPLAIN INDEXES', exact: true }),
+        actions.getByRole('button', { name: 'Explain indexes', exact: true }),
     ).toBeVisible();
-    await expect(actions.getByRole('button', { name: 'EXPLAIN PLAN', exact: true })).toBeVisible();
+    await expect(actions.getByRole('button', { name: 'Explain plan', exact: true })).toBeVisible();
     await expect(
-        actions.getByRole('button', { name: 'EXPLAIN PIPELINE', exact: true }),
+        actions.getByRole('button', { name: 'Explain pipeline', exact: true }),
     ).toBeVisible();
     await expect(
-        actions.getByRole('button', { name: 'EXPLAIN ANALYZE', exact: true }),
+        actions.getByRole('button', { name: 'Explain analyze', exact: true }),
     ).toBeVisible();
     await expect(run).toBeEnabled();
     await run.focus();
@@ -337,7 +337,7 @@ test('EXPLAIN PLAN opens a graph with a tree view and keeps the raw result avail
     await trust(page);
     await page.getByTestId('run-action-explain-plan').click();
 
-    const plan = page.locator('.results-surface[aria-label="Logical query plan"]');
+    const plan = page.locator('.results-surface[aria-label="Explain plan"]');
     await expect(plan).toContainText('Expression');
     await expect(plan).toContainText('ReadFromFixture');
     await expect(plan).toContainText('Fixture only; the SQL was not evaluated.');
@@ -346,10 +346,8 @@ test('EXPLAIN PLAN opens a graph with a tree view and keeps the raw result avail
         'aria-pressed',
         'true',
     );
-    await expect(page.getByRole('region', { name: 'Logical query plan', exact: true })).toHaveCount(
-        1,
-    );
-    const graph = plan.getByRole('region', { name: 'Logical query plan · Graph', exact: true });
+    await expect(page.getByRole('region', { name: 'Explain plan', exact: true })).toHaveCount(1);
+    const graph = plan.getByRole('region', { name: 'Explain plan · Graph', exact: true });
     await expect(graph).toBeVisible();
     const graphNodes = graph.locator('[data-node-id]');
     await expect(graphNodes).toHaveCount(2);
@@ -388,7 +386,7 @@ test('EXPLAIN PLAN opens a graph with a tree view and keeps the raw result avail
     await expect(plan.locator('.explain-plan-tree')).toBeVisible();
     await plan.getByRole('button', { name: 'Graph', exact: true }).click();
     await expect(
-        plan.getByRole('region', { name: 'Logical query plan · Graph', exact: true }),
+        plan.getByRole('region', { name: 'Explain plan · Graph', exact: true }),
     ).toBeVisible();
 
     await page.getByRole('tab', { name: 'Table', exact: true }).click();
@@ -401,10 +399,10 @@ test('EXPLAIN ANALYZE opens a measured runtime graph and retains the raw result'
     await trust(page);
     await page.getByTestId('run-action-explain-analyze').click();
 
-    const runtime = page.locator('.results-surface[aria-label="Runtime"]');
+    const runtime = page.locator('.results-surface[aria-label="Explain analyze"]');
     await expect(runtime.locator('.runtime-summary-grid')).toContainText('31.42 ms');
     await expect(runtime.locator('.runtime-summary-grid')).toContainText('29.34 ms');
-    const graph = runtime.getByRole('region', { name: 'Runtime · Graph', exact: true });
+    const graph = runtime.getByRole('region', { name: 'Explain analyze · Graph', exact: true });
     await expect(graph).toBeVisible();
     await expect(graph.locator('[data-node-id]')).toHaveCount(5);
     await expect(graph).toContainText('ReadFromMergeTree');

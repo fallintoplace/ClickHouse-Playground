@@ -293,14 +293,14 @@ export function graphLabels(kind: PipelineGraphKind, copy?: Copy['common']) {
         case 'explain-plan':
             return {
                 terminology: {
-                    graph: graphLabel(copy?.logicalPlan, 'Logical query plan'),
+                    graph: graphLabel(copy?.logicalPlan, 'Explain plan'),
                     item: graphLabel(copy?.planStep, 'steps'),
                     selected: graphLabel(copy?.planSelectedStep, 'Selected step'),
                     action: graphLabel(copy?.planInspectStep, 'Inspect step'),
                     details: graphLabel(copy?.planStepDetails, 'Selected plan step details'),
                 },
                 connection: 'connections',
-                viewport: `${graphLabel(copy?.logicalPlan, 'Logical query plan')} · ${graphLabel(copy?.planGraphView, 'Graph')}`,
+                viewport: `${graphLabel(copy?.logicalPlan, 'Explain plan')} · ${graphLabel(copy?.planGraphView, 'Graph')}`,
                 svg: graphLabel(copy?.planGraphHint, 'Select a step to inspect its properties.'),
                 empty: graphLabel(
                     copy?.pipelineNoOutput,
@@ -330,7 +330,7 @@ export function graphLabels(kind: PipelineGraphKind, copy?: Copy['common']) {
         case 'runtime':
             return {
                 terminology: {
-                    graph: graphLabel(copy?.runtimeGraph, 'Measured runtime'),
+                    graph: graphLabel(copy?.runtimeGraph, 'Explain analyze'),
                     item: graphLabel(copy?.sqlFlowOperators, 'stages'),
                     selected: graphLabel(copy?.selectedOperator, 'Selected stage'),
                     action: graphLabel(copy?.inspectOperator, 'Inspect stage'),
@@ -340,7 +340,7 @@ export function graphLabels(kind: PipelineGraphKind, copy?: Copy['common']) {
                     ),
                 },
                 connection: 'connections',
-                viewport: `${graphLabel(copy?.runtimeGraph, 'Measured runtime')} · ${graphLabel(copy?.planGraphView, 'Graph')}`,
+                viewport: `${graphLabel(copy?.runtimeGraph, 'Explain analyze')} · ${graphLabel(copy?.planGraphView, 'Graph')}`,
                 svg: graphLabel(copy?.pipelineGraphHint, 'Click an operator to inspect it'),
                 empty: graphLabel(
                     copy?.pipelineNoOutput,
@@ -350,7 +350,7 @@ export function graphLabels(kind: PipelineGraphKind, copy?: Copy['common']) {
         default:
             return {
                 terminology: {
-                    graph: graphLabel(copy?.pipelineGraph, 'Execution plan graph'),
+                    graph: graphLabel(copy?.pipelineGraph, 'Explain pipeline'),
                     item: graphLabel(copy?.sqlFlowOperators, 'operators'),
                     selected: graphLabel(copy?.selectedOperator, 'Selected operator'),
                     action: graphLabel(copy?.inspectOperator, 'Inspect operator'),

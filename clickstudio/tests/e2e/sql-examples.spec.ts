@@ -139,8 +139,8 @@ test('Help tour exposes ClickStudio native workflows from one place', async ({ p
     await expect(dialog.getByRole('button', { name: 'Mutations', exact: true })).toBeVisible();
 
     await dialog.getByTestId('help-section-explain').click();
-    await expect(dialog.getByRole('button', { name: /EXPLAIN PLAN/ })).toBeVisible();
-    await expect(dialog.getByRole('button', { name: /EXPLAIN PIPELINE/ })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: /Explain plan/ })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: /Explain pipeline/ })).toBeVisible();
 
     await dialog.getByTestId('help-section-monitoring').click();
     await dialog.getByRole('button', { name: 'Open monitoring', exact: true }).click();
