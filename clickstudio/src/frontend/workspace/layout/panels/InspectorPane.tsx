@@ -3,7 +3,6 @@ import type { FunctionTestEvidence } from '../../../database/functions/SqlFuncti
 import type { SqlFunctionCatalogState } from '../../../database/functions/useSqlFunctionCatalog';
 import type { PythonFunctionCatalogState } from '../../../database/functions/usePythonFunctionCatalog';
 import type { TablePermissionCatalogState } from '../../../database/tables/useTablePermissionCatalog';
-import { RunComparisonLauncher } from '../../../queries/history/RunComparison';
 import {
     useCallback,
     useEffect,
@@ -54,12 +53,10 @@ export type InspectorPaneProps = {
     schemaLoadingMore?: boolean;
     schemaError: string;
     importFeedback?: WorkspaceFeedback;
-    historyError?: string;
     documentsError?: string;
     evidenceFeedback?: WorkspaceFeedback;
     search: string;
     setSearch: (search: string) => void;
-    history: Run[];
     documents: QueryDocument[];
     revisions: QueryDocument[];
     revisionsDocumentId?: string;
@@ -71,19 +68,15 @@ export type InspectorPaneProps = {
     run?: Run;
     functionTest?: FunctionTestEvidence;
     profile?: QueryProfile;
-    comparisonProfiles?: Readonly<Record<string, QueryProfile>>;
-    comparisonPipelines?: Readonly<Record<string, ProfilePipeline>>;
     pipeline?: ProfilePipeline;
     onRefreshSchema: () => void;
     onLoadMoreSchema?: () => void;
     importedTableTarget?: ImportedTableTarget;
     onImportedTableRevealed: (target: ImportedTableTarget) => void;
-    onRefreshHistory: () => void;
     onInsert: (value: string) => void;
     onOpenSqlDraft: OpenSqlDraft;
     onTableDeleted: (table: Pick<SchemaTable, 'database' | 'name'>) => void;
     onDatabaseDeleted: (database: string) => void;
-    onOpenRun: (run: Run) => void;
     onOpenDocument: (document: QueryDocument) => void;
     onLoadProfile: () => void;
     onLoadPipeline: () => void;
@@ -130,8 +123,6 @@ function panelTitle(inspector: Inspector, copy: Copy['common']): string {
             return copy.objects;
         case 'reference':
             return copy.reference;
-        case 'history':
-            return copy.history;
         case 'documents':
             return copy.queries;
         case 'assistant':
@@ -217,8 +208,6 @@ function InspectorPaneHeading({
 }
 
 export function InspectorPane({
-    comparisonProfiles,
-    comparisonPipelines,
     copy,
     inspector,
     setInspector,
@@ -232,12 +221,10 @@ export function InspectorPane({
     schemaLoadingMore,
     schemaError,
     importFeedback,
-    historyError,
     documentsError,
     evidenceFeedback,
     search,
     setSearch,
-    history,
     documents,
     revisions,
     revisionsDocumentId,
@@ -254,12 +241,10 @@ export function InspectorPane({
     onLoadMoreSchema,
     importedTableTarget,
     onImportedTableRevealed,
-    onRefreshHistory,
     onInsert,
     onOpenSqlDraft,
     onTableDeleted,
     onDatabaseDeleted,
-    onOpenRun,
     onOpenDocument,
     onLoadProfile,
     onLoadPipeline,
@@ -328,7 +313,7 @@ export function InspectorPane({
     const isExpert = Boolean(expert);
     const primaryNavigation = primaryInspectorNavigation(isExpert);
     const moreItems = inspectorMoreNavigation(isExpert, Boolean(run));
-    const selectPrimaryInspector = (next: Inspector) => {
+    const selectInspector = (next: Inspector) => {
         if (next === 'reference') setReferenceTarget(undefined);
         setInspector(next);
     };
@@ -342,7 +327,7 @@ export function InspectorPane({
                 expert={isExpert}
                 docked={docked}
                 primaryNavigation={primaryNavigation}
-                onSelect={selectPrimaryInspector}
+                onSelect={selectInspector}
                 onClose={onClose}
             />
             {isExpert && docked && (
@@ -353,13 +338,13 @@ export function InspectorPane({
                             item={item}
                             copy={copy}
                             selected={inspector === item.id}
-                            onSelect={selectPrimaryInspector}
+                            onSelect={selectInspector}
                         />
                     ))}
                     <InspectorMoreMenu
                         copy={copy}
                         inspector={inspector}
-                        onSelect={setInspector}
+                        onSelect={selectInspector}
                         items={moreItems}
                     />
                 </nav>
@@ -415,20 +400,9 @@ export function InspectorPane({
                 <InspectorSavedViews
                     copy={copy}
                     inspector={inspector}
-                    connection={connection}
-                    connectionId={connectionId}
-                    trusted={trusted}
-                    expert={expert}
-                    history={history}
-                    historyError={historyError}
                     documentsError={documentsError}
                     visibleDocuments={visibleDocuments}
-                    run={run}
-                    comparisonProfiles={comparisonProfiles}
-                    comparisonPipelines={comparisonPipelines}
-                    onRefreshHistory={onRefreshHistory}
                     onRefreshDocuments={onRefreshDocuments}
-                    onOpenRun={onOpenRun}
                     onOpenDocument={onOpenDocument}
                 />
                 {inspector === 'revisions' &&
@@ -516,101 +490,16 @@ export function InspectorPane({
 function InspectorSavedViews({
     copy,
     inspector,
-    connection,
-    connectionId,
-    trusted,
-    expert,
-    history,
-    historyError,
     documentsError,
     visibleDocuments,
-    run,
-    comparisonProfiles,
-    comparisonPipelines,
-    onRefreshHistory,
     onRefreshDocuments,
-    onOpenRun,
     onOpenDocument,
 }: Pick<
     InspectorPaneProps,
-    | 'copy'
-    | 'inspector'
-    | 'connection'
-    | 'connectionId'
-    | 'trusted'
-    | 'expert'
-    | 'history'
-    | 'historyError'
-    | 'documentsError'
-    | 'run'
-    | 'comparisonProfiles'
-    | 'comparisonPipelines'
-    | 'onRefreshHistory'
-    | 'onRefreshDocuments'
-    | 'onOpenRun'
-    | 'onOpenDocument'
+    'copy' | 'inspector' | 'documentsError' | 'onRefreshDocuments' | 'onOpenDocument'
 > & { visibleDocuments: QueryDocument[] }) {
     return (
         <>
-            {inspector === 'history' && (
-                <section className="inspector-section">
-                    <div className="schema-heading">
-                        <span>{copy.history.toUpperCase()}</span>
-                        {expert && (
-                            <RunComparisonLauncher
-                                connectionId={connectionId}
-                                trusted={trusted}
-                                history={history}
-                                initialRun={run}
-                                profiles={comparisonProfiles}
-                                pipelines={comparisonPipelines}
-                                queryLogAvailable={connection.manifest?.queryLog.available === true}
-                            />
-                        )}
-                        <Button
-                            variant="ghost"
-                            className="toolbar-small"
-                            onClick={onRefreshHistory}
-                        >
-                            ↻ Refresh
-                        </Button>
-                    </div>
-                    <WorkspaceInlineNotice
-                        feedback={readFailureFeedback(
-                            'Couldn’t load query history. Try again.',
-                            historyError,
-                        )}
-                        onRetry={onRefreshHistory}
-                    />
-                    {history.length
-                        ? history.slice(0, 30).map(item => (
-                              <button
-                                  type="button"
-                                  className="history-card"
-                                  key={item.id}
-                                  onClick={() => onOpenRun(item)}
-                              >
-                                  <span className={cx('run-state-mark', `state-${item.status}`)} />
-                                  <span className="history-card-copy">
-                                      <strong>{item.sql.replace(/\s+/g, ' ').slice(0, 58)}</strong>
-                                      <small>
-                                          {new Date(item.createdAt).toLocaleString()} <i>·</i>{' '}
-                                          {Math.round(item.elapsedMs)} ms <i>·</i>{' '}
-                                          {item.rowCount.toLocaleString()} rows
-                                      </small>
-                                  </span>
-                                  <span className="history-open">↗</span>
-                              </button>
-                          ))
-                        : !historyError && (
-                              <div className="inspector-empty">
-                                  <Icon name="history" />
-                                  <strong>No runs yet</strong>
-                                  <p>Your recent ClickHouse executions appear here.</p>
-                              </div>
-                          )}
-                </section>
-            )}
             {inspector === 'documents' && (
                 <section className="inspector-section">
                     <div className="schema-heading">

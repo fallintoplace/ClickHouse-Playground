@@ -39,9 +39,9 @@ for (const theme of ['Light', 'Dark']) {
                     .getByRole('button', { name: 'Objects', exact: true })
                     .click();
             await inspector
-                .getByRole('navigation', { name: 'Workspace browser', exact: true })
-                .getByRole('button', { name: 'Reference', exact: true })
+                .getByRole('button', { name: 'More workspace panels', exact: true })
                 .click();
+            await page.getByRole('menuitem', { name: 'Reference', exact: true }).click();
             const reference = inspector.locator('.reference-results');
             await expect(reference).toBeVisible();
             await expectReferenceStyles(page, info, 'reference-list');

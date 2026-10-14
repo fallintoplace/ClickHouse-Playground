@@ -231,8 +231,9 @@ test('Run comparison searches full SQL and swaps retained runs without executing
         if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/runs')
             submissions++;
     });
-    await openWorkspacePanel(page, 'history');
-    await page.getByRole('button', { name: 'Compare runs', exact: true }).click();
+    const results = page.getByRole('region', { name: 'Query results', exact: true });
+    await results.getByRole('tab', { name: 'Insights', exact: true }).click();
+    await results.getByRole('button', { name: 'Compare runs', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Compare query runs', exact: true });
     const beforePicker = dialog.getByRole('combobox', { name: 'Before run', exact: true });
     await expect(beforePicker).toBeVisible();

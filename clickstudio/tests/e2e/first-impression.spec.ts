@@ -1,7 +1,9 @@
 import { setWorkspaceMode, replaceSql, trust } from './helpers.js';
 import { test, expect } from '@playwright/test';
 
-test('Experimental mode uses the Standard right inspector layout', async ({ page }) => {
+test('Experimental mode keeps Objects and AI primary and moves Reference into More', async ({
+    page,
+}) => {
     await trust(page);
 
     const content = page.locator('.workspace-content');
@@ -13,13 +15,13 @@ test('Experimental mode uses the Standard right inspector layout', async ({ page
     const workspace = page.locator('.workspace-main');
     await expect(rail).toBeVisible();
     await expect(rail.getByRole('button', { name: 'Objects', exact: true })).toBeVisible();
-    await expect(rail.getByRole('button', { name: 'Reference', exact: true })).toBeVisible();
+    await expect(rail.getByRole('button', { name: 'Reference', exact: true })).toHaveCount(0);
     await expect(rail.getByRole('button', { name: 'AI', exact: true })).toBeVisible();
     await expect(inspector).toBeVisible();
     await expect(inspector.locator('.inspector-tabs')).toBeVisible();
     await expect(inspector.getByRole('heading', { name: 'Objects', exact: true })).toBeVisible();
     await expect(inspector.getByRole('button', { name: 'Objects', exact: true })).toBeVisible();
-    await expect(inspector.getByRole('button', { name: 'Reference', exact: true })).toBeVisible();
+    await expect(inspector.getByRole('button', { name: 'Reference', exact: true })).toHaveCount(0);
     await expect(inspector.getByRole('button', { name: 'AI', exact: true })).toBeVisible();
     await expect(
         inspector.getByRole('button', { name: 'Close inspector', exact: true }),
@@ -41,7 +43,11 @@ test('Experimental mode uses the Standard right inspector layout', async ({ page
 
     await page.setViewportSize({ width: 1280, height: 720 });
     const browser = inspector.getByRole('navigation', { name: 'Workspace browser', exact: true });
-    await browser.getByRole('button', { name: 'Reference', exact: true }).click();
+    await expect(browser.getByRole('button')).toHaveText(['Objects', 'AI', 'More']);
+    await browser.getByRole('button', { name: 'More workspace panels', exact: true }).click();
+    await expect(page.getByRole('menuitem', { name: 'Reference', exact: true })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Query history', exact: true })).toHaveCount(0);
+    await page.getByRole('menuitem', { name: 'Reference', exact: true }).click();
     await expect(inspector.getByRole('heading', { name: 'Reference', exact: true })).toBeVisible();
     await rail.getByRole('button', { name: 'AI', exact: true }).click();
     await expect(inspector.getByRole('heading', { name: 'AI', exact: true })).toBeVisible();
@@ -58,7 +64,7 @@ test('Experimental mode uses the Standard right inspector layout', async ({ page
     await expect(inspector.getByRole('heading', { name: 'AI', exact: true })).toBeVisible();
 
     await inspector.getByRole('button', { name: 'More workspace panels', exact: true }).click();
-    await expect(page.getByRole('menuitem', { name: 'Query history', exact: true })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Query history', exact: true })).toHaveCount(0);
     await expect(
         page.getByRole('menuitem', { name: 'Version history', exact: true }),
     ).toBeVisible();
@@ -137,11 +143,11 @@ test('Standard keeps Objects and AI while preserving execution and saving', asyn
     await expect(inspector).toHaveCount(0);
 });
 
-for (const panel of ['Objects', 'Reference', 'Query history', 'Saved queries', 'Version history']) {
+for (const panel of ['Objects', 'Reference', 'Saved queries', 'Version history']) {
     test(`Standard preserves the Experimental ${panel} selection`, async ({ page }) => {
         await trust(page);
         const inspector = page.locator('.inspector-pane.is-docked-inspector');
-        if (panel === 'Objects' || panel === 'Reference')
+        if (panel === 'Objects')
             await inspector.getByRole('button', { name: panel, exact: true }).click();
         else {
             await inspector
@@ -486,11 +492,13 @@ test('EXPLAIN PIPELINE opens an interactive ClickHouse operator graph', async ({
     await expect(controls.getByLabel('Zoom level')).toHaveText(zoomBeforeEditorFocus);
 });
 
-test('Experimental panels stay reachable through the workspace rail and More', async ({ page }) => {
+test('Reference stays in More while Objects and AI stay primary', async ({ page }) => {
     await trust(page);
     await page.getByRole('button', { name: 'More workspace panels', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Query history', exact: true }).click();
-    await expect(page.locator('.inspector-header h2')).toHaveText('Query history');
+    await expect(page.getByRole('menuitem', { name: 'Reference', exact: true })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Query history', exact: true })).toHaveCount(0);
+    await page.getByRole('menuitem', { name: 'Reference', exact: true }).click();
+    await expect(page.locator('.inspector-header h2')).toHaveText('Reference');
 
     await page.locator('.icon-rail').getByRole('button', { name: 'AI', exact: true }).click();
     await expect(page.locator('.inspector-header h2')).toHaveText('AI');

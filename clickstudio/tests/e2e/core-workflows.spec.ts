@@ -20,7 +20,6 @@ import {
 import { test, expect, type Page } from '@playwright/test';
 import { chooseChartOption } from './chart-control-helpers.js';
 import { DEFAULT_LIMITS } from '../../src/shared/queries/execution/settings.js';
-import type { Run } from '../../src/shared/queries/execution/types.js';
 
 declare global {
     interface Window {
@@ -739,7 +738,6 @@ test('Failed execution replaces visible results and can collapse, reopen and ret
 }, testInfo) => {
     await trust(page);
     const results = await runQuery(page);
-    const previousSql = await page.locator('.cm-content').innerText();
     let failNextRun = true;
     const runRoute = (url: URL) => url.pathname === '/api/runs';
     await page.route(runRoute, async route => {
@@ -799,16 +797,6 @@ test('Failed execution replaces visible results and can collapse, reopen and ret
         await results.getByRole('button', { name: 'Expand Query results', exact: true }).click();
         await expect(failure).toBeVisible();
 
-        await openWorkspacePanel(page, 'history');
-        await page
-            .locator('.history-card')
-            .filter({ hasText: previousSql.replace(/\s+/g, ' ').slice(0, 58) })
-            .first()
-            .click();
-        await expect(results.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
-        await expect(failure).toHaveCount(0);
-        await page.getByRole('tab').filter({ hasText: 'Getting started.sql' }).first().click();
-        await expect(failure).toBeVisible();
         await results.getByRole('button', { name: 'Collapse Query results', exact: true }).click();
         await replaceSql(page, 'SELECT 1');
         await runButton(page).click();
@@ -2372,46 +2360,6 @@ test('A delayed chart snapshot cannot update the draft after selecting another s
     } finally {
         releaseSnapshot();
     }
-});
-
-test('Refreshing run history replaces the visible list with the latest response', async ({
-    page,
-}) => {
-    let refreshed = false;
-    const run: Run = {
-        dataSource: 'fixture',
-        id: 'history-refresh-run',
-        queryId: 'history-refresh-query',
-        owner: 'local-owner',
-        connectionId: 'demo',
-        sql: 'SELECT refreshed_history_entry',
-        kind: 'query',
-        parameters: {},
-        limits: DEFAULT_LIMITS,
-        tags: {},
-        status: 'succeeded',
-        createdAt: '2026-09-23T00:00:00.000Z',
-        elapsedMs: 12,
-        rowCount: 7,
-        bytes: 56,
-        columns: [],
-        warnings: [],
-        sequence: 1,
-        resultState: 'unavailable',
-        requestedBy: 'local-owner',
-        executedAs: 'fixture-reader',
-        permissionSnapshot: { readonly: true, role: 'viewer' },
-        retryPolicy: 'never',
-    };
-    await page.route(/\/api\/runs\?connectionId=demo$/, route =>
-        route.fulfill({ json: refreshed ? [run] : [] }),
-    );
-    await trust(page);
-    await openWorkspacePanel(page, 'history');
-    await expect(page.getByText('No runs yet')).toBeVisible();
-    refreshed = true;
-    await page.getByRole('button', { name: /Refresh/ }).click();
-    await expect(page.getByText('SELECT refreshed_history_entry')).toBeVisible();
 });
 
 test('Ask AI keeps chat history when SQL changes and sends prior messages with follow-ups', async ({

@@ -11,7 +11,6 @@ export type Session = {
 export const INSPECTORS = [
     'schema',
     'reference',
-    'history',
     'documents',
     'revisions',
     'details',

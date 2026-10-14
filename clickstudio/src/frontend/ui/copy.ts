@@ -46,7 +46,6 @@ export const copy = {
         closePanel: 'Close',
         save: 'Save',
         schema: 'Schema',
-        history: 'Query history',
         assistant: 'AI',
         results: 'Results',
         table: 'Table',

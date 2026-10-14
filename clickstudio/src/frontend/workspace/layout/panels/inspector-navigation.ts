@@ -1,8 +1,8 @@
 import type { IconName } from '../../../ui/components/icons.js';
 import type { Inspector } from '../../workspace-types.js';
 
-type PrimaryInspector = 'schema' | 'reference' | 'assistant';
-type InspectorCopyKey = 'objects' | 'reference' | 'assistant' | 'queries' | 'history';
+type PrimaryInspector = 'schema' | 'assistant';
+type InspectorCopyKey = 'objects' | 'reference' | 'assistant' | 'queries';
 
 export type PrimaryInspectorDestination = Readonly<{
     group: 'primary';
@@ -16,7 +16,7 @@ export type SecondaryInspectorDestination = Readonly<{
     group: 'more';
     id: Exclude<Inspector, PrimaryInspector>;
     icon: IconName;
-    copyKey?: 'queries' | 'history';
+    copyKey?: 'reference' | 'queries';
     expertOnly?: boolean;
     requiresRun?: boolean;
     railSection?: 'browse' | 'execution';
@@ -26,21 +26,13 @@ type InspectorNavigationDestination = PrimaryInspectorDestination | SecondaryIns
 
 export const INSPECTOR_NAVIGATION: readonly InspectorNavigationDestination[] = [
     { group: 'primary', id: 'schema', icon: 'schema', copyKey: 'objects' },
+    { group: 'primary', id: 'assistant', icon: 'assistant', copyKey: 'assistant' },
     {
-        group: 'primary',
+        group: 'more',
         id: 'reference',
         icon: 'reference',
         copyKey: 'reference',
         expertOnly: true,
-    },
-    { group: 'primary', id: 'assistant', icon: 'assistant', copyKey: 'assistant' },
-    {
-        group: 'more',
-        id: 'history',
-        icon: 'history',
-        copyKey: 'history',
-        expertOnly: true,
-        railSection: 'browse',
     },
     {
         group: 'more',

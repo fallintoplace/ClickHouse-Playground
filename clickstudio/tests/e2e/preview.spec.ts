@@ -351,10 +351,8 @@ test('Static production preview loads the native parser and exports retained sam
     await expect(page.getByText('Ready · local WebAssembly')).toBeVisible();
     await expect(page.getByText('Valid ClickHouse SQL')).toBeVisible();
 
-    await page
-        .getByRole('navigation', { name: 'Workspace browser' })
-        .getByRole('button', { name: 'Reference' })
-        .click();
+    await page.getByRole('button', { name: 'More workspace panels' }).click();
+    await page.getByRole('menuitem', { name: 'Reference' }).click();
     await expect(page.getByTestId('reference-source')).toContainText(
         'Offline ClickHouse reference',
     );
@@ -438,10 +436,8 @@ test('Static production preview searches native Playground docs with bound query
     });
 
     await page.goto('/experimental');
-    await page
-        .getByRole('navigation', { name: 'Workspace browser' })
-        .getByRole('button', { name: 'Reference' })
-        .click();
+    await page.getByRole('button', { name: 'More workspace panels' }).click();
+    await page.getByRole('menuitem', { name: 'Reference' }).click();
     await page.getByTestId('reference-search').fill('MergeTree');
     const mergeTree = page.getByRole('option', { name: /MergeTree Table Engine/ }).first();
     await expect(mergeTree).toBeVisible();
@@ -508,10 +504,8 @@ test('Static production preview retries missing source metadata and uses native 
     });
 
     await page.goto('/experimental');
-    await page
-        .getByRole('navigation', { name: 'Workspace browser' })
-        .getByRole('button', { name: 'Reference' })
-        .click();
+    await page.getByRole('button', { name: 'More workspace panels' }).click();
+    await page.getByRole('menuitem', { name: 'Reference' }).click();
     await page.getByTestId('reference-search').fill('MergeTree');
     const mergeTree = page.getByRole('option', { name: /MergeTree Table Engine/ }).first();
     await expect(mergeTree).toBeVisible();

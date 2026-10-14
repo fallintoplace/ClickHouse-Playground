@@ -49,7 +49,6 @@ export function useWorkspaceData({
     const [documentsLoaded, setDocumentsLoaded] = useState(false);
     const [documentsReadError, setDocumentsReadError] = useState(false);
     const [documentsError, setDocumentsError] = useState('');
-    const [historyError, setHistoryError] = useState('');
     const [documentRevisions, setDocumentRevisions] = useState<QueryDocument[]>([]);
     const [revisionsDocumentId, setRevisionsDocumentId] = useState<string>();
     const [revisionLoading, setRevisionLoading] = useState(false);
@@ -96,13 +95,9 @@ export function useWorkspaceData({
                 );
                 if (!signal?.aborted && historyRequestRef.current === requestId) {
                     setHistory(next);
-                    setHistoryError('');
                 }
             } catch (caught) {
-                if (!signal?.aborted && historyRequestRef.current === requestId) {
-                    setHistoryError(message(caught));
-                    throw caught;
-                }
+                if (!signal?.aborted && historyRequestRef.current === requestId) throw caught;
             }
         },
         [connectionId],
@@ -209,7 +204,6 @@ export function useWorkspaceData({
         documentsLoaded,
         documentsReadError,
         documentsError,
-        historyError,
         documentRevisions,
         revisionsDocumentId,
         revisionLoading,

@@ -4,7 +4,6 @@ export function inspectorLabel(value: Inspector): string {
     return {
         schema: 'Schema explorer',
         reference: 'Reference',
-        history: 'Query history',
         documents: 'Saved queries',
         revisions: 'Version history',
         details: 'Run details',

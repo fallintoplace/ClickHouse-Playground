@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import type { QueryDocument } from '../../src/shared/queries/saved-queries/types.js';
 import type { Run } from '../../src/shared/queries/execution/types.js';
-import { openWorkspacePanel, runButton, trust, useAdvancedMode } from './helpers.js';
+import { runButton, trust, useAdvancedMode } from './helpers.js';
 import { isQueryDocument } from '../../src/shared/queries/saved-queries/validation.js';
 import { decodeValue, jsonRecord } from '../helpers/type-guards.js';
 
@@ -308,59 +308,4 @@ test('Chart snapshot loads while a save is still in progress', async ({ page }) 
     } finally {
         release();
     }
-});
-
-function historyRun(): Run {
-    return {
-        id: 'recent-run',
-        queryId: 'recent-query',
-        connectionId: 'demo',
-        dataSource: 'fixture',
-        owner: 'local-owner',
-        sql: 'SELECT history_refresh',
-        kind: 'query',
-        parameters: {},
-        limits: { rows: 5000, bytes: 2000000, seconds: 30, memory: 536870912, threads: 4 },
-        tags: {},
-        status: 'succeeded',
-        createdAt: '2026-01-01T00:00:00.000Z',
-        elapsedMs: 10,
-        rowCount: 1,
-        bytes: 8,
-        columns: [],
-        warnings: [],
-        sequence: 1,
-        resultState: 'unavailable',
-        requestedBy: 'local-owner',
-        executedAs: 'fixture-reader',
-        permissionSnapshot: { readonly: true, role: 'owner' },
-        retryPolicy: 'never',
-    };
-}
-
-test('Refreshing run history shows the latest run without executing SQL', async ({ page }) => {
-    let refresh = false,
-        executions = 0;
-    page.on('request', request => {
-        if (
-            request.method() === 'POST' &&
-            ['/api/runs', '/api/scripts'].includes(new URL(request.url()).pathname)
-        )
-            executions++;
-    });
-    await page.route(
-        url => url.pathname === '/api/runs' && url.searchParams.has('connectionId'),
-        route => route.fulfill({ json: refresh ? [historyRun()] : [] }),
-    );
-    await trust(page);
-    await openWorkspacePanel(page, 'history');
-    const pane = page.locator('.inspector-pane');
-    await expect(pane.getByText('No runs yet', { exact: true })).toBeVisible();
-    refresh = true;
-    await pane.getByRole('button', { name: '↻ Refresh', exact: true }).click();
-    const historyCard = pane.locator('.history-card');
-    await expect(historyCard).toContainText('SELECT history_refresh');
-    await historyCard.click();
-    await expect(page.locator('.cm-content')).toContainText('SELECT history_refresh');
-    expect(executions).toBe(0);
 });

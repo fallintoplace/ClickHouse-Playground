@@ -1,12 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import {
-    openBlankSql,
-    openWorkspacePanel,
-    replaceSql,
-    runButton,
-    trust,
-    openStatementResults,
-} from './helpers.js';
+import { openBlankSql, replaceSql, runButton, trust, openStatementResults } from './helpers.js';
 import type { Script } from '../../src/shared/queries/execution/types.js';
 import { newDraft } from '../../src/frontend/queries/editor/drafts/workspace-state.js';
 
@@ -295,51 +288,31 @@ test('Draft storage warning stays visible until browser storage recovers', async
     await expect(warning).toHaveCount(0);
 });
 
-for (const panel of ['history', 'documents'] as const) {
-    test(`${panel} read failure stays in its panel and Retry clears it`, async ({ page }) => {
-        let fail = true;
-        await page.route(
-            url =>
-                panel === 'history'
-                    ? url.pathname === '/api/runs' && url.searchParams.has('connectionId')
-                    : url.pathname === '/api/documents',
-            route =>
-                fail
-                    ? route.fulfill({
-                          status: 503,
-                          json: {
-                              error: { code: 'READ_FAILED', message: 'Read endpoint diagnostic' },
-                          },
-                      })
-                    : route.fulfill({ json: [] }),
-        );
-        await trust(page);
-        if (panel === 'history') await openWorkspacePanel(page, 'history');
-        else {
-            await page.getByTestId('workspace-panels').click();
-            await page.getByTestId('workspace-panel-documents').click();
-        }
-        const inspector = page.locator('.inspector-pane');
-        const notice = inspector.locator('.workspace-inline-notice');
-        await expect(notice).toContainText(
-            panel === 'history' ? 'Couldn’t load query history.' : 'Couldn’t load saved queries.',
-        );
-        await expect(
-            inspector.getByText(panel === 'history' ? 'No runs yet' : 'Nothing saved yet', {
-                exact: true,
-            }),
-        ).toHaveCount(0);
-        await expect(page.locator('.toast')).toHaveCount(0);
-        fail = false;
-        await notice.getByRole('button', { name: 'Retry', exact: true }).click();
-        await expect(notice).toHaveCount(0);
-        await expect(
-            inspector.getByText(panel === 'history' ? 'No runs yet' : 'Nothing saved yet', {
-                exact: true,
-            }),
-        ).toBeVisible();
-    });
-}
+test('Saved queries read failure stays in its panel and Retry clears it', async ({ page }) => {
+    let fail = true;
+    await page.route(
+        url => url.pathname === '/api/documents',
+        route =>
+            fail
+                ? route.fulfill({
+                      status: 503,
+                      json: { error: { code: 'READ_FAILED', message: 'Read endpoint diagnostic' } },
+                  })
+                : route.fulfill({ json: [] }),
+    );
+    await trust(page);
+    await page.getByTestId('workspace-panels').click();
+    await page.getByTestId('workspace-panel-documents').click();
+    const inspector = page.locator('.inspector-pane');
+    const notice = inspector.locator('.workspace-inline-notice');
+    await expect(notice).toContainText('Couldn’t load saved queries.');
+    await expect(inspector.getByText('Nothing saved yet', { exact: true })).toHaveCount(0);
+    await expect(page.locator('.toast')).toHaveCount(0);
+    fail = false;
+    await notice.getByRole('button', { name: 'Retry', exact: true }).click();
+    await expect(notice).toHaveCount(0);
+    await expect(inspector.getByText('Nothing saved yet', { exact: true })).toBeVisible();
+});
 
 test('A failed result read uses inline Retry and preserves the successful query outcome', async ({
     page,
