@@ -29,6 +29,7 @@ export function renderChartControls({
     measureIndexes,
     numericIndexes,
     availableMeasures,
+    toolbarContainer,
 }: {
     chartKind: Exclude<ChartKind, 'table'>;
     result: Result;
@@ -44,13 +45,14 @@ export function renderChartControls({
     measureIndexes: number[];
     numericIndexes: number[];
     availableMeasures: number[];
+    toolbarContainer?: HTMLElement | null;
 }) {
     return (
-        <ChartToolbar>
+        <ChartToolbar portalTarget={toolbarContainer}>
             <div className="chart-control-field">
-                <span className="chart-control-label">{chartCopy.type}</span>
                 <SelectControl
                     className="chart-select"
+                    compactMenu
                     label={chartCopy.type}
                     value={chartKind}
                     hideDisabledOptions
@@ -112,11 +114,9 @@ export function renderChartControls({
             </div>
             {chartKind !== 'number' && (
                 <div className="chart-control-field">
-                    <span className="chart-control-label">
-                        {chartKind === 'scatter' ? chartCopy.xAxisMeasure : chartCopy.xAxis}
-                    </span>
                     <SelectControl
                         className="chart-select"
+                        compactMenu
                         label={chartKind === 'scatter' ? chartCopy.xAxisMeasure : chartCopy.xAxis}
                         value={String(xIndex)}
                         hideDisabledOptions
@@ -155,9 +155,9 @@ export function renderChartControls({
             )}
             {chartKind === 'heatmap' && (
                 <div className="chart-control-field">
-                    <span className="chart-control-label">{chartCopy.yAxis}</span>
                     <SelectControl
                         className="chart-select"
+                        compactMenu
                         label={chartCopy.yAxis}
                         value={String(groupByIndex ?? -1)}
                         hideDisabledOptions
@@ -176,7 +176,8 @@ export function renderChartControls({
                     <ChartPopover
                         label={chartCopy.measures}
                         closeLabel={chartCopy.closeControls}
-                        controlLabel={chartCopy.measures}
+                        triggerClassName="chart-measures-trigger"
+                        popoverClassName="chart-measures-popover"
                         trigger={
                             <>
                                 <span
@@ -236,9 +237,9 @@ export function renderChartControls({
                 )
             ) : (
                 <div className="chart-control-field">
-                    <span className="chart-control-label">{chartCopy.measure}</span>
                     <SelectControl
                         className="chart-select"
+                        compactMenu
                         label={chartCopy.measure}
                         value={String(yIndex)}
                         searchable={numericIndexes.length >= 8}

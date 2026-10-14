@@ -15,12 +15,14 @@ export function ChartView({
     loading,
     chart,
     onChart,
+    toolbarContainer,
     copy,
 }: {
     result?: Result;
     loading: boolean;
     chart: Draft['chart'];
     onChart: (chart: Draft['chart']) => void;
+    toolbarContainer?: HTMLElement | null;
     copy: Copy;
 }) {
     const {
@@ -46,7 +48,14 @@ export function ChartView({
         chart.kind === 'candlestick' ||
         (chart.kind === 'table' && suggestion.config.kind === 'candlestick')
     )
-        return renderCandlestickChart({ result, chart, onChart, chartCopy, selection });
+        return renderCandlestickChart({
+            result,
+            chart,
+            onChart,
+            chartCopy,
+            selection,
+            toolbarContainer,
+        });
     if (!numericIndexes.length)
         return (
             <RowCountChart
@@ -54,6 +63,7 @@ export function ChartView({
                 chart={chart}
                 suggestion={suggestion}
                 onChart={onChart}
+                toolbarContainer={toolbarContainer}
                 copy={chartCopy}
             />
         );
@@ -67,5 +77,11 @@ export function ChartView({
         selection,
     });
     const renderChartSvg = createChartSvgRenderer(model.svg, onPlotViewport);
-    return renderChartWorkspace({ ...model, onChart, onCategoryViewport, renderChartSvg });
+    return renderChartWorkspace({
+        ...model,
+        onChart,
+        onCategoryViewport,
+        renderChartSvg,
+        toolbarContainer,
+    });
 }

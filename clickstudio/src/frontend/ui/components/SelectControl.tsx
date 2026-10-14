@@ -24,13 +24,20 @@ function matchesSearch(option: SelectControlOption, search: string) {
     );
 }
 
-function positionSelectMenu(element: HTMLDivElement, button: HTMLButtonElement) {
+function positionSelectMenu(
+    element: HTMLDivElement,
+    button: HTMLButtonElement,
+    compactMenu: boolean,
+) {
     const view = element.ownerDocument.defaultView;
     if (!view) return;
     const anchor = button.getBoundingClientRect();
     const edge = 8;
     const gap = 4;
-    element.style.minWidth = `${Math.min(Math.max(anchor.width, 220), view.innerWidth - edge * 2)}px`;
+    element.style.minWidth = `${Math.min(
+        Math.max(anchor.width, compactMenu ? 140 : 220),
+        view.innerWidth - edge * 2,
+    )}px`;
     element.style.setProperty('--select-available-height', `${view.innerHeight - edge * 2}px`);
     const desiredHeight = element.getBoundingClientRect().height;
     const below = Math.max(0, view.innerHeight - anchor.bottom - gap - edge);
@@ -50,6 +57,7 @@ export function SelectControl({
     options,
     onChange,
     searchable = false,
+    compactMenu = false,
     hideDisabledOptions = true,
     disabled = false,
     className = '',
@@ -61,6 +69,7 @@ export function SelectControl({
     options: SelectControlOption[];
     onChange: (value: string) => void;
     searchable?: boolean;
+    compactMenu?: boolean;
     hideDisabledOptions?: boolean;
     disabled?: boolean;
     className?: string;
@@ -91,8 +100,9 @@ export function SelectControl({
     const activeOptionId = activeOption ? `${id}-option-${activeIndex}` : undefined;
 
     const positionMenu = useCallback(() => {
-        if (menu.current && trigger.current) positionSelectMenu(menu.current, trigger.current);
-    }, []);
+        if (menu.current && trigger.current)
+            positionSelectMenu(menu.current, trigger.current, compactMenu);
+    }, [compactMenu]);
 
     const showMenu = () => {
         const element = menu.current;

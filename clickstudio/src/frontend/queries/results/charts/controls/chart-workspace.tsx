@@ -35,12 +35,14 @@ export function renderChartWorkspace({
     svg,
     onCategoryViewport,
     renderChartSvg,
+    toolbarContainer,
     scatterSummary,
     rowSummary,
 }: ReturnType<typeof prepareChartView> & {
     onChart: (chart: Draft['chart']) => void;
     onCategoryViewport: RefCallback<HTMLDivElement>;
     renderChartSvg: ReturnType<typeof createChartSvgRenderer>;
+    toolbarContainer?: HTMLElement | null;
 }) {
     return (
         <ScrollEdgeFrame<HTMLDivElement> className="chart-workspace-frame">
@@ -213,6 +215,7 @@ export function renderChartWorkspace({
                             measureIndexes,
                             numericIndexes,
                             availableMeasures,
+                            toolbarContainer,
                         })}
                         {renderChartContent()}
                         <div className="chart-footer">

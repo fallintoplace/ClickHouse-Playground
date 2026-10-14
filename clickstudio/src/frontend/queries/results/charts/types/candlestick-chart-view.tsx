@@ -16,12 +16,14 @@ export function renderCandlestickChart({
     onChart,
     chartCopy,
     selection,
+    toolbarContainer,
 }: {
     result: Result;
     chart: Draft['chart'];
     onChart: (chart: Draft['chart']) => void;
     chartCopy: Copy['chart'];
     selection: ReturnType<typeof prepareChartSelection>;
+    toolbarContainer?: HTMLElement | null;
 }) {
     const {
         activeCandle,
@@ -77,6 +79,7 @@ export function renderCandlestickChart({
         patchCandle,
         candleColumns,
         activeCandleValid,
+        toolbarContainer,
     });
 }
 
@@ -93,6 +96,7 @@ function renderCandlestickControls({
     patchCandle,
     candleColumns,
     activeCandleValid,
+    toolbarContainer,
 }: {
     chart: Draft['chart'];
     chartCopy: Copy['chart'];
@@ -106,6 +110,7 @@ function renderCandlestickControls({
     patchCandle: (field: keyof CandlestickConfig, value: string) => void;
     candleColumns: (selected: number | undefined) => SelectControlOption[];
     activeCandleValid: boolean;
+    toolbarContainer?: HTMLElement | null;
 }) {
     const fields = [
         ['open', chartCopy.openLabel],
@@ -121,11 +126,11 @@ function renderCandlestickControls({
         <ScrollEdgeFrame<HTMLDivElement> className="chart-workspace-frame">
             {ref => (
                 <div ref={ref} className="chart-workspace animate-enter">
-                    <ChartToolbar>
+                    <ChartToolbar portalTarget={toolbarContainer}>
                         <div className="chart-control-field">
-                            <span className="chart-control-label">{chartCopy.type}</span>
                             <SelectControl
                                 className="chart-select"
+                                compactMenu
                                 label={chartCopy.type}
                                 value="candlestick"
                                 hideDisabledOptions
@@ -143,9 +148,9 @@ function renderCandlestickControls({
                             />
                         </div>
                         <div className="chart-control-field">
-                            <span className="chart-control-label">{chartCopy.xAxis}</span>
                             <SelectControl
                                 className="chart-select"
+                                compactMenu
                                 label={chartCopy.xAxis}
                                 value={String(candleX)}
                                 hideDisabledOptions
@@ -178,6 +183,7 @@ function renderCandlestickControls({
                                             <span>{label}</span>
                                             <SelectControl
                                                 className="chart-select"
+                                                compactMenu
                                                 label={label}
                                                 value={
                                                     candle[field] === undefined

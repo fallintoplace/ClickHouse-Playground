@@ -1313,12 +1313,6 @@
     gap: 8px;
     font-size: 10px;
   }
-  .chart-control-label {
-    flex: none;
-    color: var(--muted);
-    font-size: 10px;
-    white-space: nowrap;
-  }
   .chart-popover-control {
     display: inline-flex;
     min-width: 0;
@@ -2524,4 +2518,52 @@
   min-width: 0;
   max-width: none;
   flex: 1 1 auto;
+}
+
+.results-chart-tools:empty,
+.results-chart-tools[hidden] {
+  display: none;
+}
+
+.results-chart-tools {
+  min-width: 0;
+  max-width: 100%;
+  flex: 0 1 auto;
+}
+
+.results-chart-tools > .chart-toolbar {
+  min-height: 0;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+}
+
+.results-chart-tools .chart-toolbar .chart-controls .chart-control-field {
+  gap: 5px;
+  font-size: 9px;
+}
+
+.results-chart-tools .chart-select {
+  min-width: 72px;
+  max-width: 112px;
+  flex: 0 1 112px;
+}
+
+.results-chart-tools .chart-popover-control {
+  gap: 4px;
+}
+
+.results-chart-tools .chart-popover-trigger {
+  max-width: 132px;
+}
+
+.results-chart-tools .chart-measure-summary {
+  max-width: 96px;
+}
+
+.chart-measures-popover {
+  width: fit-content;
+  min-width: 150px;
+  max-width: min(320px, calc(100vw - 16px));
 }

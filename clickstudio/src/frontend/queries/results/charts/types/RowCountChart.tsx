@@ -32,12 +32,14 @@ export function RowCountChart({
     chart,
     suggestion,
     onChart,
+    toolbarContainer,
     copy,
 }: {
     result: Result;
     chart: Draft['chart'];
     suggestion: ReturnType<typeof recommendChart>;
     onChart: (chart: Draft['chart']) => void;
+    toolbarContainer?: HTMLElement | null;
     copy: Copy['chart'];
 }) {
     const {
@@ -234,6 +236,7 @@ export function RowCountChart({
                             breakdowns={breakdowns}
                             customTitle={customTitle}
                             onChart={onChart}
+                            toolbarContainer={toolbarContainer}
                         />
                         {renderChartContent()}
                         <div className="chart-footer">
@@ -284,6 +287,7 @@ function RowCountChartToolbar({
     breakdowns,
     customTitle,
     onChart,
+    toolbarContainer,
 }: {
     result: Result;
     chart: Draft['chart'];
@@ -295,13 +299,14 @@ function RowCountChartToolbar({
     breakdowns: number[];
     customTitle: string | undefined;
     onChart: (chart: Draft['chart']) => void;
+    toolbarContainer?: HTMLElement | null;
 }) {
     return (
-        <ChartToolbar>
+        <ChartToolbar portalTarget={toolbarContainer}>
             <div className="chart-control-field">
-                <span className="chart-control-label">{copy.xAxis}</span>
                 <SelectControl
                     className="chart-select"
+                    compactMenu
                     label={copy.xAxis}
                     value={String(xIndex)}
                     searchable={dimensions.length >= 8}
@@ -344,9 +349,9 @@ function RowCountChartToolbar({
             </div>
             {timeAxis && breakdowns.length > 0 && (
                 <div className="chart-control-field">
-                    <span className="chart-control-label">{copy.breakdownBy}</span>
                     <SelectControl
                         className="chart-select"
+                        compactMenu
                         label={copy.breakdownBy}
                         value={groupByIndex === undefined ? '' : String(groupByIndex)}
                         searchable={breakdowns.length >= 8}

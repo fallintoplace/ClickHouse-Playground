@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '../../../ui/components/primitives';
 import { Icon } from '../../../ui/components/icons';
 
@@ -21,13 +22,15 @@ export function ChartPopover({
     closeLabel,
     trigger,
     children,
-    controlLabel,
+    triggerClassName,
+    popoverClassName,
 }: {
     label: string;
     closeLabel: string;
     trigger: ReactNode;
     children: ReactNode;
-    controlLabel?: string;
+    triggerClassName?: string;
+    popoverClassName?: string;
 }) {
     const id = useId();
     const button = useRef<HTMLButtonElement>(null);
@@ -68,15 +71,10 @@ export function ChartPopover({
 
     return (
         <span className="chart-popover-control">
-            {controlLabel && (
-                <span className="chart-control-label" aria-hidden="true">
-                    {controlLabel}
-                </span>
-            )}
             <button
                 ref={button}
                 type="button"
-                className="button-base button-secondary chart-popover-trigger"
+                className={`button-base button-secondary chart-popover-trigger ${triggerClassName ?? ''}`.trim()}
                 popoverTarget={id}
                 aria-label={label}
                 aria-haspopup="dialog"
@@ -88,7 +86,7 @@ export function ChartPopover({
             <div
                 ref={panel}
                 id={id}
-                className="chart-popover"
+                className={`chart-popover ${popoverClassName ?? ''}`.trim()}
                 popover="auto"
                 role="dialog"
                 aria-label={label}
@@ -121,10 +119,18 @@ export function ChartPopover({
     );
 }
 
-export function ChartToolbar({ children }: { children: ReactNode }) {
-    return (
+export function ChartToolbar({
+    children,
+    portalTarget,
+}: {
+    children: ReactNode;
+    portalTarget?: HTMLElement | null;
+}) {
+    const toolbar = (
         <div className="chart-toolbar">
             <div className="chart-controls">{children}</div>
         </div>
     );
+    if (portalTarget === undefined) return toolbar;
+    return portalTarget ? createPortal(toolbar, portalTarget) : null;
 }

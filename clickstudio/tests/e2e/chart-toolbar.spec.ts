@@ -30,6 +30,9 @@ async function openChart(page: Page) {
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();
     await snapshot;
     await expect(results.locator('.chart-toolbar')).toBeVisible();
+    await expect(results.locator('.results-chart-tools > .chart-toolbar')).toBeVisible();
+    await expect(results.locator('.results-chart-tools + .results-tabs')).toHaveCount(1);
+    await expect(results.locator('.results-content .chart-toolbar')).toHaveCount(0);
     await expect(results.getByRole('button', { name: 'Chart details', exact: true })).toHaveCount(
         0,
     );
@@ -46,7 +49,7 @@ async function expectToolbarFits(toolbar: Locator) {
                 const bounds = element.getBoundingClientRect();
                 return [
                     ...element.querySelectorAll(
-                        '.chart-controls > label, .chart-controls > .chart-popover-control, h3',
+                        '.chart-controls > .chart-control-field, .chart-controls > .chart-popover-control, h3',
                     ),
                 ].every(control => {
                     const rect = control.getBoundingClientRect();
@@ -119,8 +122,19 @@ for (const mode of ['Standard', 'Experimental'])
                 .poll(() => toolbar.evaluate(element => element.getBoundingClientRect().height))
                 .toBeLessThanOrEqual(44);
             await expect(results.locator('.chart-footer')).toContainText('retained prefix only');
+            const type = toolbar.getByRole('combobox', { name: 'Type', exact: true });
+            await type.click();
+            const typeMenu = type.locator('xpath=..').locator('.chart-select-menu');
+            await expect(typeMenu).toBeVisible();
+            expect(
+                await typeMenu.evaluate(element => element.getBoundingClientRect().width),
+            ).toBeLessThan(180);
+            await page.keyboard.press('Escape');
             await measures.press('Enter');
             const popup = results.getByRole('dialog', { name: 'Measures', exact: true });
+            expect(
+                await popup.evaluate(element => element.getBoundingClientRect().width),
+            ).toBeLessThan(200);
             const group = popup.getByRole('group', { name: 'Measures', exact: true });
             await expect(group.getByLabel('value_1', { exact: true })).toBeFocused();
             await expect(group.getByRole('checkbox', { checked: true })).toHaveCount(4);
@@ -248,7 +262,7 @@ test('Short numeric line charts show every X-axis label that fits', async ({ pag
     });
     const results = await openChart(page);
     const toolbar = results.locator('.chart-toolbar');
-    await expect(toolbar.locator('.chart-control-label')).toHaveText(['Type', 'X axis']);
+    await expect(toolbar.locator('.chart-control-label')).toHaveCount(0);
     await expect(toolbar.getByRole('button', { name: 'Measures', exact: true })).toHaveCount(0);
     await chooseChartOption(
         page,

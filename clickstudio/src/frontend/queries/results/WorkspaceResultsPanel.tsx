@@ -89,6 +89,7 @@ export function WorkspaceResultsPanel({
     viewState: WorkspaceViewState;
 }) {
     const [tableToolbar, setTableToolbar] = useState<HTMLDivElement | null>(null);
+    const [chartToolbar, setChartToolbar] = useState<HTMLDivElement | null>(null);
     const [tableRowCount, setTableRowCount] = useState<HTMLSpanElement | null>(null);
     const [structureMode, setStructureMode] = useState<StructureView>('flow');
     const [planView, setPlanView] = useState<ExplainPlanViewMode>('graph');
@@ -160,6 +161,7 @@ export function WorkspaceResultsPanel({
             {renderResultsHeader({
                 showFailure,
                 setTableToolbar,
+                setChartToolbar,
                 setTableRowCount,
                 panels,
                 previousSuccessfulResult,
@@ -204,6 +206,7 @@ export function WorkspaceResultsPanel({
                         previousSuccessfulResult={previousSuccessfulResult}
                         rowsUnavailable={rowsUnavailable}
                         tableToolbar={tableToolbar}
+                        chartToolbar={chartToolbar}
                         tableRowCount={tableRowCount}
                         structureMode={structureMode}
                         planView={planView}
@@ -230,6 +233,7 @@ type WorkspaceResultsBodyProps = {
     previousSuccessfulResult: boolean;
     rowsUnavailable: boolean;
     tableToolbar: HTMLDivElement | null;
+    chartToolbar: HTMLDivElement | null;
     tableRowCount: HTMLSpanElement | null;
     structureMode: StructureView;
     planView: ExplainPlanViewMode;
@@ -251,6 +255,7 @@ function WorkspaceResultsBody({
     previousSuccessfulResult,
     rowsUnavailable,
     tableToolbar,
+    chartToolbar,
     tableRowCount,
     structureMode,
     planView,
@@ -353,6 +358,7 @@ function WorkspaceResultsBody({
                         previousSuccessfulResult={previousSuccessfulResult}
                         rowsUnavailable={rowsUnavailable}
                         tableToolbar={tableToolbar}
+                        chartToolbar={chartToolbar}
                         tableRowCount={tableRowCount}
                         planView={planView}
                     />
@@ -374,6 +380,7 @@ type WorkspaceResultViewProps = Pick<
     | 'previousSuccessfulResult'
     | 'rowsUnavailable'
     | 'tableToolbar'
+    | 'chartToolbar'
     | 'tableRowCount'
     | 'planView'
 >;
@@ -389,6 +396,7 @@ function WorkspaceResultView({
     previousSuccessfulResult,
     rowsUnavailable,
     tableToolbar,
+    chartToolbar,
     tableRowCount,
     planView,
 }: WorkspaceResultViewProps) {
@@ -488,6 +496,7 @@ function WorkspaceResultView({
                 page,
                 actions,
                 tableToolbar,
+                chartToolbar,
                 tableRowCount,
                 previousSuccessfulResult,
                 copy,
@@ -547,6 +556,7 @@ function renderChartResult({
     page,
     actions,
     tableToolbar,
+    chartToolbar,
     tableRowCount,
     previousSuccessfulResult,
     copy,
@@ -560,6 +570,7 @@ function renderChartResult({
     page: number;
     actions: WorkspaceResultsPanelActions;
     tableToolbar: HTMLDivElement | null;
+    chartToolbar: HTMLDivElement | null;
     tableRowCount: HTMLSpanElement | null;
     previousSuccessfulResult: boolean;
     copy: Copy;
@@ -594,6 +605,7 @@ function renderChartResult({
             loading={!retainedSnapshot && run.resultState === 'reopenable'}
             chart={active.chart}
             onChart={chart => actions.onPatch({ chart })}
+            toolbarContainer={chartToolbar}
             copy={copy}
         />
     );
@@ -602,6 +614,7 @@ function renderChartResult({
 function renderResultsHeader({
     showFailure,
     setTableToolbar,
+    setChartToolbar,
     setTableRowCount,
     panels,
     previousSuccessfulResult,
@@ -615,6 +628,9 @@ function renderResultsHeader({
 }: {
     showFailure: boolean;
     setTableToolbar: import('react').Dispatch<
+        import('react').SetStateAction<HTMLDivElement | null>
+    >;
+    setChartToolbar: import('react').Dispatch<
         import('react').SetStateAction<HTMLDivElement | null>
     >;
     setTableRowCount: import('react').Dispatch<
@@ -731,6 +747,15 @@ function renderResultsHeader({
                         >
                             {copy.common.previousRun}
                         </span>
+                    )}
+                {!showFailure &&
+                    visibleResultsView === 'chart' &&
+                    snapshotChart?.config.kind !== 'table' && (
+                        <div
+                            ref={setChartToolbar}
+                            className="results-chart-tools"
+                            hidden={panels.resultsCollapsed}
+                        />
                     )}
                 {!showFailure && run && resultTabs.length > 1 && (
                     <div
