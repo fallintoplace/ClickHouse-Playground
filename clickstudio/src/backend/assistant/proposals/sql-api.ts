@@ -7,6 +7,7 @@ import {
     buildContext,
     PROMPT_VERSION,
     validateAssistantConversation,
+    validateAssistantImages,
     validateProposal,
     type PreparedContext,
 } from './assistant.js';
@@ -21,8 +22,14 @@ import { fail, json } from '../../system/requests/responses.js';
 import { OpenAIDriver } from '../openai-client.js';
 import { openaiServiceTier } from '../../system/config.js';
 import { isRecord } from '../../../shared/common/values.js';
+import {
+    MAX_ASSISTANT_IMAGE_COUNT,
+    MAX_VERCEL_ASSISTANT_TOTAL_IMAGE_BYTES,
+} from '../../../shared/assistant/images.js';
 
-const MAX_BODY_BYTES = 300_000;
+const MAX_BODY_BYTES = 4_000_000;
+const MAX_BODY_BYTES_WITHOUT_IMAGES = 300_000;
+const MAX_IMAGE_DATA_URL_CHARS = 2_900_000;
 const MAX_REQUESTS_PER_DAY = 20;
 const MODEL = process.env.OPENAI_MODEL?.trim() || 'gpt-6-luna';
 const requestsByIp = new Map<string, { day: string; count: number }>();
@@ -37,6 +44,35 @@ function allowRequest(ip: string): boolean {
     if (current?.day === day && current.count >= MAX_REQUESTS_PER_DAY) return false;
     requestsByIp.set(ip, { day, count: current?.day === day ? current.count + 1 : 1 });
     return true;
+}
+
+function assistantImages(body: Record<string, unknown>): string[] {
+    const images = body.images === undefined ? [] : body.images;
+    if (!Array.isArray(images)) throw new AppError(400, 'IMAGE_TYPE', 'Images must be a list.');
+    if (images.length + (body.image === undefined ? 0 : 1) > MAX_ASSISTANT_IMAGE_COUNT)
+        throw new AppError(
+            400,
+            'IMAGE_COUNT',
+            `Attach at most ${MAX_ASSISTANT_IMAGE_COUNT} images.`,
+        );
+    const dataUrls = [
+        ...(body.image === undefined ? [] : [field(body.image, 'image', MAX_IMAGE_DATA_URL_CHARS)]),
+        ...images.map((image, index) =>
+            field(image, `image ${index + 1}`, MAX_IMAGE_DATA_URL_CHARS),
+        ),
+    ];
+    const validated = validateAssistantImages(dataUrls);
+    const totalBytes = validated.reduce((total, image) => {
+        const payload = image.slice(image.indexOf(',') + 1);
+        return total + Buffer.from(payload, 'base64').length;
+    }, 0);
+    if (totalBytes > MAX_VERCEL_ASSISTANT_TOTAL_IMAGE_BYTES)
+        throw new AppError(
+            413,
+            'IMAGE_SIZE',
+            `Attached images must total at most ${MAX_VERCEL_ASSISTANT_TOTAL_IMAGE_BYTES / 1_000_000} MB on this deployment.`,
+        );
+    return validated;
 }
 
 function prepareAssistantContext(body: Record<string, unknown>) {
@@ -61,6 +97,7 @@ function prepareAssistantContext(body: Record<string, unknown>) {
             : undefined;
     const serverVersion =
         typeof body.serverVersion === 'string' ? body.serverVersion.slice(0, 128) : undefined;
+    const images = assistantImages(body);
     const built = buildContext({
         connectionId,
         database,
@@ -76,6 +113,7 @@ function prepareAssistantContext(body: Record<string, unknown>) {
         sensitiveColumns: (process.env.AI_SENSITIVE_COLUMNS ?? 'password,token,secret,api_key')
             .split(',')
             .map(name => name.trim()),
+        images,
     });
     return { connectionId, action, sql, schema, built };
 }
@@ -125,6 +163,10 @@ async function post(request: Request): Promise<Response> {
         return fail('REQUEST_BODY', 'The request body is not valid JSON.');
     }
     if (!isRecord(body)) return fail('REQUEST_BODY', 'The request body must be a JSON object.');
+    const hasImages =
+        body.image !== undefined || (Array.isArray(body.images) && body.images.length > 0);
+    if (!hasImages && Buffer.byteLength(raw) > MAX_BODY_BYTES_WITHOUT_IMAGES)
+        return fail('REQUEST_SIZE', 'The assistant request is too large.', 413);
 
     let timeoutSignal: AbortSignal | undefined;
     try {

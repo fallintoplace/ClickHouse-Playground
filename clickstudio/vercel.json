@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
   "fluid": true,
-  "buildCommand": "npm run build:preview",
+  "buildCommand": "CLICKSTUDIO_VERCEL_BUILD=1 npm run build:preview",
   "outputDirectory": "dist/frontend",
   "git": {
     "deploymentEnabled": {

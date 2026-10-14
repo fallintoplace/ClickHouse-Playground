@@ -2,9 +2,14 @@ import { useEffect, useRef, useState, type ClipboardEvent } from 'react';
 import {
     MAX_ASSISTANT_IMAGE_BYTES,
     MAX_ASSISTANT_IMAGE_COUNT,
-    MAX_ASSISTANT_TOTAL_IMAGE_BYTES,
 } from '../../../shared/assistant/images';
 import { Icon } from '../../ui/components/icons';
+
+const maxTotalImageBytes = __ASSISTANT_MAX_TOTAL_IMAGE_BYTES__;
+const maxTotalImageMegabytes = maxTotalImageBytes / 1_000_000;
+const maxTotalImageLabel = Number.isInteger(maxTotalImageMegabytes)
+    ? `${maxTotalImageMegabytes}`
+    : maxTotalImageMegabytes.toFixed(1);
 
 export type AssistantImageAttachment = {
     id: string;
@@ -120,8 +125,8 @@ export function useAssistantImageAttachments(
         const totalBytes =
             images.reduce((total, image) => total + image.size, 0) +
             files.reduce((total, file) => total + file.size, 0);
-        if (totalBytes > MAX_ASSISTANT_TOTAL_IMAGE_BYTES) {
-            setError('Attached images must total at most 6 MB.');
+        if (totalBytes > maxTotalImageBytes) {
+            setError(`Attached images must total at most ${maxTotalImageLabel} MB.`);
             return;
         }
 

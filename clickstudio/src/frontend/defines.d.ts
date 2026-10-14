@@ -1,0 +1,1 @@
+declare const __ASSISTANT_MAX_TOTAL_IMAGE_BYTES__: number;
