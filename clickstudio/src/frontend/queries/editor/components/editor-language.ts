@@ -37,7 +37,7 @@ export const sqlEditorTheme = (dark: boolean) =>
                 fontFamily: 'var(--font-mono)',
                 fontVariantNumeric: 'tabular-nums',
             },
-            '.cm-content': { minHeight: '220px' },
+            '.cm-content': { minHeight: '220px', caretColor: 'var(--editor-foreground)' },
             '.cm-activeLine': { backgroundColor: 'var(--editor-active-line)' },
             '.cm-activeLineGutter': { backgroundColor: 'var(--editor-active-gutter)' },
             '.cm-cursor': { borderLeftColor: 'var(--text)' },

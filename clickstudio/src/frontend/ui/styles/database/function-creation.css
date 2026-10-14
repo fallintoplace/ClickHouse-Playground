@@ -45,6 +45,10 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 140px;
   }
 
+  .sql-function-dialog .function-creation-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .sql-function-dialog .function-creation-fields .function-creation-section-heading {
     min-height: 34px;
   }
@@ -69,6 +73,13 @@
     grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr);
     gap: 24px;
     align-items: start;
+  }
+
+  .sql-function-create-sidebar {
+    display: grid;
+    min-width: 0;
+    gap: 20px;
+    align-content: start;
   }
 
   .function-creation-section-heading {
@@ -165,6 +176,10 @@
     .function-creation-workspace {
       grid-template-columns: minmax(0, 1fr);
       gap: 20px;
+    }
+
+    .sql-function-create-sidebar {
+      gap: 16px;
     }
 
     .sql-function-dialog .function-creation-source {

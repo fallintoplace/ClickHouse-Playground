@@ -85,6 +85,10 @@ test('Custom function starts blank, previews SQL and creates a testable SQL UDF'
         await expect(dialog.getByLabel('Expression', { exact: true })).toContainText(
             'e.g. price * (1 + rate)',
         );
+        await expect(dialog.getByLabel('Expression', { exact: true })).toHaveCSS(
+            'caret-color',
+            'rgb(247, 247, 247)',
+        );
         await expect(dialog.getByLabel('Function name', { exact: true })).toBeFocused();
         await expect(
             dialog.getByRole('button', { name: 'Create UDF', exact: true }),
@@ -119,6 +123,28 @@ test('Custom function starts blank, previews SQL and creates a testable SQL UDF'
     } finally {
         await workspace.close();
     }
+});
+
+test('Adding SQL UDF parameters keeps the expression editor in place to their right', async ({
+    page,
+}) => {
+    await functionsWorkspace(page, { existing: true });
+    await page.getByRole('button', { name: 'Create SQL UDF', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Create SQL Function', exact: true });
+    const parameters = dialog.getByRole('region', { name: 'Parameters', exact: true });
+    const expression = dialog.locator('.function-creation-source');
+    const initialExpression = await expression.boundingBox();
+    const parameterBounds = await parameters.boundingBox();
+
+    expect(parameterBounds!.x + parameterBounds!.width).toBeLessThan(initialExpression!.x);
+
+    for (let index = 0; index < 3; index++)
+        await dialog.getByRole('button', { name: 'Add parameter', exact: true }).click();
+
+    const updatedExpression = await expression.boundingBox();
+    expect(updatedExpression!.x).toBe(initialExpression!.x);
+    expect(updatedExpression!.y).toBe(initialExpression!.y);
+    await expect(dialog.getByLabel('Parameter 4 name', { exact: true })).toBeVisible();
 });
 
 test('Create opens a clean custom function form with 4px corners', async ({ page }) => {
@@ -340,6 +366,16 @@ test('SQL UDF dialog and tester remain usable in the light theme', async ({ page
     await page.getByRole('button', { name: 'Create SQL UDF', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Create SQL Function', exact: true });
     await expect(dialog.getByLabel('Function name', { exact: true })).toBeFocused();
+    const expression = dialog.getByLabel('Expression', { exact: true });
+    await expect(expression).toHaveCSS('caret-color', 'rgb(27, 48, 61)');
+    await page.evaluate(() => {
+        document.documentElement.dataset.theme = 'click-dark';
+    });
+    await expect(expression).toHaveCSS('caret-color', 'rgb(247, 247, 247)');
+    await page.evaluate(() => {
+        document.documentElement.dataset.theme = 'click-light';
+    });
+    await expect(expression).toHaveCSS('caret-color', 'rgb(27, 48, 61)');
     await page.screenshot({ path: 'test-results/sql-functions/create-light.png' });
     await dialog.getByRole('button', { name: 'Cancel', exact: true }).focus();
     await page.keyboard.press('Tab');

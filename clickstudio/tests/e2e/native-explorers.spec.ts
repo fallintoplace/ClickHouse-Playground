@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { trust, openWorkspacePanel, runButton } from './helpers.js';
+import { trust, runButton } from './helpers.js';
 import { jsonRecord, stringValue } from '../helpers/type-guards.js';
 
 test('Materialized views have selectable dependency edges and refresh details', async ({

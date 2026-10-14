@@ -189,31 +189,33 @@ export function CreateSqlFunctionDialog({
                         onChange={event => changeField('name', event.target.value)}
                     />
                 </label>
-                <SqlFunctionParameters
-                    parameters={parameters}
-                    busy={busy}
-                    onAdd={addParameter}
-                    onChange={changeParameter}
-                    onRemove={removeParameter}
-                />
             </div>
             <div className="function-creation-workspace">
-                <section
-                    className="function-creation-preview sql-function-create-preview"
-                    aria-label="SQL preview"
-                >
-                    <div className="function-creation-section-heading">
-                        <h3>SQL preview</h3>
-                    </div>
-                    <pre>
-                        {sql ||
-                            (fields.name ||
-                            parameters.some(parameter => parameter.name) ||
-                            fields.expression
-                                ? validation
-                                : 'CREATE FUNCTION ... AS (...) -> ...;')}
-                    </pre>
-                </section>
+                <div className="sql-function-create-sidebar">
+                    <SqlFunctionParameters
+                        parameters={parameters}
+                        busy={busy}
+                        onAdd={addParameter}
+                        onChange={changeParameter}
+                        onRemove={removeParameter}
+                    />
+                    <section
+                        className="function-creation-preview sql-function-create-preview"
+                        aria-label="SQL preview"
+                    >
+                        <div className="function-creation-section-heading">
+                            <h3>SQL preview</h3>
+                        </div>
+                        <pre>
+                            {sql ||
+                                (fields.name ||
+                                parameters.some(parameter => parameter.name) ||
+                                fields.expression
+                                    ? validation
+                                    : 'CREATE FUNCTION ... AS (...) -> ...;')}
+                        </pre>
+                    </section>
+                </div>
                 <div className="creation-dialog-field function-creation-source">
                     <span className="function-creation-section-heading">
                         <span>Expression</span>

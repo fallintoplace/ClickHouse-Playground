@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { EditorState } from '@codemirror/state';
+import { Compartment, EditorState } from '@codemirror/state';
 import {
     EditorView,
     keymap,
@@ -42,6 +42,9 @@ export function FunctionCodeEditor({
     useEffect(() => {
         if (!element.current) return;
         const config = configuration.current;
+        const isDarkTheme = () => document.documentElement.dataset.theme !== 'click-light';
+        const theme = new Compartment();
+        let dark = isDarkTheme();
         const editor = new EditorView({
             parent: element.current,
             state: EditorState.create({
@@ -51,13 +54,13 @@ export function FunctionCodeEditor({
                     config.language === 'python' ? python() : sql({ dialect: clickhouse }),
                     history(),
                     indentOnInput(),
+                    theme.of(sqlEditorTheme(dark)),
                     keymap.of([
                         ...defaultKeymap,
                         ...historyKeymap,
                         ...(config.language === 'python' ? [indentWithTab] : []),
                     ]),
                     syntaxHighlighting(sqlHighlightStyle),
-                    sqlEditorTheme(false),
                     EditorView.lineWrapping,
                     editorPlaceholder(config.placeholder),
                     EditorState.transactionFilter.of(transaction =>
@@ -81,8 +84,19 @@ export function FunctionCodeEditor({
                 ],
             }),
         });
+        const themeObserver = new MutationObserver(() => {
+            const nextDark = isDarkTheme();
+            if (nextDark === dark) return;
+            dark = nextDark;
+            editor.dispatch({ effects: theme.reconfigure(sqlEditorTheme(dark)) });
+        });
+        themeObserver.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['data-theme'],
+        });
         view.current = editor;
         return () => {
+            themeObserver.disconnect();
             editor.destroy();
             view.current = undefined;
         };
