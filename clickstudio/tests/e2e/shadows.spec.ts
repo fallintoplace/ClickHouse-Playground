@@ -230,13 +230,14 @@ for (const theme of ['Dark', 'Light'])
                     .getByRole('button', { name: 'Objects', exact: true })
                     .click();
             await expect(inspector).toHaveCSS('border-radius', '0px');
-            await expect(inspector.locator('.object-tree-scroll')).toHaveCSS(
-                'border-radius',
-                '4px',
-            );
+            const objectTree = inspector.locator('.object-tree-scroll');
+            await expect(objectTree).toHaveCSS('border-radius', '0px');
+            await expect(objectTree).toHaveCSS('border-width', '0px');
+            await expect(objectTree).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+            await expect(objectTree).toHaveCSS('box-shadow', 'none');
             await expect(inspector.locator('.object-tree-count').first()).toHaveCSS(
                 'border-radius',
-                '2px',
+                '8px',
             );
             await expectWrappedSearchFocus(
                 inspector.getByTestId('schema-search'),

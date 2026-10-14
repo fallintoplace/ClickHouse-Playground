@@ -129,7 +129,7 @@ test(`Light mode keeps workspace and help text readable with brown accent`, asyn
     await expectReadableText(page.locator('.application'), 'Workspace and objects');
     await expect(page.locator('.object-tree-scroll')).toHaveCSS(
         'background-color',
-        'rgb(234, 240, 250)',
+        'rgba(0, 0, 0, 0)',
     );
     await page.screenshot({ path: info.outputPath('light-workspace.png') });
 

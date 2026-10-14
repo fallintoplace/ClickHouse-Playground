@@ -9,6 +9,10 @@ import { MemoryStore } from '../../src/backend/system/store.js';
 import { DemoDriver } from '../../src/backend/database/clickhouse/sample-client.js';
 import type { AssistantDriver } from '../../src/backend/assistant/proposals/assistant.js';
 import type { ImportJob } from '../../src/backend/database/imports/imports.js';
+import {
+    MAX_IMPORT_FILE_BYTES,
+    MAX_IMPORT_SOURCE_CHARS,
+} from '../../src/shared/database/imports/limits.js';
 import type { CreateTableColumn } from '../../src/backend/database/tables/create-table.js';
 import type {
     ClickHouseDocumentationEntry,
@@ -1189,8 +1193,12 @@ for (const [name, source, valueLength] of [
 test('Import preview transport keeps the source byte limit and other JSON body limits', async t => {
     const app = await start();
     t.after(() => app.stop());
-    const source = 'a\n' + 'é'.repeat(999999) + 'a';
-    assert.equal(Buffer.byteLength(source), 2000001);
+    const header = 'a\n';
+    const availableBytes = MAX_IMPORT_FILE_BYTES - Buffer.byteLength(header);
+    const value = 'é'.repeat(Math.floor(availableBytes / 2));
+    const source = header + value + 'a'.repeat((availableBytes % 2) + 1);
+    assert.equal(Buffer.byteLength(source), MAX_IMPORT_FILE_BYTES + 1);
+    assert.ok(source.length < MAX_IMPORT_SOURCE_CHARS);
     const preview = await app.call('/imports/preview', {
         name: 'oversized.csv',
         source,
