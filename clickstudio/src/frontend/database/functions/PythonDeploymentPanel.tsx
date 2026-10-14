@@ -5,7 +5,7 @@ import type {
     pythonStatusSchema,
     PythonFunctionDraft,
 } from '../../../shared/database/functions/python-functions';
-import { message } from '../../api/client';
+import { isFrontendDemoPreview, message } from '../../api/client';
 import { Icon } from '../../ui/components/icons';
 import { SelectControl } from '../../ui/components/SelectControl';
 import {
@@ -117,7 +117,7 @@ export function PythonDeploymentPanel({
                     Deployment is unavailable for this connection. ZIP export remains available.
                 </p>
             )}
-            {allowed && !capability?.available && (
+            {allowed && !isFrontendDemoPreview && !capability?.available && (
                 <p className="sql-function-input-hint">
                     {capability?.reason || 'Checking Cloud management access...'}
                 </p>
