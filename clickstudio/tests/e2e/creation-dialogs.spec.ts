@@ -218,22 +218,78 @@ for (const mode of ['Standard', 'Experimental']) {
         await fill();
         await dialog.getByRole('button', { name: 'Add column', exact: true }).click();
         await dialog.getByLabel('Column 2 name', { exact: true }).fill('tenant');
+        await expect(dialog.locator('select')).toHaveCount(0);
+        const type = dialog.getByRole('combobox', { name: 'Column 2 type', exact: true });
+        await type.click();
+        const typeOptions = dialog.getByRole('listbox', {
+            name: 'Column 2 type',
+            exact: true,
+        });
+        await typeOptions.getByRole('option', { name: 'Bool', exact: true }).click();
+        await expect(typeOptions).toBeHidden();
+        await expect(type).toHaveAttribute('aria-valuetext', 'Bool');
+        const sortingKey = dialog.getByRole('combobox', { name: 'Sorting key', exact: true });
+        await sortingKey.click();
+        const sortingKeyOptions = dialog.getByRole('listbox', {
+            name: 'Sorting key',
+            exact: true,
+        });
+        await sortingKeyOptions.getByRole('option', { name: 'tenant', exact: true }).click();
+        await expect(sortingKeyOptions).toBeHidden();
+        await expect(sortingKey).toHaveAttribute('aria-valuetext', 'tenant');
         await dialog.getByRole('button', { name: 'Create table', exact: true }).click();
         await expect(dialog.getByRole('status')).toContainText('Created demo.events_corporate.');
         expect(requests).toEqual([
             {
                 database: 'demo',
                 table: 'events_corporate',
-                orderBy: 'id',
+                orderBy: 'tenant',
                 columns: [
                     { name: 'id', type: 'UInt64', generatedId: true },
-                    { name: 'tenant', type: 'String' },
+                    { name: 'tenant', type: 'Bool' },
                 ],
             },
         ]);
         await dialog.getByRole('button', { name: 'Done', exact: true }).click();
         await expect(dialog).toHaveCount(0);
         await expect(trigger).toBeEnabled();
+    });
+
+    test(`${mode} table updates the sorting key when a selected column changes`, async ({
+        page,
+    }) => {
+        const { dialog } = await creationDialog(page, 'table', mode);
+        await dialog.getByRole('button', { name: 'Add column', exact: true }).click();
+        const columnName = dialog.getByLabel('Column 2 name', { exact: true });
+        await columnName.fill('tenant');
+
+        const type = dialog.getByRole('combobox', { name: 'Column 2 type', exact: true });
+        await type.click();
+        const typeOptions = dialog.getByRole('listbox', {
+            name: 'Column 2 type',
+            exact: true,
+        });
+        await typeOptions.getByRole('option', { name: 'Bool', exact: true }).click();
+        await expect(typeOptions).toBeHidden();
+        const sortingKey = dialog.getByRole('combobox', { name: 'Sorting key', exact: true });
+        await sortingKey.click();
+        const sortingKeyOptions = dialog.getByRole('listbox', {
+            name: 'Sorting key',
+            exact: true,
+        });
+        await sortingKeyOptions.getByRole('option', { name: 'tenant', exact: true }).click();
+        await expect(sortingKeyOptions).toBeHidden();
+
+        await columnName.fill('account');
+        await expect(type).toHaveAttribute('aria-valuetext', 'Bool');
+        await expect(sortingKey).toHaveAttribute('aria-valuetext', 'id');
+        await dialog.getByRole('button', { name: 'Remove account', exact: true }).click();
+        const singleSortingKey = dialog.getByRole('group', {
+            name: 'Sorting key',
+            exact: true,
+        });
+        await expect(singleSortingKey).toContainText('id');
+        await expect(singleSortingKey).toHaveAttribute('data-value', '0');
     });
 }
 

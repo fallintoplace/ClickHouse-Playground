@@ -19,6 +19,7 @@ import {
 } from '../connections/cloud-connection';
 import { Icon } from '../../ui/components/icons';
 import { CreationDialog } from '../../ui/components/CreationDialog';
+import { SelectControl } from '../../ui/components/SelectControl';
 
 type Props = {
     connection: Connected;
@@ -30,6 +31,7 @@ type Props = {
 const firstColumn: CreateTableColumn = { name: 'id', type: 'UInt64', generatedId: true };
 const identifierPattern = /^[A-Za-z_][A-Za-z0-9_]{0,127}$/;
 const identifierPatternAttribute = '[A-Za-z_][A-Za-z0-9_]{0,127}';
+const columnTypeOptions = CREATE_TABLE_COLUMN_TYPES.map(type => ({ value: type, label: type }));
 
 export function CreateTableDialog({ connection, databases, onClose, onCreated }: Props) {
     const databaseInput = useRef<HTMLInputElement>(null);
@@ -368,6 +370,7 @@ function CreateTableContent({ model }: { model: CreateTableContentModel }) {
         targetTable,
         error,
     } = model;
+    const sortingColumnIndex = columns.findIndex(column => column.name === orderBy);
     return (
         <>
             {!created && (
@@ -406,24 +409,19 @@ function CreateTableContent({ model }: { model: CreateTableContentModel }) {
 
                     {renderTableColumns(model)}
 
-                    <label className="creation-dialog-field">
+                    <div className="creation-dialog-field">
                         <span>Sorting key</span>
-                        <span className="create-table-select-wrap">
-                            <select
-                                aria-label="Sorting key"
-                                value={orderBy}
-                                onChange={event => setOrderBy(event.target.value)}
-                                className="creation-dialog-control create-table-select"
-                            >
-                                {columns.map((column, index) => (
-                                    <option key={`${column.name}-${index}`} value={column.name}>
-                                        {column.name || `Column ${index + 1}`}
-                                    </option>
-                                ))}
-                            </select>
-                            <Icon name="chevron" />
-                        </span>
-                    </label>
+                        <SelectControl
+                            label="Sorting key"
+                            value={String(Math.max(sortingColumnIndex, 0))}
+                            options={columns.map((column, index) => ({
+                                value: String(index),
+                                label: column.name || `Column ${index + 1}`,
+                            }))}
+                            onChange={value => setOrderBy(columns[Number(value)]?.name ?? '')}
+                            className="select-control-field create-table-select create-table-sort-select"
+                        />
+                    </div>
                 </>
             )}
             {created && (
@@ -495,24 +493,16 @@ function renderTableColumns({
                             </span>
                         )}
                     </label>
-                    <label className="create-table-column-field">
+                    <div className="create-table-column-field">
                         <span className="create-table-column-label">Type</span>
-                        <span className="create-table-select-wrap">
-                            <select
-                                aria-label={`Column ${index + 1} type`}
-                                value={column.type}
-                                onChange={event => updateColumn(index, 'type', event.target.value)}
-                                className="creation-dialog-control create-table-column-control create-table-select"
-                            >
-                                {CREATE_TABLE_COLUMN_TYPES.map(type => (
-                                    <option key={type} value={type}>
-                                        {type}
-                                    </option>
-                                ))}
-                            </select>
-                            <Icon name="chevron" />
-                        </span>
-                    </label>
+                        <SelectControl
+                            label={`Column ${index + 1} type`}
+                            value={column.type}
+                            options={columnTypeOptions}
+                            onChange={value => updateColumn(index, 'type', value)}
+                            className="select-control-field create-table-select"
+                        />
+                    </div>
                     <button
                         type="button"
                         aria-label={`Remove ${column.name || `column ${index + 1}`}`}

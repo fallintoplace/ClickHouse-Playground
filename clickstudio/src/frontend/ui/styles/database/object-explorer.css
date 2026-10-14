@@ -345,24 +345,17 @@
   margin-top: calc(var(--create-table-column-label-height) + var(--create-table-column-field-gap));
   border-radius: 3px;
 }
-.create-table-select-wrap {
-  position: relative;
-  display: block;
-  min-width: 0;
+.create-table-select .chart-select-trigger {
+  height: 38px;
+  min-height: 38px;
+  padding: 9px 12px;
+  background: var(--control-well);
+  color: var(--text);
+  font: 400 12px/1.5 var(--font-mono);
 }
-.create-table-select {
-  appearance: none;
-  padding-right: 34px;
-}
-.create-table-select-wrap > svg {
-  position: absolute;
-  top: 50%;
-  right: 10px;
-  width: 15px;
-  height: 15px;
-  pointer-events: none;
-  color: var(--muted);
-  transform: translateY(-50%);
+.create-table-sort-select .chart-select-trigger {
+  height: 40px;
+  min-height: 40px;
 }
 .create-table-supported-types {
   margin: 0;
