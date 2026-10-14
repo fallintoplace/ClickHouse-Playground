@@ -11,7 +11,115 @@ import {
     mockWritableWorkspace,
     previewCsv,
     chooseExistingTable,
+    chooseImportOption,
 } from './import-helpers.js';
+
+for (const theme of ['Light', 'Dark']) {
+    test(`Import selectors support search, keyboard selection, and validation in ${theme}`, async ({
+        page,
+    }, info) => {
+        await page.setViewportSize({ width: 760, height: 600 });
+        await mockWritableWorkspace(page);
+        await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+        await page.route('**/api/imports/preview', route =>
+            route.fulfill({
+                status: 201,
+                json: {
+                    id: 'input-1',
+                    name: 'events.csv',
+                    format: 'csv',
+                    columns: ['day', 'events'],
+                    rows: [{ day: '2026-01-01', events: '10' }],
+                    rowCount: 1,
+                },
+            }),
+        );
+        await page.getByRole('button', { name: 'Import', exact: true }).click();
+        const dialog = await previewCsv(page);
+        await expect(dialog.locator('select')).toHaveCount(0);
+        const close = dialog.getByRole('button', { name: 'Close import wizard', exact: true });
+        await expect(close.locator('svg')).toBeVisible();
+        await expect(close).toHaveText('');
+        const target = dialog.getByRole('combobox', { name: 'Import target table', exact: true });
+        await target.press('ArrowDown');
+        const tableSearch = dialog.getByRole('searchbox', { name: 'Search import target table' });
+        await expect(tableSearch).toBeFocused();
+        await tableSearch.fill('no-matching-table');
+        await expect(dialog.getByRole('option')).toHaveCount(0);
+        await tableSearch.press('Escape');
+        await expect(dialog).toBeVisible();
+        await expect(target).toBeFocused();
+        await expect(target).toHaveAttribute('aria-expanded', 'false');
+        await target.click();
+        await expect(tableSearch).toBeFocused();
+        await tableSearch.fill('demo.events');
+        await expect(
+            dialog.getByRole('option', { name: 'demo.events', exact: true }),
+        ).toBeVisible();
+        await expect(tableSearch.locator('..')).toBeInViewport();
+        await page.screenshot({ path: info.outputPath('import-dropdown.png') });
+        await tableSearch.press('Enter');
+        await expect(target).toHaveAttribute('data-value', 'demo.events');
+        await expect(target).toBeFocused();
+
+        const events = dialog.getByRole('combobox', { name: 'Map events to destination' });
+        await events.press('ArrowDown');
+        const mappingSearch = dialog.getByRole('searchbox', {
+            name: 'Search map events to destination',
+        });
+        await mappingSearch.press('ArrowDown');
+        const listbox = dialog.getByRole('listbox', { name: 'Map events to destination' });
+        await expect(listbox).toBeFocused();
+        await listbox.press('Home');
+        await listbox.press('Enter');
+        await expect(events).toHaveAttribute('data-value', '');
+        await expect(events).toBeFocused();
+        await expect(dialog.locator('.import-mapping-counts')).toContainText('1 skipped');
+
+        const day = dialog.getByRole('combobox', { name: 'Map day to destination' });
+        const row = day.locator('xpath=ancestor::tr');
+        const normalRowHeight = await row.evaluate(
+            element => element.getBoundingClientRect().height,
+        );
+        await chooseImportOption(day, 'events');
+        await expect(day).toHaveAttribute('aria-invalid', 'true');
+        await expect(day).toHaveAttribute('aria-describedby', 'import-mapping-error-0');
+        await expect(day).toBeFocused();
+        const warning = dialog.getByRole('button', { name: 'Mapping error for day', exact: true });
+        const errorColor = await warning.evaluate(element => getComputedStyle(element).color);
+        await expect(day).toHaveCSS('border-color', errorColor);
+        await expect(dialog.getByRole('tooltip')).toBeHidden();
+        expect(
+            await row.evaluate(element => element.getBoundingClientRect().height),
+        ).toBeLessThanOrEqual(normalRowHeight + 1);
+        await warning.hover();
+        const tooltip = dialog.getByRole('tooltip');
+        await expect(tooltip).toContainText('cannot be inserted into "events" (UInt64)');
+        await expect(tooltip).toBeInViewport();
+        expect(
+            await row.evaluate(element => element.getBoundingClientRect().height),
+        ).toBeLessThanOrEqual(normalRowHeight + 1);
+        await day.hover();
+        await expect(tooltip).toBeHidden();
+        await expect(day).toHaveCSS('border-color', errorColor);
+        await page.screenshot({ path: info.outputPath('import-selectors.png') });
+        await warning.focus();
+        await expect(tooltip).toBeVisible();
+        await expect(tooltip).toBeInViewport();
+        await page.screenshot({ path: info.outputPath('import-mapping-tooltip.png') });
+        await warning.press('Escape');
+        await expect(tooltip).toBeHidden();
+        await expect(dialog).toBeVisible();
+        await expect(warning).toBeFocused();
+        await warning.press('Tab');
+        await expect(events).toBeFocused();
+        await chooseImportOption(day, 'day');
+        await expect(day).not.toHaveAttribute('aria-invalid', 'true');
+        await expect(warning).toHaveCount(0);
+        await close.click();
+        await expect(dialog).toBeHidden();
+    });
+}
 
 test('File import requires an explicit destination before review', async ({ page }) => {
     await mockWritableWorkspace(page);
@@ -37,7 +145,9 @@ test('File import requires an explicit destination before review', async ({ page
     await page.getByRole('button', { name: 'Import', exact: true }).click();
     const dialog = await previewCsv(page);
 
-    await expect(dialog.getByLabel('Import target table')).toHaveValue('');
+    await expect(
+        dialog.getByRole('combobox', { name: 'Import target table', exact: true }),
+    ).toHaveAttribute('data-value', '');
     await expect(dialog.locator('.import-mapping-empty-state')).toContainText('Choose a table');
     await expect(
         dialog.getByRole('button', { name: 'Choose a destination', exact: true }),
@@ -45,7 +155,9 @@ test('File import requires an explicit destination before review', async ({ page
     expect(mappingRequests).toBe(0);
 
     await chooseExistingTable(dialog);
-    await expect(dialog.getByLabel('Map day to destination')).toHaveValue('day');
+    await expect(
+        dialog.getByRole('combobox', { name: 'Map day to destination', exact: true }),
+    ).toHaveAttribute('data-value', 'day');
     await expect(dialog.getByRole('button', { name: 'Review import', exact: true })).toBeEnabled();
 });
 
@@ -102,7 +214,9 @@ for (const mode of ['beginner', 'expert']) {
             .evaluateAll(headers => headers.map(header => header.getBoundingClientRect().width));
         expect(mappingColumnWidths[1]).toBeGreaterThan(mappingColumnWidths[0]!);
         expect(mappingColumnWidths[2]).toBeGreaterThan(mappingColumnWidths[0]!);
-        await expect(dialog.getByLabel('Map day to destination')).toHaveValue('day');
+        await expect(
+            dialog.getByRole('combobox', { name: 'Map day to destination', exact: true }),
+        ).toHaveAttribute('data-value', 'day');
         await dialog.getByRole('button', { name: 'Review import', exact: true }).click();
         const review = dialog.getByRole('region', { name: 'Review import', exact: true });
         await expect(
@@ -369,10 +483,16 @@ test('File import review lists skipped columns and success can start another imp
     const mappingCounts = dialog.locator('.import-mapping-counts');
     await expect(mappingCounts).toContainText('2 mapped');
     await expect(mappingCounts).toContainText('1 skipped');
-    await dialog.getByLabel('Map events to destination').selectOption('');
+    await chooseImportOption(
+        dialog.getByRole('combobox', { name: 'Map events to destination', exact: true }),
+        '',
+    );
     await expect(mappingCounts).toContainText('1 mapped');
     await expect(mappingCounts).toContainText('2 skipped');
-    await dialog.getByLabel('Map events to destination').selectOption('events');
+    await chooseImportOption(
+        dialog.getByRole('combobox', { name: 'Map events to destination', exact: true }),
+        'events',
+    );
     await expect(mappingCounts).toContainText('2 mapped');
     await expect(mappingCounts).toContainText('1 skipped');
     await dialog.getByRole('button', { name: 'Review import', exact: true }).click();

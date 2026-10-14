@@ -61,14 +61,16 @@
   :is(
     input:not([type="radio"], [type="checkbox"], [type="file"], [type="range"], [type="hidden"]),
     select,
-    textarea
+    textarea,
+    .import-wizard-dialog [role="combobox"]
   ):focus {
   border-color: var(--focus-color);
   outline: none;
   box-shadow: none;
 }
 
-:root :is(input, select, textarea)[aria-invalid="true"]:focus {
+:root
+  :is(input, select, textarea, .import-wizard-dialog [role="combobox"])[aria-invalid="true"]:focus {
   border-color: var(--red);
 }
 

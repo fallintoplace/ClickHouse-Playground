@@ -110,7 +110,19 @@ export async function previewCsv(page: Page) {
 }
 
 export async function chooseExistingTable(dialog: Locator) {
-    const target = dialog.getByLabel('Import target table');
-    await expect(target).toHaveValue('');
-    await target.selectOption('demo.events');
+    const target = dialog.getByRole('combobox', { name: 'Import target table', exact: true });
+    await expect(target).toHaveAttribute('data-value', '');
+    await chooseImportOption(target, 'demo.events');
+}
+
+export async function chooseImportOption(control: Locator, value: string) {
+    await control.click();
+    const escapedValue = value.replaceAll('\\', '\\\\').replaceAll('"', '\\"');
+    const option = control
+        .locator('..')
+        .getByRole('listbox')
+        .locator(`[role="option"][data-value="${escapedValue}"]`);
+    await expect(option).toBeVisible();
+    await option.click();
+    await expect(control).toHaveAttribute('data-value', value);
 }

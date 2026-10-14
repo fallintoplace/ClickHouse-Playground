@@ -2,6 +2,7 @@ import { expect, type Locator, type Page, type Route } from '@playwright/test';
 import type { CloudConnectionTest } from '../../src/frontend/database/connections/cloud-connection.js';
 import { arrayValue, jsonRecord, jsonValue } from '../helpers/type-guards.js';
 import { cloudSchema as previewCloudSchema } from '../helpers/cloud-fixtures.js';
+import { chooseImportOption } from './import-helpers.js';
 
 export { previewCloudSchema };
 
@@ -259,5 +260,8 @@ export async function connectPreviewCloud(page: Page, path = '/experimental') {
 
 export async function chooseExistingCloudTable(dialog: Locator) {
     await dialog.getByRole('radio', { name: /Add to a table/ }).check();
-    await dialog.getByLabel('Import target table').selectOption('default.events');
+    await chooseImportOption(
+        dialog.getByRole('combobox', { name: 'Import target table', exact: true }),
+        'default.events',
+    );
 }

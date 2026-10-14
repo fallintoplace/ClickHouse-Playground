@@ -1,3 +1,4 @@
+import { chooseImportOption } from './import-helpers.js';
 import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
 import { GEO_HELP_CITIES } from '../../src/frontend/help/previews/geo-help-examples.js';
@@ -755,7 +756,9 @@ test('ClickHouse Cloud import maps and inserts into an existing table without ty
     await expect(mappingStep).toHaveCSS('row-gap', '15px');
     await chooseExistingCloudTable(dialog);
     await expect(dialog.getByRole('radio', { name: /Add to a table/ })).toBeChecked();
-    await expect(dialog.getByLabel('Map day to destination')).toHaveValue('day');
+    await expect(
+        dialog.getByRole('combobox', { name: 'Map day to destination', exact: true }),
+    ).toHaveAttribute('data-value', 'day');
     await dialog.getByRole('button', { name: 'Review import' }).click();
     await dialog.getByRole('button', { name: 'Import rows', exact: true }).click();
 
@@ -783,16 +786,25 @@ test('ClickHouse Cloud import requires an exact table before review', async ({ p
     const create = dialog.getByRole('radio', { name: /Create a table/ });
     await expect(existing).toBeChecked();
     await expect(create).not.toBeChecked();
-    await expect(dialog.getByLabel('Import target table')).toHaveValue('');
+    await expect(
+        dialog.getByRole('combobox', { name: 'Import target table', exact: true }),
+    ).toHaveAttribute('data-value', '');
     await expect(dialog.locator('.import-mapping-empty-state')).toContainText('Choose a table');
     await expect(
         dialog.getByRole('button', { name: 'Choose a table', exact: true }),
     ).toBeDisabled();
 
     await existing.check();
-    await expect(dialog.getByLabel('Import target table')).toHaveValue('');
-    await dialog.getByLabel('Import target table').selectOption('default.events');
-    await expect(dialog.getByLabel('Map day to destination')).toHaveValue('day');
+    await expect(
+        dialog.getByRole('combobox', { name: 'Import target table', exact: true }),
+    ).toHaveAttribute('data-value', '');
+    await chooseImportOption(
+        dialog.getByRole('combobox', { name: 'Import target table', exact: true }),
+        'default.events',
+    );
+    await expect(
+        dialog.getByRole('combobox', { name: 'Map day to destination', exact: true }),
+    ).toHaveAttribute('data-value', 'day');
     await expect(dialog.getByRole('button', { name: 'Review import', exact: true })).toBeEnabled();
     expect(imports).toHaveLength(0);
 });
@@ -820,13 +832,18 @@ test('ClickHouse Cloud import explains when no source columns are mapped', async
     await expect(emptyState).toContainText('Skipped columns will not be imported.');
     await expect(emptyState).toContainText('Create a table');
     for (const source of ['event_id', 'message', 'active', 'id']) {
-        await expect(dialog.getByLabel(`Map ${source} to destination`)).toHaveValue('');
+        await expect(
+            dialog.getByRole('combobox', { name: `Map ${source} to destination`, exact: true }),
+        ).toHaveAttribute('data-value', '');
     }
     await expect(
         dialog.getByRole('button', { name: 'Map a column first', exact: true }),
     ).toBeDisabled();
 
-    await dialog.getByLabel('Map message to destination').selectOption('day');
+    await chooseImportOption(
+        dialog.getByRole('combobox', { name: 'Map message to destination', exact: true }),
+        'day',
+    );
     await expect(mappingCounts).toContainText('1 mapped');
     await expect(mappingCounts).toContainText('3 skipped');
     await expect(emptyState).toHaveCount(0);
@@ -834,7 +851,10 @@ test('ClickHouse Cloud import explains when no source columns are mapped', async
 });
 
 test('ClickHouse Cloud import creates a table with editable inferred columns', async ({ page }) => {
-    const imports = await mockCloudEndpoint(page);
+    const imports = await mockCloudEndpoint(page, 'success', {
+        ...previewCloudSchema,
+        databases: ['default', 'analytics'],
+    });
     await connectPreviewCloud(page);
     await page.getByRole('button', { name: 'Import', exact: true }).last().click();
 
@@ -847,8 +867,19 @@ test('ClickHouse Cloud import creates a table with editable inferred columns', a
     await dialog.getByRole('button', { name: 'Read file and continue' }).click();
     await dialog.getByRole('radio', { name: /Create a table/ }).check();
     await expect(dialog.getByLabel('New table name')).toHaveValue('interview_events');
-    await expect(dialog.getByLabel('Type for day')).toHaveValue('Date');
-    await expect(dialog.getByLabel('Type for events')).toHaveValue('UInt64');
+    await expect(
+        dialog.getByRole('combobox', { name: 'Type for day', exact: true }),
+    ).toHaveAttribute('data-value', 'Date');
+    await expect(
+        dialog.getByRole('combobox', { name: 'Type for events', exact: true }),
+    ).toHaveAttribute('data-value', 'UInt64');
+    const database = dialog.getByRole('combobox', { name: 'New table database', exact: true });
+    await chooseImportOption(database, 'analytics');
+    await chooseImportOption(database, 'default');
+    await chooseImportOption(
+        dialog.getByRole('combobox', { name: 'Type for events', exact: true }),
+        'String',
+    );
     await expect(dialog.getByRole('checkbox', { name: /Add a generated id/ })).toBeChecked();
     await dialog.getByLabel('New table name').fill('interview_events');
     const mappingCounts = dialog.locator('.import-mapping-counts');
@@ -873,7 +904,7 @@ test('ClickHouse Cloud import creates a table with editable inferred columns', a
         generateId: true,
         columns: [
             { source: 'day', name: 'event_day', type: 'Date' },
-            { source: 'events', name: 'events', type: 'UInt64' },
+            { source: 'events', name: 'events', type: 'String' },
         ],
     });
 });
@@ -1130,9 +1161,12 @@ test('ClickHouse Cloud import flags invalid mappings before review and inspects 
     });
     await dialog.getByRole('button', { name: 'Read file and continue' }).click();
     await chooseExistingCloudTable(dialog);
-    const dayMapping = dialog.getByLabel('Map day to destination');
+    const dayMapping = dialog.getByRole('combobox', {
+        name: 'Map day to destination',
+        exact: true,
+    });
     await dayMapping.focus();
-    await dayMapping.selectOption('id');
+    await chooseImportOption(dayMapping, 'id');
 
     const mappingError = dialog.locator('#import-mapping-error-0');
     await expect(mappingError).toContainText(
@@ -1144,7 +1178,7 @@ test('ClickHouse Cloud import flags invalid mappings before review and inspects 
     await expect(dialog.getByRole('button', { name: 'Import rows', exact: true })).toHaveCount(0);
     expect(imports).toHaveLength(0);
 
-    await dayMapping.selectOption('day');
+    await chooseImportOption(dayMapping, 'day');
     await expect(mappingError).toHaveCount(0);
     await dialog.getByRole('button', { name: 'Review import' }).click();
     await dialog.getByRole('button', { name: 'Import rows', exact: true }).click();

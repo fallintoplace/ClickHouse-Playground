@@ -1,5 +1,6 @@
 import type { cloudImportDatabases } from '../state/cloud-import';
 import type { useImportWizardController } from '../useImportWizardController';
+import { SelectControl } from '../../../ui/components/SelectControl';
 
 export function ImportNewTableForm({
     createTableDatabase,
@@ -40,23 +41,23 @@ export function ImportNewTableForm({
                 <small>Names and types are guessed from your file. You can edit them below.</small>
             </div>
             <div className="import-new-table-fields">
-                <label>
-                    DATABASE
-                    <select
-                        aria-label="New table database"
+                <div className="import-new-table-field">
+                    <span>DATABASE</span>
+                    <SelectControl
+                        className="select-control-field"
+                        label="New table database"
                         value={createTableDatabase}
-                        onChange={event => {
-                            setCreateTableDatabase(event.target.value);
+                        searchable
+                        options={importableDatabases.map(database => ({
+                            value: database,
+                            label: database,
+                        }))}
+                        onChange={value => {
+                            setCreateTableDatabase(value);
                             setError('');
                         }}
-                    >
-                        {importableDatabases.map(database => (
-                            <option key={database} value={database}>
-                                {database}
-                            </option>
-                        ))}
-                    </select>
-                </label>
+                    />
+                </div>
                 <label>
                     TABLE NAME
                     <input
@@ -127,19 +128,14 @@ export function ImportNewTableForm({
                             }
                             maxLength={128}
                         />
-                        <select
-                            aria-label={`Type for ${column.source}`}
+                        <SelectControl
+                            className="select-control-field"
+                            label={`Type for ${column.source}`}
                             value={column.type}
-                            onChange={event =>
-                                updateCreateColumn(column.source, 'type', event.target.value)
-                            }
-                        >
-                            {createColumnTypes.map(type => (
-                                <option key={type} value={type}>
-                                    {type}
-                                </option>
-                            ))}
-                        </select>
+                            searchable
+                            options={createColumnTypes.map(type => ({ value: type, label: type }))}
+                            onChange={value => updateCreateColumn(column.source, 'type', value)}
+                        />
                     </div>
                 ))}
             </div>

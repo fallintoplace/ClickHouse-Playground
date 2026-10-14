@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { mockWritableWorkspace, previewCsv, chooseExistingTable } from './import-helpers.js';
+import {
+    mockWritableWorkspace,
+    previewCsv,
+    chooseExistingTable,
+    chooseImportOption,
+} from './import-helpers.js';
 
 test.beforeEach(async ({ page }) => {
     await mockWritableWorkspace(page);
@@ -41,7 +46,10 @@ test('Switching import types preserves row mappings and the selected SQL file', 
 }) => {
     const dialog = await previewCsv(page);
     await chooseExistingTable(dialog);
-    await dialog.getByLabel('Map events to destination').selectOption('');
+    await chooseImportOption(
+        dialog.getByRole('combobox', { name: 'Map events to destination', exact: true }),
+        '',
+    );
     await dialog.getByRole('button', { name: /Open SQL file/ }).click();
     await dialog.getByLabel('Choose a SQL query file').setInputFiles({
         name: 'saved-query.sql',
@@ -49,9 +57,15 @@ test('Switching import types preserves row mappings and the selected SQL file', 
         buffer: Buffer.from('SELECT 42'),
     });
     await dialog.getByRole('button', { name: /Rows CSV/ }).click();
-    await expect(dialog.getByLabel('Import target table')).toHaveValue('demo.events');
-    await expect(dialog.getByLabel('Map events to destination')).toHaveValue('');
-    await expect(dialog.getByLabel('Map day to destination')).toHaveValue('day');
+    await expect(
+        dialog.getByRole('combobox', { name: 'Import target table', exact: true }),
+    ).toHaveAttribute('data-value', 'demo.events');
+    await expect(
+        dialog.getByRole('combobox', { name: 'Map events to destination', exact: true }),
+    ).toHaveAttribute('data-value', '');
+    await expect(
+        dialog.getByRole('combobox', { name: 'Map day to destination', exact: true }),
+    ).toHaveAttribute('data-value', 'day');
     await dialog.getByRole('button', { name: /Open SQL file/ }).click();
     await expect(dialog.locator('.import-selected-file')).toContainText('saved-query.sql');
     await expect(dialog.getByRole('button', { name: 'Open query', exact: true })).toBeEnabled();

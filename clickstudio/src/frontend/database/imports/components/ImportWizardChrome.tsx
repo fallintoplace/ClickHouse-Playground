@@ -1,6 +1,5 @@
 import { importSteps } from '../state/import-wizard-model';
 import type { useImportWizardController } from '../useImportWizardController';
-import { Button } from '../../../ui/components/primitives';
 import { Icon } from '../../../ui/components/icons';
 
 export function ImportWizardHeader({
@@ -59,7 +58,9 @@ export function ImportWizardHeader({
                 </div>
                 <p className="transfer-dialog-description">{getImportDescription()}</p>
             </div>
-            <Button
+            <button
+                type="button"
+                className="creation-dialog-close"
                 aria-label="Close import wizard"
                 disabled={
                     openingQuery ||
@@ -69,8 +70,8 @@ export function ImportWizardHeader({
                 }
                 onClick={() => (importKind === 'query' ? closeQueryMode() : void closeWizard())}
             >
-                Close
-            </Button>
+                <Icon name="close" />
+            </button>
         </header>
     );
 }

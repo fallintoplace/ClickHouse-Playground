@@ -1,4 +1,6 @@
 import { NativeTable } from '../../../ui/components/NativeTable';
+import { SelectControl } from '../../../ui/components/SelectControl';
+import { ImportMappingError } from './ImportMappingError';
 import { type ImportPreview } from '../state/import-wizard-model';
 import type { useImportWizardController } from '../useImportWizardController';
 
@@ -45,36 +47,38 @@ export function ImportColumnMapping({
                                     <code className="import-source-column-name">{source}</code>
                                 </th>
                                 <td>
-                                    <select
-                                        aria-label={`Map ${source} to destination`}
-                                        aria-invalid={sourceIssue ? true : undefined}
-                                        aria-describedby={issueId}
-                                        value={fields[source] ?? ''}
-                                        onChange={event => {
-                                            setFields(current => ({
-                                                ...current,
-                                                [source]: event.target.value,
-                                            }));
-                                            setMapping(undefined);
-                                            setError('');
-                                        }}
-                                    >
-                                        <option value="">Skip column</option>
-                                        {destinationColumns.map(column => (
-                                            <option key={column.name} value={column.name}>
-                                                {column.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {sourceIssue && (
-                                        <p
-                                            id={issueId}
-                                            role="alert"
-                                            className="mt-2 max-w-80 text-[11px] leading-relaxed text-[var(--red)]"
-                                        >
-                                            {sourceIssue.message}
-                                        </p>
-                                    )}
+                                    <div className="import-mapping-control">
+                                        <SelectControl
+                                            className="select-control-field"
+                                            label={`Map ${source} to destination`}
+                                            aria-invalid={sourceIssue ? true : undefined}
+                                            aria-describedby={issueId}
+                                            value={fields[source] ?? ''}
+                                            searchable
+                                            options={[
+                                                { value: '', label: 'Skip column' },
+                                                ...destinationColumns.map(column => ({
+                                                    value: column.name,
+                                                    label: column.name,
+                                                })),
+                                            ]}
+                                            onChange={value => {
+                                                setFields(current => ({
+                                                    ...current,
+                                                    [source]: value,
+                                                }));
+                                                setMapping(undefined);
+                                                setError('');
+                                            }}
+                                        />
+                                        {sourceIssue && issueId && (
+                                            <ImportMappingError
+                                                id={issueId}
+                                                source={source}
+                                                message={sourceIssue.message}
+                                            />
+                                        )}
+                                    </div>
                                 </td>
                                 <td className="import-column-type-cell">
                                     <span

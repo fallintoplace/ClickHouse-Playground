@@ -6,6 +6,7 @@ import type { useImportWizardController } from '../useImportWizardController';
 import { Icon } from '../../../ui/components/icons';
 import { ImportNewTableForm } from '../preview/ImportNewTableForm';
 import { ImportColumnMapping } from '../preview/ImportColumnMapping';
+import { SelectControl } from '../../../ui/components/SelectControl';
 
 type ImportMappingStepProps = ComponentProps<typeof ImportNewTableForm> &
     ComponentProps<typeof ImportColumnMapping> & {
@@ -175,21 +176,23 @@ export function ImportMappingStep({
                     </div>
                     {selectedDestinationChoice === 'existing' && (
                         <div className="import-destination-select-shell">
-                            <label className="import-destination-select">
-                                DESTINATION TABLE
-                                <select
-                                    aria-label="Import target table"
+                            <div className="import-destination-select">
+                                <span>DESTINATION TABLE</span>
+                                <SelectControl
+                                    className="select-control-field"
+                                    label="Import target table"
                                     value={target}
-                                    onChange={event => changeTarget(event.target.value)}
-                                >
-                                    <option value="">Choose a table…</option>
-                                    {availableTargets.map(table => (
-                                        <option key={table} value={table}>
-                                            {table}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
+                                    searchable
+                                    options={[
+                                        { value: '', label: 'Choose a table…' },
+                                        ...availableTargets.map(table => ({
+                                            value: table,
+                                            label: table,
+                                        })),
+                                    ]}
+                                    onChange={changeTarget}
+                                />
+                            </div>
                             <span className="import-destination-helper">
                                 You can only add rows to a table with compatible columns.
                             </span>
@@ -204,21 +207,20 @@ export function ImportMappingStep({
                         <span className="import-setup-kicker">DESTINATION</span>
                         <h3>Choose a table</h3>
                     </div>
-                    <label className="import-destination-select">
-                        CLICKHOUSE TABLE
-                        <select
-                            aria-label="Import target table"
+                    <div className="import-destination-select">
+                        <span>CLICKHOUSE TABLE</span>
+                        <SelectControl
+                            className="select-control-field"
+                            label="Import target table"
                             value={target}
-                            onChange={event => changeTarget(event.target.value)}
-                        >
-                            <option value="">Choose a table…</option>
-                            {availableTargets.map(table => (
-                                <option key={table} value={table}>
-                                    {table}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
+                            searchable
+                            options={[
+                                { value: '', label: 'Choose a table…' },
+                                ...availableTargets.map(table => ({ value: table, label: table })),
+                            ]}
+                            onChange={changeTarget}
+                        />
+                    </div>
                 </div>
             )}
 

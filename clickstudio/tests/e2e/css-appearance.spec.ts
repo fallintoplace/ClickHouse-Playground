@@ -2,7 +2,12 @@ import { functionsWorkspace } from './sql-functions-helpers.js';
 import { setWorkspaceMode, replaceSql, runButton, runScript, trust } from './helpers.js';
 import { test, expect } from '@playwright/test';
 import type { Script } from '../../src/shared/queries/execution/types.js';
-import { chooseExistingTable, mockWritableWorkspace, previewCsv } from './import-helpers.js';
+import {
+    chooseExistingTable,
+    mockWritableWorkspace,
+    previewCsv,
+    chooseImportOption,
+} from './import-helpers.js';
 import {
     chooseExistingCloudTable,
     connectPreviewCloud,
@@ -243,11 +248,15 @@ for (const theme of ['Light', 'Dark']) {
         const compareStyles = (state: string) => expectReferenceStyles(page, info, `${state}-1440`);
         await compareStyles('cloud-choose-table');
         await chooseExistingCloudTable(dialog);
-        await expect(dialog.getByLabel('Map day to destination')).toHaveValue('day');
+        await expect(
+            dialog.getByRole('combobox', { name: 'Map day to destination', exact: true }),
+        ).toHaveAttribute('data-value', 'day');
         await compareStyles('cloud-existing-table');
         await dialog.getByRole('radio', { name: /Create a table/ }).check();
         await dialog.getByLabel('New table name').fill('imported_events');
-        await expect(dialog.getByLabel('Type for day')).toHaveValue('Date');
+        await expect(
+            dialog.getByRole('combobox', { name: 'Type for day', exact: true }),
+        ).toHaveAttribute('data-value', 'Date');
         await compareStyles('cloud-create-table');
         await dialog.getByRole('button', { name: 'Review import', exact: true }).click();
         await expect(
@@ -327,13 +336,13 @@ for (const theme of ['Light', 'Dark']) {
         await previewCsv(page);
         await compareStyles('mapping-disabled');
         await chooseExistingTable(dialog);
-        const day = dialog.getByLabel('Map day to destination');
-        await day.selectOption('events');
+        const day = dialog.getByRole('combobox', { name: 'Map day to destination', exact: true });
+        await chooseImportOption(day, 'events');
         await expect(day).toHaveAttribute('aria-invalid', 'true');
         await day.focus();
         await compareStyles('mapping-invalid');
-        await day.selectOption('day');
-        await dialog.getByLabel('Map day to destination').focus();
+        await chooseImportOption(day, 'day');
+        await dialog.getByRole('combobox', { name: 'Map day to destination', exact: true }).focus();
         await compareStyles('mapping-focus');
         await dialog.getByRole('button', { name: 'Review import', exact: true }).click();
         await expect(

@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import {
+    useCallback,
+    useEffect,
+    useId,
+    useRef,
+    useState,
+    type AriaAttributes,
+    type KeyboardEvent,
+} from 'react';
 
 export type SelectControlOption = {
     value: string;
@@ -15,6 +23,8 @@ export function SelectControl({
     hideDisabledOptions = true,
     disabled = false,
     className = '',
+    'aria-invalid': invalid,
+    'aria-describedby': describedBy,
 }: {
     label: string;
     value: string;
@@ -24,7 +34,7 @@ export function SelectControl({
     hideDisabledOptions?: boolean;
     disabled?: boolean;
     className?: string;
-}) {
+} & Pick<AriaAttributes, 'aria-invalid' | 'aria-describedby'>) {
     const id = useId();
     const trigger = useRef<HTMLButtonElement>(null);
     const menu = useRef<HTMLDivElement>(null);
@@ -164,6 +174,11 @@ export function SelectControl({
                 <span
                     className="chart-select-trigger chart-select-static"
                     title={singleOption.label}
+                    role="group"
+                    aria-label={label}
+                    aria-invalid={invalid}
+                    aria-describedby={describedBy}
+                    data-value={value}
                 >
                     <span className="chart-select-value">{singleOption.label}</span>
                 </span>
@@ -175,6 +190,8 @@ export function SelectControl({
                     disabled={disabled || !hasEnabledOptions}
                     role="combobox"
                     aria-label={label}
+                    aria-invalid={invalid}
+                    aria-describedby={describedBy}
                     aria-haspopup="listbox"
                     aria-expanded={open}
                     aria-controls={`${id}-listbox`}

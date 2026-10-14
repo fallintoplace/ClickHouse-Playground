@@ -11,18 +11,22 @@
     .native-run-picker select,
     .native-lineage-database select,
     .chart-controls select,
-    .import-destination-select select,
+    .import-destination-select .chart-select-trigger,
     .import-new-table-fields input,
-    .import-new-table-fields select,
+    .import-new-table-fields .chart-select-trigger,
     .import-create-column-row input,
-    .import-create-column-row select,
-    .import-column-map tbody td > select
+    .import-create-column-row .chart-select-trigger,
+    .import-column-map .chart-select-trigger
   ) {
   border-color: var(--control-border);
   background: var(--panel);
 }
 
 :root[data-theme="click-light"] :is(input, select, textarea)[aria-invalid="true"] {
+  border-color: var(--red);
+}
+
+:root .import-wizard-dialog .chart-select-trigger[aria-invalid="true"] {
   border-color: var(--red);
 }
 
