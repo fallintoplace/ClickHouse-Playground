@@ -103,6 +103,11 @@ test('Custom function starts blank, previews SQL and creates a testable SQL UDF'
         await page.screenshot({ path: 'test-results/sql-functions/custom-function.png' });
         await dialog.getByRole('button', { name: 'Create UDF', exact: true }).click();
         await expect(page.locator('.sql-function-details h3')).toHaveText('add_tax_demo');
+        await chooseSelectOption(
+            page,
+            page.getByRole('combobox', { name: 'price input type', exact: true }),
+            'integer',
+        );
         await page.getByLabel('price', { exact: true }).fill('100');
         await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
         await expect(page.locator('.sql-function-output pre')).toHaveText('119');
@@ -237,7 +242,7 @@ test('Map tester preserves duplicate keys in the server-produced output', async 
     const { state } = await functionsWorkspace(page, { existing: true });
     state.mapJson = '{"a":1,"a":2}';
     await page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }).click();
-    const format = page.getByRole('combobox', { name: 'entries input format', exact: true });
+    const format = page.getByRole('combobox', { name: 'entries input type', exact: true });
     await expect(format).toBeVisible();
     await expect(format).toHaveAttribute('data-value', 'map');
     await chooseSelectOption(page, format, 'json');
@@ -388,13 +393,18 @@ for (const theme of ['Dark', 'Light']) {
             page.getByRole('region', { name: 'Function result', exact: true }),
         ).toContainText('Run the function to see its result.');
         const input = details.getByLabel(parameter, { exact: true });
+        await chooseSelectOption(
+            page,
+            details.getByRole('combobox', { name: `${parameter} input type`, exact: true }),
+            'array',
+        );
         await input.fill('[\n  10, 20, 30, 40\n]');
         await expect(details.locator('.sql-function-preview pre')).toContainText(
             '[10, 20, 30, 40]',
         );
-        await expect(input).toHaveAttribute('aria-describedby', /-input-hint$/);
+        await expect(input).toHaveAttribute('aria-describedby', /-input-hint-0$/);
         await expect(input).toHaveAccessibleDescription(
-            'JSON values: "text", [1, 2, 3], true or null.',
+            'JSON array, e.g. [1, 2, 3] or ["a", "b"].',
         );
         for (const target of [details, input, details.locator('.sql-function-preview')]) {
             expect(

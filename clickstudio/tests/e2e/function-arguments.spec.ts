@@ -4,29 +4,131 @@ import { workspacePath } from './helpers.js';
 import { chooseChartOption as chooseSelectOption } from './chart-control-helpers.js';
 
 for (const mode of ['Standard', 'Experimental']) {
-    test(`${mode} uses the shared keyboard-selectable SQL input format control`, async ({
-        page,
-    }) => {
+    test(`${mode} uses the shared keyboard-selectable SQL input type control`, async ({ page }) => {
         await functionsWorkspace(page, { path: workspacePath(mode), existing: true });
         await page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }).click();
         const details = page.locator('.sql-function-details');
-        const format = details.getByRole('combobox', { name: 'entries input format', exact: true });
+        const format = details.getByRole('combobox', { name: 'entries input type', exact: true });
         await expect(details.locator('select')).toHaveCount(0);
         await format.focus();
         await page.keyboard.press('ArrowDown');
-        const listbox = page.getByRole('listbox', { name: 'entries input format', exact: true });
+        const listbox = page.getByRole('listbox', { name: 'entries input type', exact: true });
         await expect(listbox).toBeFocused();
+        await expect(listbox.getByRole('option')).toHaveText([
+            'String',
+            'Integer',
+            'Float',
+            'Boolean',
+            'Array',
+            'Map',
+            'Null',
+            'JSON (advanced)',
+        ]);
         await page.keyboard.press('Home');
         await page.keyboard.press('Enter');
         await expect(format).toBeFocused();
-        await expect(format).toHaveAttribute('data-value', 'json');
+        await expect(format).toHaveAttribute('data-value', 'string');
         await expect(details.locator('.sql-function-preview pre')).not.toContainText('map(');
         await page.keyboard.press('ArrowDown');
         await expect(listbox).toBeFocused();
         await page.keyboard.press('End');
         await page.keyboard.press('Enter');
-        await expect(format).toHaveAttribute('data-value', 'map');
+        await expect(format).toHaveAttribute('data-value', 'json');
+        await expect(details.getByLabel('entries', { exact: true })).toHaveValue(
+            JSON.stringify('[["a", 10], ["b", 20], ["c", 30]]'),
+        );
+        await chooseSelectOption(page, format, 'string');
+        await chooseSelectOption(page, format, 'map');
         await expect(details.locator('.sql-function-preview pre')).toContainText('map(');
+    });
+
+    test(`${mode} SQL input types validate values and submit their matching literals`, async ({
+        page,
+    }, info) => {
+        const { state, requests } = await functionsWorkspace(page, { path: workspacePath(mode) });
+        state.functions.push({
+            name: 'identity_demo',
+            parameters: ['value'],
+            createQuery: 'CREATE FUNCTION identity_demo AS (value) -> value;',
+        });
+        await page.locator('.object-refresh-action').click();
+        await page.getByRole('button', { name: 'identity_demo SQL UDF', exact: true }).click();
+        const details = page.locator('.sql-function-details');
+        const input = details.getByLabel('value', { exact: true });
+        const type = details.getByRole('combobox', { name: 'value input type', exact: true });
+        const run = details.getByRole('button', { name: 'Run on ClickHouse', exact: true });
+        await expect(type).toHaveAttribute('data-value', 'string');
+        await expect(input).toHaveValue('');
+        await expect(input).toHaveAccessibleDescription('Plain text; quotes are not needed.');
+        await input.fill("hello'\\\nworld");
+        await run.click();
+        await expect(details.locator('.sql-function-output')).toBeVisible();
+        expect(requests.filter(request => request.action === 'run').at(-1)?.sql).toContain(
+            "`identity_demo`('hello\\'\\\\\nworld')",
+        );
+        await chooseSelectOption(page, type, 'json');
+        await expect(input).toHaveValue(JSON.stringify("hello'\\\nworld"));
+        await chooseSelectOption(page, type, 'string');
+        await expect(input).toHaveValue("hello'\\\nworld");
+        for (const [kind, value, sql] of [
+            ['integer', '9007199254740993', '9007199254740993'],
+            ['float', '2.0', "CAST('2.0', 'Float64')"],
+            ['boolean', 'true', 'true'],
+            ['array', '[1, 2, 3]', '[1, 2, 3]'],
+            ['map', '[["a", 1], ["a", 2]]', "map('a', 1, 'a', 2)"],
+            ['json', 'null', 'NULL'],
+        ]) {
+            await chooseSelectOption(page, type, kind!);
+            await input.fill(value!);
+            await expect(details.locator('.sql-function-output')).toHaveCount(0);
+            await run.click();
+            await expect(details.locator('.sql-function-output')).toBeVisible();
+            expect(requests.filter(request => request.action === 'run').at(-1)?.sql).toContain(
+                `\`identity_demo\`(${sql})`,
+            );
+        }
+        for (const [kind, value, error] of [
+            ['integer', '2.0', 'whole number'],
+            ['float', 'Infinity', 'finite decimal'],
+            ['boolean', 'yes', 'true or false'],
+            ['array', '42', 'JSON array'],
+            ['map', '{}', 'map as'],
+            ['json', '{}', 'JSON strings'],
+        ]) {
+            await chooseSelectOption(page, type, kind!);
+            await input.fill(value!);
+            await expect(run).toBeDisabled();
+            await expect(details.getByRole('status')).toContainText(error!);
+        }
+        expect(requests.filter(request => request.action === 'run')).toHaveLength(7);
+        await chooseSelectOption(page, type, 'string');
+        await input.fill('keep this text');
+        await chooseSelectOption(page, type, 'null');
+        await expect(input).toBeDisabled();
+        await expect(input).toHaveValue('NULL');
+        await run.click();
+        await expect
+            .poll(() => requests.filter(request => request.action === 'run').length)
+            .toBe(8);
+        await expect(run).toBeEnabled();
+        await expect(details.locator('.sql-function-output')).toBeVisible();
+        expect(requests.filter(request => request.action === 'run').at(-1)?.sql).toContain(
+            '`identity_demo`(NULL)',
+        );
+        await chooseSelectOption(page, type, 'string');
+        await expect(input).toBeEnabled();
+        await expect(input).toHaveValue('keep this text');
+        await expect(details.locator('.sql-function-output')).toHaveCount(0);
+        await details.screenshot({ path: info.outputPath('plain-string-input.png') });
+        await chooseSelectOption(page, type, 'null');
+        await chooseSelectOption(page, type, 'json');
+        await expect(input).toHaveValue('"keep this text"');
+        await expect(run).toBeEnabled();
+        await chooseSelectOption(page, type, 'null');
+        await chooseSelectOption(page, type, 'string');
+        await expect(input).toHaveValue('keep this text');
+        await chooseSelectOption(page, type, 'json');
+        await details.screenshot({ path: info.outputPath('advanced-json-input.png') });
     });
 
     test(`${mode} signature refresh preserves separate values for duplicate argument labels`, async ({

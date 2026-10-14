@@ -205,7 +205,7 @@ test('Local Cloud connection restores after refresh and exports retained rows fr
     await connectionDialog.getByLabel('Username').fill('demo');
     await connectionDialog.getByLabel('Password').fill('demo-password');
     await connectionDialog.getByRole('button', { name: 'Connect service' }).click();
-    await expect(page.locator('.connection-trigger')).toContainText('CLICKHOUSE CLOUD');
+    await expect(page.locator('.connection-trigger .connection-env.is-cloud')).toHaveText('CLOUD');
 
     await page.getByTestId('run-button').click();
     const results = page.getByRole('region', { name: 'Query results', exact: true });
@@ -226,7 +226,7 @@ test('Local Cloud connection restores after refresh and exports retained rows fr
     expect(serverExportRequests).toEqual([]);
 
     await page.reload();
-    await expect(page.locator('.connection-trigger')).toContainText('CLICKHOUSE CLOUD');
+    await expect(page.locator('.connection-trigger .connection-env.is-cloud')).toHaveText('CLOUD');
     const firstConnect = cloudSessionMethods.indexOf('POST');
     expect(firstConnect).toBeGreaterThanOrEqual(0);
     expect(cloudSessionMethods.slice(firstConnect + 1)).toContain('GET');

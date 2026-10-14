@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { setWorkspaceMode, workspacePath } from './helpers.js';
 import { functionsWorkspace } from './sql-functions-helpers.js';
+import { chooseChartOption as chooseSelectOption } from './chart-control-helpers.js';
 
 test('Standard loads functions only when Objects is first opened', async ({ page }) => {
     const { requests } = await functionsWorkspace(page, {
@@ -123,6 +124,11 @@ for (const mode of ['Standard', 'Experimental']) {
         });
         await page.locator('.object-refresh-action').click();
         await tree.getByRole('button', { name: 'add_tax_demo SQL UDF', exact: true }).click();
+        await chooseSelectOption(
+            page,
+            page.getByRole('combobox', { name: 'price input type', exact: true }),
+            'integer',
+        );
         await page.getByLabel('price', { exact: true }).fill('100');
         await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
         await expect(page.locator('.sql-function-output pre')).toHaveText('119');
@@ -143,6 +149,11 @@ for (const mode of ['Standard', 'Experimental']) {
         await dialog.getByRole('button', { name: 'Create UDF', exact: true }).click();
         await expect(dialog).toHaveCount(0);
         await expect(page.locator('.sql-function-details h3')).toHaveText('add_tax_demo');
+        await chooseSelectOption(
+            page,
+            page.getByRole('combobox', { name: 'price input type', exact: true }),
+            'integer',
+        );
         await page.getByLabel('price', { exact: true }).fill('100');
         await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
         await expect(page.locator('.sql-function-output pre')).toHaveText('119');

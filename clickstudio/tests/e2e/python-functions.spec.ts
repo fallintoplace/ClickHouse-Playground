@@ -104,7 +104,7 @@ test('Experimental hides Functions on sample data and after disconnecting Cloud'
         page.getByRole('button', { name: 'Create Python UDF', exact: true }),
     ).toBeVisible();
     await page.getByRole('button', { name: 'Disconnect Cloud', exact: true }).click();
-    await expect(page.locator('.connection-trigger')).not.toContainText('CLICKHOUSE CLOUD');
+    await expect(page.locator('.connection-trigger .connection-env.is-cloud')).toHaveCount(0);
     await expect(page.locator('.sql-functions-tree, .python-functions-tree')).toHaveCount(0);
     await expect(page.getByTestId('schema-search')).not.toHaveAttribute('placeholder', /functions/);
 });

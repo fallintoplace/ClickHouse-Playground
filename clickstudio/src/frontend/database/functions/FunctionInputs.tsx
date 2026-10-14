@@ -1,13 +1,27 @@
 import { useId, useState } from 'react';
 import {
+    SQL_FUNCTION_ARGUMENT_OPTIONS,
     SQL_FUNCTION_TEMPLATES,
+    changeFunctionArgumentKind,
     type FunctionArgument,
+    type FunctionArgumentKind,
     type SqlFunction,
 } from '../../../shared/database/functions/sql-functions';
 import { PYTHON_SCALAR_TYPES } from '../../../shared/database/functions/python-functions';
 import { SelectControl } from '../../ui/components/SelectControl';
 
-function FunctionInputFormat({
+const inputHints: Record<FunctionArgumentKind, string> = {
+    string: 'Plain text; quotes are not needed.',
+    integer: 'Whole number, e.g. 42.',
+    float: 'Decimal number, e.g. 3.14 or 1e3.',
+    boolean: 'true or false.',
+    array: 'JSON array, e.g. [1, 2, 3] or ["a", "b"].',
+    map: 'Key / value pairs: [[key, value], …].',
+    null: 'No value is needed.',
+    json: 'JSON value: "text", 42, [1, 2, 3], true or null.',
+};
+
+function FunctionInputType({
     parameter,
     index,
     argument,
@@ -32,21 +46,21 @@ function FunctionInputFormat({
         <SelectControl
             className="select-control-field sql-function-type-control"
             label={
-                type === undefined ? `${parameter} input format` : `Test argument ${index + 1} type`
+                type === undefined ? `${parameter} input type` : `Test argument ${index + 1} type`
             }
             value={type ?? argument.kind}
             options={
                 type === undefined
-                    ? [
-                          { value: 'json', label: 'JSON' },
-                          { value: 'map', label: 'Map entries' },
-                      ]
+                    ? SQL_FUNCTION_ARGUMENT_OPTIONS.map(option => option)
                     : PYTHON_SCALAR_TYPES.map(type => ({ value: type, label: type }))
             }
             onChange={value => {
-                if (type === undefined)
-                    onChange(index, { ...argument, kind: value === 'map' ? 'map' : 'json' });
-                else onTypeChange?.(index, value);
+                if (type === undefined) {
+                    const option = SQL_FUNCTION_ARGUMENT_OPTIONS.find(
+                        option => option.value === value,
+                    );
+                    if (option) onChange(index, changeFunctionArgumentKind(argument, option.value));
+                } else onTypeChange?.(index, value);
             }}
         />
     );
@@ -70,14 +84,12 @@ export function FunctionInputs({
         <>
             {parameters.map((parameter, index) => {
                 const argument = arguments_[index]!;
-                let describedBy;
-                if (!types)
-                    describedBy =
-                        argument.kind === 'map' ? `${id}-map-hint-${index}` : `${id}-input-hint`;
+                const describedBy = types ? undefined : `${id}-input-hint-${index}`;
+                const isNull = !types && argument.kind === 'null';
                 return (
                     <div key={`${index}:${parameter}`} className="sql-function-argument">
                         <label htmlFor={`${id}-argument-${index}`}>{parameter}</label>
-                        <FunctionInputFormat
+                        <FunctionInputType
                             parameter={parameter}
                             index={index}
                             argument={argument}
@@ -88,34 +100,28 @@ export function FunctionInputs({
                         <textarea
                             id={`${id}-argument-${index}`}
                             aria-describedby={describedBy}
-                            rows={Math.min(6, argument.value.split('\n').length)}
+                            rows={isNull ? 1 : Math.min(6, argument.value.split('\n').length)}
                             spellCheck={false}
-                            value={argument.value}
+                            disabled={isNull}
+                            value={isNull ? 'NULL' : argument.value}
                             onChange={event =>
                                 onChange(index, { ...argument, value: event.target.value })
                             }
                         />
-                        {argument.kind === 'map' && (
-                            <small
-                                id={`${id}-map-hint-${index}`}
-                                className="sql-function-input-hint"
-                            >
-                                Key / value pairs: [[key, value], …].
+                        {!types && (
+                            <small id={describedBy} className="sql-function-input-hint">
+                                {inputHints[argument.kind]}
                             </small>
                         )}
                     </div>
                 );
             })}
-            {!types && (
-                <small id={`${id}-input-hint`} className="sql-function-input-hint">
-                    JSON values: "text", [1, 2, 3], true or null.
-                </small>
-            )}
         </>
     );
 }
 
 function defaultFunctionArgument(type?: string): FunctionArgument {
+    if (type === undefined) return { value: '', kind: 'string' };
     let value = '0';
     if (type === 'String') value = '';
     else if (type === 'Bool') value = 'false';

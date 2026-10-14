@@ -6,6 +6,7 @@ import {
     createSqlFunctionQuery,
     sqlFunctionParameters,
     functionArgumentSql,
+    changeFunctionArgumentKind,
     testSqlFunctionQuery,
     isFunctionCatalog,
     isSqlFunctionDrop,
@@ -151,6 +152,142 @@ test('Tester rejects raw SQL, JSON objects, unsafe numbers, huge maps and deep i
         JSON.stringify(Array(101).fill(['a', 1])),
     ])
         assert.throws(() => functionArgumentSql({ kind: 'map', value }));
+});
+
+test('String inputs accept plain text and escape it as one SQL literal', () => {
+    for (const value of [
+        '',
+        '  hello  ',
+        '你好 👋',
+        '"quoted"',
+        'line one\nline two',
+        'x'.repeat(8192),
+    ])
+        assert.equal(functionArgumentSql({ kind: 'string', value }), `'${value}'`);
+    assert.equal(
+        functionArgumentSql({ kind: 'string', value: "a'\\; DROP FUNCTION f; --" }),
+        "'a\\'\\\\; DROP FUNCTION f; --'",
+    );
+    assert.throws(() => functionArgumentSql({ kind: 'string', value: 'x'.repeat(8193) }));
+});
+
+test('Integer inputs preserve exact signed and unsigned 64-bit values', () => {
+    for (const [value, sql] of [
+        ['0', '0'],
+        [' -00042 ', '-42'],
+        ['+0042', '42'],
+        ['-0', '0'],
+        ['9007199254740993', '9007199254740993'],
+        ['-9223372036854775808', '-9223372036854775808'],
+        ['9223372036854775807', '9223372036854775807'],
+        ['18446744073709551615', '18446744073709551615'],
+    ])
+        assert.equal(functionArgumentSql({ kind: 'integer', value }), sql);
+    for (const value of [
+        '',
+        ' ',
+        '1.0',
+        '1e2',
+        '0x10',
+        '--1',
+        '1; SELECT 2',
+        '-9223372036854775809',
+        '18446744073709551616',
+        '9'.repeat(8193),
+    ])
+        assert.throws(() => functionArgumentSql({ kind: 'integer', value }));
+});
+
+test('Float inputs keep their type and accept only finite decimal or exponent syntax', () => {
+    for (const value of ['2', '2.0', '-0', '+.5', '1.', '-3.14', '1e3', '1E-3', '1e308'])
+        assert.equal(
+            functionArgumentSql({ kind: 'float', value: ` ${value} ` }),
+            `CAST('${value}', 'Float64')`,
+        );
+    for (const value of [
+        '',
+        ' ',
+        'NaN',
+        'Infinity',
+        '-Infinity',
+        '1e999',
+        '0x10',
+        '1,5',
+        '.',
+        '1; SELECT 2',
+    ])
+        assert.throws(() => functionArgumentSql({ kind: 'float', value }));
+});
+
+test('Boolean and Null inputs generate their explicit SQL literals', () => {
+    for (const value of ['true', 'false'])
+        assert.equal(functionArgumentSql({ kind: 'boolean', value: ` ${value} ` }), value);
+    for (const value of ['', 'TRUE', '0', '1', 'null', '"true"', 'true; SELECT 2'])
+        assert.throws(() => functionArgumentSql({ kind: 'boolean', value }));
+    for (const value of ['', 'retained plain text', 'x'.repeat(8193)])
+        assert.equal(functionArgumentSql({ kind: 'null', value }), 'NULL');
+});
+
+test('Array inputs require bounded JSON arrays while advanced JSON still accepts scalars', () => {
+    for (const [value, sql] of [
+        ['[]', '[]'],
+        ['[1, "text", true, null, [2]]', "[1, 'text', true, NULL, [2]]"],
+        [JSON.stringify(Array(100).fill(1)), `[${Array(100).fill('1').join(', ')}]`],
+    ])
+        assert.equal(functionArgumentSql({ kind: 'array', value }), sql);
+    for (const value of [
+        '1',
+        '"text"',
+        'null',
+        '{}',
+        '[{}]',
+        '[9007199254740993]',
+        '[[[[[[1]]]]]]',
+        JSON.stringify(Array(101).fill(1)),
+    ])
+        assert.throws(() => functionArgumentSql({ kind: 'array', value }));
+    assert.equal(functionArgumentSql({ kind: 'json', value: '"text"' }), "'text'");
+    assert.throws(
+        () => functionArgumentSql({ kind: 'unsupported', value: '[[1, 2]]' }),
+        /supported input type/,
+    );
+});
+
+test('Switching between String and advanced JSON preserves quoting and whitespace', () => {
+    for (const value of ['', '  hello  ', '"quoted"', "a'\\\n你好", '42', '[1, 2]']) {
+        const argument = { kind: 'string', value };
+        const json = changeFunctionArgumentKind(argument, 'json');
+        assert.deepEqual(json, { kind: 'json', value: JSON.stringify(value) });
+        assert.equal(functionArgumentSql(json), functionArgumentSql(argument));
+        assert.deepEqual(changeFunctionArgumentKind(json, 'string'), argument);
+        const nullJson = changeFunctionArgumentKind(json, 'null');
+        assert.deepEqual(changeFunctionArgumentKind(nullJson, 'string'), argument);
+        assert.deepEqual(changeFunctionArgumentKind(nullJson, 'json'), json);
+        const nullString = changeFunctionArgumentKind(argument, 'null');
+        assert.deepEqual(changeFunctionArgumentKind(nullString, 'json'), json);
+        assert.deepEqual(
+            changeFunctionArgumentKind(changeFunctionArgumentKind(nullString, 'null'), 'string'),
+            argument,
+        );
+        assert.deepEqual(argument, { kind: 'string', value });
+        assert.deepEqual(
+            changeFunctionArgumentKind(changeFunctionArgumentKind(argument, 'null'), 'string'),
+            argument,
+        );
+    }
+    for (const value of ['bad JSON', '42', '[1, 2]'])
+        assert.deepEqual(changeFunctionArgumentKind({ kind: 'json', value }, 'string'), {
+            kind: 'string',
+            value,
+        });
+    assert.deepEqual(changeFunctionArgumentKind({ kind: 'array', value: '[1, 2]' }, 'json'), {
+        kind: 'json',
+        value: '[1, 2]',
+    });
+    assert.deepEqual(changeFunctionArgumentKind({ kind: 'string', value: 'text' }, 'string'), {
+        kind: 'string',
+        value: 'text',
+    });
 });
 
 test('SQL UDF discovery returns server definitions independently of databases', async () => {

@@ -12,7 +12,22 @@ export type FunctionCatalog = {
     canDrop: boolean;
     dropReason: string;
 };
-export type FunctionArgument = { value: string; kind: 'json' | 'map' };
+export const SQL_FUNCTION_ARGUMENT_OPTIONS = [
+    { value: 'string', label: 'String' },
+    { value: 'integer', label: 'Integer' },
+    { value: 'float', label: 'Float' },
+    { value: 'boolean', label: 'Boolean' },
+    { value: 'array', label: 'Array' },
+    { value: 'map', label: 'Map' },
+    { value: 'null', label: 'Null' },
+    { value: 'json', label: 'JSON (advanced)' },
+] as const;
+export type FunctionArgumentKind = (typeof SQL_FUNCTION_ARGUMENT_OPTIONS)[number]['value'];
+export type FunctionArgument = {
+    value: string;
+    kind: FunctionArgumentKind;
+    valueKind?: Exclude<FunctionArgumentKind, 'null'>;
+};
 
 export const SQL_FUNCTION_TEMPLATES = [
     {
@@ -23,8 +38,8 @@ export const SQL_FUNCTION_TEMPLATES = [
         expression:
             'arrayFilter((value, position) -> position != index, items, arrayEnumerate(items))',
         arguments: [
-            { value: '[10, 20, 30, 40]', kind: 'json' },
-            { value: '2', kind: 'json' },
+            { value: '[10, 20, 30, 40]', kind: 'array' },
+            { value: '2', kind: 'integer' },
         ],
     },
     {
@@ -35,7 +50,7 @@ export const SQL_FUNCTION_TEMPLATES = [
         expression: 'mapFilter((entry_key, value) -> entry_key != key, entries)',
         arguments: [
             { value: '[["a", 10], ["b", 20], ["c", 30]]', kind: 'map' },
-            { value: '"b"', kind: 'json' },
+            { value: 'b', kind: 'string' },
         ],
     },
 ] satisfies Array<
@@ -122,9 +137,39 @@ function literal(value: unknown, depth = 0): string {
 }
 
 export function functionArgumentSql(argument: FunctionArgument): string {
+    if (argument.kind === 'null') return 'NULL';
     if (argument.value.length > 8192) throw new Error('Keep each input under 8,192 characters.');
+    if (argument.kind === 'string') return quoteStringLiteral(argument.value);
+    const input = argument.value.trim();
+    if (argument.kind === 'integer') {
+        if (!/^[+-]?\d+$/.test(input)) throw new Error('Enter a whole number, e.g. 42.');
+        const value = BigInt(input);
+        if (value < -(2n ** 63n) || value > 2n ** 64n - 1n)
+            throw new Error(
+                'Enter an integer between -9223372036854775808 and 18446744073709551615.',
+            );
+        return String(value);
+    }
+    if (argument.kind === 'float') {
+        if (
+            !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(input) ||
+            !Number.isFinite(Number(input))
+        )
+            throw new Error('Enter a finite decimal number, e.g. 3.14 or 1e3.');
+        return `CAST(${quoteStringLiteral(input)}, 'Float64')`;
+    }
+    if (argument.kind === 'boolean') {
+        if (input !== 'true' && input !== 'false') throw new Error('Enter true or false.');
+        return input;
+    }
+    if (!['json', 'array', 'map'].includes(argument.kind))
+        throw new Error('Choose a supported input type.');
     const value: unknown = JSON.parse(argument.value);
     if (argument.kind === 'json') return literal(value);
+    if (argument.kind === 'array') {
+        if (!Array.isArray(value)) throw new Error('Enter a JSON array, e.g. [1, 2, 3].');
+        return literal(value);
+    }
     if (
         !Array.isArray(value) ||
         !value.length ||
@@ -133,6 +178,30 @@ export function functionArgumentSql(argument: FunctionArgument): string {
     )
         throw new Error('Enter a map as [[key, value], …] with 1–100 entries.');
     return `map(${value.flatMap(pair => pair.map((item: unknown) => literal(item))).join(', ')})`;
+}
+
+export function changeFunctionArgumentKind(
+    argument: FunctionArgument,
+    kind: FunctionArgumentKind,
+): FunctionArgument {
+    if (kind === 'null')
+        return {
+            value: argument.value,
+            kind,
+            valueKind: argument.kind === 'null' ? argument.valueKind : argument.kind,
+        };
+    const previousKind = argument.kind === 'null' ? argument.valueKind : argument.kind;
+    let value = argument.value;
+    if (previousKind === 'string' && kind === 'json') value = JSON.stringify(value);
+    else if (previousKind === 'json' && kind === 'string') {
+        try {
+            const parsed: unknown = JSON.parse(value);
+            if (typeof parsed === 'string') value = parsed;
+        } catch {
+            return { value, kind };
+        }
+    }
+    return { value, kind };
 }
 
 export function testSqlFunctionQuery(fn: SqlFunction, arguments_: FunctionArgument[]): string {

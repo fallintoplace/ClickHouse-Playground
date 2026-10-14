@@ -1,6 +1,7 @@
 import { test, expect, type Locator } from '@playwright/test';
 import { functionsWorkspace } from './sql-functions-helpers.js';
 import { workspacePath } from './helpers.js';
+import { chooseChartOption as chooseSelectOption } from './chart-control-helpers.js';
 
 async function detailStyles(details: Locator) {
     return details.evaluate(element => {
@@ -50,6 +51,11 @@ for (const mode of ['Standard', 'Experimental']) {
             );
             await page.mouse.move(0, 0);
             const functionStyles = await detailStyles(details);
+            await chooseSelectOption(
+                page,
+                details.getByRole('combobox', { name: 'index input type', exact: true }),
+                'float',
+            );
             await page.getByLabel('index', { exact: true }).fill('2.0');
             await details.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
             await expect(details.locator('.sql-function-output')).toHaveText('[10, 30, 40]');
