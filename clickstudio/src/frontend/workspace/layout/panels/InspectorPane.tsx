@@ -157,12 +157,26 @@ function PrimaryInspectorTab({
     );
 }
 
+function InspectorCloseButton({ onClose }: { onClose?: () => void }) {
+    return (
+        <Button
+            variant="ghost"
+            className="icon-only"
+            aria-label="Close inspector"
+            onClick={onClose}
+        >
+            <Icon name="close" />
+        </Button>
+    );
+}
+
 function InspectorPaneHeading({
     title,
     copy,
     inspector,
     expert,
     docked,
+    hideHeading,
     primaryNavigation,
     onSelect,
     onClose,
@@ -172,10 +186,13 @@ function InspectorPaneHeading({
     inspector: Inspector;
     expert: boolean;
     docked: boolean;
+    hideHeading: boolean;
     primaryNavigation: readonly PrimaryInspectorDestination[];
     onSelect: (inspector: Inspector) => void;
     onClose?: () => void;
 }) {
+    if (hideHeading) return null;
+
     return (
         <header className="inspector-header">
             {docked && !expert ? (
@@ -193,16 +210,7 @@ function InspectorPaneHeading({
             ) : (
                 <h2>{title}</h2>
             )}
-            {docked && (
-                <Button
-                    variant="ghost"
-                    className="icon-only"
-                    aria-label="Close inspector"
-                    onClick={onClose}
-                >
-                    <Icon name="close" />
-                </Button>
-            )}
+            {docked && <InspectorCloseButton onClose={onClose} />}
         </header>
     );
 }
@@ -312,6 +320,7 @@ export function InspectorPane({
     const clearReferenceTarget = useCallback(() => setReferenceTarget(undefined), []);
     const isExpert = Boolean(expert);
     const primaryNavigation = primaryInspectorNavigation(isExpert);
+    const hasPrimaryInspectorTab = primaryNavigation.some(item => item.id === inspector);
     const moreItems = inspectorMoreNavigation(isExpert, Boolean(run));
     const selectInspector = (next: Inspector) => {
         if (next === 'reference') setReferenceTarget(undefined);
@@ -326,6 +335,7 @@ export function InspectorPane({
                 inspector={inspector}
                 expert={isExpert}
                 docked={docked}
+                hideHeading={isExpert && docked && hasPrimaryInspectorTab}
                 primaryNavigation={primaryNavigation}
                 onSelect={selectInspector}
                 onClose={onClose}
@@ -347,6 +357,11 @@ export function InspectorPane({
                         onSelect={selectInspector}
                         items={moreItems}
                     />
+                    {hasPrimaryInspectorTab && (
+                        <div>
+                            <InspectorCloseButton onClose={onClose} />
+                        </div>
+                    )}
                 </nav>
             )}
             <div
