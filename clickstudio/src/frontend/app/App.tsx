@@ -574,7 +574,7 @@ function ConnectionPicker({
         }
 
         if (isCloudConnection) {
-            return 'CLICKHOUSE CLOUD';
+            return 'CLOUD';
         }
 
         return 'LIVE CONNECTION';
@@ -582,6 +582,10 @@ function ConnectionPicker({
     const getConnectionLabel = () => {
         if (connection) {
             if (isPlayground) {
+                return 'ClickHouse';
+            }
+
+            if (isCloudConnection) {
                 return 'ClickHouse';
             }
 
