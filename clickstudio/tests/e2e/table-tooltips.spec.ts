@@ -222,7 +222,7 @@ test('Heatmaps keep native context and suppress redundant axis titles', async ({
     );
     expect(columnWidths.every(width => Math.abs(width - columnWidths[0]!) < 1)).toBe(true);
     const cell = table.getByLabel('Around Town, Avicii: 5', { exact: true });
-    await expect(cell).toHaveAttribute('title', 'artist: Avicii · title: Around Town · plays: 5');
+    await expect(cell).toHaveAttribute('title', 'title: Around Town · artist: Avicii · plays: 5');
     await cell.hover();
     await expect(page.getByRole('tooltip')).toHaveCount(0);
 });
