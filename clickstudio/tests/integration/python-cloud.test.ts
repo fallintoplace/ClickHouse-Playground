@@ -18,12 +18,15 @@ const config = {
     keySecret: 'private-key-secret',
 };
 const version = {
-    functionName: 'python_double',
+    functionName: 'py_semver_compare',
     version: 1,
     status: 'ready',
     error: null,
-    arguments: [{ name: 'value', type: 'Int64' }],
-    returnType: 'Int64',
+    arguments: [
+        { name: 'left', type: 'String' },
+        { name: 'right', type: 'String' },
+    ],
+    returnType: 'Int32',
 };
 const draft = PYTHON_FUNCTION_TEMPLATES[1]!;
 const json = (result: unknown, extra = {}) => Response.json({ result, ...extra });

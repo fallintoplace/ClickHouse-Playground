@@ -204,7 +204,7 @@ export function CreateSqlFunctionDialog({
                         disabled={busy}
                         aria-label="Function name"
                         maxLength={128}
-                        placeholder="e.g. udf_lowercase_utf8"
+                        placeholder="e.g. udf_array_remove_at"
                         onChange={event => changeField('name', event.target.value)}
                     />
                 </label>
@@ -247,7 +247,7 @@ export function CreateSqlFunctionDialog({
                         value={fields.expression}
                         disabled={busy}
                         maxLength={8192}
-                        placeholder="e.g. lowerUTF8(value)"
+                        placeholder="e.g. arrayFilter((x, i) -> i != n, xs, arrayEnumerate(xs))"
                         onChange={value => changeField('expression', value)}
                     />
                 </div>

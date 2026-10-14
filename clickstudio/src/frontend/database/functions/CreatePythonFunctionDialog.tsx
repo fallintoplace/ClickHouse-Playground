@@ -107,7 +107,7 @@ export function CreatePythonFunctionDialog({
                         value={draft.name}
                         onChange={event => update({ name: event.target.value })}
                         maxLength={128}
-                        placeholder="e.g. py_normalize_text"
+                        placeholder="e.g. py_semver_compare"
                     />
                 </label>
                 <div className="creation-dialog-field">

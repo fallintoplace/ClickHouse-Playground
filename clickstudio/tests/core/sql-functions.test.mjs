@@ -67,8 +67,15 @@ test('SQL UDF templates use the requested names and existing higher-order functi
     assert.match(second.expression, /mapFilter/);
 });
 
-test('SQL UDF creation presets have unique names and valid ClickHouse expressions', () => {
+test('SQL UDF creation presets have unique names and compose non-native behavior', () => {
     const names = SQL_FUNCTION_CREATION_TEMPLATES.map(template => template.name);
+    assert.deepEqual(names, [
+        'udf_array_remove_at',
+        'udf_map_remove',
+        'udf_array_every_nth',
+        'udf_round_significant',
+        'udf_normalize_whitespace',
+    ]);
     assert.equal(new Set(names).size, names.length);
     for (const template of SQL_FUNCTION_CREATION_TEMPLATES) {
         const sql = createSqlFunctionQuery(template);
@@ -76,6 +83,10 @@ test('SQL UDF creation presets have unique names and valid ClickHouse expression
         assert.match(sql, / -> .+;$/);
     }
     assert.equal(SQL_FUNCTION_CREATION_TEMPLATES.length, 5);
+    assert.doesNotMatch(
+        SQL_FUNCTION_CREATION_TEMPLATES.map(template => template.expression).join('\n'),
+        /\b(?:arrayDistinct|lowerUTF8|toStartOfMonth)\s*\(/,
+    );
 });
 
 test('Create SQL validates identifiers, unique bounded parameters and one expression', () => {

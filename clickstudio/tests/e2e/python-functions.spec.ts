@@ -23,7 +23,7 @@ test('Python ZIP export includes offline tokenizer assets without management cre
     await chooseSelectOption(page, template, '0');
     const pending = page.waitForEvent('download');
     await dialog.getByRole('button', { name: 'Export ZIP', exact: true }).click();
-    expect((await pending).suggestedFilename()).toBe('py_similarity.zip');
+    expect((await pending).suggestedFilename()).toBe('py_grapheme_count.zip');
     await chooseSelectOption(
         page,
         dialog.getByRole('combobox', { name: 'Template', exact: true }),
@@ -252,7 +252,7 @@ for (const { viewport, theme } of [
         ).toHaveAttribute('data-value', 'custom');
         await expect(dialog.getByLabel('Function name', { exact: true })).toHaveAttribute(
             'placeholder',
-            'e.g. py_normalize_text',
+            'e.g. py_semver_compare',
         );
         await expect(
             dialog.getByRole('button', { name: 'Export ZIP', exact: true }),
@@ -270,17 +270,23 @@ for (const { viewport, theme } of [
             '0',
         );
         await expect(dialog.getByRole('textbox', { name: 'Python source' })).toContainText(
-            'SequenceMatcher',
+            'regex.findall',
         );
         const pending = page.waitForEvent('download');
         await dialog.getByRole('button', { name: 'Export ZIP', exact: true }).click();
         const downloaded = await pending;
-        expect(downloaded.suggestedFilename()).toBe('py_similarity.zip');
+        expect(downloaded.suggestedFilename()).toBe('py_grapheme_count.zip');
         const path = await downloaded.path();
         expect(path).toBeTruthy();
         const files = unzipSync(new Uint8Array(await readFile(path!)));
-        expect(Object.keys(files).sort()).toEqual(['function.json', 'function.xml', 'main.py']);
-        expect(strFromU8(files['main.py']!)).toContain('SequenceMatcher');
+        expect(Object.keys(files).sort()).toEqual([
+            'function.json',
+            'function.xml',
+            'main.py',
+            'requirements.txt',
+        ]);
+        expect(strFromU8(files['main.py']!)).toContain('regex.findall');
+        expect(strFromU8(files['requirements.txt']!)).toContain('regex');
         const bounds = await dialog.boundingBox();
         expect(bounds).toBeTruthy();
         expect(bounds!.width).toBeLessThanOrEqual(viewport.width);
@@ -339,11 +345,11 @@ for (const { width, height } of [
         await expect(template).toHaveAttribute('data-value', '1');
         await expect(template).toBeFocused();
         await expect(dialog.getByLabel('Function name', { exact: true })).toHaveValue(
-            'python_double',
+            'py_semver_compare',
         );
         await expect(
             dialog.getByRole('combobox', { name: 'Return type', exact: true }),
-        ).toHaveAttribute('data-value', 'Int64');
+        ).toHaveAttribute('data-value', 'Int32');
         await chooseSelectOption(
             page,
             dialog.getByRole('combobox', { name: 'Argument 1 type', exact: true }),

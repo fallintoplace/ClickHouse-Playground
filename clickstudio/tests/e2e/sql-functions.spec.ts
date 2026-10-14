@@ -91,10 +91,10 @@ test('Custom function starts blank and creates a testable SQL UDF', async ({ pag
             await expect(dialog.getByLabel(name, { exact: true })).toHaveValue('');
         await expect(dialog.getByLabel('Function name', { exact: true })).toHaveAttribute(
             'placeholder',
-            'e.g. udf_lowercase_utf8',
+            'e.g. udf_array_remove_at',
         );
         await expect(dialog.getByLabel('Expression', { exact: true })).toContainText(
-            'e.g. lowerUTF8(value)',
+            'e.g. arrayFilter((x, i) -> i != n, xs, arrayEnumerate(xs))',
         );
         await expect(dialog.getByLabel('Expression', { exact: true })).toHaveCSS(
             'caret-color',
@@ -163,7 +163,9 @@ test('SQL UDF presets fill the draft and Custom clears it', async ({ page }) => 
     await expect(name).toHaveValue('');
     await expect(parameters.locator('.sql-function-parameter-row')).toHaveCount(1);
     await expect(dialog.getByLabel('Parameter 1 name', { exact: true })).toHaveValue('');
-    await expect(expression).toContainText('e.g. lowerUTF8(value)');
+    await expect(expression).toContainText(
+        'e.g. arrayFilter((x, i) -> i != n, xs, arrayEnumerate(xs))',
+    );
 
     await name.fill('custom_after_template');
     await dialog.getByLabel('Parameter 1 name', { exact: true }).fill('value');

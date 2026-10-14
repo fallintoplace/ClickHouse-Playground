@@ -69,22 +69,24 @@ export const SQL_FUNCTION_CREATION_TEMPLATES = [
         expression,
     })),
     {
-        name: 'udf_array_distinct',
-        label: 'Keep unique array items',
-        parameters: ['items'],
-        expression: 'arrayDistinct(items)',
+        name: 'udf_array_every_nth',
+        label: 'Keep every Nth array item',
+        parameters: ['items', 'step'],
+        expression:
+            'arrayFilter((item, position) -> position % step = 0, items, arrayEnumerate(items))',
     },
     {
-        name: 'udf_lowercase_utf8',
-        label: 'Lowercase UTF-8 text',
-        parameters: ['value'],
-        expression: 'lowerUTF8(value)',
+        name: 'udf_round_significant',
+        label: 'Round to significant digits',
+        parameters: ['value', 'digits'],
+        expression:
+            'if(value = 0, value, round(value, toInt32(digits - 1 - floor(log10(abs(value))))))',
     },
     {
-        name: 'udf_start_of_month',
-        label: 'Start of month',
-        parameters: ['date_time'],
-        expression: 'toStartOfMonth(date_time)',
+        name: 'udf_normalize_whitespace',
+        label: 'Normalize whitespace',
+        parameters: ['text'],
+        expression: "trimBoth(replaceRegexpAll(text, '[[:space:]]+', ' '))",
     },
 ] satisfies Array<SqlFunctionInput & { label: string }>;
 

@@ -21,7 +21,13 @@ import {
     pythonAdapter,
 } from '../../.core-build/src/shared/database/functions/python-udf-package.js';
 
-const draft = PYTHON_FUNCTION_TEMPLATES[1];
+const draft = {
+    name: 'test_transform',
+    arguments: [{ name: 'value', type: 'Int64' }],
+    returnType: 'Int64',
+    requirements: '',
+    source: 'def transform(value):\n    return value\n',
+};
 
 test('Python signatures accept only the six scalar types and distinct named arguments', () => {
     assert.deepEqual(PYTHON_SCALAR_TYPES, [
@@ -61,13 +67,11 @@ test('Python templates have unique names and valid transform signatures; Custom 
     assert.deepEqual(
         PYTHON_FUNCTION_TEMPLATES.map(template => template.label),
         [
-            'String similarity',
-            'Double',
+            'Count Unicode graphemes',
+            'Compare semantic versions',
             'LLM token count',
-            'Normalize text',
-            'Word count',
-            'Round number',
-            'ISO weekday',
+            'Format phone number as E.164',
+            'Extract email domain',
         ],
     );
     assert.equal(
@@ -94,7 +98,9 @@ test('Cloud definition and self-hosted XML agree with the generated chunk protoc
     assert.equal(definition.maxCommandExecutionTime, 10);
     assert.match(
         pythonFunctionXml(draft),
-        /<command>python3 \/var\/lib\/clickhouse\/user_scripts\/python_double\/main.py<\/command>/,
+        new RegExp(
+            `<command>python3 /var/lib/clickhouse/user_scripts/${draft.name}/main\\.py</command>`,
+        ),
     );
     assert.match(pythonFunctionXml(draft), /<send_chunk_header>1<\/send_chunk_header>/);
     assert.throws(() => pythonFunctionXml({ ...draft, name: '</name>' }));
@@ -172,8 +178,11 @@ test('Typed SQL inputs preserve full integer ranges and quote strings without SQ
         "CAST('hello\\'\n\\\\world', 'String')",
     );
     assert.match(
-        testPythonFunctionQuery('python_double', [{ type: 'Int64', value: '21' }]),
-        /`python_double`\(CAST\('21', 'Int64'\)\)/,
+        testPythonFunctionQuery('py_semver_compare', [
+            { type: 'String', value: '1.2.3' },
+            { type: 'String', value: '1.2.4' },
+        ]),
+        /`py_semver_compare`\(CAST\('1\.2\.3', 'String'\), CAST\('1\.2\.4', 'String'\)\)/,
     );
     assert.match(
         testPythonFunctionQuery('_installed', [{ type: 'Int64', value: '21' }]),
