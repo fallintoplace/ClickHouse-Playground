@@ -1882,8 +1882,10 @@
   }
   .runtime-summary-grid.is-compact {
     display: flex;
+    width: fit-content;
+    max-width: 100%;
     min-width: 0;
-    flex: 1 1 0;
+    flex: 0 1 auto;
     gap: 0;
     margin: 0;
     overflow: hidden;
@@ -1905,10 +1907,10 @@
     );
   }
   .runtime-summary-grid.is-compact .runtime-summary-card {
-    min-width: 0;
-    flex: 1 1 0;
+    min-width: max-content;
+    flex: 0 0 auto;
     gap: 1px;
-    padding: 3px 4px;
+    padding: 3px 6px;
     border: 0;
     border-inline-start: 1px solid var(--line);
     border-radius: 0;
@@ -2266,7 +2268,11 @@
 @media (max-width: 560px) {
   .runtime-summary-grid.is-compact {
     display: grid;
+    width: 100%;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .runtime-summary-grid.is-compact .runtime-summary-card {
+    min-width: 0;
   }
   .runtime-summary-grid.is-compact .runtime-summary-card:nth-child(3n + 1) {
     border-inline-start: 0;
