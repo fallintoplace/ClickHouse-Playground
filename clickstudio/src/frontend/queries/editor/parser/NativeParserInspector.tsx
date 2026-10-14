@@ -1,5 +1,6 @@
 import type { NativeParseSnapshot, NativeParserStatus } from '../../../../shared/sql/parser';
 import { nativeHighlightRanges } from '../../../../shared/sql/parser';
+import { sqlLexer } from '../../../../shared/sql/lexer';
 import { asNativeAstObject } from './native-ast';
 import { Button, cx, Spinner } from '../../../ui/components/primitives';
 import { Icon } from '../../../ui/components/icons';
@@ -35,16 +36,19 @@ export function NativeParserInspector({ status, snapshot, onRetry }: Props) {
                 return 'Unavailable';
         }
     };
+    const nativeLexerReady = sqlLexer.engine === 'clickhouse';
     return (
         <section
             className="inspector-section parser-inspector"
             aria-label="ClickHouse parser details"
         >
             <div className={cx('parser-status-card', `parser-status-${status}`)}>
-                <span className={cx('status-light', getParserTone())} />
-                <div>
-                    <strong>ClickHouse native parser</strong>
-                    <small>{getParserStatusLabel()}</small>
+                <div className="parser-status-main">
+                    <span className={cx('status-light', getParserTone())} aria-hidden="true" />
+                    <div>
+                        <strong>ClickHouse native parser</strong>
+                        <small>{getParserStatusLabel()}</small>
+                    </div>
                 </div>
                 {snapshot && (
                     <span className="parser-duration">{snapshot.elapsedMs.toFixed(1)} ms</span>
@@ -54,6 +58,22 @@ export function NativeParserInspector({ status, snapshot, onRetry }: Props) {
                         Retry
                     </Button>
                 )}
+                <div
+                    className="parser-lexer-status"
+                    role="status"
+                    aria-label={`SQL lexer: ${nativeLexerReady ? 'ClickHouse ready' : 'fallback active'}`}
+                >
+                    <span
+                        className={cx(
+                            'status-light',
+                            nativeLexerReady ? 'is-trusted' : 'is-warning',
+                        )}
+                        aria-hidden="true"
+                    />
+                    <span>SQL lexer</span>
+                    <strong>{nativeLexerReady ? 'ClickHouse' : 'Fallback'}</strong>
+                    <small>{nativeLexerReady ? 'Ready' : 'Active'}</small>
+                </div>
             </div>
 
             {status === 'loading' && (
