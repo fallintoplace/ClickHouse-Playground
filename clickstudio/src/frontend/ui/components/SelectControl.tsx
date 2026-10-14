@@ -12,8 +12,17 @@ import {
 export type SelectControlOption = {
     value: string;
     label: string;
+    title?: string;
+    searchText?: string;
     disabled?: boolean;
 };
+
+function matchesSearch(option: SelectControlOption, search: string) {
+    const query = search.trim().toLocaleLowerCase();
+    return (
+        !query || `${option.label} ${option.searchText ?? ''}`.toLocaleLowerCase().includes(query)
+    );
+}
 
 function positionSelectMenu(element: HTMLDivElement, button: HTMLButtonElement) {
     const view = element.ownerDocument.defaultView;
@@ -74,9 +83,7 @@ export function SelectControl({
             ? availableOptions[0]
             : undefined;
     const hasSingleOption = singleOption !== undefined;
-    const visibleOptions = availableOptions.filter(option =>
-        option.label.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()),
-    );
+    const visibleOptions = availableOptions.filter(option => matchesSearch(option, search));
     const enabledIndexes = visibleOptions.flatMap((option, index) =>
         option.disabled ? [] : [index],
     );
@@ -219,7 +226,7 @@ export function SelectControl({
                     aria-controls={`${id}-listbox`}
                     aria-activedescendant={open ? activeOptionId : undefined}
                     aria-valuetext={selected?.label ?? ''}
-                    title={selected?.label}
+                    title={selected?.title ?? selected?.label}
                     data-value={value}
                     data-state={open ? 'open' : 'closed'}
                     popoverTarget={id}
@@ -269,9 +276,7 @@ export function SelectControl({
                             const nextSearch = event.target.value;
                             setSearch(nextSearch);
                             const nextVisibleOptions = availableOptions.filter(option =>
-                                option.label
-                                    .toLocaleLowerCase()
-                                    .includes(nextSearch.trim().toLocaleLowerCase()),
+                                matchesSearch(option, nextSearch),
                             );
                             const firstEnabled = nextVisibleOptions.findIndex(
                                 option => !option.disabled,
@@ -311,7 +316,7 @@ export function SelectControl({
                             data-value={option.value}
                             data-active={index === activeIndex || undefined}
                             data-disabled={option.disabled || undefined}
-                            title={option.label}
+                            title={option.title ?? option.label}
                             onMouseMove={() => {
                                 if (!option.disabled) setActiveIndex(index);
                             }}

@@ -199,11 +199,14 @@ test('Storage tabs show merge flow and honest mutation completion', async ({ pag
     await expect(dialog).toHaveCount(0);
 });
 
-test('Run comparison selects two retained runs without executing another query', async ({
+test('Run comparison searches full SQL and swaps retained runs without executing another query', async ({
     page,
 }, info) => {
     await trust(page);
-    for (const sql of ['SELECT 1 AS value', 'SELECT 2 AS value']) {
+    for (const sql of [
+        'SELECT 1 AS value /* hidden text unique_before_marker */',
+        'SELECT 2 AS value /* hidden text unique_after_marker */',
+    ]) {
         await page.locator('.cm-content').click();
         await page.keyboard.press('ControlOrMeta+a');
         await page.keyboard.insertText(sql);
@@ -231,8 +234,23 @@ test('Run comparison selects two retained runs without executing another query',
     await openWorkspacePanel(page, 'history');
     await page.getByRole('button', { name: 'Compare runs', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Compare query runs', exact: true });
-    await expect(dialog.getByLabel('Before run')).toBeVisible();
-    await expect(dialog.getByLabel('After run')).toBeVisible();
+    const beforePicker = dialog.getByRole('combobox', { name: 'Before run', exact: true });
+    await expect(beforePicker).toBeVisible();
+    await expect(dialog.getByRole('combobox', { name: 'After run', exact: true })).toBeVisible();
+    await beforePicker.click();
+    const search = dialog.getByRole('searchbox', {
+        name: 'Search before run',
+        exact: true,
+    });
+    await search.fill('unique_after_marker');
+    const option = dialog.getByRole('option');
+    await expect(option).toHaveCount(1);
+    await expect(option).toHaveAttribute('title', /unique_after_marker/);
+    await search.fill('no_matching_query_marker');
+    await expect(option).toHaveCount(0);
+    await expect(dialog.getByRole('status')).toContainText('No matches');
+    await search.press('Escape');
+    await expect(search).toBeHidden();
     await expect(dialog.locator('.native-comparison-table')).toContainText(
         'Client-observed elapsed time',
     );
