@@ -376,7 +376,7 @@ export const copy = {
         partsVisualize: 'Visualize parts',
         partsExplorerTitle: 'MergeTree parts',
         partsExplorerDescription:
-            'ClickHouse stores table data in parts. Too many parts can slow your queries. Check their size and merges here.',
+            'ClickHouse stores data in parts. Too many parts can slow queries. Check part sizes and see which ones are merging.',
         partsStateFilter: 'Part state',
         partsStateAll: 'All',
         partsStateActive: 'Active',
