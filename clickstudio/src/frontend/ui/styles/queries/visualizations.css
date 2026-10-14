@@ -1880,6 +1880,13 @@
     gap: 7px;
     margin: 0 0 10px;
   }
+  .runtime-summary-grid.is-compact {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 0;
+    gap: 4px;
+    margin: 0;
+  }
   .runtime-summary-card {
     display: grid;
     min-width: 0;
@@ -1893,12 +1900,25 @@
       var(--panel)
     );
   }
+  .runtime-summary-grid.is-compact .runtime-summary-card {
+    min-width: 0;
+    flex: 1 1 0;
+    gap: 3px;
+    padding: 5px 6px;
+    border-radius: var(--radius-control);
+  }
   .runtime-summary-card > span {
     color: var(--muted);
     font-size: 8px;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+  }
+  .runtime-summary-grid.is-compact .runtime-summary-card > span {
+    overflow: hidden;
+    font-size: 7px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .runtime-summary-card > strong {
     overflow: hidden;
@@ -1908,6 +1928,9 @@
     font-variant-numeric: tabular-nums;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .runtime-summary-grid.is-compact .runtime-summary-card > strong {
+    font-size: 9px;
   }
   .is-runtime-graph .pipeline-node-face {
     fill: var(--runtime-node-fill, var(--panel-raised));
@@ -2231,6 +2254,13 @@
 /* Responsive and motion states */
 
 @media (max-width: 560px) {
+  .runtime-summary-grid.is-compact {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .runtime-summary-grid.is-compact .runtime-summary-card > strong {
+    font-size: 8px;
+  }
   .insight-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

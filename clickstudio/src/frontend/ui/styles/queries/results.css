@@ -74,6 +74,11 @@
     align-items: baseline;
     gap: 7px;
   }
+  .results-title .results-runtime-heading {
+    min-width: 0;
+    flex: 1;
+    align-items: center;
+  }
   .results-title h2 {
     flex: none;
     margin: 0;
@@ -1104,5 +1109,14 @@
   }
   .result-table-toolbar {
     justify-content: space-between;
+  }
+}
+
+@media (max-width: 700px) {
+  .results-title .results-runtime-heading {
+    flex-wrap: wrap;
+  }
+  .results-title .results-runtime-heading .runtime-summary-grid.is-compact {
+    flex-basis: 100%;
   }
 }

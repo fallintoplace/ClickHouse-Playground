@@ -12,7 +12,10 @@ import type { FailedQueryError } from '../../workspace/workspace-helpers';
 import type { WorkspacePanelController } from '../../workspace/layout/panels/useWorkspacePanels';
 import type { WorkspaceViewState } from '../../workspace/layout/useWorkspaceViewState';
 import { ChartView, GeoView, InsightsView, ResultGrid } from './ResultViews';
-import { ExplainAnalyzeView } from '../inspection/performance/ExplainAnalyzeView';
+import {
+    ExplainAnalyzeView,
+    RuntimeSummaryCards,
+} from '../inspection/performance/ExplainAnalyzeView';
 import { ExplainIndexesView } from '../inspection/plans/ExplainIndexesView';
 import {
     ExplainPlanView,
@@ -669,7 +672,12 @@ function renderResultsHeader({
                     />
                 </span>
                 {!showQueryCard && (
-                    <div className="results-heading">
+                    <div
+                        className={cx(
+                            'results-heading',
+                            visibleResultsView === 'runtime' && 'results-runtime-heading',
+                        )}
+                    >
                         <h2>{resultsTitle}</h2>
                         {visibleResultsView === 'plan' && viewState.explainPlan && (
                             <ExplainPlanViewControls
@@ -677,6 +685,13 @@ function renderResultsHeader({
                                 onViewChange={onPlanViewChange}
                                 nodeCount={viewState.explainPlan.nodeCount}
                                 copy={copy.common}
+                            />
+                        )}
+                        {visibleResultsView === 'runtime' && viewState.analyzeEvidence && (
+                            <RuntimeSummaryCards
+                                evidence={viewState.analyzeEvidence}
+                                copy={copy.common}
+                                compact
                             />
                         )}
                     </div>

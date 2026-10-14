@@ -24,27 +24,8 @@ export function ExplainAnalyzeView({
             </div>
         );
 
-    const metrics = [
-        [copy.runtimeTime, evidence.summary.totalTime],
-        [copy.runtimePlanning, evidence.summary.planningTime],
-        [copy.runtimeExecution, evidence.summary.executionTime],
-        [copy.runtimeRowsRead, evidence.summary.readRows],
-        [copy.runtimeBytesRead, evidence.summary.readBytes],
-        [copy.runtimePeakMemory, evidence.summary.peakMemory],
-    ].filter((metric): metric is [string, string] => Boolean(metric[1]));
-
     return (
         <section className="explain-analyze-view" aria-label={copy.explainAnalyze}>
-            {metrics.length > 0 && (
-                <div className="runtime-summary-grid" aria-label={copy.runtimeGraph}>
-                    {metrics.map(([label, value]) => (
-                        <article className="runtime-summary-card" key={label}>
-                            <span>{label}</span>
-                            <strong>{value}</strong>
-                        </article>
-                    ))}
-                </div>
-            )}
             {evidence.pipeline.nodes.length > 0 ? (
                 <PipelineGraph
                     pipeline={evidence.pipeline}
@@ -59,5 +40,40 @@ export function ExplainAnalyzeView({
                 </div>
             )}
         </section>
+    );
+}
+
+export function RuntimeSummaryCards({
+    evidence,
+    copy,
+    compact = false,
+}: {
+    evidence: ExplainAnalyzeEvidence;
+    copy: Copy['common'];
+    compact?: boolean;
+}) {
+    const metrics = [
+        [copy.runtimeTime, evidence.summary.totalTime],
+        [copy.runtimePlanning, evidence.summary.planningTime],
+        [copy.runtimeExecution, evidence.summary.executionTime],
+        [copy.runtimeRowsRead, evidence.summary.readRows],
+        [copy.runtimeBytesRead, evidence.summary.readBytes],
+        [copy.runtimePeakMemory, evidence.summary.peakMemory],
+    ].filter((metric): metric is [string, string] => Boolean(metric[1]));
+
+    if (metrics.length === 0) return null;
+
+    return (
+        <div
+            className={`runtime-summary-grid${compact ? ' is-compact' : ''}`}
+            aria-label={copy.runtimeGraph}
+        >
+            {metrics.map(([label, value]) => (
+                <article className="runtime-summary-card" key={label}>
+                    <span>{label}</span>
+                    <strong>{value}</strong>
+                </article>
+            ))}
+        </div>
     );
 }
