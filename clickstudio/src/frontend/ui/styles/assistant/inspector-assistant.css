@@ -2407,8 +2407,7 @@
     height: 5px;
   }
   .execution-telemetry {
-    flex: 1;
-    justify-content: center;
+    flex: 0 1 auto;
     color: var(--muted);
     font-size: 8px;
   }
@@ -2426,18 +2425,18 @@
     font-size: 7px;
   }
   .execution-right {
-    flex: none;
+    min-width: 0;
+    flex: 1;
   }
   .execution-help-hint {
     min-width: 0;
-    max-width: min(42vw, 660px);
+    flex: 1 1 auto;
     margin: 0;
-    overflow: hidden;
+    overflow: visible;
     color: var(--text-soft);
     font-size: 12px;
     line-height: 1.35;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
   }
   .execution-details-button {
     min-height: 27px;
@@ -2949,7 +2948,12 @@
     justify-content: flex-start;
   }
   .execution-help-hint {
-    max-width: 60vw;
+    max-width: none;
+    white-space: normal;
+  }
+  .execution-right {
+    min-width: 0;
+    flex: 1 1 100%;
   }
   .execution-right code {
     max-width: 90px;
@@ -2990,11 +2994,13 @@
     width: 100%;
   }
   .execution-right {
-    margin-left: auto;
+    min-width: 0;
+    flex: 1 1 100%;
   }
   .execution-help-hint {
-    max-width: calc(100vw - 82px);
+    max-width: none;
     font-size: 11px;
+    white-space: normal;
   }
   .execution-right code {
     max-width: 76px;

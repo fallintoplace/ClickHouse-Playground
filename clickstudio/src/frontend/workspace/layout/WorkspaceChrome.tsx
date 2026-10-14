@@ -375,7 +375,7 @@ export function ExecutionBar({
                     </span>
                 )}
             </div>
-            {currentRun && (hasTelemetry || currentRun.kind !== 'query') && (
+            {currentRun && hasTelemetry && (
                 <div className="execution-telemetry">
                     {progress?.readRows !== undefined && progress.readRows !== '' && (
                         <span>
@@ -391,9 +391,6 @@ export function ExecutionBar({
                         <span>
                             <strong>{formatBytes(progress.memory)}</strong> {copy.memory}
                         </span>
-                    )}
-                    {currentRun.kind !== 'query' && (
-                        <span className="execution-kind">{currentRun.kind.toUpperCase()}</span>
                     )}
                 </div>
             )}
