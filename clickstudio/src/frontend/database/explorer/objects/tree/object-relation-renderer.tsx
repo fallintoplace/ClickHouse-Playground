@@ -11,6 +11,7 @@ import { Icon } from '../../../../ui/components/icons';
 import type { ObjectExplorerProps } from './object-explorer-types';
 import { ExplorerGroupRow } from './ObjectTreeRows';
 import { ObjectLeafRow } from './ObjectTreeRows';
+import { objectTypeFooterHelp, objectTypeLabel } from './object-type-labels';
 
 export function createRelationRenderer({
     expanded,
@@ -21,6 +22,7 @@ export function createRelationRenderer({
     copy,
     toggle,
     selectObject,
+    expert,
 }: {
     expanded: (id: string, forced?: boolean) => boolean;
     model: ObjectExplorerModel;
@@ -30,6 +32,7 @@ export function createRelationRenderer({
     copy: ObjectExplorerProps['copy'];
     toggle: (id: string) => void;
     selectObject: (id: string) => void;
+    expert: boolean;
 }) {
     return (relation: ExplorerRelation, level: number) => {
         const relationExpanded = expanded(
@@ -94,6 +97,9 @@ export function createRelationRenderer({
                         type="button"
                         className="object-tree-main"
                         title={`${relation.table.database}.${relation.table.name}`}
+                        data-footer-help={
+                            expert ? objectTypeFooterHelp(relation.table.engine) : undefined
+                        }
                         onClick={() => selectObject(relation.id)}
                     >
                         <span
@@ -106,7 +112,7 @@ export function createRelationRenderer({
                         </span>
                         <span className="object-tree-label">
                             <strong>{relation.table.name}</strong>
-                            <small>{relation.table.engine}</small>
+                            <small>{objectTypeLabel(relation.table.engine)}</small>
                         </span>
                     </button>
                 </div>

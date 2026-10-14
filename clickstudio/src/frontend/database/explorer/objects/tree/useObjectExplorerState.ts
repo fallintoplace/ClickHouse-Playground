@@ -295,6 +295,7 @@ export function useObjectExplorerState(props: ObjectExplorerProps) {
         copy,
         toggle,
         selectObject,
+        expert,
     });
 
     const showCompactDetails = compact && detailsOpen && selected;

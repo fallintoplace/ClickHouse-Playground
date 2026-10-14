@@ -488,6 +488,55 @@ test('Column details show the type once and keep comments readable', async ({ pa
 });
 
 for (const mode of ['Standard', 'Experimental']) {
+    test(`${mode} shows readable table types and limits their definitions to Experimental`, async ({
+        page,
+    }) => {
+        const typedTables = [
+            { database: 'analytics', name: 'dictionary_source', engine: 'Dictionary' },
+            { database: 'analytics', name: 'shared_source', engine: 'SharedMergeTree' },
+            { database: 'analytics', name: 'daily_summary', engine: 'MaterializedView' },
+        ];
+        await mockLiveWorkspace(
+            page,
+            route => route.fulfill({ json: { ...schema, tables: typedTables } }),
+            mode,
+        );
+        if (mode === 'Standard')
+            await page
+                .locator('.icon-rail')
+                .getByRole('button', { name: 'Objects', exact: true })
+                .click();
+        await page.getByRole('button', { name: 'Expand Views', exact: true }).click();
+
+        const types = [
+            {
+                name: 'dictionary_source',
+                label: 'Dictionary',
+                definition: /lookup table backed by a ClickHouse dictionary/i,
+            },
+            {
+                name: 'shared_source',
+                label: 'Shared MergeTree',
+                definition: /shared object storage/i,
+            },
+            {
+                name: 'daily_summary',
+                label: 'Materialized View',
+                definition: /results of a saved query in a table/i,
+            },
+        ];
+        const footerHelp = page.locator('.execution-help-hint');
+        for (const type of types) {
+            const row = page.locator(
+                `[role="treeitem"][data-table-name="${type.name}"] .object-tree-main`,
+            );
+            await expect(row).toContainText(type.label);
+            await row.hover();
+            if (mode === 'Experimental') await expect(footerHelp).toContainText(type.definition);
+            else await expect(footerHelp).toHaveCount(0);
+        }
+    });
+
     test(`Column row separators span the ${mode} list without an empty scrollbar gutter`, async ({
         page,
     }, info) => {
