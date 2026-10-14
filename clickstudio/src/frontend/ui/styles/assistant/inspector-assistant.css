@@ -1510,6 +1510,19 @@
     font-size: 8px;
     line-height: 1.5;
   }
+  .assistant-starter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .assistant-starter-actions .button-base {
+    min-height: 28px;
+    padding-inline: 10px;
+    border-radius: 999px;
+    font-size: 9px;
+  }
   .assistant-turn {
     display: grid;
     min-width: 0;

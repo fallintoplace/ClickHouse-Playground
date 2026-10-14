@@ -252,13 +252,16 @@ export function createInspectorProps({
             serverVersion?: string,
             database?: string,
             images?: readonly AssistantImageAttachment[],
+            question?: string,
         ) =>
             void requestAssistantSql(
                 currentSchema,
                 serverVersion,
                 database,
                 includeRun ? signal => loadAssistantRunContext(run, snapshot, signal) : undefined,
-                images?.length ? { images } : undefined,
+                images?.length || question
+                    ? { ...(images?.length ? { images } : {}), ...(question ? { question } : {}) }
+                    : undefined,
             ),
         onCancelAssistantRequest: cancelAssistantRequest,
         expert: experience === 'expert',

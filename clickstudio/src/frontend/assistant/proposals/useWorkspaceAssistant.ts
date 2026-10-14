@@ -141,6 +141,7 @@ type AssistantRunContextLoader = (signal: AbortSignal) => Promise<AssistantRunCo
 type AssistantRequestOptions = {
     repair?: AssistantRepairContext;
     images?: readonly AssistantImageAttachment[];
+    question?: string;
 };
 type AssistantActivity = { turnId: string; phase: AssistantPhase };
 type ActiveAssistantRequest = {
@@ -199,7 +200,8 @@ function createAssistantSqlRequestHandler(context: AssistantSqlRequestContext) {
         const requestIncludesRun = includeRun && !repair;
         const question = repair
             ? 'Fix this query error and return the updated SQL draft, keeping the other statements unchanged.'
-            : assistantQuestion.trim() ||
+            : options?.question?.trim() ||
+              assistantQuestion.trim() ||
               (options?.images?.length
                   ? 'Please analyze the attached images and explain any relevant SQL, database UI, or error details.'
                   : '');

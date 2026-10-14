@@ -112,6 +112,7 @@ export type InspectorPaneProps = {
         serverVersion?: string,
         database?: string,
         images?: readonly AssistantImageAttachment[],
+        question?: string,
     ) => void;
     onCancelAssistantRequest: () => void;
     expert?: boolean;
@@ -501,8 +502,14 @@ export function InspectorPane({
                         error={assistantError}
                         notice={assistantNotice}
                         trusted={trusted}
-                        onAskAI={images =>
-                            onAskAI(schema, assistantServerVersion, connection.database, images)
+                        onAskAI={(images, question) =>
+                            onAskAI(
+                                schema,
+                                assistantServerVersion,
+                                connection.database,
+                                images,
+                                question,
+                            )
                         }
                         onCancelRequest={onCancelAssistantRequest}
                     />

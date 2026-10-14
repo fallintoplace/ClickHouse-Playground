@@ -51,7 +51,7 @@ export type AssistantWorkflowProps = {
     error: string;
     notice: string;
     trusted: boolean;
-    onAskAI: (images: readonly AssistantImageAttachment[]) => void;
+    onAskAI: (images: readonly AssistantImageAttachment[], question?: string) => void;
     onCancelRequest: () => void;
 };
 
@@ -674,6 +674,7 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
         !isReadingImages &&
         trusted &&
         (Boolean(question.trim()) || imageAttachments.length > 0);
+    const canStartPrompt = !busy && !isReadingImages && trusted;
     const latestTurnIds = useMemo(
         () => new Map(turns.map(turn => [turn.draftId, turn.id])),
         [turns],
@@ -703,11 +704,11 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
         return () => observer.disconnect();
     }, [question, questionInput]);
 
-    const ask = () => {
-        if (!canSubmit) return;
+    const ask = (prompt?: string) => {
+        if (prompt ? !canStartPrompt : !canSubmit) return;
         const images = imageAttachments;
         clearImageAttachments();
-        void onAskAI(images);
+        void onAskAI(images, prompt);
     };
     const sendOnEnter = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
         if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -800,6 +801,34 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
                                     <p>
                                         Ask about your query. Follow-ups keep this chat’s context.
                                     </p>
+                                    {!question.trim() && !imageAttachments.length && (
+                                        <div
+                                            className="assistant-starter-actions"
+                                            role="group"
+                                            aria-label="Example tasks"
+                                        >
+                                            <Button
+                                                variant="secondary"
+                                                disabled={!canStartPrompt}
+                                                onClick={() =>
+                                                    ask('Explain this SQL query in plain language.')
+                                                }
+                                            >
+                                                Explain
+                                            </Button>
+                                            <Button
+                                                variant="secondary"
+                                                disabled={!canStartPrompt}
+                                                onClick={() =>
+                                                    ask(
+                                                        'Optimize this ClickHouse query and explain the changes.',
+                                                    )
+                                                }
+                                            >
+                                                Optimize
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                             {turns.map(turn => (
