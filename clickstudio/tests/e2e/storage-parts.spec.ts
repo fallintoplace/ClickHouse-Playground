@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
 import type { MergeTreePartsSnapshot } from '../../src/shared/database/explorer/storage/parts.js';
 import { trust } from './helpers.js';
 
@@ -47,11 +47,106 @@ async function openParts(page: Page, data = snapshot, theme?: string) {
     await page.route('**/api/connections/*/table-parts', route => route.fulfill({ json: data }));
     await trust(page);
     if (theme) await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+    if (!(await page.locator('.inspector-pane').isVisible()))
+        await page
+            .locator('.icon-rail')
+            .getByRole('button', { name: 'Objects', exact: true })
+            .click();
     await page.getByRole('button', { name: 'events MergeTree', exact: true }).click();
     await page.getByRole('button', { name: 'Visualize parts', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'MergeTree parts', exact: true });
     await expect(dialog.locator('.parts-overview')).toBeVisible();
     return dialog;
+}
+
+async function expectChartFits(viewport: Locator) {
+    await expect
+        .poll(() =>
+            viewport.locator('svg').evaluate(element => {
+                if (!(element instanceof SVGSVGElement)) throw new Error('Expected an SVG');
+                const canvas = element.viewBox.baseVal;
+                const bounds = element.getBoundingClientRect();
+                return (
+                    Math.abs(canvas.width - bounds.width) < 1 &&
+                    Math.abs(canvas.height - bounds.height) < 1
+                );
+            }),
+        )
+        .toBe(true);
+}
+
+for (const theme of ['Light', 'Dark']) {
+    test(`${theme} charts fill the available space and keep labels readable after resizing`, async ({
+        page,
+    }, info) => {
+        const firstPart = snapshot.parts[0];
+        if (!firstPart) throw new Error('Expected a part in the fixture');
+        await page.setViewportSize({ width: 1600, height: 1000 });
+        const dialog = await openParts(
+            page,
+            { ...snapshot, parts: [firstPart], totalParts: '1', inactiveParts: '0' },
+            theme,
+        );
+        await dialog.getByRole('button', { name: 'Treemap', exact: true }).click();
+        const viewport = dialog.locator('.parts-graph-viewport');
+        const svg = viewport.locator('svg');
+        await expectChartFits(viewport);
+        const chartBox = await viewport.boundingBox();
+        const dialogBox = await dialog.boundingBox();
+        expect(chartBox).not.toBeNull();
+        expect(dialogBox).not.toBeNull();
+        expect(chartBox!.height).toBeGreaterThan(dialogBox!.height * 0.5);
+        const part = svg.locator('.is-part-cell');
+        const partBox = await part.boundingBox();
+        expect(partBox).not.toBeNull();
+        expect(partBox!.width).toBeGreaterThan(chartBox!.width * 0.95);
+        expect(partBox!.height).toBeGreaterThan(chartBox!.height * 0.9);
+        await expect(dialog.locator('.parts-inspector')).toBeInViewport();
+        await dialog.screenshot({ path: info.outputPath('parts-treemap.png') });
+
+        await part.focus();
+        await page.keyboard.press('Enter');
+        await expect(dialog.locator('.parts-inspector')).toContainText(firstPart.name);
+        for (const layout of ['Galaxy', 'Treemap']) {
+            await dialog.getByRole('button', { name: layout, exact: true }).click();
+            await svg.locator('.is-part-cell').focus();
+            await page.keyboard.press('Enter');
+            for (const size of [
+                { width: 920, height: 650 },
+                { width: 1440, height: 900 },
+            ]) {
+                await page.setViewportSize(size);
+                await expectChartFits(viewport);
+                await expect
+                    .poll(() =>
+                        svg.locator('.parts-cell-label').evaluate(element => {
+                            if (!(element instanceof SVGGraphicsElement))
+                                throw new Error('Expected an SVG label');
+                            const matrix = element.getScreenCTM();
+                            return (
+                                parseFloat(getComputedStyle(element).fontSize) *
+                                (matrix ? Math.hypot(matrix.a, matrix.b) : 0)
+                            );
+                        }),
+                    )
+                    .toBeGreaterThanOrEqual(11.9);
+                await expect(dialog.locator('.parts-inspector')).toContainText(firstPart.name);
+            }
+            await dialog.getByRole('button', { name: 'Zoom into partition 2026-09' }).click();
+            await expect(dialog.locator('.parts-breadcrumb')).toContainText('2026-09');
+            await page.setViewportSize({ width: 1000, height: 800 });
+            await expect(svg.locator('.is-part-cell')).toBeInViewport();
+            await dialog.locator('.parts-breadcrumb button').click();
+            await expect(dialog.locator('.parts-breadcrumb')).not.toContainText('2026-09');
+        }
+        await dialog.getByRole('button', { name: 'Inactive 0', exact: true }).click();
+        await expect(viewport).toHaveCount(0);
+        await dialog.getByRole('button', { name: 'All', exact: true }).click();
+        await expect(svg.locator('.parts-cell-label')).toHaveText(firstPart.name);
+        await expect
+            .poll(() => dialog.evaluate(element => element.scrollWidth <= element.clientWidth))
+            .toBe(true);
+    });
 }
 
 for (const theme of ['Light', 'Dark']) {
@@ -178,11 +273,15 @@ test('Short windows can scroll to the part inspector and footer', async ({ page 
     const dialog = await openParts(page);
     await page.setViewportSize({ width: 1280, height: 400 });
     const content = dialog.getByRole('region', { name: 'MergeTree parts', exact: true });
-    await content.evaluate(element => {
-        element.scrollTop = element.scrollHeight;
-    });
-    await expect(content.locator('.parts-inspector')).toBeInViewport();
-    await expect(content.locator('.parts-explorer-footer')).toBeInViewport();
+    for (const layout of ['Part map', 'Treemap', 'Galaxy']) {
+        await dialog.getByRole('button', { name: layout, exact: true }).click();
+        if (layout !== 'Part map') await expectChartFits(content.locator('.parts-graph-viewport'));
+        await content.evaluate(element => {
+            element.scrollTop = element.scrollHeight;
+        });
+        await expect(content.locator('.parts-inspector')).toBeInViewport();
+        await expect(content.locator('.parts-explorer-footer')).toBeInViewport();
+    }
     const dialogBox = await dialog.boundingBox();
     const contentBox = await content.boundingBox();
     expect(dialogBox).not.toBeNull();
@@ -248,3 +347,52 @@ test('Help storage keeps the shared part headings aligned with the data', async 
     expect(row).not.toBeNull();
     expect(Math.abs((heading?.x ?? 0) - (row?.x ?? 0))).toBeLessThan(1);
 });
+
+test('Narrow windows keep both charts readable and details reachable', async ({ page }) => {
+    await page.setViewportSize({ width: 640, height: 700 });
+    const dialog = await openParts(page);
+    const content = dialog.getByRole('region', { name: 'MergeTree parts', exact: true });
+    const viewport = content.locator('.parts-graph-viewport');
+    for (const layout of ['Treemap', 'Galaxy']) {
+        await dialog.getByRole('button', { name: layout, exact: true }).click();
+        await page.setViewportSize({ width: 600, height: 650 });
+        await expectChartFits(viewport);
+        await content.evaluate(element => {
+            element.scrollTop = element.scrollHeight;
+        });
+        await expect(content.locator('.parts-inspector')).toBeInViewport();
+        await expect(content.locator('.parts-explorer-footer')).toBeInViewport();
+        expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(
+            true,
+        );
+    }
+});
+
+for (const width of [1440, 640]) {
+    test(`Help charts fit at ${width}px after resizing and returning to Storage`, async ({
+        page,
+    }) => {
+        await page.route('**/api/connections/*/table-parts', route =>
+            route.fulfill({ json: snapshot }),
+        );
+        await page.setViewportSize({ width, height: 1000 });
+        await trust(page);
+        await page.getByRole('button', { name: 'Help', exact: true }).click();
+        const help = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });
+        await help.getByTestId('help-section-storage').click();
+        const parts = help.getByRole('region', { name: 'MergeTree parts', exact: true });
+        const viewport = parts.locator('.parts-graph-viewport');
+        for (const layout of ['Treemap', 'Galaxy']) {
+            await parts.getByRole('button', { name: layout, exact: true }).click();
+            await expectChartFits(viewport);
+            await page.setViewportSize({ width: width > 850 ? 1000 : 600, height: 700 });
+            await expectChartFits(viewport);
+            await help.getByTestId('help-section-examples').click();
+            await help.getByTestId('help-section-storage').click();
+            await parts.getByRole('button', { name: layout, exact: true }).click();
+            await expectChartFits(viewport);
+            await page.setViewportSize({ width, height: 1000 });
+            await expectChartFits(viewport);
+        }
+    });
+}

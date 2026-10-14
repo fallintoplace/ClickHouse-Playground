@@ -2021,9 +2021,9 @@
   max-height: none;
   min-height: 0;
   flex: 1;
-  gap: 16px;
+  gap: 10px;
   overflow: auto;
-  padding: 18px 24px;
+  padding: 12px 20px;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -2101,7 +2101,7 @@
   flex: none;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   margin: 0;
-  padding: 14px 0;
+  padding: 10px 0;
   border-block: 1px solid var(--line);
 }
 .parts-overview > div {
@@ -2121,9 +2121,9 @@
   font-size: 11px;
 }
 .parts-overview dd {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: var(--text);
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.025em;
@@ -2271,11 +2271,16 @@
   pointer-events: none;
 }
 .parts-graph-viewport svg {
-  position: relative;
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
-  min-height: 220px;
+  min-height: 0;
+}
+.parts-explorer-dialog .parts-graph-viewport:not(.is-map) {
+  min-height: min(360px, 50dvh);
+  flex: 1 0 min(360px, 50dvh);
 }
 .parts-graph-viewport.is-map {
   max-height: min(460px, 56vh);
@@ -2483,7 +2488,7 @@
 .parts-cell-label {
   fill: var(--text);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 580;
   pointer-events: none;
 }
@@ -2506,7 +2511,7 @@
 .parts-galaxy-cell text {
   fill: var(--text);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 12px;
   text-anchor: middle;
   pointer-events: none;
 }
@@ -2532,7 +2537,7 @@
 .parts-partition-zoom text {
   fill: var(--text);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 760;
   pointer-events: none;
 }
@@ -2548,7 +2553,7 @@
   justify-content: space-between;
   gap: 10px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
   pointer-events: none;
 }
 .parts-legend > span:first-child {
@@ -2566,12 +2571,12 @@
 }
 .parts-inspector {
   display: flex;
-  min-height: 58px;
+  min-height: 44px;
   flex: none;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 14px 16px;
+  padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius-panel);
   background: color-mix(in srgb, var(--panel-raised) 45%, var(--panel));

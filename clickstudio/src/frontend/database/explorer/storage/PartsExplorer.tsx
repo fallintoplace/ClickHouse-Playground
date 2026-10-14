@@ -1,6 +1,6 @@
 import { easeCubicInOut, hierarchy, pack, scaleLinear, select, treemap } from 'd3';
 import type { ScaleLinear, HierarchyCircularNode, HierarchyRectangularNode } from 'd3';
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type {
     MergeTreePart,
     MergeTreePartsSnapshot,
@@ -38,8 +38,7 @@ function isCircularNode(node: PartsLayoutNode): node is HierarchyCircularNode<Ce
     return 'x' in node && 'y' in node && 'r' in node;
 }
 
-const width = 1_000;
-const height = 510;
+type ChartSize = { width: number; height: number };
 const palette = [
     'var(--parts-highlight)',
     'var(--violet)',
@@ -153,6 +152,9 @@ export function PartsExplorer({
     const [selectedPart, setSelectedPart] = useState<MergeTreePart>();
     const [zoomedPartition, setZoomedPartition] = useState<string>();
     const transformGroup = useRef<SVGGElement>(null);
+    const graphViewport = useRef<HTMLDivElement>(null);
+    const [chartSize, setChartSize] = useState<ChartSize>({ width: 1_000, height: 510 });
+    const { width, height } = chartSize;
     const requestKey = `${connection.id}:${table.database}.${table.name}`;
 
     useEffect(() => {
@@ -184,6 +186,23 @@ export function PartsExplorer({
         () => (snapshot ? makeTree(snapshot, metric, filteredParts) : undefined),
         [filteredParts, metric, snapshot],
     );
+
+    useLayoutEffect(() => {
+        const element = graphViewport.current;
+        if (!element || layoutMode === 'map') return;
+        const measure = () => {
+            const next = { width: element.clientWidth, height: element.clientHeight };
+            if (!next.width || !next.height) return;
+            setChartSize(previous =>
+                previous.width === next.width && previous.height === next.height ? previous : next,
+            );
+        };
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(element);
+        return () => observer.disconnect();
+    }, [layoutMode, tree]);
+
     const layout = useMemo(() => {
         if (!tree || layoutMode === 'map') return undefined;
         const root = hierarchy(tree, node => node.children)
@@ -196,7 +215,7 @@ export function PartsExplorer({
                   .paddingTop(node => (node.depth === 1 ? 25 : 3))
                   .round(true)(root)
             : pack<Cell>().size([width, height]).padding(4)(root);
-    }, [layoutMode, tree]);
+    }, [height, layoutMode, tree, width]);
     const layoutNodes = layout?.descendants() ?? [];
 
     const partitionGroups = useMemo(() => {
@@ -286,7 +305,7 @@ export function PartsExplorer({
             .duration(520)
             .ease(easeCubicInOut)
             .attr('transform', transform);
-    }, [layout, layoutMode, zoomedPartition]);
+    }, [height, layout, layoutMode, width, zoomedPartition]);
 
     useEffect(() => {
         if (embedded) return;
@@ -395,6 +414,8 @@ export function PartsExplorer({
         selectedPart,
         activeMetricLabel,
         transformGroup,
+        graphViewport,
+        chartSize,
         layoutNodes,
         keyCell,
         showingText,
@@ -446,6 +467,8 @@ function renderPartsDialog({
     selectedPart,
     activeMetricLabel,
     transformGroup,
+    graphViewport,
+    chartSize,
     layoutNodes,
     keyCell,
     showingText,
@@ -487,6 +510,8 @@ function renderPartsDialog({
     selectedPart: MergeTreePart | undefined;
     activeMetricLabel: string;
     transformGroup: import('react').RefObject<SVGGElement | null>;
+    graphViewport: import('react').RefObject<HTMLDivElement | null>;
+    chartSize: ChartSize;
     layoutNodes: HierarchyCircularNode<Cell>[] | HierarchyRectangularNode<Cell>[];
     keyCell: (event: KeyboardEvent<SVGElement>, id: string, part?: MergeTreePart) => void;
     showingText: string | undefined;
@@ -693,6 +718,8 @@ function renderPartsDialog({
                         metric,
                         activeMetricLabel,
                         transformGroup,
+                        graphViewport,
+                        chartSize,
                         layoutNodes,
                         keyCell,
                         showingText,
@@ -1009,6 +1036,8 @@ function renderPartsGraph({
     metric,
     activeMetricLabel,
     transformGroup,
+    graphViewport,
+    chartSize,
     layoutNodes,
     keyCell,
     showingText,
@@ -1027,12 +1056,14 @@ function renderPartsGraph({
     metric: PartsMetric;
     activeMetricLabel: string;
     transformGroup: import('react').RefObject<SVGGElement | null>;
+    graphViewport: import('react').RefObject<HTMLDivElement | null>;
+    chartSize: ChartSize;
     layoutNodes: HierarchyCircularNode<Cell>[] | HierarchyRectangularNode<Cell>[];
     keyCell: (event: KeyboardEvent<SVGElement>, id: string, part?: MergeTreePart) => void;
     showingText: string | undefined;
 }) {
     return (
-        <div className={`parts-graph-viewport is-${layoutMode}`}>
+        <div ref={graphViewport} className={`parts-graph-viewport is-${layoutMode}`}>
             {layoutMode === 'map' ? (
                 <PartsMap
                     copy={copy}
@@ -1048,7 +1079,7 @@ function renderPartsGraph({
                 />
             ) : (
                 <svg
-                    viewBox={`0 0 ${width} ${height}`}
+                    viewBox={`0 0 ${chartSize.width} ${chartSize.height}`}
                     role="group"
                     aria-label={`${copy.partsExplorerTitle} · ${activeMetricLabel}`}
                 >
@@ -1098,12 +1129,12 @@ function renderPartsGraph({
                                         rectHeight = Math.max(0, rect.y1 - rect.y0);
                                     const badgeWidth = Math.min(
                                         rectWidth,
-                                        Math.max(36, node.data.label.length * 6 + 18),
+                                        Math.max(36, node.data.label.length * 7 + 18),
                                     );
                                     const badgeHeight = Math.min(23, rectHeight);
                                     const labelLimit = Math.max(
                                         1,
-                                        Math.floor((badgeWidth - 18) / 6),
+                                        Math.floor((badgeWidth - 18) / 7),
                                     );
                                     return (
                                         <g
@@ -1155,9 +1186,9 @@ function renderPartsGraph({
                                 const circle = node;
                                 const badgeWidth = Math.min(
                                     circle.r * 2,
-                                    Math.max(36, node.data.label.length * 6 + 18),
+                                    Math.max(36, node.data.label.length * 7 + 18),
                                 );
-                                const labelLimit = Math.max(1, Math.floor((badgeWidth - 18) / 6));
+                                const labelLimit = Math.max(1, Math.floor((badgeWidth - 18) / 7));
                                 return (
                                     <g
                                         key={`${node.data.id}:zoom`}
@@ -1230,7 +1261,7 @@ function renderTreemapCell(
     const cellWidth = Math.max(0, rect.x1 - rect.x0),
         cellHeight = Math.max(0, rect.y1 - rect.y0);
     const label = part?.name ?? node.data.label;
-    const labelLimit = Math.max(3, Math.floor((cellWidth - 14) / 7));
+    const labelLimit = Math.max(3, Math.floor((cellWidth - 14) / 7.5));
     return (
         <g
             key={node.data.id}
@@ -1274,6 +1305,7 @@ function renderGalaxyCell(
 ) {
     const circle = node;
     const radius = circle.r;
+    const labelLimit = Math.max(3, Math.floor((radius * 2 - 14) / 7.5));
     return (
         <g
             key={node.data.id}
@@ -1289,7 +1321,9 @@ function renderGalaxyCell(
             <circle r={radius} style={{ '--part-color': color }} />
             {part && radius > 22 && (
                 <text className="parts-cell-label" y="3">
-                    {part.name.length > 20 ? `${part.name.slice(0, 19)}…` : part.name}
+                    {part.name.length > labelLimit
+                        ? `${part.name.slice(0, labelLimit - 1)}…`
+                        : part.name}
                 </text>
             )}
         </g>
