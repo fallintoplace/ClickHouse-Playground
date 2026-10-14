@@ -150,6 +150,11 @@ export function WorkspaceQueryPanel({
             data-testid="run-button"
             aria-label={runButtonLabel}
             title={cancelButtonActive ? runButtonLabel : runTitle}
+            data-footer-help={
+                cancelButtonActive
+                    ? copy.common.cancelExecutionHelpDescription
+                    : (runTitle ?? copy.common.runQueryHelpDescription)
+            }
             onClick={() => (executionCanCancel ? actions.onCancel() : void runSql())}
             disabled={
                 state.cancelling ||
@@ -169,6 +174,7 @@ export function WorkspaceQueryPanel({
             aria-label={copy.common.save}
             aria-keyshortcuts="Control+S Meta+S"
             title={`${copy.common.save} (Ctrl/Cmd+S)`}
+            data-footer-help={copy.common.saveDraftHelpDescription}
             onClick={() => void actions.onSave(active)}
             disabled={Boolean(state.editorProposal) || Boolean(busy) || !active.name.trim()}
         >
@@ -417,6 +423,7 @@ function ExpertQueryControlRail({
                             id: 'sql-map',
                             label: copy.common.sqlMap,
                             title: copy.common.visualizeSqlStructure,
+                            description: copy.common.helpQueryEngineDescription,
                             onSelect: actions.onOpenSqlMap,
                         },
                     ]}
@@ -524,6 +531,7 @@ function renderQueryHeading({
                     data-testid="format-sql"
                     aria-label={copy.common.formatSql}
                     title={copy.common.formatSql}
+                    data-footer-help={copy.common.formatSqlHelpDescription}
                     disabled={Boolean(state.editorProposal)}
                     onClick={() => void actions.onFormat(standardFormatter)}
                 >

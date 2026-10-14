@@ -108,6 +108,7 @@ export function ImportWizard({
         <dialog
             ref={dialogRef}
             aria-labelledby="import-wizard-title"
+            data-footer-hint-scope="workspace"
             onCancel={event => {
                 if (event.target !== event.currentTarget) return;
                 event.preventDefault();

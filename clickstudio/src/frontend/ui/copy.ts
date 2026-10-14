@@ -43,6 +43,21 @@ export const copy = {
     common: {
         run: 'Run',
         cancel: 'Cancel',
+        runQueryHelpDescription:
+            'Run the selected SQL, or run the full query when no text is selected.',
+        cancelExecutionHelpDescription: 'Stop the query that is running.',
+        formatSqlHelpDescription:
+            'Format the SQL for consistent spacing and indentation. This changes the draft only; it does not run the query.',
+        saveDraftHelpDescription: 'Save this SQL draft so you can return to it later.',
+        importHelpDescription:
+            'Open the import flow to load a local SQL file or import file rows into ClickHouse.',
+        exportHelpDescription:
+            'Choose whether to download the active SQL draft or rows from its latest result.',
+        resultsTableHelpDescription: 'Inspect the rows and values returned by your query.',
+        resultsChartHelpDescription: 'See trends and comparisons in your query results as a chart.',
+        resultsMapHelpDescription: 'See location data from your query results on a map.',
+        resultsInsightsHelpDescription:
+            'Review a quick summary of your results and ideas for what to explore next.',
         closePanel: 'Close',
         save: 'Save',
         schema: 'Schema',

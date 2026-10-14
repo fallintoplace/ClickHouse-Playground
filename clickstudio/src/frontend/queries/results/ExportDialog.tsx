@@ -30,6 +30,7 @@ export function ExportDialog({
         <dialog
             ref={dialogRef}
             aria-labelledby="export-dialog-title"
+            data-footer-hint-scope="workspace"
             onCancel={event => {
                 event.preventDefault();
                 onClose();
@@ -55,6 +56,7 @@ export function ExportDialog({
             <div className="transfer-dialog-body grid gap-2 overflow-y-auto">
                 <button
                     type="button"
+                    data-footer-help="Download the active SQL draft. It is not run."
                     disabled={!queryAvailable}
                     onClick={onExportQuery}
                     className="export-option transfer-dialog-option"
@@ -69,6 +71,7 @@ export function ExportDialog({
                 </button>
                 <button
                     type="button"
+                    data-footer-help="Download rows from the latest query result."
                     disabled={!rowsAvailable}
                     onClick={onExportRows}
                     className="export-option transfer-dialog-option"

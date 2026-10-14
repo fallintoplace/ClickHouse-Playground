@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Run } from '../../../shared/queries/execution/types';
 import { Button, cx } from '../../ui/components/primitives';
@@ -18,6 +18,52 @@ export type RunAction = {
     onSelect: () => void;
 };
 
+const footerHintTargetSelector =
+    '[data-footer-help], button, a[href], input, select, textarea, [role="button"], [role="tab"], [role="menuitem"], [tabindex]:not([tabindex="-1"])';
+
+function readFooterActionHint(element: HTMLElement): string | undefined {
+    const describedBy = element
+        .getAttribute('aria-describedby')
+        ?.split(/\s+/)
+        .map(id => document.getElementById(id)?.textContent ?? '')
+        .filter(Boolean)
+        .join(' ');
+    const labelledBy = element
+        .getAttribute('aria-labelledby')
+        ?.split(/\s+/)
+        .map(id => document.getElementById(id)?.textContent ?? '')
+        .filter(Boolean)
+        .join(' ');
+    const visibleLabel = element.matches(
+        'button, a[href], [role="button"], [role="tab"], [role="menuitem"]',
+    )
+        ? element.innerText
+        : undefined;
+    const hint = [
+        element.dataset.footerHelp,
+        describedBy,
+        element.title,
+        labelledBy,
+        element.getAttribute('aria-label'),
+        element.getAttribute('placeholder'),
+        visibleLabel,
+    ]
+        .find(value => value?.trim())
+        ?.replace(/\s+/g, ' ')
+        .trim();
+
+    if (!hint) return undefined;
+    return hint.length > 360 ? `${hint.slice(0, 357).trimEnd()}…` : hint;
+}
+
+function isFooterHintScope(target: EventTarget | null, workspaceRoot: HTMLElement): boolean {
+    if (!(target instanceof Element)) return false;
+    return (
+        workspaceRoot.contains(target) ||
+        Boolean(target.closest('[data-footer-hint-scope="workspace"]'))
+    );
+}
+
 function DisabledRunAction({
     action,
     label,
@@ -32,6 +78,7 @@ function DisabledRunAction({
             className="run-option-disabled-anchor"
             role="group"
             tabIndex={0}
+            data-footer-help={action.description ?? action.title ?? action.label}
             title={action.title}
             aria-label={`${action.label}: ${action.title}`}
         >
@@ -40,6 +87,7 @@ function DisabledRunAction({
                 aria-label={action.label}
                 variant="secondary"
                 className="run-option-button"
+                data-footer-help={action.description ?? action.title ?? action.label}
                 disabled
                 title={undefined}
                 aria-describedby={descriptionId}
@@ -100,6 +148,7 @@ export function RunActionGroup({ actions, copy }: { actions: RunAction[]; copy: 
                     aria-label={action.label}
                     variant="secondary"
                     className="run-option-button"
+                    data-footer-help={action.description ?? action.title ?? action.label}
                     disabled={action.disabled}
                     title={action.title ?? action.label}
                     aria-describedby={actionDescriptionId}
@@ -139,6 +188,7 @@ export function RailButton({
     accent,
     disabled,
     testId,
+    helpText,
     onClick,
 }: {
     icon: IconName;
@@ -147,6 +197,7 @@ export function RailButton({
     accent?: boolean;
     disabled?: boolean;
     testId?: string;
+    helpText?: string;
     onClick: () => void;
 }) {
     return (
@@ -155,6 +206,7 @@ export function RailButton({
             type="button"
             title={label}
             aria-label={label}
+            data-footer-help={helpText}
             aria-pressed={active}
             disabled={disabled}
             data-testid={testId}
@@ -189,6 +241,8 @@ export function ExecutionBar({
     helpButton: ReactNode;
     copy: Copy['common'];
 }) {
+    const footerRef = useRef<HTMLElement | null>(null);
+    const [actionHelpHint, setActionHelpHint] = useState<string>();
     const currentRun = failedAttempt ? undefined : run;
     const progress = currentRun?.progress;
     const executionInProgress = Boolean(currentRun && (!terminal(currentRun) || scriptRunning));
@@ -230,8 +284,53 @@ export function ExecutionBar({
             </span>
         );
     };
+    useEffect(() => {
+        const workspaceRoot = footerRef.current?.closest<HTMLElement>('.workspace-root');
+        if (!workspaceRoot) return;
+
+        const updateHint = (event: Event) => {
+            if (!isFooterHintScope(event.target, workspaceRoot)) return;
+            const eventTarget = event.target;
+            if (!(eventTarget instanceof Element)) return;
+            const action = eventTarget.closest<HTMLElement>(footerHintTargetSelector);
+            if (!action || action.closest('.execution-bar')) return;
+            const hint = readFooterActionHint(action);
+            if (hint) setActionHelpHint(hint);
+        };
+        const clearHintWhenLeaving = (
+            target: EventTarget | null,
+            relatedTarget: EventTarget | null,
+        ) => {
+            if (
+                isFooterHintScope(target, workspaceRoot) &&
+                !isFooterHintScope(relatedTarget, workspaceRoot)
+            ) {
+                setActionHelpHint(undefined);
+            }
+        };
+        const clearHintOnPointerOut = (event: PointerEvent) =>
+            clearHintWhenLeaving(event.target, event.relatedTarget);
+        const clearHintOnFocusOut = (event: FocusEvent) =>
+            clearHintWhenLeaving(event.target, event.relatedTarget);
+
+        document.addEventListener('pointerover', updateHint, true);
+        document.addEventListener('focusin', updateHint, true);
+        document.addEventListener('click', updateHint, true);
+        document.addEventListener('pointerout', clearHintOnPointerOut, true);
+        document.addEventListener('focusout', clearHintOnFocusOut, true);
+        return () => {
+            document.removeEventListener('pointerover', updateHint, true);
+            document.removeEventListener('focusin', updateHint, true);
+            document.removeEventListener('click', updateHint, true);
+            document.removeEventListener('pointerout', clearHintOnPointerOut, true);
+            document.removeEventListener('focusout', clearHintOnFocusOut, true);
+        };
+    }, []);
+    const visibleHelpHint = actionHelpHint ?? helpHint;
+
     return (
         <footer
+            ref={footerRef}
             className={cx('execution-bar', executionInProgress && 'is-running')}
             data-run-status={failedAttempt ? 'failed' : (currentRun?.status ?? 'ready')}
             data-query-id={currentRun?.queryId}
@@ -299,7 +398,7 @@ export function ExecutionBar({
                 </div>
             )}
             <div className="execution-right">
-                {helpHint && <p className="execution-help-hint">{helpHint}</p>}
+                {visibleHelpHint && <p className="execution-help-hint">{visibleHelpHint}</p>}
                 {helpButton}
             </div>
             {executionInProgress && <span className="execution-progress-line" />}

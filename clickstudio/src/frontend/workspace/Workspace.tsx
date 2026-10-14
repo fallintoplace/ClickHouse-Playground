@@ -38,6 +38,7 @@ import {
     helpStatementSql,
     insertEditorText,
     revealEditorRange,
+    resultsViewHelpHint,
 } from './workspace-helpers';
 
 import { useWorkspaceController, type WorkspaceProps } from './useWorkspaceController';
@@ -45,7 +46,6 @@ import { createExampleDraft } from '../queries/execution/useWorkspaceExecution';
 import { useSqlEditorSessions } from '../queries/editor/components/useSqlEditorSessions';
 import { useWorkspaceDocumentSaveShortcut } from '../queries/saved-queries/useWorkspaceDocumentSave';
 import type { RunKind } from '../../shared/queries/execution/status';
-import type { ResultsView } from './workspace-types';
 
 function openImportedSqlQuery(
     name: string,
@@ -379,7 +379,7 @@ function renderWorkspaceLayout({
         emptySqlActionRef,
         setDrawerOpen,
     } = model;
-    const helpHint = resultsHelpHint(visibleResultsView, copy.common);
+    const helpHint = resultsViewHelpHint(visibleResultsView, copy.common);
 
     return (
         <div
@@ -432,11 +432,13 @@ function renderWorkspaceLayout({
                     <RailButton
                         icon="importFile"
                         label={copy.common.import}
+                        helpText={copy.common.importHelpDescription}
                         onClick={() => setImportOpen(true)}
                     />
                     <RailButton
                         icon="exportFile"
                         label={copy.common.export}
+                        helpText={copy.common.exportHelpDescription}
                         onClick={() => setExportOpen(true)}
                     />
                     {experience === 'expert' && (
@@ -578,26 +580,6 @@ function renderWorkspaceLayout({
             })}
         </div>
     );
-}
-
-function resultsHelpHint(
-    view: ResultsView,
-    copy: WorkspaceProps['copy']['common'],
-): string | undefined {
-    switch (view) {
-        case 'indexes':
-            return copy.helpExplainIndexesDescription;
-        case 'plan':
-            return copy.helpExplainPlanDescription;
-        case 'pipeline':
-            return copy.helpExplainPipelineDescription;
-        case 'runtime':
-            return copy.helpExplainAnalyzeDescription;
-        case 'sqlmap':
-            return copy.helpQueryEngineDescription;
-        default:
-            return undefined;
-    }
 }
 
 function renderWorkspaceOverlays({

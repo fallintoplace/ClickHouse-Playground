@@ -26,7 +26,7 @@ import { Icon } from '../../ui/components/icons';
 import { ScriptResultsSelector, ScriptRunningResults } from './ScriptResultsSelector';
 import { ScrollEdgeFrame } from '../../ui/components/ScrollEdgeShadows';
 import { QueryFailureNotice } from './QueryFailureNotice';
-import { resultsTabLabel } from '../../workspace/workspace-helpers';
+import { resultsTabLabel, resultsViewHelpHint } from '../../workspace/workspace-helpers';
 import { WorkspaceInlineNotice } from '../../workspace/layout/notifications/WorkspaceInlineNotice';
 import type { WorkspaceFeedback } from '../../workspace/layout/notifications/useWorkspaceNotifications';
 
@@ -702,6 +702,7 @@ function renderResultsHeader({
                                 role="tab"
                                 aria-selected={visibleResultsView === tab}
                                 type="button"
+                                data-footer-help={resultsViewHelpHint(tab, copy.common)}
                                 onClick={() => {
                                     if (tab !== 'sqlmap') onStructureModeChange('flow');
                                     actions.onSelectView(tab);

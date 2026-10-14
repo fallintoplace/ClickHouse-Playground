@@ -62,6 +62,7 @@ export function WorkspaceHelpPanel(props: WorkspaceHelpPanelProps) {
                             aria-modal="true"
                             aria-labelledby="workspace-help-title"
                             tabIndex={-1}
+                            data-footer-hint-scope="workspace"
                         >
                             <header className="workspace-help-header">
                                 <div>
@@ -133,6 +134,7 @@ export function WorkspaceHelpPanel(props: WorkspaceHelpPanelProps) {
                                                 aria-selected={section === item.id}
                                                 aria-controls={'workspace-help-panel-' + item.id}
                                                 tabIndex={section === item.id ? 0 : -1}
+                                                data-footer-help={item.description}
                                                 className={cx(
                                                     'workspace-help-tab',
                                                     item.experimental && 'is-experimental',

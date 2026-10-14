@@ -135,6 +135,29 @@ export function resultsTabLabel(view: ResultsView, copy: Copy['common']): string
     }
 }
 
+export function resultsViewHelpHint(view: ResultsView, copy: Copy['common']): string {
+    switch (view) {
+        case 'results':
+            return copy.resultsTableHelpDescription;
+        case 'chart':
+            return copy.resultsChartHelpDescription;
+        case 'map':
+            return copy.resultsMapHelpDescription;
+        case 'insights':
+            return copy.resultsInsightsHelpDescription;
+        case 'sqlmap':
+            return copy.helpQueryEngineDescription;
+        case 'indexes':
+            return copy.helpExplainIndexesDescription;
+        case 'plan':
+            return copy.helpExplainPlanDescription;
+        case 'pipeline':
+            return copy.helpExplainPipelineDescription;
+        case 'runtime':
+            return copy.helpExplainAnalyzeDescription;
+    }
+}
+
 export function apiErrorDetail(error: unknown): ApiError {
     if (error instanceof RequestError) return error.detail;
     const candidate =
