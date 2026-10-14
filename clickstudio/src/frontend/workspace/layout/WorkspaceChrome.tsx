@@ -285,6 +285,10 @@ export function ExecutionBar({
         );
     };
     useEffect(() => {
+        if (!helpHint) {
+            setActionHelpHint(undefined);
+            return;
+        }
         const workspaceRoot = footerRef.current?.closest<HTMLElement>('.workspace-root');
         if (!workspaceRoot) return;
 
@@ -325,8 +329,8 @@ export function ExecutionBar({
             document.removeEventListener('pointerout', clearHintOnPointerOut, true);
             document.removeEventListener('focusout', clearHintOnFocusOut, true);
         };
-    }, []);
-    const visibleHelpHint = actionHelpHint ?? helpHint;
+    }, [helpHint]);
+    const visibleHelpHint = helpHint ? (actionHelpHint ?? helpHint) : undefined;
 
     return (
         <footer

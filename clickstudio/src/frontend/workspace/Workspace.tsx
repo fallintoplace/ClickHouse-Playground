@@ -717,7 +717,7 @@ function renderWorkspaceOverlays({
                 onOpenDetails={experience === 'expert' ? () => showInspector('details') : undefined}
                 scriptRunning={script?.status === 'running'}
                 serverLabel={serverLabel}
-                helpHint={helpHint}
+                helpHint={experience === 'expert' ? helpHint : undefined}
                 copy={copy.common}
                 helpButton={
                     <HelpButton copy={copy.common} open={helpPanelOpen} onOpen={openHelp} />
