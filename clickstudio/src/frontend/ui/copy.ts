@@ -74,6 +74,22 @@ export const copy = {
         noSqlTabsOpenDescription: 'Start a blank query.',
         help: 'Help',
         closeHelp: 'Close help',
+        objectTypes: {
+            dictionary: {
+                label: 'Dictionary',
+                definition:
+                    'A lookup table backed by a ClickHouse dictionary. You can query it like a regular table.',
+            },
+            sharedMergeTree: {
+                label: 'Shared MergeTree',
+                definition:
+                    'A MergeTree table that stores data in shared object storage for ClickHouse Cloud.',
+            },
+            materializedView: {
+                label: 'Materialized View',
+                definition: 'Stores the results of a saved query in a table.',
+            },
+        },
         helpCenterTitle: 'Explore ClickStudio',
         helpCenterDescription:
             'Explore SQL examples, query workflows, ClickHouse observability, EXPLAIN views, storage, and reference docs.',

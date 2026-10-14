@@ -242,6 +242,7 @@ export function ExecutionBar({
     copy: Copy['common'];
 }) {
     const footerRef = useRef<HTMLElement | null>(null);
+    const helpHintRef = useRef<HTMLParagraphElement | null>(null);
     const [actionHelpHint, setActionHelpHint] = useState<string>();
     const currentRun = failedAttempt ? undefined : run;
     const progress = currentRun?.progress;
@@ -332,6 +333,42 @@ export function ExecutionBar({
     }, [helpHint]);
     const visibleHelpHint = helpHint ? (actionHelpHint ?? helpHint) : undefined;
 
+    useEffect(() => {
+        const element = helpHintRef.current;
+        if (!element || !visibleHelpHint) return;
+
+        const minFontSize = 9;
+        let measuredWidth = -1;
+        const fitHint = (force = false) => {
+            const width = element.clientWidth;
+            if (!width || (!force && Math.abs(width - measuredWidth) < 0.5)) return;
+            measuredWidth = width;
+
+            element.style.removeProperty('font-size');
+            let fontSize = Number.parseFloat(getComputedStyle(element).fontSize);
+            element.style.fontSize = `${fontSize}px`;
+            while (fontSize > minFontSize && element.scrollWidth > width) {
+                fontSize = Math.max(minFontSize, fontSize - 0.5);
+                element.style.fontSize = `${fontSize}px`;
+            }
+        };
+
+        const handleWindowResize = () => fitHint(true);
+        fitHint(true);
+        window.addEventListener('resize', handleWindowResize);
+
+        if (typeof ResizeObserver === 'undefined') {
+            return () => window.removeEventListener('resize', handleWindowResize);
+        }
+
+        const observer = new ResizeObserver(() => fitHint());
+        observer.observe(element);
+        return () => {
+            observer.disconnect();
+            window.removeEventListener('resize', handleWindowResize);
+        };
+    }, [visibleHelpHint]);
+
     return (
         <footer
             ref={footerRef}
@@ -399,7 +436,15 @@ export function ExecutionBar({
                 </div>
             )}
             <div className="execution-right">
-                {visibleHelpHint && <p className="execution-help-hint">{visibleHelpHint}</p>}
+                {visibleHelpHint && (
+                    <p
+                        ref={helpHintRef}
+                        className="execution-help-hint"
+                        title={visibleHelpHint}
+                    >
+                        {visibleHelpHint}
+                    </p>
+                )}
                 {helpButton}
             </div>
             {executionInProgress && <span className="execution-progress-line" />}

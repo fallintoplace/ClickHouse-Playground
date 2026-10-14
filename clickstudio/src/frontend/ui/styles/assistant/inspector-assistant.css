@@ -2437,11 +2437,12 @@
     min-width: 0;
     flex: 1 1 auto;
     margin: 0;
-    overflow: visible;
+    overflow: hidden;
     color: var(--text-soft);
     font-size: 12px;
     line-height: 1.35;
-    white-space: normal;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .execution-details-button {
     min-height: 27px;
@@ -2954,7 +2955,7 @@
   }
   .execution-help-hint {
     max-width: none;
-    white-space: normal;
+    white-space: nowrap;
   }
   .execution-right {
     min-width: 0;
@@ -3005,7 +3006,7 @@
   .execution-help-hint {
     max-width: none;
     font-size: 11px;
-    white-space: normal;
+    white-space: nowrap;
   }
   .execution-right code {
     max-width: 76px;

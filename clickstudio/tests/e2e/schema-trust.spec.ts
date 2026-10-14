@@ -535,6 +535,31 @@ for (const mode of ['Standard', 'Experimental']) {
             if (mode === 'Experimental') await expect(footerHelp).toContainText(type.definition);
             else await expect(footerHelp).toHaveCount(0);
         }
+
+        if (mode === 'Experimental') {
+            const row = page.locator(
+                '[role="treeitem"][data-table-name="dictionary_source"] .object-tree-main',
+            );
+            const footerBar = page.locator('.execution-bar');
+            const footerHeightBefore = await footerBar.evaluate(
+                element => element.getBoundingClientRect().height,
+            );
+            const longHint = 'A long help hint that should stay on one line. '.repeat(20);
+            await row.evaluate((element, hint) => {
+                element.setAttribute('data-footer-help', hint);
+                element.dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
+            }, longHint);
+
+            await expect(footerHelp).toContainText(longHint.slice(0, 40));
+            await expect.poll(() =>
+                footerHelp.evaluate(element => parseFloat(getComputedStyle(element).fontSize)),
+            ).toBeLessThan(12);
+            await expect(footerHelp).toHaveCSS('white-space', 'nowrap');
+            const footerHeightAfter = await footerBar.evaluate(
+                element => element.getBoundingClientRect().height,
+            );
+            expect(footerHeightAfter).toBe(footerHeightBefore);
+        }
     });
 
     test(`Column row separators span the ${mode} list without an empty scrollbar gutter`, async ({

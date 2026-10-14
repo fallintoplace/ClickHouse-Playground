@@ -98,7 +98,9 @@ export function createRelationRenderer({
                         className="object-tree-main"
                         title={`${relation.table.database}.${relation.table.name}`}
                         data-footer-help={
-                            expert ? objectTypeFooterHelp(relation.table.engine) : undefined
+                            expert
+                                ? objectTypeFooterHelp(relation.table.engine, copy.objectTypes)
+                                : undefined
                         }
                         onClick={() => selectObject(relation.id)}
                     >
@@ -112,7 +114,7 @@ export function createRelationRenderer({
                         </span>
                         <span className="object-tree-label">
                             <strong>{relation.table.name}</strong>
-                            <small>{objectTypeLabel(relation.table.engine)}</small>
+                            <small>{objectTypeLabel(relation.table.engine, copy.objectTypes)}</small>
                         </span>
                     </button>
                 </div>

@@ -1,39 +1,26 @@
-type ObjectTypePresentation = {
-    label: string;
-    definition: string;
-};
+import type { Copy } from '../../../../ui/copy';
 
-const OBJECT_TYPE_PRESENTATIONS = new Map<string, ObjectTypePresentation>([
-    [
-        'Dictionary',
-        {
-            label: 'Dictionary',
-            definition:
-                'A lookup table backed by a ClickHouse dictionary. You can query it like a regular table.',
-        },
-    ],
-    [
-        'SharedMergeTree',
-        {
-            label: 'Shared MergeTree',
-            definition:
-                'A MergeTree table that stores data in shared object storage for ClickHouse Cloud.',
-        },
-    ],
-    [
-        'MaterializedView',
-        {
-            label: 'Materialized View',
-            definition: 'Stores the results of a saved query in a table.',
-        },
-    ],
+type ObjectTypeCopy = Copy['common']['objectTypes'];
+type ObjectTypeCopyKey = keyof ObjectTypeCopy;
+
+const OBJECT_TYPE_COPY_KEYS = new Map<string, ObjectTypeCopyKey>([
+    ['Dictionary', 'dictionary'],
+    ['SharedMergeTree', 'sharedMergeTree'],
+    ['MaterializedView', 'materializedView'],
 ]);
 
-export function objectTypeLabel(type: string): string {
-    return OBJECT_TYPE_PRESENTATIONS.get(type)?.label ?? type;
+export function objectTypeLabel(type: string, objectTypes: ObjectTypeCopy): string {
+    const key = OBJECT_TYPE_COPY_KEYS.get(type);
+    return key ? objectTypes[key].label : type;
 }
 
-export function objectTypeFooterHelp(type: string): string | undefined {
-    const presentation = OBJECT_TYPE_PRESENTATIONS.get(type);
-    return presentation ? `${type}: ${presentation.definition}` : undefined;
+export function objectTypeFooterHelp(
+    type: string,
+    objectTypes: ObjectTypeCopy,
+): string | undefined {
+    const key = OBJECT_TYPE_COPY_KEYS.get(type);
+    if (!key) return undefined;
+
+    const presentation = objectTypes[key];
+    return `${presentation.label}: ${presentation.definition}`;
 }
