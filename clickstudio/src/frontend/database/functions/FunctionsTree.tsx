@@ -15,6 +15,7 @@ export function FunctionsTree({
     createReason,
     onCreate,
     onSelect,
+    label = 'Functions',
 }: {
     catalog?: FunctionCatalog;
     loading: boolean;
@@ -23,6 +24,7 @@ export function FunctionsTree({
     createReason: string;
     onCreate: () => void;
     onSelect: (fn: SqlFunction) => void;
+    label?: string;
 }) {
     const [expanded, setExpanded] = useState(true);
     const query = search.trim().toLowerCase();
@@ -31,7 +33,7 @@ export function FunctionsTree({
         <div className="object-tree-branch sql-functions-tree">
             <ExplorerGroupRow
                 level={1}
-                label="Functions"
+                label={label}
                 kind="function"
                 count={functions.length}
                 expanded={expanded || Boolean(query)}

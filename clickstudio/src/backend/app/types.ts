@@ -7,6 +7,7 @@ export type Driver = QueryDriver &
     Pick<
         ClickHouseDriver,
         | 'connection'
+        | 'executableFunctions'
         | 'connections'
         | 'test'
         | 'targets'

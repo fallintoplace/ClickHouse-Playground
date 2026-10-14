@@ -10,6 +10,7 @@ import {
 } from '../../shared/database/connections/playground.js';
 import { requireThat } from './requests/errors.js';
 import { identifier, integer, limits, record, text } from './requests/validation.js';
+import type { CloudUdfConfig } from '../database/functions/cloud-executable-functions.js';
 function isLoopbackHost(host: string) {
     const normalized = host
         .toLowerCase()
@@ -58,6 +59,7 @@ export interface Config {
     sensitiveColumns: string[];
     telemetryUrl?: string;
     traceUrl?: string;
+    udfManagement?: CloudUdfConfig;
 }
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     const host = env.HOST ?? '127.0.0.1',
@@ -185,6 +187,22 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
         'DEMO_LOCAL_ONLY',
         'Fixture mode is loopback-only',
     );
+    const udfValues = [
+        env.CLICKSTUDIO_UDF_ORG_ID,
+        env.CLICKSTUDIO_UDF_SERVICE_ID,
+        env.CLICKSTUDIO_UDF_API_KEY_ID,
+        env.CLICKSTUDIO_UDF_API_KEY_SECRET,
+    ];
+    const udfEnabled = udfValues.some(Boolean);
+    requireThat(
+        !udfEnabled ||
+            (udfValues.every(Boolean) &&
+                Boolean(token && token.length >= 32) &&
+                env.DEMO_MODE !== 'true'),
+        400,
+        'UDF_CONFIG',
+        'Cloud UDF management requires all four CLICKSTUDIO_UDF variables, a workspace access token of at least 32 characters and a non-demo backend.',
+    );
     return {
         host,
         port,
@@ -201,6 +219,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
             .map(s => s.trim()),
         telemetryUrl: env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
         traceUrl: env.TRACE_URL_TEMPLATE,
+        ...(udfEnabled
+            ? {
+                  udfManagement: {
+                      organizationId: env.CLICKSTUDIO_UDF_ORG_ID!,
+                      serviceId: env.CLICKSTUDIO_UDF_SERVICE_ID!,
+                      keyId: env.CLICKSTUDIO_UDF_API_KEY_ID!,
+                      keySecret: env.CLICKSTUDIO_UDF_API_KEY_SECRET!,
+                  },
+              }
+            : {}),
     };
 }
 export function publicProfile(p: Profile): Connection {
@@ -220,6 +248,8 @@ export function configuredSecrets(config: Config): string[] {
     return [
         config.token,
         config.openaiKey,
+        config.udfManagement?.keyId,
+        config.udfManagement?.keySecret,
         ...config.profiles.flatMap(p => [p.password, p.writer?.password]),
     ].filter((s): s is string => Boolean(s));
 }

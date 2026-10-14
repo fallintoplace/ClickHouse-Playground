@@ -251,17 +251,28 @@ for (const mode of ['Standard', 'Experimental']) {
             existing: true,
             path: workspacePath(mode),
         });
-        await page.getByRole('button', { name: 'Collapse Functions', exact: true }).click();
+        await page
+            .getByRole('button', {
+                name: mode === 'Experimental' ? 'Collapse SQL Functions' : 'Collapse Functions',
+                exact: true,
+            })
+            .click();
         state.metadataError = true;
         await page.locator('.object-refresh-action').click();
         await expect(page.locator('.sql-functions-tree')).toHaveCount(0);
         await expect(page.getByText('Function metadata unavailable', { exact: true })).toHaveCount(
             0,
         );
-        await expect(page.getByTestId('schema-search')).not.toHaveAttribute(
-            'placeholder',
-            'Search objects and functions…',
-        );
+        if (mode === 'Experimental')
+            await expect(page.getByTestId('schema-search')).toHaveAttribute(
+                'placeholder',
+                'Search objects and functions…',
+            );
+        else
+            await expect(page.getByTestId('schema-search')).not.toHaveAttribute(
+                'placeholder',
+                'Search objects and functions…',
+            );
         await expect(
             page.getByRole('button', { name: 'events MergeTree', exact: true }),
         ).toBeVisible();

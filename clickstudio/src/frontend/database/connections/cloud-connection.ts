@@ -1,4 +1,8 @@
 import {
+    executableCatalogSchema,
+    type ExecutableFunction,
+} from '../../../shared/database/functions/python-functions.js';
+import {
     isFunctionCatalog,
     isSqlFunction,
     isSqlFunctionDrop,
@@ -811,6 +815,19 @@ export async function loadClickHouseCloudReplication(
     return await requestCloud(
         { action: CLOUD_ACTIONS.replication, credentials: cloud.credentials },
         apiResponses.isReplicationSnapshot,
+        signal,
+    );
+}
+
+export async function loadClickHouseCloudExecutableFunctions(signal?: AbortSignal) {
+    const cloud = requireCloudConnection('Reconnect to ClickHouse Cloud.');
+    return requestCloud(
+        { action: CLOUD_ACTIONS.executableFunctions, credentials: cloud.credentials },
+        (
+            value,
+        ): value is {
+            functions: ExecutableFunction[];
+        } => executableCatalogSchema.safeParse(value).success,
         signal,
     );
 }

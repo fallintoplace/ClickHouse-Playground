@@ -76,6 +76,7 @@ import { quotedTable } from '../imports/imports.js';
 import { publicProfile, redactor, type Config, type Profile } from '../../system/config.js';
 import { queryTablePermissions } from '../tables/permissions.js';
 import { NO_TABLE_PERMISSIONS } from '../../../shared/database/tables/permissions.js';
+import { loadExecutableFunctions } from '../functions/executable-functions.js';
 /** All database addresses and credentials are operator-owned; the API accepts only profile IDs. */
 export class ClickHouseDriver implements QueryDriver, ImportDriver, CreateTableDriver {
     private readers = new Map<string, ClickHouseClient>();
@@ -98,6 +99,9 @@ export class ClickHouseDriver implements QueryDriver, ImportDriver, CreateTableD
     }
     connections(p: Principal) {
         return this.config.profiles.map(c => this.connection(p, c.id));
+    }
+    executableFunctions(id: string) {
+        return loadExecutableFunctions(this.client(id));
     }
     private client(id: string, write = false): ClickHouseClient {
         const pool = write ? this.writers : this.readers;

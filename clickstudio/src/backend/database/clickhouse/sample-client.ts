@@ -56,6 +56,9 @@ const demoIndexAnalysis = [
  * database.
  */
 export class DemoDriver {
+    async executableFunctions(_id: string) {
+        return { functions: [] };
+    }
     async tablePermissions(_id: string, _database: string, _table?: string) {
         return { ...NO_TABLE_PERMISSIONS };
     }

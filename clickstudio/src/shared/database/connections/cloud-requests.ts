@@ -6,6 +6,7 @@ import type { QueryLogSource, WorkloadWindow } from '../explorer/activity/worklo
 
 export const CLOUD_ACTIONS = {
     functions: 'functions',
+    executableFunctions: 'executable-functions',
     createFunction: 'create-function',
     dropFunction: 'drop-function',
     test: 'test',
@@ -40,6 +41,7 @@ export type CloudCredentials = {
 type QueryInput = { sql: string; parameters?: Record<string, string> };
 type CloudRequestPayloads = {
     [CLOUD_ACTIONS.functions]: object;
+    [CLOUD_ACTIONS.executableFunctions]: object;
     [CLOUD_ACTIONS.createFunction]: SqlFunctionInput;
     [CLOUD_ACTIONS.dropFunction]: SqlFunctionDropInput;
     [CLOUD_ACTIONS.test]: object;

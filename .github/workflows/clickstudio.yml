@@ -42,6 +42,11 @@ jobs:
         run: npm run lint
       - name: Core and workspace coverage gates
         run: npm run coverage
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Generated Python protocol fixtures
+        run: npm run test:python
       - name: Build application
         run: npm run build:app
       - name: Install Chromium

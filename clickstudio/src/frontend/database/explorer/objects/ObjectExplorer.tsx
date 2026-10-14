@@ -13,6 +13,10 @@ import { useObjectExplorerState } from './tree/useObjectExplorerState';
 import { ObjectExplorerSearch } from './ObjectExplorerSearch';
 import { ObjectTree } from './tree/ObjectTree';
 import { ObjectExplorerDialogs } from './ObjectExplorerDialogs';
+import { usePythonFunctions } from '../../functions/usePythonFunctions';
+import { PythonFunctionsTree } from '../../functions/PythonFunctionsTree';
+import { CreatePythonFunctionDialog } from '../../functions/CreatePythonFunctionDialog';
+import { PythonFunctionDetails } from '../../functions/PythonFunctionDetails';
 
 function ObjectExplorerEmptySearch({
     query,
@@ -71,12 +75,16 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
     } = state;
     const functionsEnabled = trusted && connection.id === CLICKHOUSE_CLOUD_CONNECTION_ID;
     const functions = useSqlFunctions(connection, functionsEnabled, props.functionCatalog);
-    const functionDetails = functions.selected;
+    const python = usePythonFunctions(connection, expert);
+    const functionDetails = functions.selected || python.selected;
+    const deployPython =
+        trusted && !connection.readonly && connection.id === CLICKHOUSE_CLOUD_CONNECTION_ID;
     const canDeleteFunction =
         !connection.readonly && !functions.loading && functions.catalog?.canDrop === true;
-    const functionsSlot =
+    const sqlFunctionsSlot =
         functionsEnabled && !functions.error ? (
             <FunctionsTree
+                label={expert ? 'SQL Functions' : 'Functions'}
                 catalog={functions.catalog}
                 loading={functions.loading}
                 search={search}
@@ -89,6 +97,22 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                 onCreate={functions.openCreate}
                 onSelect={functions.select}
             />
+        ) : undefined;
+    const functionsSlot =
+        sqlFunctionsSlot || expert ? (
+            <>
+                {sqlFunctionsSlot}
+                {expert && (
+                    <PythonFunctionsTree
+                        state={python}
+                        search={search}
+                        onSelect={fn => {
+                            functions.close();
+                            python.select(fn);
+                        }}
+                    />
+                )}
+            </>
         ) : undefined;
     const canInsertSelectedTable =
         connection.dataSource !== 'fixture' &&
@@ -146,15 +170,33 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                 (showCompactDetails || functionDetails) && 'is-detail-mode',
             )}
         >
-            {functionDetails ? (
+            {python.selected ? (
+                <div className="object-compact-details">
+                    <button type="button" className="object-back-button" onClick={python.close}>
+                        <Icon name="chevron" className="object-back-icon" />
+                        {copy.objects}
+                    </button>
+                    <PythonFunctionDetails
+                        key={`${python.key}:${python.selected.name}`}
+                        fn={python.selected}
+                        trusted={trusted}
+                        deployAllowed={deployPython}
+                        evidence={props.functionTest}
+                        onRun={onOpenSqlDraft}
+                        onCopy={(value, id) => void copyText(value, id)}
+                        onRefresh={python.refresh}
+                    />
+                </div>
+            ) : null}
+            {!python.selected && functions.selected ? (
                 <div className="object-compact-details">
                     <button type="button" className="object-back-button" onClick={functions.close}>
                         <Icon name="chevron" className="object-back-icon" />
                         {copy.objects}
                     </button>
                     <SqlFunctionDetails
-                        key={functionDetails.name}
-                        fn={functionDetails}
+                        key={functions.selected.name}
+                        fn={functions.selected}
                         evidence={props.functionTest}
                         trusted={trusted}
                         canDelete={canDeleteFunction}
@@ -164,7 +206,9 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                                 : functions.catalog?.dropReason ||
                                   'Checking DROP FUNCTION privileges…'
                         }
-                        onDelete={() => functions.openDelete(functionDetails)}
+                        onDelete={() => {
+                            if (functions.selected) functions.openDelete(functions.selected);
+                        }}
                         onRun={onOpenSqlDraft}
                         copiedId={copiedId}
                         onCopy={(sql, id) => void copyText(sql, id)}
@@ -198,8 +242,11 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                 <ObjectExplorerBrowser
                     state={state}
                     functionsSlot={functionsSlot}
-                    functionsEnabled={functionsEnabled}
-                    onRefreshFunctions={functions.refresh}
+                    functionsEnabled={functionsEnabled || expert}
+                    onRefreshFunctions={() => {
+                        functions.refresh();
+                        python.refresh();
+                    }}
                 />
             )}
             {functions.createOpen && (
@@ -208,6 +255,14 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                     onCreated={functions.created}
                     copiedId={copiedId}
                     onCopy={(sql, id) => void copyText(sql, id)}
+                />
+            )}
+            {python.createOpen && (
+                <CreatePythonFunctionDialog
+                    key={python.key}
+                    onClose={python.closeCreate}
+                    onPublished={python.refresh}
+                    deployAllowed={deployPython}
                 />
             )}
             {functions.deleteTarget && canDeleteFunction && (

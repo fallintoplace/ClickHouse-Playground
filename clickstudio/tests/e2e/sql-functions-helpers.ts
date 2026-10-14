@@ -13,8 +13,10 @@ import {
 import { cloudConnectionTest, cloudSchema } from '../helpers/cloud-fixtures.js';
 import { jsonRecord, stringValue } from '../helpers/type-guards.js';
 import { connectPreviewCloud } from './cloud-import-helpers.js';
+import type { ExecutableFunction } from '../../src/shared/database/functions/python-functions.js';
 
 type FunctionTestState = {
+    executableFunctions: ExecutableFunction[];
     canCreate: boolean;
     canDrop: boolean;
     failDrop: boolean;
@@ -44,6 +46,20 @@ async function fulfillFunctionRun(
                     code: 'CLICKHOUSE_ERROR',
                     message: 'Function input type is invalid.',
                 },
+            },
+        });
+    if (String(body.sql).includes('python_double'))
+        return route.fulfill({
+            json: {
+                queryId: body.queryId,
+                columns: [
+                    { name: 'result', type: 'Int64' },
+                    { name: 'result_json', type: 'String' },
+                ],
+                rows: [['42', '42']],
+                elapsedMs: 3,
+                bytes: 16,
+                truncated: false,
             },
         });
     if (liveClient) {
@@ -177,6 +193,7 @@ export async function functionsWorkspace(
     } = {},
 ) {
     const state: FunctionTestState = {
+        executableFunctions: [],
         canCreate: options.canCreate ?? true,
         canDrop: options.canDrop ?? true,
         failDrop: false,
@@ -223,6 +240,8 @@ export async function functionsWorkspace(
         if (action === 'test')
             return route.fulfill({ json: cloudConnectionTest({ serverVersion: '26.6.8.7' }) });
         if (action === 'schema') return route.fulfill({ json: cloudSchema });
+        if (action === 'executable-functions')
+            return route.fulfill({ json: { functions: state.executableFunctions } });
         if (action === 'functions') {
             if (state.metadataDelay)
                 await new Promise(resolve => setTimeout(resolve, state.metadataDelay));

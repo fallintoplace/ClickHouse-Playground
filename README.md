@@ -176,3 +176,4 @@ For ClickHouse integration checks, start the local database first. Then run thes
 - [Setup and implementation guide](docs/CLICKSTUDIO.md): setup, settings, and details.
 - [SQL editing tools](docs/EDITOR-TOOLS.md): navigation, snippets, and autocomplete.
 - [ClickHouse exploration workflows](docs/native-explorers.md): objects, MergeTree activity, and query comparisons.
+- [Python executable UDFs](docs/PYTHON-UDFS.md): Experimental authoring, ZIP export, Cloud deployment, and SQL testing.

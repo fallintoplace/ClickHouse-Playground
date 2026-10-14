@@ -32,6 +32,7 @@ import { registerImportRoutes } from '../database/imports/routes.js';
 import { registerMonitorRoutes } from '../queries/monitoring/routes.js';
 import { assistantConnectionAuthorized } from '../assistant/context/authorization.js';
 import { createSecretGuards } from '../system/requests/secrets.js';
+import { registerPythonFunctionRoutes } from '../database/functions/python-function-routes.js';
 
 export function createApp(
     config: Config,
@@ -41,6 +42,7 @@ export function createApp(
         assistant?: AssistantDriver;
         parserWasm?: () => Promise<Uint8Array>;
         cloudApi?: Pick<typeof cloudApi, 'fetch'>;
+        udfFetch?: typeof fetch;
     } = {},
 ) {
     const app = express(),
@@ -79,6 +81,15 @@ export function createApp(
     const closeMcp = registerMcpRoutes(app, { config, driver, runs, safeExport });
     registerCloudApi(app, config, cloudSessions, overrides.cloudApi ?? cloudApi);
     registerConnectionRoutes({ app, driver, runs, authorized });
+    registerPythonFunctionRoutes({
+        app,
+        config,
+        store,
+        driver,
+        authorized,
+        cloudSessions,
+        request: overrides.udfFetch,
+    });
     registerExplorerRoutes({ app, authorized, driver });
     registerDocumentationRoutes({ authorized, driver, app });
     registerTableRoutes({ app, tableCreation, tableDeletion, driver, authorized });

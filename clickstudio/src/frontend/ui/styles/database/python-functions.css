@@ -1,0 +1,106 @@
+@layer components {
+  .python-function-dialog {
+    width: min(860px, calc(100vw - 32px));
+  }
+
+  .python-function-dialog .creation-dialog-layout {
+    height: min(800px, calc(100dvh - 48px));
+  }
+
+  .python-function-dialog .creation-dialog-title {
+    letter-spacing: 0;
+  }
+
+  .python-function-dialog .creation-dialog-content {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    padding: 0;
+    contain: paint;
+  }
+
+  .python-function-scroll {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    min-height: 0;
+    gap: 20px;
+    align-content: start;
+    overflow-y: auto;
+    padding: 20px 24px;
+    box-sizing: border-box;
+  }
+
+  .python-function-argument-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(90px, 140px) 36px;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .python-function-argument-row .creation-dialog-button {
+    padding: 6px;
+    min-width: 0;
+  }
+
+  .python-function-editor {
+    height: 240px;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+  }
+
+  .python-function-editor .cm-scroller {
+    overflow: auto;
+  }
+
+  .python-deployment-panel,
+  .python-function-signature {
+    display: grid;
+    min-width: 0;
+    gap: 10px;
+    padding-block: 12px;
+    border-top: 1px solid var(--line);
+  }
+
+  .python-deployment-panel h3,
+  .python-function-signature h4 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .python-function-checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    color: var(--text-soft);
+    font-size: 11px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+
+  .python-function-checkbox input {
+    flex: none;
+    margin-top: 3px;
+  }
+
+  .python-deployment-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .python-deployment-panel .creation-dialog-button {
+    justify-self: start;
+    white-space: normal;
+  }
+
+  @media (width <= 600px) {
+    .python-function-dialog .sql-function-fields {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}
