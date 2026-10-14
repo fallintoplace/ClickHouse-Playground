@@ -6,7 +6,10 @@ import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 
 import { flushSync } from 'react-dom';
 import { assistantReplyFrom, parseAssistantProposal } from './assistant-proposal-parser';
 import type { AssistantConversationMessage } from '../../../shared/assistant/types';
-import type { AssistantImageAttachment } from './assistant-image-attachments';
+import type {
+    AssistantImageAttachment,
+    AssistantTextFileAttachment,
+} from './assistant-attachments';
 import type { Result } from '../../../shared/queries/results/types';
 import type { Schema } from '../../../shared/database/schema/types';
 import { apiResponses, isFrontendDemoPreview, message, post } from '../../api/client';
@@ -71,6 +74,7 @@ function detailedConversationTurn(turn: AssistantChatTurn): AssistantConversatio
                 sql: turn.contextSql,
                 includeRun: turn.includeRun,
                 ...(turn.images?.length ? { images: turn.images } : {}),
+                ...(turn.files?.length ? { files: turn.files } : {}),
                 ...(turn.runId ? { runId: turn.runId } : {}),
                 ...(turn.runContext ? { runContext: turn.runContext } : {}),
             }),
@@ -141,8 +145,20 @@ type AssistantRunContextLoader = (signal: AbortSignal) => Promise<AssistantRunCo
 type AssistantRequestOptions = {
     repair?: AssistantRepairContext;
     images?: readonly AssistantImageAttachment[];
+    files?: readonly AssistantTextFileAttachment[];
     question?: string;
 };
+
+function defaultAttachmentQuestion(options?: AssistantRequestOptions): string {
+    if (options?.images?.length && options.files?.length)
+        return 'Please review the attached images and files and explain any relevant SQL, database UI, or error details.';
+    if (options?.files?.length)
+        return 'Please review the attached files and explain any relevant SQL, database UI, or error details.';
+    if (options?.images?.length)
+        return 'Please analyze the attached images and explain any relevant SQL, database UI, or error details.';
+    return '';
+}
+
 type AssistantActivity = { turnId: string; phase: AssistantPhase };
 type ActiveAssistantRequest = {
     turnId: string;
@@ -202,9 +218,7 @@ function createAssistantSqlRequestHandler(context: AssistantSqlRequestContext) {
             ? 'Fix this query error and return the updated SQL draft, keeping the other statements unchanged.'
             : options?.question?.trim() ||
               assistantQuestion.trim() ||
-              (options?.images?.length
-                  ? 'Please analyze the attached images and explain any relevant SQL, database UI, or error details.'
-                  : '');
+              defaultAttachmentQuestion(options);
         if (!question) {
             setAssistantError('Ask a question or describe the SQL you want first.');
             return;
@@ -225,6 +239,7 @@ function createAssistantSqlRequestHandler(context: AssistantSqlRequestContext) {
             contextSql: active.sql,
             includeRun: requestIncludesRun,
             ...(options?.images?.length ? { images: options.images.map(image => image.name) } : {}),
+            ...(options?.files?.length ? { files: options.files.map(file => file.name) } : {}),
             ...(requestIncludesRun && activeRunId ? { runId: activeRunId } : {}),
             status: 'pending' as const,
         };
@@ -322,6 +337,11 @@ function createAssistantSqlRequestHandler(context: AssistantSqlRequestContext) {
                     error: storedRunContext?.error,
                     ...(options?.images?.length
                         ? { images: options.images.map(image => image.dataUrl) }
+                        : {}),
+                    ...(options?.files?.length
+                        ? {
+                              files: options.files.map(({ name, content }) => ({ name, content })),
+                          }
                         : {}),
                 },
                 apiResponses.isUnknown,

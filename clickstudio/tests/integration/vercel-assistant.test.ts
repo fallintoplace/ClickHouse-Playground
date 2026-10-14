@@ -77,6 +77,78 @@ test('Vercel assistant answers without schema and marks it as unknown', async t 
     }
 });
 
+test('Vercel assistant sends attached SQL files to OpenAI', async t => {
+    const priorKey = process.env.OPENAI_API_KEY;
+    const priorFetch = globalThis.fetch;
+    process.env.OPENAI_API_KEY = 'test-key';
+    const content = 'SELECT 1; -- demo file content\n'.repeat(1_500);
+    globalThis.fetch = async (input, init) => {
+        if (String(input).endsWith('/responses/input_tokens'))
+            return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
+        const payload = jsonRecord(jsonValue(String(init?.body)), 'OpenAI request');
+        const inputItems = arrayValue(payload.input, 'OpenAI input').map(item =>
+            jsonRecord(item, 'OpenAI message'),
+        );
+        const current = jsonRecord(inputItems[0], 'Current OpenAI message');
+        const contentItems = arrayValue(current.content, 'Current OpenAI content').map(item =>
+            jsonRecord(item, 'OpenAI content item'),
+        );
+        assert.deepEqual(jsonValue(stringValue(contentItems[1]?.text)), {
+            attachedFile: 'demo.sql',
+            content,
+        });
+        return Response.json({
+            id: 'response-text-file',
+            status: 'completed',
+            output_text: 'I reviewed the attached SQL file.',
+            output: [],
+        });
+    };
+    t.after(() => {
+        globalThis.fetch = priorFetch;
+        if (priorKey === undefined) delete process.env.OPENAI_API_KEY;
+        else process.env.OPENAI_API_KEY = priorKey;
+    });
+
+    const response = await handler.fetch(
+        request(
+            { ...assistantBody(), files: [{ name: 'demo.sql', content }] },
+            { 'x-real-ip': '192.0.2.91' },
+        ),
+    );
+    assert.equal(response.status, 201);
+    assert.equal((await responseRecord(response)).summary, 'I reviewed the attached SQL file.');
+});
+
+test('Vercel assistant rejects unsupported and oversized text attachments before OpenAI', async t => {
+    const priorKey = process.env.OPENAI_API_KEY;
+    const priorFetch = globalThis.fetch;
+    process.env.OPENAI_API_KEY = 'test-key';
+    globalThis.fetch = async () => {
+        throw new Error('Invalid attachments must not reach OpenAI.');
+    };
+    t.after(() => {
+        globalThis.fetch = priorFetch;
+        if (priorKey === undefined) delete process.env.OPENAI_API_KEY;
+        else process.env.OPENAI_API_KEY = priorKey;
+    });
+
+    const unsupported = await handler.fetch(
+        request({ ...assistantBody(), files: [{ name: 'demo.json', content: '{}' }] }),
+    );
+    assert.equal(unsupported.status, 400);
+    assert.equal(await responseErrorCode(unsupported), 'FILE_TYPE');
+
+    const oversized = await handler.fetch(
+        request({
+            ...assistantBody(),
+            files: [{ name: 'large.txt', content: 'x'.repeat(100_001) }],
+        }),
+    );
+    assert.equal(oversized.status, 413);
+    assert.equal(await responseErrorCode(oversized), 'FILE_SIZE');
+});
+
 test('Vercel assistant defaults to Fast processing and honors the server service tier', async t => {
     const priorKey = process.env.OPENAI_API_KEY;
     const priorTier = process.env.OPENAI_SERVICE_TIER;

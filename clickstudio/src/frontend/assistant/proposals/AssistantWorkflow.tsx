@@ -25,10 +25,11 @@ import { ScrollEdgeFrame } from '../../ui/components/ScrollEdgeShadows';
 import { Button, cx, Spinner } from '../../ui/components/primitives';
 import { Icon } from '../../ui/components/icons';
 import {
-    AssistantImageAttachments,
-    useAssistantImageAttachments,
+    AssistantAttachments,
+    useAssistantAttachments,
     type AssistantImageAttachment,
-} from './assistant-image-attachments';
+    type AssistantTextFileAttachment,
+} from './assistant-attachments';
 
 export type AssistantWorkflowProps = {
     mode: ExperienceLevel;
@@ -51,7 +52,11 @@ export type AssistantWorkflowProps = {
     error: string;
     notice: string;
     trusted: boolean;
-    onAskAI: (images: readonly AssistantImageAttachment[], question?: string) => void;
+    onAskAI: (
+        images: readonly AssistantImageAttachment[],
+        files: readonly AssistantTextFileAttachment[],
+        question?: string,
+    ) => void;
     onCancelRequest: () => void;
 };
 
@@ -62,6 +67,28 @@ type SqlDiffRow = {
     newLine?: number;
 };
 type SqlDiffChange = ReturnType<typeof diffLines>[number];
+
+function AssistantTurnAttachments({ turn }: { turn: AssistantChatTurn }) {
+    const images = turn.images ?? [];
+    const files = turn.files ?? [];
+    if (!images.length && !files.length) return null;
+    return (
+        <div className="assistant-user-image-attachments" aria-label="Attached files">
+            {images.map((name, index) => (
+                <span className="assistant-image-chip" key={`${name}:${index}`} title={name}>
+                    <Icon name="image" />
+                    <span>{name}</span>
+                </span>
+            ))}
+            {files.map((name, index) => (
+                <span className="assistant-image-chip" key={`${name}:${index}`} title={name}>
+                    <Icon name="reference" />
+                    <span>{name}</span>
+                </span>
+            ))}
+        </div>
+    );
+}
 
 const generateTaskPrompts = [
     'Create a ClickHouse table for movies with title, genre, release year, and rating. Insert representative sample records, then query average rating by genre.',
@@ -669,19 +696,18 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
     const [questionInput, setQuestionInput] = useState<HTMLTextAreaElement | null>(null);
     const {
         images: imageAttachments,
-        isReading: isReadingImages,
+        files: textFileAttachments,
+        isReading: isReadingAttachments,
         error: pasteError,
-        clear: clearImageAttachments,
-        remove: removeImageAttachment,
-        onPaste: pasteImages,
-    } = useAssistantImageAttachments(activeChatId, onQuestionChange);
+        clear: clearAttachments,
+        remove: removeAttachment,
+        onPaste: pasteAttachments,
+    } = useAssistantAttachments(activeChatId, onQuestionChange);
     const activeChat = chats.find(chat => chat.id === activeChatId);
+    const hasAttachments = imageAttachments.length > 0 || textFileAttachments.length > 0;
     const canSubmit =
-        !busy &&
-        !isReadingImages &&
-        trusted &&
-        (Boolean(question.trim()) || imageAttachments.length > 0);
-    const canStartPrompt = !busy && !isReadingImages && trusted;
+        !busy && !isReadingAttachments && trusted && (Boolean(question.trim()) || hasAttachments);
+    const canStartPrompt = !busy && !isReadingAttachments && trusted;
     const latestTurnIds = useMemo(
         () => new Map(turns.map(turn => [turn.draftId, turn.id])),
         [turns],
@@ -714,8 +740,9 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
     const ask = (prompt?: string) => {
         if (prompt ? !canStartPrompt : !canSubmit) return;
         const images = imageAttachments;
-        clearImageAttachments();
-        void onAskAI(images, prompt);
+        const files = textFileAttachments;
+        clearAttachments();
+        void onAskAI(images, files, prompt);
     };
     const sendOnEnter = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
         if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -809,7 +836,7 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
                                         Explain or optimize a ClickHouse query, or generate a new
                                         example.
                                     </p>
-                                    {!question.trim() && !imageAttachments.length && (
+                                    {!question.trim() && !hasAttachments && (
                                         <div
                                             className="assistant-starter-actions"
                                             role="group"
@@ -860,23 +887,7 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
                                     <div className="assistant-user-message">
                                         <span>You</span>
                                         <p>{turn.question}</p>
-                                        {turn.images?.length ? (
-                                            <div
-                                                className="assistant-user-image-attachments"
-                                                aria-label={`${turn.images.length} attached images`}
-                                            >
-                                                {turn.images.map((name, index) => (
-                                                    <span
-                                                        className="assistant-image-chip"
-                                                        key={`${name}:${index}`}
-                                                        title={name}
-                                                    >
-                                                        <Icon name="image" />
-                                                        <span>{name}</span>
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        ) : null}
+                                        <AssistantTurnAttachments turn={turn} />
                                     </div>
                                     <div className="assistant-response">
                                         <span className="assistant-response-label">Assistant</span>
@@ -917,11 +928,14 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
                     </div>
                 )}
                 <div className="assistant-chat-composer">
-                    {(imageAttachments.length > 0 || isReadingImages) && (
-                        <AssistantImageAttachments
+                    {(imageAttachments.length > 0 ||
+                        textFileAttachments.length > 0 ||
+                        isReadingAttachments) && (
+                        <AssistantAttachments
                             images={imageAttachments}
-                            isReading={isReadingImages}
-                            onRemove={removeImageAttachment}
+                            files={textFileAttachments}
+                            isReading={isReadingAttachments}
+                            onRemove={removeAttachment}
                         />
                     )}
                     <ScrollEdgeFrame<HTMLTextAreaElement>
@@ -938,7 +952,7 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
                                 value={question}
                                 onChange={event => onQuestionChange(event.target.value)}
                                 onKeyDown={sendOnEnter}
-                                onPaste={pasteImages}
+                                onPaste={pasteAttachments}
                                 placeholder="Ask about your SQL…"
                                 title="Enter to send. Shift+Enter for a new line."
                                 rows={1}

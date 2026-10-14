@@ -10,7 +10,10 @@ import type { Draft, WorkspaceState } from '../../../queries/editor/drafts/works
 import { terminal } from '../../../queries/execution/status';
 import type { useWorkspaceController, WorkspaceProps } from '../../useWorkspaceController';
 import type { InspectorPaneProps } from './InspectorPane';
-import type { AssistantImageAttachment } from '../../../assistant/proposals/assistant-image-attachments';
+import type {
+    AssistantImageAttachment,
+    AssistantTextFileAttachment,
+} from '../../../assistant/proposals/assistant-attachments';
 
 async function loadAssistantRunContext(
     run: Run | undefined,
@@ -252,6 +255,7 @@ export function createInspectorProps({
             serverVersion?: string,
             database?: string,
             images?: readonly AssistantImageAttachment[],
+            files?: readonly AssistantTextFileAttachment[],
             question?: string,
         ) =>
             void requestAssistantSql(
@@ -259,8 +263,12 @@ export function createInspectorProps({
                 serverVersion,
                 database,
                 includeRun ? signal => loadAssistantRunContext(run, snapshot, signal) : undefined,
-                images?.length || question
-                    ? { ...(images?.length ? { images } : {}), ...(question ? { question } : {}) }
+                images?.length || files?.length || question
+                    ? {
+                          ...(images?.length ? { images } : {}),
+                          ...(files?.length ? { files } : {}),
+                          ...(question ? { question } : {}),
+                      }
                     : undefined,
             ),
         onCancelAssistantRequest: cancelAssistantRequest,

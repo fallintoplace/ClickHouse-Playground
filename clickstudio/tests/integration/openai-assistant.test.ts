@@ -182,6 +182,54 @@ test('OpenAI receives every attached image with the current message', async t =>
     );
 });
 
+test('OpenAI receives attached text files as source material with the current message', async t => {
+    const originalFetch = globalThis.fetch;
+    let requestBody: Record<string, unknown> | undefined;
+    globalThis.fetch = async (input, init) => {
+        const body = jsonRecord(jsonValue(String(init?.body)), 'OpenAI request');
+        if (String(input).endsWith('/responses/input_tokens'))
+            return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
+        requestBody = body;
+        return Response.json({
+            id: 'response-text-files',
+            status: 'completed',
+            output_text: 'I reviewed the attached SQL.',
+            output: [],
+        });
+    };
+    t.after(() => {
+        globalThis.fetch = originalFetch;
+    });
+    const files = [
+        { name: 'sample.csv', content: 'id,name\n1,Ada' },
+        { name: 'query.sql', content: 'SELECT * FROM demo.events' },
+    ];
+    const driver = new OpenAIDriver('test-key', 'test-model');
+
+    await driver.propose(
+        assistantContext({
+            instructions: 'Use attached text files as source material.',
+            question: 'Review these files.',
+            context: JSON.stringify({ sql: 'SELECT 1' }),
+            files,
+        }),
+        new AbortController().signal,
+    );
+
+    const input = arrayValue(requestBody?.input, 'OpenAI input');
+    const message = jsonRecord(input[0], 'Current message');
+    const content = arrayValue(message.content, 'Current message content').map(item =>
+        jsonRecord(item, 'Current message item'),
+    );
+    assert.deepEqual(
+        content.slice(1),
+        files.map(file => ({
+            type: 'input_text',
+            text: JSON.stringify({ attachedFile: file.name, content: file.content }),
+        })),
+    );
+});
+
 test('OpenAI replies preserve complete scripts without local output limits', async t => {
     const priorFetch = globalThis.fetch;
     t.after(() => {

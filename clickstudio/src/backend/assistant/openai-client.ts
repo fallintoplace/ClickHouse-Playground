@@ -155,6 +155,11 @@ export class OpenAIDriver implements AssistantDriver {
                 }),
             },
         ];
+        for (const file of context.payload.files ?? [])
+            content.push({
+                type: 'input_text',
+                text: JSON.stringify({ attachedFile: file.name, content: file.content }),
+            });
         const images =
             context.payload.images ?? (context.payload.image ? [context.payload.image] : []);
         for (const image of images)

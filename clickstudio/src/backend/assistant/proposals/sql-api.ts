@@ -8,6 +8,7 @@ import {
     PROMPT_VERSION,
     validateAssistantConversation,
     validateAssistantImages,
+    validateAssistantTextFiles,
     validateProposal,
     type PreparedContext,
 } from './assistant.js';
@@ -28,7 +29,7 @@ import {
 } from '../../../shared/assistant/images.js';
 
 const MAX_BODY_BYTES = 4_000_000;
-const MAX_BODY_BYTES_WITHOUT_IMAGES = 300_000;
+const MAX_BODY_BYTES_WITHOUT_ATTACHMENTS = 300_000;
 const MAX_IMAGE_DATA_URL_CHARS = 2_900_000;
 const MAX_REQUESTS_PER_DAY = 20;
 const MODEL = process.env.OPENAI_MODEL?.trim() || 'gpt-6-luna';
@@ -98,6 +99,7 @@ function prepareAssistantContext(body: Record<string, unknown>) {
     const serverVersion =
         typeof body.serverVersion === 'string' ? body.serverVersion.slice(0, 128) : undefined;
     const images = assistantImages(body);
+    const files = validateAssistantTextFiles(body.files);
     const built = buildContext({
         connectionId,
         database,
@@ -114,6 +116,7 @@ function prepareAssistantContext(body: Record<string, unknown>) {
             .split(',')
             .map(name => name.trim()),
         images,
+        files,
     });
     return { connectionId, action, sql, schema, built };
 }
@@ -165,7 +168,8 @@ async function post(request: Request): Promise<Response> {
     if (!isRecord(body)) return fail('REQUEST_BODY', 'The request body must be a JSON object.');
     const hasImages =
         body.image !== undefined || (Array.isArray(body.images) && body.images.length > 0);
-    if (!hasImages && Buffer.byteLength(raw) > MAX_BODY_BYTES_WITHOUT_IMAGES)
+    const hasFiles = Array.isArray(body.files) && body.files.length > 0;
+    if (!hasImages && !hasFiles && Buffer.byteLength(raw) > MAX_BODY_BYTES_WITHOUT_ATTACHMENTS)
         return fail('REQUEST_SIZE', 'The assistant request is too large.', 413);
 
     let timeoutSignal: AbortSignal | undefined;

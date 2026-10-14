@@ -12,7 +12,7 @@ import type { Result } from '../../../shared/queries/results/types.js';
 import type { Run } from '../../../shared/queries/execution/types.js';
 import type { RunService } from '../../queries/execution/runs.js';
 import type { AssistantService } from './assistant.js';
-import { validateAssistantConversation } from './assistant.js';
+import { validateAssistantConversation, validateAssistantTextFiles } from './assistant.js';
 import {
     assistantRequestFrom,
     assistantResultFrom,
@@ -77,14 +77,18 @@ function registerAssistantSqlRoute(
             );
             const browserCloud = connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID;
             if (browserCloud) {
-                const withoutImages = { ...v };
-                delete withoutImages.image;
-                delete withoutImages.images;
-                const hasImages = v.image !== undefined || v.images !== undefined;
+                const withoutAttachments = { ...v };
+                delete withoutAttachments.image;
+                delete withoutAttachments.images;
+                delete withoutAttachments.files;
+                const hasAttachments =
+                    v.image !== undefined ||
+                    v.images !== undefined ||
+                    (Array.isArray(v.files) && v.files.length > 0);
                 requireThat(
-                    Buffer.byteLength(JSON.stringify(withoutImages)) <= 300_000 &&
+                    Buffer.byteLength(JSON.stringify(withoutAttachments)) <= 300_000 &&
                         Buffer.byteLength(JSON.stringify(v)) <=
-                            (hasImages ? MAX_ASSISTANT_REQUEST_BYTES : 300_000),
+                            (hasAttachments ? MAX_ASSISTANT_REQUEST_BYTES : 300_000),
                     413,
                     'REQUEST_SIZE',
                     'The assistant request is too large.',
@@ -185,6 +189,7 @@ function registerAssistantSqlRoute(
                 sensitiveColumns: config.sensitiveColumns,
                 image: v.image === undefined ? undefined : text(v.image, 'image', 2_900_000),
                 images: assistantImages(v.images),
+                files: validateAssistantTextFiles(v.files),
             });
             preparedContextId = context.id;
             if (!secretFree(context.payload)) {
@@ -291,6 +296,7 @@ export function registerAssistantRoutes({
             sensitiveColumns: config.sensitiveColumns,
             image: v.image === undefined ? undefined : text(v.image, 'image', 2900000),
             images: assistantImages(v.images),
+            files: validateAssistantTextFiles(v.files),
         });
         if (!secretFree(context.payload)) {
             store.delete('ai-contexts', context.id);

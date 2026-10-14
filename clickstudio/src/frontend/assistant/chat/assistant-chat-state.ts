@@ -4,6 +4,7 @@ import { parseAssistantProposal } from '../proposals/assistant-proposal-parser.j
 import type { Proposal } from '../../../shared/assistant/types.js';
 import type { Result } from '../../../shared/queries/results/types.js';
 import { MAX_ASSISTANT_IMAGE_COUNT } from '../../../shared/assistant/images.js';
+import { MAX_ASSISTANT_TEXT_FILE_COUNT } from '../../../shared/assistant/text-files.js';
 
 export type AssistantTurnStatus = 'pending' | 'complete' | 'failed' | 'cancelled';
 
@@ -22,6 +23,7 @@ export interface AssistantChatTurn {
     runId?: string;
     runContext?: AssistantChatRunContext;
     images?: string[];
+    files?: string[];
     status: AssistantTurnStatus;
     proposal?: Proposal;
     applied?: boolean;
@@ -180,6 +182,19 @@ function recoverImageNames(value: unknown): string[] | undefined {
     return names.length ? names : undefined;
 }
 
+function recoverFileNames(value: unknown): string[] | undefined {
+    if (!Array.isArray(value) || value.length > MAX_ASSISTANT_TEXT_FILE_COUNT) return undefined;
+    const names = value.filter(
+        (name): name is string =>
+            typeof name === 'string' &&
+            name.length > 0 &&
+            name.length <= 100 &&
+            !name.includes('\0') &&
+            !name.startsWith('data:'),
+    );
+    return names.length ? names : undefined;
+}
+
 function recoverTurn(value: unknown): AssistantChatTurn | undefined {
     if (
         !record(value) ||
@@ -199,6 +214,7 @@ function recoverTurn(value: unknown): AssistantChatTurn | undefined {
         value.runContext === undefined ? undefined : recoverRunContext(value.runContext);
     if (value.runContext !== undefined && !runContext) return undefined;
     const images = recoverImageNames(value.images);
+    const files = recoverFileNames(value.files);
     const interrupted = value.status === 'pending';
     const getRestoredError = () => {
         if (interrupted) {
@@ -222,6 +238,7 @@ function recoverTurn(value: unknown): AssistantChatTurn | undefined {
         ...(typeof value.runId === 'string' ? { runId: value.runId } : {}),
         ...(runContext ? { runContext } : {}),
         ...(images ? { images } : {}),
+        ...(files ? { files } : {}),
         status: interrupted ? 'cancelled' : value.status,
         ...(proposal ? { proposal } : {}),
         ...(typeof value.applied === 'boolean' ? { applied: value.applied } : {}),

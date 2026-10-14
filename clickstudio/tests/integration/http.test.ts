@@ -682,6 +682,7 @@ test('Ask AI uses a validated Playground server version supplied by the browser'
 test('Ask AI uses browser Cloud schema and run evidence without resolving a local connection', async t => {
     let sentContext: Record<string, unknown> | undefined;
     let sentImages: string[] | undefined;
+    let sentFiles: Array<{ name: string; content: string }> | undefined;
     const tinyPng = `data:image/png;base64,${Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).toString('base64')}`;
     const assistant: AssistantDriver = {
         available: true,
@@ -689,6 +690,7 @@ test('Ask AI uses browser Cloud schema and run evidence without resolving a loca
         propose: async context => {
             sentContext = jsonRecord(JSON.parse(context.payload.context), 'Assistant context');
             sentImages = context.payload.images;
+            sentFiles = context.payload.files;
             return {
                 content: {
                     sql: 'SELECT player FROM default.world_cup_golden_boot',
@@ -740,11 +742,13 @@ test('Ask AI uses browser Cloud schema and run evidence without resolving a loca
         },
         evidenceSql: 'SELECT player FROM default.world_cup_golden_boot',
         images: [tinyPng, tinyPng],
+        files: [{ name: 'winners.csv', content: 'player\nMarta' }],
     });
     assert.equal(response.status, 201);
     assert.deepEqual(driver.schemaCalls, []);
     assert.equal(sentContext?.serverVersion, '25.8.4.5');
     assert.deepEqual(sentImages, [tinyPng, tinyPng]);
+    assert.deepEqual(sentFiles, [{ name: 'winners.csv', content: 'player\nMarta' }]);
     assert.deepEqual(sentContext?.tables, [{ database: 'default', name: 'world_cup_golden_boot' }]);
     assert.deepEqual(sentContext?.schema, [
         { database: 'default', table: 'world_cup_golden_boot', name: 'player', type: 'String' },
