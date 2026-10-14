@@ -757,7 +757,7 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
                 variant="primary"
                 className="assistant-composer-submit"
                 disabled={!canSubmit}
-                onClick={ask}
+                onClick={() => ask()}
                 aria-label="Send"
                 title="Send (Enter)"
             >
