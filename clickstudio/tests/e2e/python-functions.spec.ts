@@ -4,6 +4,35 @@ import { unzipSync, strFromU8 } from 'fflate';
 import { functionsWorkspace } from './sql-functions-helpers.js';
 import { workspacePath } from './helpers.js';
 
+test('Experimental sample data exports Python without trusting a SQL connection', async ({
+    page,
+}) => {
+    await page.goto('/experimental');
+    await expect(
+        page.getByRole('button', { name: 'Create Python UDF', exact: true }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Create Python UDF', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Create Python UDF', exact: true });
+    const pending = page.waitForEvent('download');
+    await dialog.getByRole('button', { name: 'Export ZIP', exact: true }).click();
+    expect((await pending).suggestedFilename()).toBe('py_similarity.zip');
+    await dialog.getByLabel('Template', { exact: true }).selectOption('2');
+    const tokenDownload = page.waitForEvent('download');
+    await dialog.getByRole('button', { name: 'Export ZIP', exact: true }).click();
+    const tokenizer = await tokenDownload;
+    expect(tokenizer.suggestedFilename()).toBe('count_tokens.zip');
+    const tokenizerPath = await tokenizer.path();
+    expect(tokenizerPath).toBeTruthy();
+    const files = unzipSync(new Uint8Array(await readFile(tokenizerPath!)));
+    expect(Object.keys(files).some(name => name.startsWith('tiktoken_cache/'))).toBe(true);
+    expect(strFromU8(files['requirements.txt']!)).toContain('tiktoken==0.14.0');
+    await expect(
+        dialog.getByText(
+            'Deployment is unavailable for this connection. ZIP export remains available.',
+        ),
+    ).toBeVisible();
+});
+
 test('Standard keeps Python management hidden and makes no executable metadata requests', async ({
     page,
 }) => {

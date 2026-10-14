@@ -392,6 +392,11 @@ function ObjectExplorerBrowser({
                     <p>{copy.trustToInspect}</p>
                 </div>
             )}
+            {!trusted && functionsSlot && (
+                <div className="object-tree" role="tree" aria-label="Functions">
+                    {functionsSlot}
+                </div>
+            )}
             {schemaLoading && (
                 <div className="inspector-empty">
                     <Spinner />

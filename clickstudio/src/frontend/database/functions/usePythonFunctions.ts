@@ -50,7 +50,7 @@ export function usePythonFunctions(connection: Connected, enabled: boolean) {
         functions: discover && loaded?.key === key ? loaded.functions : [],
         loading: discover && (loaded?.key !== key || loaded.revision !== revision),
         error: discover && loaded?.key === key ? loaded.error : undefined,
-        selected: enabled && selection?.key === key ? selection.fn : undefined,
+        selected: discover && selection?.key === key ? selection.fn : undefined,
         createOpen: enabled && creating === key,
         create: () => setCreating(key),
         closeCreate: () => setCreating(undefined),

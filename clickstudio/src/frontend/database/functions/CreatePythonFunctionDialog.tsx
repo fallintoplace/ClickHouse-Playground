@@ -91,6 +91,7 @@ export function CreatePythonFunctionDialog({
                     <label className="creation-dialog-field">
                         <span>Template</span>
                         <select
+                            aria-label="Template"
                             defaultValue="0"
                             onChange={event =>
                                 setDraft(
@@ -196,6 +197,7 @@ export function CreatePythonFunctionDialog({
                     <label className="creation-dialog-field">
                         <span>Returns</span>
                         <select
+                            aria-label="Return type"
                             value={draft.returnType}
                             onChange={event =>
                                 update({
