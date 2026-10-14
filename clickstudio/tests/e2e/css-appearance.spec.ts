@@ -252,12 +252,30 @@ for (const theme of ['Light', 'Dark']) {
             dialog.getByRole('combobox', { name: 'Map day to destination', exact: true }),
         ).toHaveAttribute('data-value', 'day');
         await compareStyles('cloud-existing-table');
+        const mappingSelect = dialog.getByRole('combobox', {
+            name: 'Map day to destination',
+            exact: true,
+        });
+        await mappingSelect.click();
+        await expect(
+            dialog.getByRole('searchbox', { name: 'Search map day to destination' }),
+        ).toBeFocused();
+        await compareStyles('cloud-mapping-options');
+        await page.screenshot({ path: info.outputPath('cloud-mapping-selector.png') });
+        await page.keyboard.press('Escape');
         await dialog.getByRole('radio', { name: /Create a table/ }).check();
         await dialog.getByLabel('New table name').fill('imported_events');
         await expect(
             dialog.getByRole('combobox', { name: 'Type for day', exact: true }),
         ).toHaveAttribute('data-value', 'Date');
         await compareStyles('cloud-create-table');
+        await dialog.getByRole('combobox', { name: 'Type for day', exact: true }).click();
+        const typeSearch = dialog.getByRole('searchbox', { name: 'Search type for day' });
+        await expect(typeSearch).toBeFocused();
+        await expect(typeSearch).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+        await compareStyles('cloud-type-options');
+        await page.screenshot({ path: info.outputPath('cloud-type-selector.png') });
+        await page.keyboard.press('Escape');
         await dialog.getByRole('button', { name: 'Review import', exact: true }).click();
         await expect(
             dialog.getByRole('heading', {

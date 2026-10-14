@@ -2,6 +2,7 @@ import {
     useCallback,
     useEffect,
     useId,
+    useLayoutEffect,
     useRef,
     useState,
     type AriaAttributes,
@@ -13,6 +14,26 @@ export type SelectControlOption = {
     label: string;
     disabled?: boolean;
 };
+
+function positionSelectMenu(element: HTMLDivElement, button: HTMLButtonElement) {
+    const view = element.ownerDocument.defaultView;
+    if (!view) return;
+    const anchor = button.getBoundingClientRect();
+    const edge = 8;
+    const gap = 4;
+    element.style.minWidth = `${Math.min(Math.max(anchor.width, 220), view.innerWidth - edge * 2)}px`;
+    element.style.setProperty('--select-available-height', `${view.innerHeight - edge * 2}px`);
+    const desiredHeight = element.getBoundingClientRect().height;
+    const below = Math.max(0, view.innerHeight - anchor.bottom - gap - edge);
+    const above = Math.max(0, anchor.top - gap - edge);
+    const openAbove = below < desiredHeight && above > below;
+    element.style.setProperty('--select-available-height', `${openAbove ? above : below}px`);
+    const bounds = element.getBoundingClientRect();
+    const left = Math.max(edge, Math.min(anchor.left, view.innerWidth - bounds.width - edge));
+    const top = openAbove ? anchor.top - bounds.height - gap : anchor.bottom + gap;
+    element.style.left = `${left}px`;
+    element.style.top = `${Math.max(edge, Math.min(top, view.innerHeight - bounds.height - edge))}px`;
+}
 
 export function SelectControl({
     label,
@@ -63,30 +84,30 @@ export function SelectControl({
     const activeOptionId = activeOption ? `${id}-option-${activeIndex}` : undefined;
 
     const positionMenu = useCallback(() => {
-        const element = menu.current;
-        const button = trigger.current;
-        const view = element?.ownerDocument.defaultView;
-        if (!element || !button || !view) return;
-        const anchor = button.getBoundingClientRect();
-        const bounds = element.getBoundingClientRect();
-        const left = Math.max(8, Math.min(anchor.left, view.innerWidth - bounds.width - 8));
-        const top =
-            anchor.bottom + 4 + bounds.height <= view.innerHeight - 8
-                ? anchor.bottom + 4
-                : Math.max(8, anchor.top - bounds.height - 4);
-        element.style.left = `${left}px`;
-        element.style.top = `${top}px`;
+        if (menu.current && trigger.current) positionSelectMenu(menu.current, trigger.current);
     }, []);
 
     const showMenu = () => {
         const element = menu.current;
         if (!element || disabled || !hasEnabledOptions || element.matches(':popover-open')) return;
+        setSearch('');
+        const selectedIndex = availableOptions.findIndex(
+            option => option.value === value && !option.disabled,
+        );
+        const firstEnabledIndex = availableOptions.findIndex(option => !option.disabled);
+        setActiveIndex(Math.max(0, selectedIndex >= 0 ? selectedIndex : firstEnabledIndex));
         element.showPopover();
+        setOpen(true);
+        positionMenu();
+        if (searchable) searchInput.current?.focus({ preventScroll: true });
+        else listbox.current?.focus({ preventScroll: true });
     };
 
     const hideMenu = (restoreFocus = false) => {
         const element = menu.current;
         if (element?.matches(':popover-open')) element.hidePopover();
+        setOpen(false);
+        setSearch('');
         if (restoreFocus) trigger.current?.focus({ preventScroll: true });
     };
 
@@ -132,12 +153,13 @@ export function SelectControl({
         element.hidePopover();
     }, [disabled, hasEnabledOptions, hasSingleOption]);
 
-    useEffect(() => {
-        if (open)
-            listbox.current
-                ?.querySelector<HTMLElement>('[data-active="true"]')
-                ?.scrollIntoView({ block: 'nearest' });
-    }, [open, activeIndex, search]);
+    useLayoutEffect(() => {
+        if (!open) return;
+        positionMenu();
+        listbox.current
+            ?.querySelector<HTMLElement>('[data-active="true"]')
+            ?.scrollIntoView({ block: 'nearest' });
+    }, [open, activeIndex, search, options, positionMenu]);
 
     useEffect(() => {
         if (!open) return;
@@ -197,10 +219,16 @@ export function SelectControl({
                     aria-controls={`${id}-listbox`}
                     aria-activedescendant={open ? activeOptionId : undefined}
                     aria-valuetext={selected?.label ?? ''}
+                    title={selected?.label}
                     data-value={value}
                     data-state={open ? 'open' : 'closed'}
                     popoverTarget={id}
                     popoverTargetAction="toggle"
+                    onClick={event => {
+                        event.preventDefault();
+                        if (menu.current?.matches(':popover-open')) hideMenu();
+                        else showMenu();
+                    }}
                     onKeyDown={event => {
                         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
                             event.preventDefault();
@@ -220,25 +248,7 @@ export function SelectControl({
                 onToggle={event => {
                     const isOpen = event.newState === 'open';
                     setOpen(isOpen);
-                    if (!isOpen) {
-                        setSearch('');
-                        return;
-                    }
-                    setSearch('');
-                    const selectedIndex = availableOptions.findIndex(
-                        option => option.value === value && !option.disabled,
-                    );
-                    const firstEnabledIndex = availableOptions.findIndex(
-                        option => !option.disabled,
-                    );
-                    setActiveIndex(
-                        Math.max(0, selectedIndex >= 0 ? selectedIndex : firstEnabledIndex),
-                    );
-                    positionMenu();
-                    requestAnimationFrame(() => {
-                        if (searchable) searchInput.current?.focus({ preventScroll: true });
-                        else listbox.current?.focus({ preventScroll: true });
-                    });
+                    if (!isOpen) setSearch('');
                 }}
                 onKeyDown={event => {
                     if (event.key === 'Escape') {
@@ -253,7 +263,7 @@ export function SelectControl({
                         className="chart-select-search"
                         type="search"
                         aria-label={`Search ${label.toLocaleLowerCase()}`}
-                        placeholder={`Search ${label.toLocaleLowerCase()}`}
+                        placeholder="Search options…"
                         value={search}
                         onChange={event => {
                             const nextSearch = event.target.value;
@@ -314,6 +324,11 @@ export function SelectControl({
                             )}
                         </div>
                     ))}
+                    {visibleOptions.length === 0 && (
+                        <div className="chart-select-empty" role="status">
+                            No matches
+                        </div>
+                    )}
                 </div>
             </div>
         </span>

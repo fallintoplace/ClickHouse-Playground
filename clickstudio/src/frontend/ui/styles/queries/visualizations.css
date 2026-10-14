@@ -2351,8 +2351,8 @@
   inset: auto;
   width: max-content;
   min-width: 140px;
-  max-width: min(360px, calc(100vw - 16px));
-  max-height: min(320px, calc(100dvh - 16px));
+  max-width: min(480px, calc(100vw - 16px));
+  max-height: min(320px, var(--select-available-height, calc(100dvh - 16px)));
   overflow: hidden;
   margin: 0;
   padding: 4px;
@@ -2365,11 +2365,17 @@
   z-index: 20;
 }
 
+.chart-select-menu[popover]:popover-open {
+  display: flex;
+  flex-direction: column;
+}
+
 .chart-select-search {
   box-sizing: border-box;
   width: 100%;
-  min-width: 180px;
+  min-width: 0;
   min-height: 30px;
+  flex: none;
   padding: 6px 8px;
   border: 0;
   border-bottom: 1px solid var(--line);
@@ -2385,9 +2391,19 @@
 }
 
 .chart-select-listbox {
+  min-height: 0;
   max-height: min(280px, calc(100dvh - 70px));
+  flex: 1 1 auto;
   overflow-y: auto;
   outline: none;
+}
+
+@layer components {
+  .chart-select-empty {
+    padding: 8px;
+    color: var(--muted);
+    font: 400 11px/1.35 var(--font-sans);
+  }
 }
 
 .chart-select-option {

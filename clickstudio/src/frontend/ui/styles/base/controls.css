@@ -12,9 +12,9 @@
     .native-lineage-database select,
     .chart-controls select,
     .import-destination-select .chart-select-trigger,
-    .import-new-table-fields input,
+    .import-new-table-fields > label > input,
     .import-new-table-fields .chart-select-trigger,
-    .import-create-column-row input,
+    .import-create-column-row > input,
     .import-create-column-row .chart-select-trigger,
     .import-column-map .chart-select-trigger
   ) {

@@ -801,7 +801,7 @@
 }
 .import-destination-select .chart-select-trigger,
 .import-new-table-fields .chart-select-trigger,
-.import-new-table-fields input {
+.import-new-table-fields > label > input {
   height: 40px;
   min-height: 40px;
   width: 100%;
@@ -815,7 +815,8 @@
   letter-spacing: normal;
 }
 .import-destination-select .chart-select-trigger:hover,
-.import-new-table-fields :is(.chart-select-trigger, input):hover {
+.import-new-table-fields .chart-select-trigger:hover,
+.import-new-table-fields > label > input:hover {
   border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
 }
 .import-destination-helper {
