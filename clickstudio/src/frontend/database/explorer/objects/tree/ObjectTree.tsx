@@ -41,7 +41,6 @@ export function ObjectTree({
     return (
         <div className="object-tree-scroll" ref={treeScroll}>
             <div className="object-tree" role="tree" aria-label={copy.objects}>
-                {functionsSlot}
                 {model.databases.map(database => {
                     const databaseExpanded = expanded(database.id, Boolean(model.query));
                     return (
@@ -102,6 +101,7 @@ export function ObjectTree({
                         </div>
                     );
                 })}
+                {functionsSlot}
             </div>
         </div>
     );

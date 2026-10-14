@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { ExecutableFunction } from '../../../shared/database/functions/python-functions';
 import { Icon } from '../../ui/components/icons';
 import { ExplorerGroupRow, ObjectLeafRow } from '../explorer/objects/tree/ObjectTreeRows';
@@ -8,24 +7,29 @@ export function PythonFunctionsTree({
     state,
     search,
     onSelect,
+    level = 1,
+    expanded,
+    onToggle,
 }: {
     state: ReturnType<typeof usePythonFunctions>;
     search: string;
     onSelect: (fn: ExecutableFunction) => void;
+    level?: number;
+    expanded: boolean;
+    onToggle: () => void;
 }) {
-    const [expanded, setExpanded] = useState(true);
     const functions = state.functions.filter(fn =>
         fn.name.toLowerCase().includes(search.trim().toLowerCase()),
     );
     return (
         <div className="object-tree-branch python-functions-tree">
             <ExplorerGroupRow
-                level={1}
+                level={level}
                 label="Python UDFs"
                 kind="function"
                 count={functions.length}
-                expanded={expanded || Boolean(search)}
-                onToggle={() => setExpanded(value => !value)}
+                expanded={expanded || Boolean(search.trim())}
+                onToggle={onToggle}
                 action={
                     state.canCreate ? (
                         <button
@@ -41,12 +45,12 @@ export function PythonFunctionsTree({
                     ) : undefined
                 }
             />
-            {(expanded || search) && (
+            {(expanded || search.trim()) && (
                 <div role="group" className="object-tree-children">
                     {functions.map(fn => (
                         <ObjectLeafRow
                             key={fn.name}
-                            level={2}
+                            level={level + 1}
                             selected={false}
                             glyph="function"
                             label={fn.name}

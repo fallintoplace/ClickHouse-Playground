@@ -12,7 +12,9 @@ test('Existing demo SQL UDFs appear in Objects and execute on ClickHouse', async
     });
     try {
         const tree = page.getByRole('tree', { name: 'Objects', exact: true });
-        await expect(tree.getByRole('treeitem').first()).toContainText('Functions');
+        const rootRows = tree.locator(':scope > .object-tree-branch > [role="treeitem"]');
+        await expect(rootRows.first()).toContainText('default');
+        await expect(rootRows.last()).toContainText('Functions');
         for (const [index, template] of SQL_FUNCTION_TEMPLATES.entries()) {
             await page
                 .getByRole('button', { name: `${template.name} SQL UDF`, exact: true })
@@ -256,7 +258,7 @@ for (const mode of ['Standard', 'Experimental']) {
         });
         await page
             .getByRole('button', {
-                name: mode === 'Experimental' ? 'Collapse SQL Functions' : 'Collapse Functions',
+                name: 'Collapse SQL UDFs',
                 exact: true,
             })
             .click();
@@ -277,7 +279,7 @@ for (const mode of ['Standard', 'Experimental']) {
         await expect(page.locator('.object-refresh-action')).toBeEnabled();
         await page
             .getByRole('button', {
-                name: mode === 'Experimental' ? 'Expand SQL Functions' : 'Expand Functions',
+                name: 'Expand SQL UDFs',
                 exact: true,
             })
             .click();

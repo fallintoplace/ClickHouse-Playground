@@ -13,6 +13,7 @@ export function ExplorerGroupRow({
     database = false,
     kind = 'table',
     action,
+    hasChildren = count > 0,
 }: {
     level: number;
     label: string;
@@ -22,8 +23,8 @@ export function ExplorerGroupRow({
     database?: boolean;
     kind?: 'table' | 'view' | 'dictionary' | 'column' | 'projection' | 'index' | 'function';
     action?: ReactNode;
+    hasChildren?: boolean;
 }) {
-    const hasChildren = count > 0;
     const toggleLabel = expanded ? `Collapse ${label}` : `Expand ${label}`;
     const hasActionSlot = database || Boolean(action);
     const countBadge = <small className="object-tree-count">{count.toLocaleString()}</small>;

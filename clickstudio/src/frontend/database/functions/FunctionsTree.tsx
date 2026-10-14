@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type {
     FunctionCatalog,
     SqlFunction,
@@ -16,6 +15,9 @@ export function FunctionsTree({
     onCreate,
     onSelect,
     label = 'Functions',
+    level = 1,
+    expanded,
+    onToggle,
 }: {
     catalog?: FunctionCatalog;
     loading: boolean;
@@ -25,19 +27,21 @@ export function FunctionsTree({
     onCreate: () => void;
     onSelect: (fn: SqlFunction) => void;
     label?: string;
+    level?: number;
+    expanded: boolean;
+    onToggle: () => void;
 }) {
-    const [expanded, setExpanded] = useState(true);
     const query = search.trim().toLowerCase();
     const functions = catalog?.functions.filter(fn => fn.name.toLowerCase().includes(query)) ?? [];
     return (
         <div className="object-tree-branch sql-functions-tree">
             <ExplorerGroupRow
-                level={1}
+                level={level}
                 label={label}
                 kind="function"
                 count={functions.length}
                 expanded={expanded || Boolean(query)}
-                onToggle={() => setExpanded(value => !value)}
+                onToggle={onToggle}
                 action={
                     <button
                         type="button"
@@ -63,7 +67,7 @@ export function FunctionsTree({
                         functions.map(fn => (
                             <ObjectLeafRow
                                 key={fn.name}
-                                level={2}
+                                level={level + 1}
                                 selected={false}
                                 glyph="function"
                                 label={fn.name}

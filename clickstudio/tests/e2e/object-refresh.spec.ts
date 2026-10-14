@@ -300,7 +300,7 @@ test('a collapsed function group stays collapsed during refresh and can be opene
 }) => {
     await functionsWorkspace(page, { existing: true });
     await expect(refreshButton(page)).toBeEnabled();
-    await page.getByRole('button', { name: 'Collapse SQL Functions', exact: true }).click();
+    await page.getByRole('button', { name: 'Collapse SQL UDFs', exact: true }).click();
     const pending = gate();
     await page.route('**/api/cloud', async route => {
         if (jsonRecord(route.request().postDataJSON()).action === 'functions')
@@ -311,7 +311,7 @@ test('a collapsed function group stays collapsed during refresh and can be opene
         await refreshButton(page).click();
         await expect(refreshButton(page)).toBeDisabled();
         await expect(sqlFunction(page)).toHaveCount(0);
-        await page.getByRole('button', { name: 'Expand SQL Functions', exact: true }).click();
+        await page.getByRole('button', { name: 'Expand SQL UDFs', exact: true }).click();
         await expect(sqlFunction(page)).toBeVisible();
         pending.release();
         await expect(refreshButton(page)).toBeEnabled();

@@ -1,7 +1,7 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../../../shared/database/connections/cloud-policy';
 import { useSqlFunctions } from '../../functions/useSqlFunctions';
-import { FunctionsTree } from '../../functions/FunctionsTree';
+import { FunctionGroupsTree } from '../../functions/FunctionGroupsTree';
 import { SqlFunctionDetails } from '../../functions/SqlFunctionDetails';
 import { CreateSqlFunctionDialog } from '../../functions/CreateSqlFunctionDialog';
 import { DeleteSqlFunctionDialog } from '../../functions/DeleteSqlFunctionDialog';
@@ -14,7 +14,6 @@ import { ObjectExplorerSearch } from './ObjectExplorerSearch';
 import { ObjectTree } from './tree/ObjectTree';
 import { ObjectExplorerDialogs } from './ObjectExplorerDialogs';
 import { usePythonFunctions } from '../../functions/usePythonFunctions';
-import { PythonFunctionsTree } from '../../functions/PythonFunctionsTree';
 import { CreatePythonFunctionDialog } from '../../functions/CreatePythonFunctionDialog';
 import { PythonFunctionDetails } from '../../functions/PythonFunctionDetails';
 
@@ -35,6 +34,11 @@ function ObjectExplorerEmptySearch({
 
 export function ObjectExplorer(props: ObjectExplorerProps) {
     const state = useObjectExplorerState(props);
+    const [functionExpansion, setFunctionExpansion] = useState({
+        functions: true,
+        sql: true,
+        python: true,
+    });
     const {
         compact,
         showCompactDetails,
@@ -87,37 +91,30 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
     const deployPython =
         trusted && !connection.readonly && connection.id === CLICKHOUSE_CLOUD_CONNECTION_ID;
     const canDeleteFunction = functions.canDelete;
-    const sqlFunctionsSlot = functions.visible ? (
-        <FunctionsTree
-            label={expert ? 'SQL Functions' : 'Functions'}
-            catalog={functions.catalog}
-            loading={functions.loading}
-            search={search}
-            canCreate={functions.canCreate}
-            createReason={
-                connection.readonly
-                    ? 'This connection is read only.'
-                    : functions.catalog?.createReason || 'Checking CREATE FUNCTION privileges…'
-            }
-            onCreate={functions.openCreate}
-            onSelect={functions.select}
-        />
-    ) : undefined;
     const functionsSlot =
-        sqlFunctionsSlot || python.visible ? (
-            <>
-                {sqlFunctionsSlot}
-                {python.visible && (
-                    <PythonFunctionsTree
-                        state={python}
-                        search={search}
-                        onSelect={fn => {
-                            functions.close();
-                            python.select(fn);
-                        }}
-                    />
-                )}
-            </>
+        functions.visible || python.visible ? (
+            <FunctionGroupsTree
+                sql={functions}
+                python={python}
+                search={search}
+                expanded={functionExpansion}
+                onToggle={group =>
+                    setFunctionExpansion(current => ({ ...current, [group]: !current[group] }))
+                }
+                createReason={
+                    connection.readonly
+                        ? 'This connection is read only.'
+                        : functions.catalog?.createReason || 'Checking CREATE FUNCTION privileges…'
+                }
+                onSelectSql={fn => {
+                    python.close();
+                    functions.select(fn);
+                }}
+                onSelectPython={fn => {
+                    functions.close();
+                    python.select(fn);
+                }}
+            />
         ) : undefined;
     const canInsertSelectedTable =
         connection.dataSource !== 'fixture' &&

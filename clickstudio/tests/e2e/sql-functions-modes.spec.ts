@@ -102,7 +102,9 @@ for (const mode of ['Standard', 'Experimental']) {
             existing: true,
         });
         const tree = page.getByRole('tree', { name: 'Objects', exact: true });
-        await expect(tree.getByRole('treeitem').first()).toContainText('Functions');
+        const rootRows = tree.locator(':scope > .object-tree-branch > [role="treeitem"]');
+        await expect(rootRows.first()).toContainText('default');
+        await expect(rootRows.last()).toContainText('Functions');
         const search = page.getByTestId('schema-search');
         await expect(search).toHaveAttribute('placeholder', 'Search objects and functions…');
         await search.fill('udf_map');

@@ -1,8 +1,16 @@
 @layer components {
-  .sql-functions-tree {
+  .functions-tree {
     --tree-kind-color: var(--violet);
+  }
 
-    margin-bottom: 8px;
+  .object-tree-branch + .functions-tree {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+  }
+
+  .functions-tree > .object-tree-children {
+    gap: 4px;
   }
 
   .sql-functions-status {
