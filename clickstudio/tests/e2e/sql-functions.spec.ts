@@ -80,7 +80,7 @@ test('Custom function starts blank, previews SQL and creates a testable SQL UDF'
     try {
         await page.getByRole('button', { name: 'Create SQL UDF', exact: true }).click();
         const dialog = page.getByRole('dialog', { name: 'Create SQL Function', exact: true });
-        for (const name of ['Function name', 'Parameters'])
+        for (const name of ['Function name', 'Parameter 1 name'])
             await expect(dialog.getByLabel(name, { exact: true })).toHaveValue('');
         await expect(dialog.getByLabel('Expression', { exact: true })).toContainText(
             'e.g. price * (1 + rate)',
@@ -90,7 +90,7 @@ test('Custom function starts blank, previews SQL and creates a testable SQL UDF'
             dialog.getByRole('button', { name: 'Create UDF', exact: true }),
         ).toBeDisabled();
         await dialog.getByLabel('Function name', { exact: true }).fill('add_tax_demo');
-        await dialog.getByLabel('Parameters', { exact: true }).fill('price');
+        await dialog.getByLabel('Parameter 1 name', { exact: true }).fill('price');
         await dialog.getByLabel('Expression', { exact: true }).fill('price * 1.19');
         await expect(dialog.locator('pre')).toHaveText(
             'CREATE FUNCTION `add_tax_demo` AS (`price`) -> price * 1.19;',
@@ -177,7 +177,7 @@ test('Revoked permissions and server test errors stay visible without automatic 
     await page.getByRole('button', { name: 'Create SQL UDF', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Create SQL Function', exact: true });
     await dialog.getByLabel('Function name', { exact: true }).fill('my_function');
-    await dialog.getByLabel('Parameters', { exact: true }).fill('value');
+    await dialog.getByLabel('Parameter 1 name', { exact: true }).fill('value');
     await dialog.getByLabel('Expression', { exact: true }).fill('value + 1');
     await dialog.getByRole('button', { name: 'Create UDF', exact: true }).click();
     await expect(dialog.getByRole('alert')).toContainText('privilege was revoked');

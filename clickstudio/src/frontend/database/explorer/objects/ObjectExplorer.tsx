@@ -286,8 +286,6 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                 <CreateSqlFunctionDialog
                     onClose={functions.closeCreate}
                     onCreated={functions.created}
-                    copiedId={copiedId}
-                    onCopy={(sql, id) => void copyText(sql, id)}
                 />
             )}
             {python.createOpen && (

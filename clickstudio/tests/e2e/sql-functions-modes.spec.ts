@@ -138,7 +138,7 @@ for (const mode of ['Standard', 'Experimental']) {
         await page.getByRole('button', { name: 'Create SQL UDF', exact: true }).click();
         const dialog = page.getByRole('dialog', { name: 'Create SQL Function', exact: true });
         await dialog.getByLabel('Function name', { exact: true }).fill('add_tax_demo');
-        await dialog.getByLabel('Parameters', { exact: true }).fill('price');
+        await dialog.getByLabel('Parameter 1 name', { exact: true }).fill('price');
         await dialog.getByLabel('Expression', { exact: true }).fill('price * 1.19');
         await dialog.getByRole('button', { name: 'Create UDF', exact: true }).click();
         await expect(dialog).toHaveCount(0);

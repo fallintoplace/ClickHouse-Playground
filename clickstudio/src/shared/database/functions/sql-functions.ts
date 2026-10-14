@@ -57,7 +57,7 @@ export function createSqlFunctionQuery(input: SqlFunctionInput): string {
         input.parameters.some(parameter => !identifier.test(parameter)) ||
         new Set(input.parameters).size !== input.parameters.length
     )
-        throw new Error('Enter 1–16 unique parameter names, separated by commas.');
+        throw new Error('Enter 1–16 unique parameter names.');
     const expression = input.expression.trim();
     if (!expression || expression.length > 8192)
         throw new Error('Enter an expression of up to 8,192 characters.');

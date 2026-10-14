@@ -41,7 +41,9 @@ async function creationDialog(
     const fill = async () => {
         await field.fill(kind === 'function' ? 'add_tax' : 'events_corporate');
         if (kind === 'function') {
-            await dialog.getByLabel('Parameters', { exact: true }).fill('price, rate');
+            await dialog.getByLabel('Parameter 1 name', { exact: true }).fill('price');
+            await dialog.getByRole('button', { name: 'Add parameter', exact: true }).click();
+            await dialog.getByLabel('Parameter 2 name', { exact: true }).fill('rate');
             await dialog.getByLabel('Expression', { exact: true }).fill('price * (1 + rate)');
         }
     };
@@ -159,6 +161,17 @@ for (const mode of ['Standard', 'Experimental']) {
                     .click();
                 await expect.poll(() => creationRequests).toBe(1);
                 await expect(field).toBeDisabled();
+                if (kind === 'function') {
+                    await expect(
+                        dialog.getByLabel('Parameter 1 name', { exact: true }),
+                    ).toBeDisabled();
+                    await expect(
+                        dialog.getByRole('button', { name: 'Add parameter', exact: true }),
+                    ).toBeDisabled();
+                    await expect(
+                        dialog.getByRole('button', { name: 'Remove parameter 1', exact: true }),
+                    ).toBeDisabled();
+                }
                 const outside = await outsidePoint(dialog);
                 await page.mouse.click(outside.x, outside.y);
                 await page.keyboard.press('Escape');

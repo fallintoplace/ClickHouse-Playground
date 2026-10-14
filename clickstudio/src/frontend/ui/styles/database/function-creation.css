@@ -45,6 +45,24 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 140px;
   }
 
+  .sql-function-dialog .function-creation-fields .function-creation-section-heading {
+    min-height: 34px;
+  }
+
+  .sql-function-parameters {
+    display: grid;
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .sql-function-parameter-row {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: 16px minmax(0, 1fr) 32px;
+    align-items: center;
+    gap: 6px;
+  }
+
   .function-creation-workspace {
     display: grid;
     min-width: 0;

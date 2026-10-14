@@ -9,24 +9,94 @@ import { Icon } from '../../ui/components/icons';
 import { FunctionCreationDialog } from './FunctionCreationDialog';
 import { FunctionCodeEditor } from './FunctionCodeEditor';
 
+type Parameter = { id: number; name: string };
+
+function SqlFunctionParameters({
+    parameters,
+    busy,
+    onAdd,
+    onChange,
+    onRemove,
+}: {
+    parameters: Parameter[];
+    busy: boolean;
+    onAdd: () => void;
+    onChange: (id: number, name: string) => void;
+    onRemove: (id: number) => void;
+}) {
+    return (
+        <section className="sql-function-parameters" aria-label="Parameters">
+            <div className="function-creation-section-heading">
+                <h3>Parameters</h3>
+                <button
+                    type="button"
+                    className="creation-dialog-button function-creation-icon-button"
+                    aria-label="Add parameter"
+                    title="Add parameter"
+                    disabled={busy || parameters.length >= 16}
+                    onClick={onAdd}
+                >
+                    <Icon name="plus" />
+                </button>
+            </div>
+            {parameters.map((parameter, index) => (
+                <div key={parameter.id} className="sql-function-parameter-row">
+                    <span className="function-creation-meta" aria-hidden="true">
+                        {index + 1}
+                    </span>
+                    <input
+                        className="creation-dialog-control"
+                        aria-label={`Parameter ${index + 1} name`}
+                        value={parameter.name}
+                        disabled={busy}
+                        maxLength={128}
+                        placeholder={index === 0 ? 'e.g. price' : 'e.g. rate'}
+                        onChange={event => onChange(parameter.id, event.target.value)}
+                    />
+                    <button
+                        type="button"
+                        className="creation-dialog-button function-creation-icon-button"
+                        aria-label={`Remove parameter ${index + 1}`}
+                        title="Remove parameter"
+                        disabled={busy || parameters.length === 1}
+                        onClick={event => {
+                            if (event.currentTarget.matches(':focus-visible')) {
+                                const row = event.currentTarget.closest(
+                                    '.sql-function-parameter-row',
+                                );
+                                const neighbor =
+                                    row?.nextElementSibling ?? row?.previousElementSibling;
+                                neighbor
+                                    ?.querySelector<HTMLInputElement>('input')
+                                    ?.focus({ preventScroll: true });
+                            }
+                            onRemove(parameter.id);
+                        }}
+                    >
+                        <Icon name="trash" />
+                    </button>
+                </div>
+            ))}
+        </section>
+    );
+}
+
 export function CreateSqlFunctionDialog({
     onClose,
     onCreated,
-    onCopy,
-    copiedId,
 }: {
     onClose: () => void;
     onCreated: (fn: SqlFunction) => void;
-    onCopy: (sql: string, id: string) => void;
-    copiedId?: string;
 }) {
     const nameInput = useRef<HTMLInputElement>(null);
-    const [fields, setFields] = useState({ name: '', parameters: '', expression: '' });
+    const nextParameterId = useRef(1);
+    const [fields, setFields] = useState({ name: '', expression: '' });
+    const [parameters, setParameters] = useState<Parameter[]>([{ id: 0, name: '' }]);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
     const input = {
         name: fields.name.trim(),
-        parameters: fields.parameters.split(',').map(value => value.trim()),
+        parameters: parameters.map(parameter => parameter.name.trim()),
         expression: fields.expression,
     };
     let sql = '',
@@ -39,6 +109,22 @@ export function CreateSqlFunctionDialog({
 
     const changeField = (field: keyof typeof fields, value: string) => {
         setFields(current => ({ ...current, [field]: value }));
+        setError('');
+    };
+
+    const changeParameter = (id: number, name: string) => {
+        setParameters(current =>
+            current.map(parameter => (parameter.id === id ? { ...parameter, name } : parameter)),
+        );
+        setError('');
+    };
+    const addParameter = () => {
+        const id = nextParameterId.current++;
+        setParameters(current => [...current, { id, name: '' }]);
+        setError('');
+    };
+    const removeParameter = (id: number) => {
+        setParameters(current => current.filter(parameter => parameter.id !== id));
         setError('');
     };
 
@@ -72,15 +158,6 @@ export function CreateSqlFunctionDialog({
                 <>
                     <button
                         type="button"
-                        className="creation-dialog-button is-quiet"
-                        disabled={!sql || busy}
-                        onClick={() => onCopy(sql, `function-create:${sql}`)}
-                    >
-                        <Icon name="copy" />
-                        {copiedId === `function-create:${sql}` ? 'Copied' : 'Copy SQL'}
-                    </button>
-                    <button
-                        type="button"
                         className="creation-dialog-button"
                         disabled={busy}
                         onClick={onClose}
@@ -100,27 +177,25 @@ export function CreateSqlFunctionDialog({
         >
             <div className="function-creation-fields">
                 <label className="creation-dialog-field">
-                    <span>Function name</span>
+                    <span className="function-creation-section-heading">Function name</span>
                     <input
                         ref={nameInput}
                         className="creation-dialog-control"
                         value={fields.name}
+                        disabled={busy}
                         aria-label="Function name"
                         maxLength={128}
                         placeholder="e.g. add_tax"
                         onChange={event => changeField('name', event.target.value)}
                     />
                 </label>
-                <label className="creation-dialog-field">
-                    <span>Parameters</span>
-                    <input
-                        className="creation-dialog-control"
-                        value={fields.parameters}
-                        aria-label="Parameters"
-                        placeholder="e.g. price, rate"
-                        onChange={event => changeField('parameters', event.target.value)}
-                    />
-                </label>
+                <SqlFunctionParameters
+                    parameters={parameters}
+                    busy={busy}
+                    onAdd={addParameter}
+                    onChange={changeParameter}
+                    onRemove={removeParameter}
+                />
             </div>
             <div className="function-creation-workspace">
                 <section
@@ -132,7 +207,9 @@ export function CreateSqlFunctionDialog({
                     </div>
                     <pre>
                         {sql ||
-                            (fields.name || fields.parameters || fields.expression
+                            (fields.name ||
+                            parameters.some(parameter => parameter.name) ||
+                            fields.expression
                                 ? validation
                                 : 'CREATE FUNCTION ... AS (...) -> ...;')}
                     </pre>
