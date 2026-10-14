@@ -133,29 +133,21 @@ for (const mode of ['Standard', 'Experimental']) {
             await expect(
                 page.getByRole('button', { name: 'Create SQL UDF', exact: true }),
             ).toBeDisabled();
-            if (mode === 'Experimental') {
-                await expect(page.locator('.python-functions-tree')).toBeVisible();
-                await expect(
-                    page.getByRole('button', { name: 'Create Python UDF', exact: true }),
-                ).toBeDisabled();
-            }
+            await expect(page.locator('.python-functions-tree')).toBeVisible();
+            await expect(
+                page.getByRole('button', { name: 'Create Python UDF', exact: true }),
+            ).toBeDisabled();
             schema.release();
             await expect(table(page, 'events', 'ReplacingMergeTree')).toBeVisible();
             await expect(refreshButton(page)).toBeDisabled();
-            if (mode === 'Experimental') {
-                functions.release();
-                await expect(
-                    page.getByRole('button', { name: 'Create SQL UDF', exact: true }),
-                ).toBeEnabled();
-                await expect(refreshButton(page)).toBeDisabled();
-                python.release();
-            } else functions.release();
+            functions.release();
+            await expect(
+                page.getByRole('button', { name: 'Create SQL UDF', exact: true }),
+            ).toBeEnabled();
+            await expect(refreshButton(page)).toBeDisabled();
+            python.release();
             await expect(refreshButton(page)).toBeEnabled();
-            expect(requests.sort()).toEqual(
-                mode === 'Experimental'
-                    ? ['executable-functions', 'functions', 'schema']
-                    : ['functions', 'schema'],
-            );
+            expect(requests.sort()).toEqual(['executable-functions', 'functions', 'schema']);
         } finally {
             schema.release();
             functions.release();

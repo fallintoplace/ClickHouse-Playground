@@ -83,10 +83,9 @@ for (const mode of ['Standard', 'Experimental']) {
         await expect(
             page.getByRole('button', { name: 'Create SQL UDF', exact: true }),
         ).toBeEnabled();
-        if (mode === 'Experimental')
-            await expect(
-                page.getByRole('button', { name: 'Create Python UDF', exact: true }),
-            ).toBeVisible();
+        await expect(
+            page.getByRole('button', { name: 'Create Python UDF', exact: true }),
+        ).toBeVisible();
         state.canCreate = false;
         await page.locator('.object-refresh-action').click();
         await expect(page.locator('.sql-functions-tree, .python-functions-tree')).toHaveCount(0);
@@ -150,8 +149,29 @@ test('Existing Python functions remain testable without creation privileges', as
     await page.getByLabel('arg1', { exact: true }).fill('21');
     await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
     await expect(page.locator('.sql-function-output')).toHaveText('"42"');
-    await setWorkspaceMode(page, 'Standard');
-    await expect(page.locator('.python-functions-tree, .sql-function-details')).toHaveCount(0);
+    await page.locator('.object-back-button').click();
+    for (const mode of ['Standard', 'Experimental']) {
+        await setWorkspaceMode(page, mode);
+        await page
+            .locator('.icon-rail')
+            .getByRole('button', { name: 'Objects', exact: true })
+            .click();
+        await expect(
+            page.getByRole('button', { name: 'Create Python UDF', exact: true }),
+        ).toHaveCount(0);
+        await page
+            .getByRole('button', { name: 'python_double Executable UDF', exact: true })
+            .click();
+        await chooseSelectOption(
+            page,
+            page.getByRole('combobox', { name: 'Test argument 1 type', exact: true }),
+            'Int64',
+        );
+        await page.getByLabel('arg1', { exact: true }).fill('21');
+        await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
+        await expect(page.locator('.sql-function-output')).toHaveText('"42"');
+        await page.locator('.object-back-button').click();
+    }
 });
 
 for (const kind of ['SQL', 'Python']) {
@@ -185,17 +205,21 @@ for (const kind of ['SQL', 'Python']) {
     });
 }
 
-test('Standard keeps Python management hidden and makes no executable metadata requests', async ({
-    page,
-}) => {
+test('Standard loads executable metadata only when Objects is first opened', async ({ page }) => {
     const { requests } = await functionsWorkspace(page, {
         path: workspacePath('Standard'),
         existing: true,
+        openObjects: false,
     });
     await expect(page.getByRole('button', { name: 'Create Python UDF', exact: true })).toHaveCount(
         0,
     );
     expect(requests.some(request => request.action === 'executable-functions')).toBe(false);
+    await page.locator('.icon-rail').getByRole('button', { name: 'Objects', exact: true }).click();
+    await expect(
+        page.getByRole('button', { name: 'Create Python UDF', exact: true }),
+    ).toBeEnabled();
+    expect(requests.filter(request => request.action === 'executable-functions')).toHaveLength(1);
 });
 
 for (const { viewport, theme } of [

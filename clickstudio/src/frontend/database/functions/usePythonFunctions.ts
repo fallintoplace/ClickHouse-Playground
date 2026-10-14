@@ -12,7 +12,6 @@ import { metadataAccessDenied, metadataConnectionKey } from '../schema/metadata-
 
 export function usePythonFunctions(
     connection: Connected,
-    enabled: boolean,
     canCreate: boolean,
     creationPending = false,
 ) {
@@ -31,7 +30,6 @@ export function usePythonFunctions(
     const active = useRef(key);
     active.current = key;
     const discover =
-        enabled &&
         connection.trusted &&
         connection.dataSource !== 'fixture' &&
         connection.id !== PLAYGROUND_CONNECTION_ID;

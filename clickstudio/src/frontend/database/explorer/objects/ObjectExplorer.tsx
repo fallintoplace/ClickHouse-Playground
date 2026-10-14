@@ -81,7 +81,6 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
     const functions = useSqlFunctions(connection, functionsEnabled, props.functionCatalog);
     const python = usePythonFunctions(
         connection,
-        expert,
         !connection.readonly &&
             (connection.id !== CLICKHOUSE_CLOUD_CONNECTION_ID ||
                 functions.catalog?.canCreate === true),

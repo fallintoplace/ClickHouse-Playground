@@ -121,9 +121,7 @@ test('Functions preserves subgroup collapse state and search expands matching ro
     await expect(python).toBeVisible();
 });
 
-test('Standard shows the same Functions hierarchy without Python management or metadata requests', async ({
-    page,
-}) => {
+test('Standard shows the same SQL and Python Functions hierarchy', async ({ page }) => {
     const { requests, state } = await groupedWorkspace(page, '/');
     const tree = page.locator('.functions-tree');
     await expect(tree.locator('.sql-functions-tree > .object-tree-row')).toHaveAttribute(
@@ -131,10 +129,19 @@ test('Standard shows the same Functions hierarchy without Python management or m
         '2',
     );
     await expect(tree.locator(':scope > .object-tree-row .object-tree-count')).toHaveText(
-        String(state.functions.length),
+        String(state.functions.length + state.executableFunctions.length),
     );
-    await expect(tree.locator('.python-functions-tree')).toHaveCount(0);
-    expect(requests.some(request => request.action === 'executable-functions')).toBe(false);
+    await expect(tree.locator('.python-functions-tree > .object-tree-row')).toHaveAttribute(
+        'aria-level',
+        '2',
+    );
+    await expect(
+        tree.getByRole('button', { name: 'python_double Executable UDF', exact: true }),
+    ).toBeVisible();
+    await expect(
+        tree.getByRole('button', { name: 'Create Python UDF', exact: true }),
+    ).toBeEnabled();
+    expect(requests.some(request => request.action === 'executable-functions')).toBe(true);
 });
 
 test('an empty available Functions group stays collapsible and retains its create actions', async ({

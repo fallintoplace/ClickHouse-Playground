@@ -1,6 +1,7 @@
 # Python executable UDFs
 
-Python authoring and management are available in **Experimental > Objects > Python UDFs**.
+Python authoring and management are available in both **Standard** and **Experimental**
+under **Objects > Functions > Python UDFs**.
 Existing SQL UDF creation and testing are unchanged. Ordinary SQL can call installed
 executable functions in either workspace mode.
 
@@ -107,7 +108,7 @@ not install a function.
 and lossless typed SQL inputs. `npm run test:python` runs generated adapters using
 known fixture source in Python 3.11 in CI. Management HTTP and adapter tests mock the
 Cloud API; they do not modify a live organization. Browser coverage checks export,
-typed query routing, unknown outcomes, session renewal and Standard-mode isolation.
+typed query routing, unknown outcomes, session renewal and availability in both modes.
 A release deployment should additionally complete the live create, build, attach,
 reload and SQL-test sequence on its intended Cloud service.
 
