@@ -261,7 +261,7 @@
     border-top: 0;
     border-right: 0;
     border-radius: 0 0 0 var(--radius-control);
-    background: var(--panel);
+    background: color-mix(in srgb, var(--panel) 72%, transparent);
     box-shadow: none;
   }
   .editor-workspace-layout:has(.sql-proposal-review) .editor-control-rail {
@@ -505,6 +505,12 @@
   }
   .run-explain-actions .run-option-button:not(:disabled) {
     transform: none;
+  }
+  .editor-control-rail .run-option-button {
+    background: color-mix(in srgb, var(--panel-raised) 68%, transparent);
+  }
+  .editor-control-rail .run-option-button:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--control-hover) 68%, transparent);
   }
   .run-option-disabled-anchor {
     position: relative;
