@@ -56,6 +56,7 @@ export function SelectControl({
     value,
     options,
     onChange,
+    menuHeading,
     searchable = false,
     compactMenu = false,
     hideDisabledOptions = true,
@@ -68,6 +69,7 @@ export function SelectControl({
     value: string;
     options: SelectControlOption[];
     onChange: (value: string) => void;
+    menuHeading?: string;
     searchable?: boolean;
     compactMenu?: boolean;
     hideDisabledOptions?: boolean;
@@ -274,6 +276,11 @@ export function SelectControl({
                     } else if (event.key === 'Tab') hideMenu(true);
                 }}
             >
+                {menuHeading && (
+                    <div className="chart-select-menu-heading" aria-hidden="true">
+                        {menuHeading}
+                    </div>
+                )}
                 {searchable && (
                     <input
                         ref={searchInput}

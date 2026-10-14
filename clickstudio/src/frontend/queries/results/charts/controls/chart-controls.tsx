@@ -54,6 +54,7 @@ export function renderChartControls({
                     className="chart-select"
                     compactMenu
                     label={chartCopy.type}
+                    menuHeading={chartCopy.type}
                     value={chartKind}
                     hideDisabledOptions
                     onChange={value => {
@@ -118,6 +119,9 @@ export function renderChartControls({
                         className="chart-select"
                         compactMenu
                         label={chartKind === 'scatter' ? chartCopy.xAxisMeasure : chartCopy.xAxis}
+                        menuHeading={
+                            chartKind === 'scatter' ? chartCopy.xAxisMeasure : chartCopy.xAxis
+                        }
                         value={String(xIndex)}
                         hideDisabledOptions
                         searchable={result.columns.length >= 8}
@@ -159,6 +163,7 @@ export function renderChartControls({
                         className="chart-select"
                         compactMenu
                         label={chartCopy.yAxis}
+                        menuHeading={chartCopy.yAxis}
                         value={String(groupByIndex ?? -1)}
                         hideDisabledOptions
                         searchable={result.columns.length >= 8}
@@ -241,6 +246,7 @@ export function renderChartControls({
                         className="chart-select"
                         compactMenu
                         label={chartCopy.measure}
+                        menuHeading={chartCopy.measure}
                         value={String(yIndex)}
                         searchable={numericIndexes.length >= 8}
                         onChange={value => onChart({ ...chart, ys: [Number(value)] })}

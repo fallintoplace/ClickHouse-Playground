@@ -308,6 +308,7 @@ function RowCountChartToolbar({
                     className="chart-select"
                     compactMenu
                     label={copy.xAxis}
+                    menuHeading={copy.xAxis}
                     value={String(xIndex)}
                     searchable={dimensions.length >= 8}
                     onChange={value => {
@@ -353,6 +354,7 @@ function RowCountChartToolbar({
                         className="chart-select"
                         compactMenu
                         label={copy.breakdownBy}
+                        menuHeading={copy.breakdownBy}
                         value={groupByIndex === undefined ? '' : String(groupByIndex)}
                         searchable={breakdowns.length >= 8}
                         onChange={value => {

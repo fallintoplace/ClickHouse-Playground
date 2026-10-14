@@ -132,6 +132,7 @@ function renderCandlestickControls({
                                 className="chart-select"
                                 compactMenu
                                 label={chartCopy.type}
+                                menuHeading={chartCopy.type}
                                 value="candlestick"
                                 hideDisabledOptions
                                 onChange={updateKind}
@@ -152,6 +153,7 @@ function renderCandlestickControls({
                                 className="chart-select"
                                 compactMenu
                                 label={chartCopy.xAxis}
+                                menuHeading={chartCopy.xAxis}
                                 value={String(candleX)}
                                 hideDisabledOptions
                                 searchable={result.columns.length >= 8}
