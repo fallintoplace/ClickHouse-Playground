@@ -135,14 +135,15 @@ function positionMenu(menu: HTMLDivElement, trigger: HTMLButtonElement) {
     const view = menu.ownerDocument.defaultView;
     if (!view) return;
     const anchor = trigger.getBoundingClientRect();
-    const header = trigger.closest('.results-header')?.getBoundingClientRect() ?? anchor;
-    const below = view.innerHeight - header.bottom - 14;
-    const above = header.top - 14;
+    const below = view.innerHeight - anchor.bottom - 8;
+    const above = anchor.top - 8;
     menu.style.maxHeight = `${Math.max(0, Math.min(320, Math.max(below, above)))}px`;
     const bounds = menu.getBoundingClientRect();
     const left = Math.max(8, Math.min(anchor.left, view.innerWidth - bounds.width - 8));
-    const top =
-        bounds.height <= below ? header.bottom + 6 : Math.max(8, header.top - bounds.height - 6);
+    const opensBelow = bounds.height <= below;
+    const top = opensBelow ? anchor.bottom - 1 : Math.max(8, anchor.top - bounds.height + 1);
+    menu.dataset.side = opensBelow ? 'bottom' : 'top';
+    trigger.dataset.menuSide = menu.dataset.side;
     menu.style.left = `${left}px`;
     menu.style.top = `${top}px`;
 }
@@ -288,6 +289,7 @@ export function ScriptResultsSelector({
                 onToggle={event => {
                     const isOpen = event.newState === 'open';
                     setOpen(isOpen);
+                    if (!isOpen && trigger.current) delete trigger.current.dataset.menuSide;
                     if (!isOpen || !trigger.current) return;
                     positionMenu(event.currentTarget, trigger.current);
                     const items = event.currentTarget.querySelectorAll<HTMLButtonElement>(
@@ -301,6 +303,9 @@ export function ScriptResultsSelector({
                     focusedItem?.scrollIntoView({ block: 'nearest' });
                 }}
             >
+                <div className="script-results-menu-heading" aria-hidden="true">
+                    Statement results
+                </div>
                 {statements.map((statement, index) => {
                     const active = index === selectedIndex;
                     const run = statement.runId ? byId.get(statement.runId) : undefined;
