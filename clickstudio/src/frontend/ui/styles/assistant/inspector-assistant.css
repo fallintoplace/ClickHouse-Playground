@@ -146,8 +146,7 @@
     width: 12px !important; /* stylelint-disable-next-line declaration-no-important -- Preserve component icon and control dimensions above utility styles. */
     height: 12px !important;
   }
-  .inspector-tabs.is-browser-tabs
-    .inspector-more-trigger:is(.is-active, [aria-expanded="true"]) {
+  .inspector-tabs.is-browser-tabs .inspector-more-trigger:is(.is-active, [aria-expanded="true"]) {
     border-color: var(--active-border);
     background: var(--active-surface);
     color: var(--accent);

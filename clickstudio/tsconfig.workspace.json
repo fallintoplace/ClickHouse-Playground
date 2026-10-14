@@ -37,6 +37,7 @@
     "src/frontend/queries/results/charts/rendering/chart-view-model.ts",
     "src/frontend/queries/history/query-parameter-comparison.ts",
     "src/frontend/queries/saved-queries/draft-save-state.ts",
+    "src/frontend/database/explorer/objects/tree/object-type-labels.ts",
     "src/frontend/database/explorer/objects/object-explorer-model.ts",
     "src/shared/database/tables/delete-table.ts",
     "src/shared/database/reference/reference.ts",

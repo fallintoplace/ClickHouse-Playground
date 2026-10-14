@@ -583,6 +583,9 @@ export const copy = {
 };
 
 export type Copy = typeof copy;
+export type StringCopyKey<T> = {
+    [Key in keyof T]: T[Key] extends string ? Key : never;
+}[keyof T];
 
 export const themeOptions = (labels: Copy): readonly SelectOption<Theme>[] =>
     THEMES.map(value => ({

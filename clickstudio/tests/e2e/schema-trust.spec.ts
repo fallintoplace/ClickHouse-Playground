@@ -551,9 +551,11 @@ for (const mode of ['Standard', 'Experimental']) {
             }, longHint);
 
             await expect(footerHelp).toContainText(longHint.slice(0, 40));
-            await expect.poll(() =>
-                footerHelp.evaluate(element => parseFloat(getComputedStyle(element).fontSize)),
-            ).toBeLessThan(12);
+            await expect
+                .poll(() =>
+                    footerHelp.evaluate(element => parseFloat(getComputedStyle(element).fontSize)),
+                )
+                .toBeLessThan(12);
             await expect(footerHelp).toHaveCSS('white-space', 'nowrap');
             const footerHeightAfter = await footerBar.evaluate(
                 element => element.getBoundingClientRect().height,

@@ -114,7 +114,9 @@ export function createRelationRenderer({
                         </span>
                         <span className="object-tree-label">
                             <strong>{relation.table.name}</strong>
-                            <small>{objectTypeLabel(relation.table.engine, copy.objectTypes)}</small>
+                            <small>
+                                {objectTypeLabel(relation.table.engine, copy.objectTypes)}
+                            </small>
                         </span>
                     </button>
                 </div>

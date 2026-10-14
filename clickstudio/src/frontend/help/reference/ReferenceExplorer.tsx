@@ -14,7 +14,7 @@ import {
     bundledProvider,
 } from './reference-provider';
 import type { Connected } from '../../workspace/workspace-types';
-import type { Copy } from '../../ui/copy';
+import type { Copy, StringCopyKey } from '../../ui/copy';
 import { Button, cx, Spinner } from '../../ui/components/primitives';
 import { Icon } from '../../ui/components/icons';
 
@@ -30,7 +30,7 @@ type ReferenceExplorerProps = {
     onInsert: (value: string) => void;
 };
 
-const categoryCopy: Record<ReferenceCategory, keyof Copy['common']> = {
+const categoryCopy: Record<ReferenceCategory, StringCopyKey<Copy['common']>> = {
     all: 'referenceAll',
     functions: 'referenceFunctions',
     types: 'referenceTypes',

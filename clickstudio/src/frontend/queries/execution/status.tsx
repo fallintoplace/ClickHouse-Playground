@@ -2,7 +2,7 @@ import { isTerminalRunStatus } from '../../../shared/queries/execution/status';
 
 import type { Run } from '../../../shared/queries/execution/types';
 
-import type { Copy } from '../../ui/copy';
+import type { Copy, StringCopyKey } from '../../ui/copy';
 
 import { cx } from '../../ui/components/primitives.js';
 
@@ -26,7 +26,7 @@ export function Status({ run, copy }: { run?: Run; copy?: Copy['common'] }) {
     } else {
         kind = 'is-running';
     }
-    const statusCopy: Partial<Record<NonNullable<Run>['status'], keyof Copy['common']>> = {
+    const statusCopy: Partial<Record<NonNullable<Run>['status'], StringCopyKey<Copy['common']>>> = {
         queued: 'statusQueued',
         running: 'statusRunning',
         succeeded: 'statusSucceeded',

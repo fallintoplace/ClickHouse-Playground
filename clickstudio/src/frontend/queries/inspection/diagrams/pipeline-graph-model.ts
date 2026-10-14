@@ -3,7 +3,7 @@ import type {
     ProfilePipeline,
     ProfilePipelineNode,
 } from '../../../../shared/queries/inspection/types';
-import type { Copy } from '../../../ui/copy';
+import type { Copy, StringCopyKey } from '../../../ui/copy';
 
 export const nodeWidth = 220;
 export const nodeHeight = 74;
@@ -217,17 +217,18 @@ export function focusPipeline(pipeline: ProfilePipeline, selectedId?: string) {
 }
 
 export function sqlFlowNodeKind(kind: string, copy?: Copy['common']) {
-    const translation: Partial<Record<ProfilePipelineNode['kind'], keyof Copy['common']>> = {
-        read: 'sqlFlowReadKind',
-        filter: 'sqlFlowFilterKind',
-        aggregate: 'sqlFlowAggregateKind',
-        sort: 'sqlFlowSortKind',
-        resize: 'sqlFlowResizeKind',
-        join: 'sqlFlowJoinKind',
-        transform: 'sqlFlowTransformKind',
-        output: 'sqlFlowOutputKind',
-        stage: 'sqlFlowStageKind',
-    };
+    const translation: Partial<Record<ProfilePipelineNode['kind'], StringCopyKey<Copy['common']>>> =
+        {
+            read: 'sqlFlowReadKind',
+            filter: 'sqlFlowFilterKind',
+            aggregate: 'sqlFlowAggregateKind',
+            sort: 'sqlFlowSortKind',
+            resize: 'sqlFlowResizeKind',
+            join: 'sqlFlowJoinKind',
+            transform: 'sqlFlowTransformKind',
+            output: 'sqlFlowOutputKind',
+            stage: 'sqlFlowStageKind',
+        };
     const key = Object.entries(translation).find(([nodeKind]) => nodeKind === kind)?.[1];
     return key && copy ? copy[key] : kind;
 }

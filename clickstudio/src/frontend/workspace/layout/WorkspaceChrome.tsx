@@ -443,11 +443,7 @@ export function ExecutionBar({
             )}
             <div className="execution-right">
                 {visibleHelpHint && (
-                    <p
-                        ref={helpHintRef}
-                        className="execution-help-hint"
-                        title={visibleHelpHint}
-                    >
+                    <p ref={helpHintRef} className="execution-help-hint" title={visibleHelpHint}>
                         {visibleHelpHint}
                     </p>
                 )}

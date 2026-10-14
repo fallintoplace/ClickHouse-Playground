@@ -1,4 +1,4 @@
-import type { Copy } from '../../../../ui/copy';
+import type { Copy } from '../../../../ui/copy.js';
 
 type ObjectTypeCopy = Copy['common']['objectTypes'];
 type ObjectTypeCopyKey = keyof ObjectTypeCopy;
