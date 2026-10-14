@@ -296,8 +296,6 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                 <CreatePythonFunctionDialog
                     key={python.key}
                     onClose={python.closeCreate}
-                    onPublished={python.refresh}
-                    deployAllowed={deployPython}
                 />
             )}
             {functions.deleteTarget && canDeleteFunction && (

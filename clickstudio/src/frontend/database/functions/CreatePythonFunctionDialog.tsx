@@ -13,16 +13,11 @@ import { Icon } from '../../ui/components/icons';
 import { message } from '../../api/client';
 import { FunctionCreationDialog } from './FunctionCreationDialog';
 import { FunctionCodeEditor } from './FunctionCodeEditor';
-import { PythonDeploymentPanel } from './PythonDeploymentPanel';
 
 export function CreatePythonFunctionDialog({
     onClose,
-    onPublished,
-    deployAllowed,
 }: {
     onClose: () => void;
-    onPublished: () => void;
-    deployAllowed: boolean;
 }) {
     const nameInput = useRef<HTMLInputElement>(null);
     const [template, setTemplate] = useState('custom');
@@ -282,13 +277,6 @@ export function CreatePythonFunctionDialog({
                     {error}
                 </p>
             )}
-            <PythonDeploymentPanel
-                name={draft.name}
-                draft={validation.success && !sourceIssue ? validation.data : undefined}
-                allowed={deployAllowed}
-                onChanged={onPublished}
-                onBusy={setBusy}
-            />
         </FunctionCreationDialog>
     );
 }
