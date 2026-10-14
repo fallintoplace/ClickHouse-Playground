@@ -209,7 +209,8 @@ test('Heatmaps keep native context and suppress redundant axis titles', async ({
     const table = results.locator('.heatmap-grid');
     await expect(table.locator('.heatmap-row-label').first()).toHaveAttribute('title', '');
     const headers = table.locator('thead .heatmap-axis-label');
-    await expect(headers).toHaveText([
+    await expect(headers).toHaveText(['Avicii', 'Bastille', 'Beck']);
+    await expect(table.locator('.heatmap-row-label')).toHaveText([
         'Around Town',
         "Don't Turn the Lights On",
         'Supermassive Black Hole',

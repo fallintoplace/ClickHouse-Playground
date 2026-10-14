@@ -95,7 +95,7 @@ for (const mode of ['Standard', 'Experimental']) {
         await expect(page.locator('.sql-functions-tree')).toBeVisible();
     });
 
-    test(`${mode} exposes Cloud deployment only after management access is enabled`, async ({
+    test(`${mode} keeps creation export-only and gates deployment behind a management session`, async ({
         page,
     }) => {
         let sessions = 0;
@@ -114,10 +114,26 @@ for (const mode of ['Standard', 'Experimental']) {
                     },
                 });
             }
-            if (path.endsWith('/status')) return route.fulfill({ json: { versions: [] } });
+            if (path.endsWith('/status'))
+                return route.fulfill({
+                    json: {
+                        versions: [
+                            {
+                                name: 'python_double',
+                                version: 1,
+                                status: 'ready',
+                                error: null,
+                                arguments: [{ name: 'value', type: 'Int64' }],
+                                returnType: 'Int64',
+                            },
+                        ],
+                    },
+                });
             return route.fulfill({ status: 404, json: {} });
         });
-        await functionsWorkspace(page, { path: workspacePath(mode) });
+        const { state } = await functionsWorkspace(page, { path: workspacePath(mode) });
+        state.executableFunctions.push({ name: 'python_double', createQuery: '' });
+        await page.locator('.object-refresh-action').click();
         await page.getByRole('button', { name: 'Create Python UDF', exact: true }).click();
         const dialog = page.getByRole('dialog', { name: 'Create Python UDF', exact: true });
         await chooseSelectOption(
@@ -128,18 +144,42 @@ for (const mode of ['Standard', 'Experimental']) {
         await expect(
             dialog.getByRole('button', { name: 'Publish function', exact: true }),
         ).toHaveCount(0);
+        await expect(
+            dialog.getByRole('button', { name: 'Enable deployment session', exact: true }),
+        ).toHaveCount(0);
+        await expect(dialog.getByRole('region', { name: 'Cloud deployment' })).toHaveCount(0);
+        await expect(dialog.getByRole('button', { name: 'Export ZIP', exact: true })).toBeEnabled();
         expect(sessions).toBe(0);
-        await dialog
+        await dialog.press('Escape');
+        await expect(dialog).toHaveCount(0);
+        await page
+            .getByRole('button', { name: 'python_double Executable UDF', exact: true })
+            .click();
+        await page.getByRole('tab', { name: 'Deployment', exact: true }).click();
+        const deployment = page.getByRole('region', { name: 'Cloud deployment', exact: true });
+        const attach = deployment.getByRole('button', {
+            name: 'Attach selected version',
+            exact: true,
+        });
+        await expect(attach).toHaveCount(0);
+        await deployment
             .getByRole('button', { name: 'Enable deployment session', exact: true })
             .click();
-        const publish = dialog.getByRole('button', { name: 'Publish function', exact: true });
-        await expect(publish).toBeDisabled();
+        await expect(attach).toBeDisabled();
         await chooseSelectOption(
             page,
-            dialog.getByRole('combobox', { name: 'Target service', exact: true }),
+            deployment.getByRole('combobox', { name: 'Target service', exact: true }),
             'service-id',
         );
-        await expect(publish).toBeEnabled();
+        await expect(attach).toBeDisabled();
+        await chooseSelectOption(
+            page,
+            deployment.getByRole('combobox', { name: 'Build version', exact: true }),
+            '1',
+        );
+        await expect(attach).toBeDisabled();
+        await deployment.getByRole('checkbox', { name: /I confirm attachment/ }).check();
+        await expect(attach).toBeEnabled();
         expect(sessions).toBe(1);
     });
 }

@@ -511,16 +511,16 @@ test('Python tester routes typed SQL and query results through the existing runn
     await expect(page.locator('.sql-function-output')).toHaveCount(0);
     await page.getByRole('button', { name: 'Remove argument', exact: true }).click();
     await expect(page.getByLabel('arg2', { exact: true })).toHaveCount(0);
-    await page.getByRole('tab', { name: 'Definition', exact: true }).click();
+    await expect(page.getByRole('tab', { name: 'Definition', exact: true })).toHaveCount(0);
     await expect(
         page.getByText('Source is unavailable for this installed executable function.'),
-    ).toBeVisible();
+    ).toHaveCount(0);
     await page.getByRole('tab', { name: 'Deployment', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Reload pool SQL', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Delete function', exact: true })).toHaveCount(0);
 });
 
-test('Cloud timeout disables another publish until actual state has been checked and expired sessions can be renewed', async ({
+test('Cloud timeout disables another attachment until actual state has been checked and expired sessions can be renewed', async ({
     page,
 }) => {
     let reads = 0,
@@ -551,9 +551,22 @@ test('Cloud timeout disables another publish until actual state has been checked
                     },
                 });
             reads++;
-            return route.fulfill({ json: { versions: [] } });
+            return route.fulfill({
+                json: {
+                    versions: [
+                        {
+                            name: 'python_double',
+                            version: 1,
+                            status: 'ready',
+                            error: null,
+                            arguments: [{ name: 'value', type: 'Int64' }],
+                            returnType: 'Int64',
+                        },
+                    ],
+                },
+            });
         }
-        if (path.endsWith('/publish')) {
+        if (path.endsWith('/attach')) {
             writes++;
             return route.fulfill({
                 status: 502,
@@ -564,35 +577,45 @@ test('Cloud timeout disables another publish until actual state has been checked
         }
         return route.fulfill({ status: 404, json: {} });
     });
-    await functionsWorkspace(page);
-    await page.getByRole('button', { name: 'Create Python UDF', exact: true }).click();
-    const dialog = page.getByRole('dialog', { name: 'Create Python UDF', exact: true });
+    const { state } = await functionsWorkspace(page);
+    state.executableFunctions.push({ name: 'python_double', createQuery: '' });
+    await page.locator('.object-refresh-action').click();
+    await page.getByRole('button', { name: 'python_double Executable UDF', exact: true }).click();
+    await page.getByRole('tab', { name: 'Deployment', exact: true }).click();
+    const deployment = page.getByRole('region', { name: 'Cloud deployment', exact: true });
+    await deployment
+        .getByRole('button', { name: 'Enable deployment session', exact: true })
+        .click();
     await chooseSelectOption(
         page,
-        dialog.getByRole('combobox', { name: 'Template', exact: true }),
-        '0',
-    );
-    await dialog.getByRole('button', { name: 'Enable deployment session', exact: true }).click();
-    await chooseSelectOption(
-        page,
-        dialog.getByRole('combobox', { name: 'Target service', exact: true }),
+        deployment.getByRole('combobox', { name: 'Target service', exact: true }),
         'service-id',
     );
-    const publish = dialog.getByRole('button', { name: 'Publish function', exact: true });
-    await expect(publish).toBeEnabled();
-    await publish.click();
-    await expect(publish).toBeDisabled();
+    await chooseSelectOption(
+        page,
+        deployment.getByRole('combobox', { name: 'Build version', exact: true }),
+        '1',
+    );
+    await deployment.getByRole('checkbox', { name: /I confirm attachment/ }).check();
+    const attach = deployment.getByRole('button', { name: 'Attach selected version', exact: true });
+    await expect(attach).toBeEnabled();
+    await attach.click();
+    await expect(attach).toBeDisabled();
     await expect(
-        dialog.getByText('Outcome unknown. Check Cloud status before another deployment attempt.'),
+        deployment.getByText(
+            'Outcome unknown. Check Cloud status before another deployment attempt.',
+        ),
     ).toBeVisible();
     expect(writes).toBe(1);
     const before = reads;
-    await dialog.getByRole('button', { name: 'Check Cloud status', exact: true }).click();
-    await expect(publish).toBeEnabled();
+    await deployment.getByRole('button', { name: 'Check Cloud status', exact: true }).click();
+    await expect(attach).toBeEnabled();
     expect(reads).toBeGreaterThan(before);
+    expect(writes).toBe(1);
     expired = true;
-    await dialog.getByRole('button', { name: 'Check Cloud status', exact: true }).click();
+    await deployment.getByRole('button', { name: 'Check Cloud status', exact: true }).click();
     await expect(
-        dialog.getByRole('button', { name: 'Enable deployment session', exact: true }),
+        deployment.getByRole('button', { name: 'Enable deployment session', exact: true }),
     ).toBeVisible();
+    await expect(attach).toHaveCount(0);
 });

@@ -14,11 +14,7 @@ import { message } from '../../api/client';
 import { FunctionCreationDialog } from './FunctionCreationDialog';
 import { FunctionCodeEditor } from './FunctionCodeEditor';
 
-export function CreatePythonFunctionDialog({
-    onClose,
-}: {
-    onClose: () => void;
-}) {
+export function CreatePythonFunctionDialog({ onClose }: { onClose: () => void }) {
     const nameInput = useRef<HTMLInputElement>(null);
     const [template, setTemplate] = useState('custom');
     const [draft, setDraft] = useState<PythonFunctionDraft>(() =>

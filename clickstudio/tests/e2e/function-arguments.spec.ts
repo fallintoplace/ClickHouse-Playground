@@ -206,7 +206,13 @@ for (const mode of ['Standard', 'Experimental']) {
             await preview.locator('summary').click();
             await expect(preview.locator('pre')).toBeVisible();
             await preview.locator('summary').click();
-            await details.getByRole('tab', { name: 'Definition', exact: true }).click();
+            await expect(
+                details.getByRole('tab', { name: 'Definition', exact: true }),
+            ).toHaveCount(0);
+            await details.getByRole('tab', { name: 'Deployment', exact: true }).click();
+            await expect(
+                details.getByRole('button', { name: 'Reload pool SQL', exact: true }),
+            ).toBeVisible();
             await details.getByRole('tab', { name: 'Test', exact: true }).click();
             await expect(details.getByLabel('value', { exact: true })).toHaveValue('21');
             await details.screenshot({ path: info.outputPath('detected-arguments.png') });

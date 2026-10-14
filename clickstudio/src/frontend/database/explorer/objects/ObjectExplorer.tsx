@@ -293,10 +293,7 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                 />
             )}
             {python.createOpen && (
-                <CreatePythonFunctionDialog
-                    key={python.key}
-                    onClose={python.closeCreate}
-                />
+                <CreatePythonFunctionDialog key={python.key} onClose={python.closeCreate} />
             )}
             {functions.deleteTarget && canDeleteFunction && (
                 <DeleteSqlFunctionDialog
