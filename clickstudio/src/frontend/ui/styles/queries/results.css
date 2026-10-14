@@ -74,6 +74,13 @@
     align-items: baseline;
     gap: 7px;
   }
+  .results-title .results-plan-heading {
+    min-width: 0;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+  }
   .results-title .results-runtime-heading {
     min-width: 0;
     flex: 1;

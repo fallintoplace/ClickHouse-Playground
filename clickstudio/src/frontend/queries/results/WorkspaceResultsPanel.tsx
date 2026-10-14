@@ -675,6 +675,7 @@ function renderResultsHeader({
                     <div
                         className={cx(
                             'results-heading',
+                            visibleResultsView === 'plan' && 'results-plan-heading',
                             visibleResultsView === 'runtime' && 'results-runtime-heading',
                         )}
                     >
