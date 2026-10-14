@@ -57,6 +57,7 @@ export type WorkspaceQueryPanelActions = Readonly<{
     onSave: (draft?: Draft) => Promise<void>;
     onFormat: (formatter: WorkspaceFormatter) => Promise<void>;
     onRun: (kind?: RunKind, sqlOverride?: string) => Promise<void>;
+    onOpenSqlMap: () => void;
     onCancel: () => void;
     runActionTitle: (
         capability: WorkspaceRunCapability | undefined,
@@ -391,7 +392,6 @@ function ExpertQueryControlRail({
         capability: WorkspaceRunCapability | undefined;
     }[];
     const availableOptions = explainOptions.filter(option => option.capability?.available);
-    if (!availableOptions.length) return null;
     const disabled =
         Boolean(state.editorProposal) || !trusted || Boolean(busy) || unsupportedParameters;
     return (
@@ -399,13 +399,21 @@ function ExpertQueryControlRail({
             <div className="editor-actions">
                 <RunActionGroup
                     copy={copy.common}
-                    actions={availableOptions.map(option => ({
-                        id: option.id,
-                        label: option.label,
-                        disabled,
-                        title: actions.runActionTitle(option.capability, option.id),
-                        onSelect: () => void actions.onRun(option.kind),
-                    }))}
+                    actions={[
+                        ...availableOptions.map(option => ({
+                            id: option.id,
+                            label: option.label,
+                            disabled,
+                            title: actions.runActionTitle(option.capability, option.id),
+                            onSelect: () => void actions.onRun(option.kind),
+                        })),
+                        {
+                            id: 'sql-map',
+                            label: copy.common.sqlMap,
+                            title: copy.common.visualizeSqlStructure,
+                            onSelect: actions.onOpenSqlMap,
+                        },
+                    ]}
                 />
             </div>
         </aside>

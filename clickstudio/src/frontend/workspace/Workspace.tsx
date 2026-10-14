@@ -183,6 +183,10 @@ export function Workspace({
                 onSave: saveDraft,
                 onFormat: formatActiveSql,
                 onRun: runFromEditor,
+                onOpenSqlMap: () => {
+                    setView('sqlmap');
+                    panels.revealPanelTemporarily('results', active.id);
+                },
                 onCancel: () => void cancel(),
                 runActionTitle,
                 onConnectionAction: () =>

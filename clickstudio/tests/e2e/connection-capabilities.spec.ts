@@ -77,7 +77,10 @@ test('Connection review tests capabilities before trust and can retest after res
 
     await page.goto('/experimental');
     await expect(page.locator('.connection-quick-status')).toHaveText('Test needed');
-    await expect(page.locator('.editor-control-rail')).toHaveCount(0);
+    await expect(page.getByTestId('run-action-sql-map')).toBeEnabled();
+    await expect(page.getByTestId('run-action-explain')).toHaveCount(0);
+    await page.getByTestId('run-action-sql-map').click();
+    await expect(page.locator('.sql-flow-view')).toBeVisible();
     await expect(page.getByTestId('server-version')).toHaveText('ClickHouse version unavailable');
     await page.locator('.connection-trigger').click();
     const menu = page.getByRole('dialog', { name: 'Connection details' });
@@ -102,7 +105,8 @@ test('Connection review tests capabilities before trust and can retest after res
     manifest = undefined;
     await page.reload();
     await expect(page.locator('.connection-quick-status')).toHaveText('Retest needed');
-    await expect(page.locator('.editor-control-rail')).toHaveCount(0);
+    await expect(page.getByTestId('run-action-sql-map')).toBeEnabled();
+    await expect(page.getByTestId('run-action-explain')).toHaveCount(0);
     await expect(page.getByTestId('server-version')).toHaveText('ClickHouse version unavailable');
     await page.locator('.connection-trigger').click();
     const restartedMenu = page.getByRole('dialog', { name: 'Connection details' });

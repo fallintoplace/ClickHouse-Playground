@@ -900,7 +900,6 @@ function useWorkspaceExecutionView({
         sortedHistory,
         savedDocument,
         saveStatus,
-        requestedResultsView,
         sqlMapStatement,
         queryTreeAvailable,
         queryTreeUnavailableReason,
@@ -914,7 +913,7 @@ function useWorkspaceExecutionView({
         failedQueryError ||
         script ||
         pendingExecution.execution ||
-        requestedResultsView === 'sqlmap',
+        visibleResultsView === 'sqlmap',
     );
     const panels = useWorkspacePanels({
         activeDraftId: active.id,

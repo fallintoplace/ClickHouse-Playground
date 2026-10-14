@@ -1770,8 +1770,7 @@ test('SQL structure switches from logical flow to native AST', async ({ page }) 
     await trust(page);
     await replaceSql(page, 'SELECT uniqExact(user_id) FROM analytics.events');
 
-    await runButton(page).click();
-    await page.getByRole('tab', { name: 'SQL map', exact: true }).click();
+    await page.getByTestId('run-action-sql-map').click();
     const structure = page.locator('.sql-flow-view');
     const flow = structure.getByRole('button', { name: 'Logical flow', exact: true });
     const nativeAst = structure.getByRole('button', { name: 'Native AST', exact: true });

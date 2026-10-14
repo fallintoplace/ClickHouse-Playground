@@ -77,10 +77,10 @@ export function resultsViews(
 ): readonly ResultsView[] {
     if (experience === 'beginner')
         return run?.kind === 'query' ? ['results', 'chart'] : ['results'];
-    if (run?.kind === 'explain') return ['results', 'indexes'];
-    if (run?.kind === 'plan') return ['results', 'plan'];
-    if (run?.kind === 'pipeline') return ['results', 'pipeline'];
-    if (run?.kind === 'analyze') return ['results', 'runtime'];
+    if (run?.kind === 'explain') return ['results', 'indexes', 'sqlmap'];
+    if (run?.kind === 'plan') return ['results', 'plan', 'sqlmap'];
+    if (run?.kind === 'pipeline') return ['results', 'pipeline', 'sqlmap'];
+    if (run?.kind === 'analyze') return ['results', 'runtime', 'sqlmap'];
     const tabs: ResultsView[] = ['results', 'chart', 'sqlmap', 'insights'];
     if (run?.kind === 'query' && recommendGeo(run.columns)) tabs.splice(2, 0, 'map');
     return tabs;

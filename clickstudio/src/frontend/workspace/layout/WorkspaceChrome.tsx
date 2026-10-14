@@ -72,7 +72,6 @@ export function RunActionGroup({ actions, copy }: { actions: RunAction[]; copy: 
     };
     return (
         <div className="run-action-group" role="group" aria-label={copy.runActions}>
-            {otherActions.map(renderAction)}
             {explainActions.length > 0 && (
                 <div className="run-explain-actions" role="group" aria-label={explainGroupLabel}>
                     <span className="run-explain-label" aria-hidden="true">
@@ -81,6 +80,7 @@ export function RunActionGroup({ actions, copy }: { actions: RunAction[]; copy: 
                     {explainActions.map(renderAction)}
                 </div>
             )}
+            {otherActions.map(renderAction)}
         </div>
     );
 }
