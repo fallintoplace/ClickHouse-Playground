@@ -288,7 +288,7 @@ export function SqlFunctionDetails({
     useEffect(() => {
         setAttempt(undefined);
         setStartError('');
-    }, [input.signature]);
+    }, [input.signature, fn.createQuery]);
     const [activeTab, setActiveTab] = useState<FunctionDetailsTab>('test');
     const tabsId = useId();
     let sql = '',

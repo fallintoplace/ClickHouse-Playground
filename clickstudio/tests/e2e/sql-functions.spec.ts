@@ -247,7 +247,7 @@ test('Map tester preserves duplicate keys in the server-produced output', async 
 });
 
 for (const mode of ['Standard', 'Experimental']) {
-    test(`${mode} hides Functions on refresh failure and recovers through the object refresh`, async ({
+    test(`${mode} keeps Functions collapsed on refresh failure and recovers through the object refresh`, async ({
         page,
     }) => {
         const { state, requests } = await functionsWorkspace(page, {
@@ -262,11 +262,9 @@ for (const mode of ['Standard', 'Experimental']) {
             .click();
         state.metadataError = true;
         await page.locator('.object-refresh-action').click();
-        await expect(page.locator('.sql-functions-tree')).toHaveCount(0);
-        await expect(page.getByText('Function metadata unavailable', { exact: true })).toHaveCount(
-            0,
-        );
-        await expect(page.getByTestId('schema-search')).not.toHaveAttribute(
+        await expect(page.locator('.sql-functions-tree')).toBeVisible();
+        await expect(page.getByText(/SQL functions could not refresh/)).toBeVisible();
+        await expect(page.getByTestId('schema-search')).toHaveAttribute(
             'placeholder',
             'Search objects and functions…',
         );
@@ -276,6 +274,13 @@ for (const mode of ['Standard', 'Experimental']) {
         const attempts = requests.filter(body => body.action === 'functions').length;
         state.metadataError = false;
         await page.locator('.object-refresh-action').click();
+        await expect(page.locator('.object-refresh-action')).toBeEnabled();
+        await page
+            .getByRole('button', {
+                name: mode === 'Experimental' ? 'Expand SQL Functions' : 'Expand Functions',
+                exact: true,
+            })
+            .click();
         await expect(
             page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }),
         ).toBeVisible();

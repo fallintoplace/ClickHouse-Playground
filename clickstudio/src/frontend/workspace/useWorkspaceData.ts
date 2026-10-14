@@ -1,4 +1,3 @@
-import { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../shared/database/connections/cloud-policy';
 import {
     useCallback,
     useEffect,
@@ -9,7 +8,6 @@ import {
 } from 'react';
 import type { QueryDocument } from '../../shared/queries/saved-queries/types';
 import type { Run } from '../../shared/queries/execution/types';
-import type { Schema } from '../../shared/database/schema/types';
 import { sameSavedContent } from '../queries/saved-queries/draft-save-state';
 import { api, apiResponses, message } from '../api/client';
 import {
@@ -19,6 +17,7 @@ import {
 import type { WorkspaceState } from '../queries/editor/drafts/workspace-state';
 import { startVisiblePolling } from '../browser/visible-polling';
 import { useSqlFunctionCatalog } from '../database/functions/useSqlFunctionCatalog';
+import { useWorkspaceSchema } from '../database/schema/useWorkspaceSchema';
 import type { Connected } from './workspace-types';
 
 export function useWorkspaceData({
@@ -38,10 +37,8 @@ export function useWorkspaceData({
 }) {
     const connectionId = connection.id;
     const functions = useSqlFunctionCatalog(connection, trusted, objectsOpen);
-    const [schema, setSchema] = useState<Schema>();
-    const [schemaLoading, setSchemaLoading] = useState(false);
-    const [schemaLoadingMore, setSchemaLoadingMore] = useState(false);
-    const [schemaError, setSchemaError] = useState('');
+    const { schema, schemaLoading, schemaLoadingMore, schemaError, loadSchema, loadMoreSchema } =
+        useWorkspaceSchema(connection, trusted);
     const [playgroundServerVersion, setPlaygroundServerVersion] = useState<string>();
     const [playgroundServerVersionLoading, setPlaygroundServerVersionLoading] = useState(false);
     const [documents, setDocuments] = useState<QueryDocument[]>([]);
@@ -54,9 +51,6 @@ export function useWorkspaceData({
     const [revisionLoading, setRevisionLoading] = useState(false);
     const [revisionError, setRevisionError] = useState('');
     const [history, setHistory] = useState<Run[]>([]);
-    const trustedRef = useRef(trusted);
-    trustedRef.current = trusted;
-    const schemaRequestRef = useRef(0);
     const historyRequestRef = useRef(0);
     const documentsRequestRef = useRef(0);
     const revisionsRequestRef = useRef(0);
@@ -82,7 +76,6 @@ export function useWorkspaceData({
     }, [connectionId, trusted]);
 
     const invalidateRequests = useCallback(() => {
-        schemaRequestRef.current++;
         historyRequestRef.current++;
         documentsRequestRef.current++;
         revisionsRequestRef.current++;
@@ -184,111 +177,12 @@ export function useWorkspaceData({
         [activeServerId, workspaceRef],
     );
 
-    const loadSchema = useCallback(
-        async (refresh = false) => {
-            const requestId = ++schemaRequestRef.current;
-            setSchemaLoadingMore(false);
-            if (!trustedRef.current) {
-                setSchema(undefined);
-                setSchemaError('');
-                setSchemaLoading(false);
-                return undefined;
-            }
-            setSchemaLoading(true);
-            setSchemaError('');
-            try {
-                const next = await api<Schema>(
-                    `/connections/${encodeURIComponent(connectionId)}/schema${refresh ? '?refresh=true' : ''}`,
-                    apiResponses.isSchemaResponse,
-                );
-                if (schemaRequestRef.current === requestId && trustedRef.current) {
-                    setSchema(next);
-                    return next;
-                }
-            } catch (caught) {
-                if (schemaRequestRef.current === requestId && trustedRef.current)
-                    setSchemaError(message(caught));
-            } finally {
-                if (schemaRequestRef.current === requestId) setSchemaLoading(false);
-            }
-            return undefined;
-        },
-        [connectionId],
-    );
-
-    const loadMoreSchema = useCallback(async () => {
-        const current = schema;
-        if (
-            !current?.pagination ||
-            schemaLoadingMore ||
-            connectionId !== CLICKHOUSE_CLOUD_CONNECTION_ID ||
-            !trustedRef.current
-        )
-            return undefined;
-        const requestId = ++schemaRequestRef.current;
-        setSchemaLoadingMore(true);
-        setSchemaError('');
-        try {
-            const params = new URLSearchParams();
-            if (current.pagination.databases !== undefined)
-                params.set('databaseOffset', String(current.pagination.databases));
-            if (current.pagination.tables !== undefined)
-                params.set('tableOffset', String(current.pagination.tables));
-            if (current.pagination.columns !== undefined)
-                params.set('columnOffset', String(current.pagination.columns));
-            const next = await api<Schema>(
-                `/connections/${encodeURIComponent(connectionId)}/schema?${params}`,
-                apiResponses.isSchemaResponse,
-            );
-            if (schemaRequestRef.current !== requestId || !trustedRef.current) return undefined;
-            const tableKey = (table: Schema['tables'][number]) =>
-                `${table.database}\u0000${table.name}`;
-            const columnKey = (column: Schema['columns'][number]) =>
-                `${column.database}\u0000${column.table}\u0000${column.name}`;
-            const merge = <T>(left: T[], right: T[], key: (value: T) => string) => {
-                const values = new Map(left.map(value => [key(value), value]));
-                for (const value of right) values.set(key(value), value);
-                return [...values.values()];
-            };
-            const merged: Schema = {
-                ...next,
-                databases: [...new Set([...(current.databases ?? []), ...(next.databases ?? [])])],
-                tables: merge(current.tables, next.tables, tableKey),
-                columns: merge(current.columns, next.columns, columnKey),
-                dictionaries: current.dictionaries ?? next.dictionaries,
-                warnings: [...new Set([...current.warnings, ...next.warnings])],
-                metadataWarnings: [
-                    ...new Set([
-                        ...(current.metadataWarnings ?? []),
-                        ...(next.metadataWarnings ?? []),
-                    ]),
-                ],
-                truncated: next.truncated,
-            };
-            setSchema(merged);
-            return merged;
-        } catch (caught) {
-            if (schemaRequestRef.current === requestId && trustedRef.current)
-                setSchemaError(message(caught));
-            return undefined;
-        } finally {
-            if (schemaRequestRef.current === requestId) setSchemaLoadingMore(false);
-        }
-    }, [connectionId, schema, schemaLoadingMore]);
-
     useEffect(() => {
         const stopHistoryPolling = startVisiblePolling(signal => loadHistory(signal), {
             intervalMs: 15000,
         });
         void loadDocuments().catch(() => undefined);
         if (trusted) void loadSchema();
-        else {
-            schemaRequestRef.current++;
-            setSchema(undefined);
-            setSchemaError('');
-            setSchemaLoading(false);
-            setSchemaLoadingMore(false);
-        }
         return () => {
             stopHistoryPolling();
             invalidateRequests();

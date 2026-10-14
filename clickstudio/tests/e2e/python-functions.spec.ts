@@ -126,8 +126,11 @@ test('Experimental hides denied Python metadata and recovers without hiding avai
     state.executableError = true;
     state.metadataError = true;
     await page.locator('.object-refresh-action').click();
-    await expect(page.locator('.sql-functions-tree, .python-functions-tree')).toHaveCount(0);
-    await expect(page.getByTestId('schema-search')).not.toHaveAttribute('placeholder', /functions/);
+    await expect(page.locator('.python-functions-tree')).toHaveCount(0);
+    await expect(
+        page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText(/SQL functions could not refresh/)).toBeVisible();
 });
 
 test('Existing Python functions remain testable without creation privileges', async ({ page }) => {

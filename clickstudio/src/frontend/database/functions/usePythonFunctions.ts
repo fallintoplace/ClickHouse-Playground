@@ -8,9 +8,15 @@ import { PLAYGROUND_CONNECTION_ID } from '../../../shared/database/connections/p
 import type { Connected } from '../../workspace/workspace-types';
 import { api, message } from '../../api/client';
 import { loadClickHouseCloudExecutableFunctions } from '../connections/cloud-connection';
+import { metadataAccessDenied, metadataConnectionKey } from '../schema/metadata-state';
 
-export function usePythonFunctions(connection: Connected, enabled: boolean, canCreate: boolean) {
-    const key = `${connection.id}:${connection.host}:${connection.database}:${connection.username}:${connection.manifest?.testedAt}`;
+export function usePythonFunctions(
+    connection: Connected,
+    enabled: boolean,
+    canCreate: boolean,
+    creationPending = false,
+) {
+    const key = metadataConnectionKey(connection);
     const [revision, setRevision] = useState(0);
     const [creating, setCreating] = useState<string>();
     const [selection, setSelection] = useState<{ key: string; fn: ExecutableFunction }>();
@@ -18,7 +24,9 @@ export function usePythonFunctions(connection: Connected, enabled: boolean, canC
         key: string;
         revision: number;
         functions: ExecutableFunction[];
+        available?: boolean;
         error?: string;
+        refreshFailed?: boolean;
     }>();
     const active = useRef(key);
     active.current = key;
@@ -30,19 +38,31 @@ export function usePythonFunctions(connection: Connected, enabled: boolean, canC
     const visible =
         discover &&
         loaded?.key === key &&
-        !loaded.error &&
+        loaded.available === true &&
         (canCreate || loaded.functions.length > 0);
+    const loading = discover && (loaded?.key !== key || loaded.revision !== revision);
+    const error =
+        discover && loaded?.key === key && loaded.revision === revision ? loaded.error : undefined;
     useEffect(() => {
         if (!discover) setLoaded(undefined);
     }, [discover]);
     useEffect(() => {
         if (!visible) setSelection(undefined);
-        if (!visible || !canCreate) setCreating(undefined);
-    }, [visible, canCreate]);
+        if (!visible || !canCreate || error) setCreating(undefined);
+    }, [visible, canCreate, error]);
+    useEffect(() => {
+        if (loading || error || loaded?.key !== key) return;
+        setSelection(current => {
+            if (current?.key !== key) return current;
+            const fn = loaded.functions.find(value => value.name === current.fn.name);
+            return fn ? { key, fn } : undefined;
+        });
+    }, [loading, error, loaded, key]);
     useEffect(() => {
         if (!discover) return;
         const controller = new AbortController();
-        void (async () => {
+        void Promise.resolve().then(async () => {
+            if (controller.signal.aborted) return;
             try {
                 const catalog =
                     connection.id === CLICKHOUSE_CLOUD_CONNECTION_ID
@@ -54,29 +74,46 @@ export function usePythonFunctions(connection: Connected, enabled: boolean, canC
                               { signal: controller.signal },
                           );
                 if (!controller.signal.aborted)
-                    setLoaded({ key, revision, functions: catalog.functions });
+                    setLoaded({ key, revision, functions: catalog.functions, available: true });
             } catch (error) {
                 if (!controller.signal.aborted)
-                    setLoaded({ key, revision, functions: [], error: message(error) });
+                    setLoaded(current => {
+                        const retain = !metadataAccessDenied(error) && current?.key === key;
+                        return {
+                            key,
+                            revision,
+                            functions: retain ? current.functions : [],
+                            available: retain && current.available,
+                            error: message(error),
+                            refreshFailed:
+                                current?.key === key &&
+                                (current.available === true || current.refreshFailed === true),
+                        };
+                    });
             }
-        })();
+        });
         return () => controller.abort();
     }, [discover, connection.id, key, revision]);
     return {
         key,
         visible,
-        canCreate: visible && canCreate,
+        canCreate: visible && canCreate && !error,
+        creationPending: loading || creationPending,
         functions: discover && loaded?.key === key ? loaded.functions : [],
-        loading: discover && (loaded?.key !== key || loaded.revision !== revision),
-        error: discover && loaded?.key === key ? loaded.error : undefined,
+        available: discover && loaded?.key === key && loaded.available === true,
+        loading,
+        error,
+        refreshError: loaded?.refreshFailed ? error : undefined,
         selected: visible && selection?.key === key ? selection.fn : undefined,
-        createOpen: visible && canCreate && creating === key,
-        create: () => setCreating(key),
+        createOpen: visible && canCreate && !error && creating === key,
+        create: () => {
+            if (visible && canCreate && !error && !loading && !creationPending) setCreating(key);
+        },
         closeCreate: () => setCreating(undefined),
         select: (fn: ExecutableFunction) => setSelection({ key, fn }),
         close: () => setSelection(undefined),
         refresh: () => {
-            if (active.current === key) setRevision(value => value + 1);
+            if (active.current === key && discover) setRevision(value => value + 1);
         },
     };
 }

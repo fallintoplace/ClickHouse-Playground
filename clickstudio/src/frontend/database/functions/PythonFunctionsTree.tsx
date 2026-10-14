@@ -33,6 +33,7 @@ export function PythonFunctionsTree({
                             className="object-tree-inline-action"
                             aria-label="Create Python UDF"
                             title="Create Python UDF"
+                            disabled={state.creationPending}
                             onClick={state.create}
                         >
                             <Icon name="plus" />
@@ -53,15 +54,10 @@ export function PythonFunctionsTree({
                             onSelect={() => onSelect(fn)}
                         />
                     ))}
-                    {state.loading && (
+                    {state.loading && !state.available && (
                         <p className="sql-functions-status">Loading executable functions...</p>
                     )}
-                    {state.error && (
-                        <p className="sql-function-error" role="status">
-                            {state.error}
-                        </p>
-                    )}
-                    {!state.loading && !state.error && !functions.length && (
+                    {state.available && !functions.length && (
                         <p className="sql-functions-status">
                             {search
                                 ? 'No matching functions.'

@@ -43,6 +43,8 @@
     "src/frontend/help/reference/bundled-reference.ts",
     "src/frontend/ui/copy.ts",
     "src/frontend/queries/editor/schema-context.ts",
+    "src/frontend/database/schema/schema-pages.ts",
+    "src/frontend/database/schema/metadata-state.ts",
     "src/frontend/queries/editor/components/editor-session.ts",
     "src/frontend/queries/editor/components/editor-diagnostics.ts"
   ]

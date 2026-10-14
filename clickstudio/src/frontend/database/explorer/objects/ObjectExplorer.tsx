@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../../../shared/database/connections/cloud-policy';
 import { useSqlFunctions } from '../../functions/useSqlFunctions';
 import { FunctionsTree } from '../../functions/FunctionsTree';
@@ -79,13 +79,14 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
         connection,
         expert,
         !connection.readonly &&
-            (connection.id !== CLICKHOUSE_CLOUD_CONNECTION_ID || functions.canCreate),
+            (connection.id !== CLICKHOUSE_CLOUD_CONNECTION_ID ||
+                functions.catalog?.canCreate === true),
+        functions.loading || Boolean(functions.error),
     );
     const functionDetails = functions.selected || python.selected;
     const deployPython =
         trusted && !connection.readonly && connection.id === CLICKHOUSE_CLOUD_CONNECTION_ID;
-    const canDeleteFunction =
-        !connection.readonly && !functions.loading && functions.catalog?.canDrop === true;
+    const canDeleteFunction = functions.canDelete;
     const sqlFunctionsSlot = functions.visible ? (
         <FunctionsTree
             label={expert ? 'SQL Functions' : 'Functions'}
@@ -247,6 +248,8 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                     state={state}
                     functionsSlot={functionsSlot}
                     functionsVisible={Boolean(functionsSlot)}
+                    functionsLoading={functions.loading || python.loading}
+                    refreshErrors={functionRefreshErrors(functions, python)}
                     onRefreshFunctions={() => {
                         functions.refresh();
                         python.refresh();
@@ -306,15 +309,33 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
     );
 }
 
+function functionRefreshErrors(
+    functions: ReturnType<typeof useSqlFunctions>,
+    python: ReturnType<typeof usePythonFunctions>,
+) {
+    return [
+        functions.refreshError
+            ? `SQL functions could not refresh. ${functions.catalog ? 'Showing previous data. ' : ''}${functions.refreshError}`
+            : '',
+        python.refreshError
+            ? `Python functions could not refresh. ${python.available ? 'Showing previous data. ' : ''}${python.refreshError}`
+            : '',
+    ].filter(Boolean);
+}
+
 function ObjectExplorerBrowser({
     state,
     functionsSlot,
     functionsVisible,
+    functionsLoading,
+    refreshErrors,
     onRefreshFunctions,
 }: {
     state: ReturnType<typeof useObjectExplorerState>;
     functionsSlot?: ReactNode;
     functionsVisible: boolean;
+    functionsLoading: boolean;
+    refreshErrors: string[];
     onRefreshFunctions: () => void;
 }) {
     const {
@@ -350,6 +371,12 @@ function ObjectExplorerBrowser({
         onLoadMoreSchema,
         detailsOpen,
     } = state;
+    const busy = schemaLoading || functionsLoading;
+    const refreshing = useRef(false);
+    useEffect(() => {
+        if (!busy) refreshing.current = false;
+    }, [busy]);
+    const refreshLabel = busy && schema ? 'Refreshing objects' : copy.loading;
     return (
         <>
             <div className="object-search-row">
@@ -373,22 +400,29 @@ function ObjectExplorerBrowser({
                         className={cx(
                             'toolbar-small',
                             'object-refresh-action',
-                            schemaLoading && 'is-loading',
+                            busy && 'is-loading',
                         )}
-                        aria-label={schemaLoading ? copy.loading : copy.refresh}
-                        aria-busy={schemaLoading}
-                        title={schemaLoading ? copy.loading : copy.refresh}
+                        aria-label={busy ? refreshLabel : copy.refresh}
+                        aria-busy={busy}
+                        title={busy ? refreshLabel : copy.refresh}
                         onClick={() => {
+                            if (refreshing.current || busy || schemaLoadingMore || !trusted) return;
+                            refreshing.current = true;
                             onRefreshSchema();
                             onRefreshFunctions();
                         }}
-                        disabled={schemaLoading || !trusted}
+                        disabled={busy || schemaLoadingMore || !trusted}
                     >
                         <Icon name="refresh" />
                     </Button>
                 </div>
             </div>
             {schemaError && <div className="callout callout-error">{schemaError}</div>}
+            {refreshErrors.map(error => (
+                <div key={error} className="callout callout-error" role="status">
+                    {error}
+                </div>
+            ))}
             {!trusted && (
                 <div className="inspector-empty">
                     <Icon name="lock" />
@@ -396,13 +430,13 @@ function ObjectExplorerBrowser({
                     <p>{copy.trustToInspect}</p>
                 </div>
             )}
-            {schemaLoading && (
+            {schemaLoading && !schema && (
                 <div className="inspector-empty">
                     <Spinner />
                     <p>{copy.readingSchema}</p>
                 </div>
             )}
-            {trusted && ((schema && !schemaLoading) || functionsVisible) && (
+            {trusted && (schema || functionsVisible) && (
                 <>
                     {model.databases.length || functionsVisible ? (
                         <ObjectTree
@@ -433,7 +467,7 @@ function ObjectExplorerBrowser({
                             <Button
                                 variant="secondary"
                                 className="toolbar-small"
-                                disabled={schemaLoadingMore || !onLoadMoreSchema}
+                                disabled={busy || schemaLoadingMore || !onLoadMoreSchema}
                                 onClick={onLoadMoreSchema}
                             >
                                 {schemaLoadingMore ? 'Loading…' : 'Load more metadata'}

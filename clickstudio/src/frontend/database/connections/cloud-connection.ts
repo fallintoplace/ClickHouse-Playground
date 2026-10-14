@@ -483,6 +483,7 @@ export async function runClickHouseCloudSql(
 
 export async function loadClickHouseCloudSchema(
     offsets: { databaseOffset?: number; tableOffset?: number; columnOffset?: number } = {},
+    signal?: AbortSignal,
 ): Promise<Schema> {
     const cloud = requireCloudConnection(
         'Reconnect to ClickHouse Cloud before loading its schema.',
@@ -494,6 +495,7 @@ export async function loadClickHouseCloudSchema(
             ...offsets,
         },
         apiResponses.isSchemaResponse,
+        signal,
     );
 }
 

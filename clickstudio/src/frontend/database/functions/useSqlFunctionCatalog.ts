@@ -4,9 +4,10 @@ import { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../../shared/database/connect
 import type { Connected } from '../../workspace/workspace-types';
 import { message } from '../../api/client';
 import { loadClickHouseCloudFunctions } from '../connections/cloud-connection';
+import { metadataAccessDenied, metadataConnectionKey } from '../schema/metadata-state';
 
 export function useSqlFunctionCatalog(connection: Connected, trusted: boolean, visible: boolean) {
-    const key = `${connection.id}:${connection.host}:${connection.username}:${connection.manifest?.testedAt}`;
+    const key = metadataConnectionKey(connection);
     const enabled = trusted && connection.id === CLICKHOUSE_CLOUD_CONNECTION_ID;
     const currentConnection = useRef({ key, enabled });
     currentConnection.current = { key, enabled };
@@ -17,6 +18,7 @@ export function useSqlFunctionCatalog(connection: Connected, trusted: boolean, v
         revision: number;
         catalog?: FunctionCatalog;
         error?: string;
+        refreshFailed?: boolean;
     }>();
     const requested = enabled && (visible || requestedKey === key);
 
@@ -38,7 +40,19 @@ export function useSqlFunctionCatalog(connection: Connected, trusted: boolean, v
                 const catalog = await loadClickHouseCloudFunctions(controller.signal);
                 if (!controller.signal.aborted) setLoaded({ key, revision, catalog });
             } catch (error) {
-                if (!controller.signal.aborted) setLoaded({ key, revision, error: message(error) });
+                if (!controller.signal.aborted)
+                    setLoaded(current => ({
+                        key,
+                        revision,
+                        catalog:
+                            !metadataAccessDenied(error) && current?.key === key
+                                ? current.catalog
+                                : undefined,
+                        error: message(error),
+                        refreshFailed:
+                            current?.key === key &&
+                            Boolean(current.catalog || current.refreshFailed),
+                    }));
             }
         });
         return () => controller.abort();
@@ -47,7 +61,14 @@ export function useSqlFunctionCatalog(connection: Connected, trusted: boolean, v
     return {
         catalog: enabled && loaded?.key === key ? loaded.catalog : undefined,
         loading: requested && (loaded?.key !== key || loaded.revision !== revision),
-        error: enabled && loaded?.key === key ? loaded.error : undefined,
+        error:
+            enabled && loaded?.key === key && loaded.revision === revision
+                ? loaded.error
+                : undefined,
+        refreshError:
+            enabled && loaded?.key === key && loaded.revision === revision && loaded.refreshFailed
+                ? loaded.error
+                : undefined,
         refresh: () => {
             if (currentConnection.current.key !== key || !currentConnection.current.enabled) return;
             setRequestedKey(key);

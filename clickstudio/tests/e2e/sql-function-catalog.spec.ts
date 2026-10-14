@@ -39,7 +39,7 @@ test('Catalog clears on trust loss and loads a fresh catalog when trust is grant
     expect(requests.filter(body => body.action === 'functions')).toHaveLength(2);
 });
 
-for (const field of ['host', 'username', 'testedAt']) {
+for (const field of ['host', 'database', 'username', 'testedAt']) {
     test(`Catalog discards a delayed response after the connection ${field} changes`, async ({
         page,
     }) => {
@@ -93,3 +93,29 @@ for (const field of ['host', 'username', 'testedAt']) {
         expect(count).toBe(2);
     });
 }
+
+test('Refresh rebinds selected functions to new definitions and clears removed selections', async ({
+    page,
+}) => {
+    const { state } = await functionsWorkspace(page, {
+        path: workspacePath('Standard'),
+        existing: true,
+        openObjects: false,
+    });
+    await mountCatalog(page);
+    await expect(page.getByLabel('Cached functions', { exact: true })).toContainText(
+        'udf_map_remove',
+    );
+    await page.getByRole('button', { name: 'Select first function', exact: true }).click();
+    const selected = page.getByLabel('Selected function definition', { exact: true });
+    await expect(selected).not.toBeEmpty();
+    state.functions[0] = {
+        ...state.functions[0]!,
+        createQuery: 'CREATE FUNCTION updated AS x -> x + 1',
+    };
+    await page.getByRole('button', { name: 'Refresh catalog', exact: true }).click();
+    await expect(selected).toHaveText('CREATE FUNCTION updated AS x -> x + 1');
+    state.functions = [];
+    await page.getByRole('button', { name: 'Refresh catalog', exact: true }).click();
+    await expect(selected).toBeEmpty();
+});

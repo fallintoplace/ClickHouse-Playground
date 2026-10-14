@@ -51,14 +51,14 @@ export function FunctionsTree({
                     </button>
                 }
             />
-            {(expanded || query || loading || !functions.length) && (
+            {(expanded || query || !functions.length) && (
                 <div role="group" className="object-tree-children">
-                    {loading && (
+                    {loading && !catalog && (
                         <div className="sql-functions-status">
                             <Spinner size={12} label="Loading functions" />
                         </div>
                     )}
-                    {!loading &&
+                    {catalog &&
                         functions.length > 0 &&
                         functions.map(fn => (
                             <ObjectLeafRow
@@ -71,7 +71,7 @@ export function FunctionsTree({
                                 onSelect={() => onSelect(fn)}
                             />
                         ))}
-                    {!loading && functions.length === 0 && (
+                    {catalog && functions.length === 0 && (
                         <p className="sql-functions-status">
                             {query ? 'No matching functions.' : 'No SQL UDFs on this server yet.'}
                         </p>

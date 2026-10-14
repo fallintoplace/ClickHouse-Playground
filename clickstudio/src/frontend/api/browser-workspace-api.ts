@@ -1217,11 +1217,16 @@ export class BrowserWorkspaceApi {
                         );
                     case CLICKHOUSE_CLOUD_CONNECTION_ID:
                         if (method === 'GET')
-                            return loadClickHouseCloudSchema({
-                                databaseOffset: Number(url.searchParams.get('databaseOffset') ?? 0),
-                                tableOffset: Number(url.searchParams.get('tableOffset') ?? 0),
-                                columnOffset: Number(url.searchParams.get('columnOffset') ?? 0),
-                            });
+                            return loadClickHouseCloudSchema(
+                                {
+                                    databaseOffset: Number(
+                                        url.searchParams.get('databaseOffset') ?? 0,
+                                    ),
+                                    tableOffset: Number(url.searchParams.get('tableOffset') ?? 0),
+                                    columnOffset: Number(url.searchParams.get('columnOffset') ?? 0),
+                                },
+                                options.signal,
+                            );
                 }
                 break;
             case 'documentation':
