@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import type { NativeParseResult, NativeParserStatus } from '../../../../shared/sql/parser';
 import { buildSqlFlow } from './sql-flow';
 import { AnalyzerTreeView } from './AnalyzerTreeView';
@@ -53,36 +53,52 @@ export function SqlFlowModeTabs({
     analyzerUnavailableReason,
 }: SqlFlowModeTabsProps) {
     const ast = nativeAstAvailability(copy, parserStatus, parseResult);
+    const descriptionId = useId();
 
     return (
         <div className="sql-flow-mode-tabs" role="group" aria-label={copy.sqlStructure}>
             <button
                 type="button"
+                aria-label={copy.sqlFlowLogicalMode}
+                aria-describedby={`${descriptionId}-flow`}
                 aria-pressed={mode === 'flow'}
                 className={mode === 'flow' ? 'is-active' : ''}
                 onClick={() => onModeChange('flow')}
             >
-                {copy.sqlFlowLogicalMode}
+                <span className="sql-flow-mode-name">{copy.sqlFlowLogicalMode}</span>
+                <span id={`${descriptionId}-flow`} className="sql-flow-mode-description">
+                    {copy.sqlFlowLogicalModeDescription}
+                </span>
             </button>
             <button
                 type="button"
+                aria-label={copy.sqlFlowNativeAst}
+                aria-describedby={`${descriptionId}-ast`}
                 aria-pressed={mode === 'ast'}
                 className={mode === 'ast' ? 'is-active' : ''}
                 disabled={!ast.available && mode !== 'ast'}
                 title={!ast.available ? ast.unavailableReason : copy.sqlFlowNativeAst}
                 onClick={() => onModeChange('ast')}
             >
-                {copy.sqlFlowNativeAst}
+                <span className="sql-flow-mode-name">{copy.sqlFlowNativeAst}</span>
+                <span id={`${descriptionId}-ast`} className="sql-flow-mode-description">
+                    {copy.sqlFlowNativeAstDescription}
+                </span>
             </button>
             <button
                 type="button"
+                aria-label={copy.sqlFlowAnalyzer}
+                aria-describedby={`${descriptionId}-analyzer`}
                 aria-pressed={mode === 'analyzer'}
                 className={mode === 'analyzer' ? 'is-active' : ''}
                 disabled={!analyzerAvailable}
                 title={!analyzerAvailable ? analyzerUnavailableReason : copy.queryTreeGraphHint}
                 onClick={() => onModeChange('analyzer')}
             >
-                {copy.sqlFlowAnalyzer}
+                <span className="sql-flow-mode-name">{copy.sqlFlowAnalyzer}</span>
+                <span id={`${descriptionId}-analyzer`} className="sql-flow-mode-description">
+                    {copy.sqlFlowAnalyzerDescription}
+                </span>
             </button>
         </div>
     );

@@ -152,8 +152,8 @@ export function HelpExplain({
             </div>
             <p className="workspace-help-safe-note">
                 <span className="status-light is-warning" />
-                EXPLAIN ANALYZE executes the selected query to measure runtime. The other EXPLAIN
-                views inspect planning.
+                Analyze runs your query and measures how long it takes. The other views only show
+                the plan.
             </p>
         </>
     );

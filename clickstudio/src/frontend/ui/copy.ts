@@ -104,15 +104,11 @@ export const copy = {
         helpGeoDescription:
             'Explore a 20-city hotspot map, flight paths, and delivery zones with native ClickHouse geometry.',
         helpExplain: 'EXPLAIN',
-        helpExplainDescription:
-            'Run the current statement through ClickHouse index analysis, logical plan, processor pipeline, or measured runtime.',
-        helpExplainIndexesDescription:
-            'See ClickHouse index checks and how many parts and granules survive pruning.',
-        helpExplainPlanDescription: 'Inspect the optimizer plan before execution.',
-        helpExplainPipelineDescription:
-            'Inspect the physical processor topology and parallel streams.',
-        helpExplainAnalyzeDescription:
-            'Execute the statement with EXPLAIN ANALYZE and inspect measured runtime stages.',
+        helpExplainDescription: 'See the steps ClickHouse plans and how long your query takes.',
+        helpExplainIndexesDescription: 'See which data ClickHouse can skip.',
+        helpExplainPlanDescription: 'See the steps ClickHouse plans to run.',
+        helpExplainPipelineDescription: 'See how ClickHouse splits the work.',
+        helpExplainAnalyzeDescription: 'Run the query and see where time is spent.',
         helpStorage: 'Storage',
         helpStorageDescription:
             'Explore MergeTree parts, live merges, and mutations from ClickHouse system metadata.',
@@ -427,6 +423,9 @@ export const copy = {
         queryTreeTruncatedWarning:
             'This query tree is large. The view shows a bounded set of analyzer nodes.',
         sqlFlowLogicalMode: 'Logical flow',
+        sqlFlowLogicalModeDescription: 'Follow the main steps in your query.',
+        sqlFlowNativeAstDescription: 'See how ClickHouse reads your SQL.',
+        sqlFlowAnalyzerDescription: 'Check which tables and columns your query uses.',
         sqlAstClickNode: 'Select a node to inspect its parser fields.',
         sqlAstGraphHint: 'Select a node to inspect it. Double-click to expand or collapse.',
         sqlAstUnavailable: 'Native AST is unavailable for this statement.',

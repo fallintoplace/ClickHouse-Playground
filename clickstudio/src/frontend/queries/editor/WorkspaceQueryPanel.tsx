@@ -364,30 +364,35 @@ function ExpertQueryControlRail({
         {
             id: 'explain',
             label: copy.common.explain,
+            description: copy.common.helpExplainIndexesDescription,
             kind: 'explain',
             capability: connection.manifest?.explain,
         },
         {
             id: 'explain-plan',
             label: copy.common.explainPlan,
+            description: copy.common.helpExplainPlanDescription,
             kind: 'plan',
             capability: connection.manifest?.explainPlan ?? connection.manifest?.explain,
         },
         {
             id: 'explain-pipeline',
             label: copy.common.explainPipeline,
+            description: copy.common.helpExplainPipelineDescription,
             kind: 'pipeline',
             capability: connection.manifest?.explainPipeline ?? connection.manifest?.pipeline,
         },
         {
             id: 'explain-analyze',
             label: copy.common.explainAnalyze,
+            description: copy.common.helpExplainAnalyzeDescription,
             kind: 'analyze',
             capability: connection.manifest?.explainAnalyze,
         },
     ] satisfies {
         id: WorkspaceRunCapabilityAction;
         label: string;
+        description: string;
         kind: RunKind;
         capability: WorkspaceRunCapability | undefined;
     }[];
@@ -403,6 +408,7 @@ function ExpertQueryControlRail({
                         ...availableOptions.map(option => ({
                             id: option.id,
                             label: option.label,
+                            description: option.description,
                             disabled,
                             title: actions.runActionTitle(option.capability, option.id),
                             onSelect: () => void actions.onRun(option.kind),

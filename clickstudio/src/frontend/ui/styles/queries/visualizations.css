@@ -319,6 +319,7 @@
     display: inline-flex;
     width: max-content;
     max-width: 100%;
+    overflow-x: auto;
     gap: 2px;
     padding: 3px;
     border: 1px solid var(--line);
@@ -326,8 +327,13 @@
     background: var(--panel-raised);
   }
   .sql-flow-mode-tabs button {
-    min-height: 30px;
-    padding: 0 11px;
+    display: flex;
+    min-height: 42px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 3px;
+    padding: 5px 11px;
     border: 0;
     border-radius: var(--radius-control);
     background: transparent;
@@ -363,10 +369,25 @@
     padding: 2px;
   }
   .results-title .sql-flow-mode-tabs button {
-    min-height: 26px;
-    padding-inline: 9px;
+    width: 124px;
+    min-height: 42px;
+    flex: none;
+    align-items: flex-start;
+    padding: 5px 9px;
     font-size: 8px;
+    text-align: left;
+    white-space: normal;
+  }
+  .sql-flow-mode-name {
+    line-height: 1;
     white-space: nowrap;
+  }
+  .sql-flow-mode-description {
+    color: var(--muted);
+    font-size: 7px;
+    font-weight: 400;
+    line-height: 1.25;
+    text-align: left;
   }
   .pipeline-graph-toolbar {
     display: flex;

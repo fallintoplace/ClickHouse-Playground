@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import type { ReactNode } from 'react';
 import type { Run } from '../../../shared/queries/execution/types';
 import { Button, cx } from '../../ui/components/primitives';
@@ -13,10 +14,19 @@ export type RunAction = {
     label: string;
     disabled?: boolean;
     title?: string;
+    description?: string;
     onSelect: () => void;
 };
 
-function DisabledRunAction({ action, label }: { action: RunAction; label: string }) {
+function DisabledRunAction({
+    action,
+    label,
+    descriptionId,
+}: {
+    action: RunAction;
+    label: string;
+    descriptionId?: string;
+}) {
     return (
         <span
             className="run-option-disabled-anchor"
@@ -32,15 +42,38 @@ function DisabledRunAction({ action, label }: { action: RunAction; label: string
                 className="run-option-button"
                 disabled
                 title={undefined}
+                aria-describedby={descriptionId}
                 onClick={action.onSelect}
             >
-                {label}
+                <RunActionLabel action={action} label={label} descriptionId={descriptionId} />
             </Button>
         </span>
     );
 }
 
+function RunActionLabel({
+    action,
+    label,
+    descriptionId,
+}: {
+    action: RunAction;
+    label: string;
+    descriptionId?: string;
+}) {
+    if (!action.description) return label;
+
+    return (
+        <span className="run-option-content">
+            <span className="run-option-title">{label}</span>
+            <span id={descriptionId} className="run-option-description">
+                {action.description}
+            </span>
+        </span>
+    );
+}
+
 export function RunActionGroup({ actions, copy }: { actions: RunAction[]; copy: Copy['common'] }) {
+    const descriptionId = useId();
     const explainActions = actions.filter(
         action => action.id === 'explain' || action.id.startsWith('explain-'),
     );
@@ -53,6 +86,12 @@ export function RunActionGroup({ actions, copy }: { actions: RunAction[]; copy: 
         const label = isExplainAction
             ? action.label.replace(/^[^\s]+\s+/, '').toLowerCase()
             : action.label;
+        const actionDescriptionId = action.description
+            ? `${descriptionId}-${action.id}-description`
+            : undefined;
+        const content = (
+            <RunActionLabel action={action} label={label} descriptionId={actionDescriptionId} />
+        );
         if (!action.disabled || !action.title)
             return (
                 <Button
@@ -63,12 +102,20 @@ export function RunActionGroup({ actions, copy }: { actions: RunAction[]; copy: 
                     className="run-option-button"
                     disabled={action.disabled}
                     title={action.title ?? action.label}
+                    aria-describedby={actionDescriptionId}
                     onClick={action.onSelect}
                 >
-                    {label}
+                    {content}
                 </Button>
             );
-        return <DisabledRunAction key={action.id} action={action} label={label} />;
+        return (
+            <DisabledRunAction
+                key={action.id}
+                action={action}
+                label={label}
+                descriptionId={actionDescriptionId}
+            />
+        );
     };
     return (
         <div className="run-action-group" role="group" aria-label={copy.runActions}>
