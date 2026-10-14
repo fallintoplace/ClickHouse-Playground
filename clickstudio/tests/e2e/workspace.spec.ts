@@ -154,10 +154,9 @@ test('Execution IDs are available from copyable details instead of the footer', 
         'data-run-status',
         'succeeded',
     );
-    await expect(page.locator('.run-detail-hero time')).toHaveAttribute(
-        'datetime',
-        /^\d{4}-\d{2}-\d{2}T/,
-    );
+    const runTime = page.locator('.run-detail-hero time');
+    await expect(runTime).toHaveAttribute('datetime', /^\d{4}-\d{2}-\d{2}T/);
+    await expect(runTime).not.toHaveText(/:\d{2}:\d{2}/);
 
     await page.locator('.inspector-pane').evaluate(element => {
         element.setAttribute('style', 'flex: 0 0 230px; width: 230px');

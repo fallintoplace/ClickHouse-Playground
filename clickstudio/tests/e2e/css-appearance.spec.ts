@@ -1,5 +1,14 @@
 import { functionsWorkspace } from './sql-functions-helpers.js';
-import { setWorkspaceMode, replaceSql, runButton, runScript, trust } from './helpers.js';
+import {
+    arrayValue,
+    jsonRecord,
+    setWorkspaceMode,
+    replaceSql,
+    runButton,
+    runScript,
+    trust,
+    trustCurrentConnection,
+} from './helpers.js';
 import { test, expect } from '@playwright/test';
 import type { Script } from '../../src/shared/queries/execution/types.js';
 import {
@@ -22,6 +31,47 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const theme of ['Light', 'Dark']) {
+    test(`CSS preserves ${theme} Run details`, async ({ page }, info) => {
+        const reason = 'Query-log profiling is not enabled for this connection.';
+        await page.setViewportSize({ width: 1280, height: 800 });
+        await page.route(
+            url => url.pathname === '/api/connections',
+            async route => {
+                const response = await route.fetch();
+                const connections = arrayValue(await response.json(), 'Connections');
+                await route.fulfill({
+                    response,
+                    json: connections.map(value => {
+                        const connection = jsonRecord(value, 'Connection');
+                        const manifest = jsonRecord(
+                            connection.manifest ?? {},
+                            'Connection manifest',
+                        );
+                        return {
+                            ...connection,
+                            manifest: { ...manifest, queryLog: { available: false, reason } },
+                        };
+                    }),
+                });
+            },
+        );
+        await page.goto('/experimental');
+        await expect(page.locator('.connection-trigger')).toBeVisible({ timeout: 15000 });
+        await trustCurrentConnection(page);
+        await expect(runButton(page)).toBeEnabled();
+        await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+        await runButton(page).click();
+        await expect(page.locator('.execution-bar')).toHaveAttribute(
+            'data-run-status',
+            'succeeded',
+        );
+        await page.getByTestId('execution-details').click();
+
+        const inspector = page.locator('.inspector-pane');
+        await expect(inspector.locator('.run-detail-note')).toContainText(reason);
+        await expectReferenceStyles(page, info, 'run-details', inspector);
+    });
+
     for (const mode of [theme === 'Light' ? 'Standard' : 'Experimental']) {
         test(`CSS preserves ${theme}, theme accent, ${mode} workspace layouts`, async ({
             page,

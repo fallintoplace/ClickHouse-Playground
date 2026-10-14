@@ -832,6 +832,7 @@ function RunDetails({
         ...(run.executedAs ? [['Executed as', run.executedAs] as [string, string]] : []),
         ...(run.serverVersion ? [['Server', run.serverVersion] as [string, string]] : []),
     ];
+    const createdAt = new Date(run.createdAt);
     return (
         <section className="inspector-section">
             <div className="run-detail-hero">
@@ -841,7 +842,12 @@ function RunDetails({
                         <Status run={run} />
                     </span>
                 </div>
-                <time dateTime={run.createdAt}>{new Date(run.createdAt).toLocaleString()}</time>
+                <time dateTime={run.createdAt}>
+                    {createdAt.toLocaleString(undefined, {
+                        dateStyle: 'medium',
+                        timeStyle: 'short',
+                    })}
+                </time>
             </div>
             <div className="run-fact-list">
                 {items.map(([label, value]) => (
@@ -870,7 +876,7 @@ function RunDetails({
                 </div>
             )}
             {unavailableReason ? (
-                <div className="callout run-detail-note" role="note">
+                <div className="run-detail-note" role="note">
                     <Icon name="info" />
                     <span>{unavailableReason}</span>
                 </div>
