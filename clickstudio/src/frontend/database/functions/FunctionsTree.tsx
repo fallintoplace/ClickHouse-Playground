@@ -3,7 +3,6 @@ import type {
     SqlFunction,
 } from '../../../shared/database/functions/sql-functions';
 import { Icon } from '../../ui/components/icons';
-import { Spinner } from '../../ui/components/primitives';
 import { ExplorerGroupRow, ObjectLeafRow } from '../explorer/objects/tree/ObjectTreeRows';
 
 export function FunctionsTree({
@@ -57,11 +56,6 @@ export function FunctionsTree({
             />
             {(expanded || query || !functions.length) && (
                 <div role="group" className="object-tree-children">
-                    {loading && !catalog && (
-                        <div className="sql-functions-status">
-                            <Spinner size={12} label="Loading functions" />
-                        </div>
-                    )}
                     {catalog &&
                         functions.length > 0 &&
                         functions.map(fn => (

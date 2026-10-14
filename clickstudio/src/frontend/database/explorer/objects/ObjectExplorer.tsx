@@ -5,7 +5,7 @@ import { FunctionGroupsTree } from '../../functions/FunctionGroupsTree';
 import { SqlFunctionDetails } from '../../functions/SqlFunctionDetails';
 import { CreateSqlFunctionDialog } from '../../functions/CreateSqlFunctionDialog';
 import { DeleteSqlFunctionDialog } from '../../functions/DeleteSqlFunctionDialog';
-import { Button, cx, Spinner } from '../../../ui/components/primitives';
+import { Button, cx } from '../../../ui/components/primitives';
 import { Icon } from '../../../ui/components/icons';
 import { ObjectDetails } from './ObjectExplorerDetails';
 import type { ObjectExplorerProps } from './tree/object-explorer-types';
@@ -373,7 +373,7 @@ function ObjectExplorerBrowser({
     useEffect(() => {
         if (!busy) refreshing.current = false;
     }, [busy]);
-    const refreshLabel = busy && schema ? 'Refreshing objects' : copy.loading;
+    const refreshLabel = refreshing.current ? 'Refreshing objects' : 'Loading objects';
     return (
         <>
             <div className="object-search-row">
@@ -425,12 +425,6 @@ function ObjectExplorerBrowser({
                     <Icon name="lock" />
                     <strong>{copy.schemaPrivate}</strong>
                     <p>{copy.trustToInspect}</p>
-                </div>
-            )}
-            {schemaLoading && !schema && (
-                <div className="inspector-empty">
-                    <Spinner />
-                    <p>{copy.readingSchema}</p>
                 </div>
             )}
             {trusted && (schema || functionsVisible) && (

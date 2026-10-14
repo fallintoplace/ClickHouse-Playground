@@ -18,7 +18,7 @@ test('Standard loads functions only when Objects is first opened', async ({ page
 });
 
 for (const mode of ['Standard', 'Experimental']) {
-    test(`${mode} shows a spinner and keeps the pending request when Objects is reopened`, async ({
+    test(`${mode} shows one loading indicator and keeps the pending request when Objects is reopened`, async ({
         page,
     }, info) => {
         const { requests } = await functionsWorkspace(page, {
@@ -27,12 +27,13 @@ for (const mode of ['Standard', 'Experimental']) {
             metadataDelay: 2500,
             waitForFunctions: false,
         });
-        const spinner = page.getByRole('status', { name: 'Loading functions', exact: true });
-        await expect(spinner).toBeVisible();
-        await expect(spinner).toHaveClass(/loading-orbit/);
+        const spinner = page.locator('.object-refresh-action');
+        await expect(spinner).toHaveClass(/is-loading/);
+        await expect(spinner).toHaveAttribute('aria-label', 'Loading objects');
+        await expect(page.locator('.object-explorer-section .loading-orbit')).toHaveCount(0);
         await expect(page.getByText('Loading functions…', { exact: true })).toHaveCount(0);
         await page
-            .locator('.sql-functions-tree')
+            .locator('.object-explorer-section')
             .screenshot({ path: info.outputPath('functions-spinner.png') });
         await page.getByRole('button', { name: 'Close inspector', exact: true }).click();
         await page
@@ -42,7 +43,7 @@ for (const mode of ['Standard', 'Experimental']) {
         await expect(
             page.getByRole('button', { name: 'udf_map_remove SQL UDF', exact: true }),
         ).toBeVisible();
-        await expect(spinner).toHaveCount(0);
+        await expect(spinner).not.toHaveClass(/is-loading/);
         expect(requests.filter(body => body.action === 'functions')).toHaveLength(1);
     });
 
