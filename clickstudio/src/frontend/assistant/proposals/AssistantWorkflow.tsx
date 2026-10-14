@@ -63,6 +63,14 @@ type SqlDiffRow = {
 };
 type SqlDiffChange = ReturnType<typeof diffLines>[number];
 
+const generateTaskPrompts = [
+    'Create a small ClickHouse table for coffee shop orders, insert a few sample rows, then query sales by drink.',
+    'Create a small ClickHouse table for bike rentals, insert sample rows, then query ride counts by hour.',
+    'Create a small ClickHouse table for website visits, insert sample rows, then query the most visited pages.',
+    'Create a small ClickHouse table for city weather, insert sample rows, then query average temperature by city.',
+    'Create a small ClickHouse table for movie ratings, insert sample rows, then query the top-rated movies.',
+] as const;
+
 function sqlDiffRows(changes: readonly SqlDiffChange[]): SqlDiffRow[] {
     let oldLine = 1;
     let newLine = 1;
@@ -797,15 +805,16 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
                                     <span className="assistant-glyph">
                                         <Icon name="assistant" />
                                     </span>
-                                    <strong>Start a conversation</strong>
+                                    <strong>SQL Assistant</strong>
                                     <p>
-                                        Ask about your query. Follow-ups keep this chat’s context.
+                                        Explain or optimize a ClickHouse query, or generate a new
+                                        example.
                                     </p>
                                     {!question.trim() && !imageAttachments.length && (
                                         <div
                                             className="assistant-starter-actions"
                                             role="group"
-                                            aria-label="Example tasks"
+                                            aria-label="Try a task"
                                         >
                                             <Button
                                                 variant="secondary"
@@ -814,7 +823,7 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
                                                     ask('Explain this SQL query in plain language.')
                                                 }
                                             >
-                                                Explain
+                                                Explain this query
                                             </Button>
                                             <Button
                                                 variant="secondary"
@@ -825,7 +834,23 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
                                                     )
                                                 }
                                             >
-                                                Optimize
+                                                Optimize this query
+                                            </Button>
+                                            <Button
+                                                variant="secondary"
+                                                disabled={!canStartPrompt}
+                                                onClick={() =>
+                                                    ask(
+                                                        generateTaskPrompts[
+                                                            Math.floor(
+                                                                Math.random() *
+                                                                    generateTaskPrompts.length,
+                                                            )
+                                                        ],
+                                                    )
+                                                }
+                                            >
+                                                Generate a random example
                                             </Button>
                                         </div>
                                     )}

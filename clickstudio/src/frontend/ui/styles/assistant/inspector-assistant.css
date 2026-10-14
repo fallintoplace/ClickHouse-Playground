@@ -1491,37 +1491,45 @@
   .assistant-empty-chat {
     display: grid;
     justify-items: center;
-    gap: 7px;
-    padding: 18px;
+    gap: 10px;
+    padding: 24px 16px;
     color: var(--muted);
     text-align: center;
   }
   .assistant-empty-chat .assistant-glyph {
+    width: 44px;
+    height: 44px;
+    background: transparent;
+  }
+  .assistant-empty-chat .assistant-glyph svg {
     width: 30px;
     height: 30px;
   }
   .assistant-empty-chat strong {
-    color: var(--text-soft);
-    font-size: 10px;
+    color: var(--text);
+    font-size: 18px;
+    font-weight: 650;
+    letter-spacing: -0.025em;
   }
   .assistant-empty-chat p {
-    max-width: 260px;
+    max-width: 320px;
     margin: 0;
-    font-size: 8px;
+    font-size: 11px;
     line-height: 1.5;
   }
   .assistant-starter-actions {
     display: flex;
     flex-wrap: wrap;
+    max-width: 320px;
     justify-content: center;
-    gap: 6px;
-    margin-top: 4px;
+    gap: 8px;
+    margin-top: 5px;
   }
   .assistant-starter-actions .button-base {
-    min-height: 28px;
-    padding-inline: 10px;
+    min-height: 32px;
+    padding-inline: 12px;
     border-radius: 999px;
-    font-size: 9px;
+    font-size: 10px;
   }
   .assistant-turn {
     display: grid;
