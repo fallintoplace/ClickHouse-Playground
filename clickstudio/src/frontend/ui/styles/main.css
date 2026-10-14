@@ -21,6 +21,7 @@
 @import "./database/object-explorer.css";
 @import "./base/creation-dialog.css";
 @import "./database/sql-functions.css";
+@import "./database/function-creation.css";
 @import "./database/python-functions.css";
 @import "./database/import-wizard.css";
 @import "./database/transfer-dialog.css";

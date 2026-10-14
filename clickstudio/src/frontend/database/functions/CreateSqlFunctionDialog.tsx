@@ -5,8 +5,9 @@ import {
 } from '../../../shared/database/functions/sql-functions';
 import { createClickHouseCloudFunction } from '../connections/cloud-connection';
 import { message } from '../../api/client';
-import { CreationDialog } from '../../ui/components/CreationDialog';
 import { Icon } from '../../ui/components/icons';
+import { FunctionCreationDialog } from './FunctionCreationDialog';
+import { FunctionCodeEditor } from './FunctionCodeEditor';
 
 export function CreateSqlFunctionDialog({
     onClose,
@@ -58,10 +59,10 @@ export function CreateSqlFunctionDialog({
     };
 
     return (
-        <CreationDialog
+        <FunctionCreationDialog
             className="sql-function-dialog"
             title="Create SQL Function"
-            description="Create a SQL UDF available across databases."
+            description="SQL · lambda expression"
             closeLabel="Close Create SQL Function"
             busy={busy}
             initialFocus={nameInput}
@@ -91,12 +92,13 @@ export function CreateSqlFunctionDialog({
                         className="creation-dialog-button is-primary"
                         disabled={!sql || busy}
                     >
+                        <Icon name="plus" />
                         {busy ? 'Creating…' : 'Create UDF'}
                     </button>
                 </>
             }
         >
-            <div className="sql-function-fields">
+            <div className="function-creation-fields">
                 <label className="creation-dialog-field">
                     <span>Function name</span>
                     <input
@@ -118,36 +120,44 @@ export function CreateSqlFunctionDialog({
                         placeholder="e.g. price, rate"
                         onChange={event => changeField('parameters', event.target.value)}
                     />
-                    <small className="creation-dialog-help">Comma-separated names.</small>
-                </label>
-                <label className="creation-dialog-field sql-function-expression">
-                    <span>Expression</span>
-                    <textarea
-                        className="creation-dialog-control"
-                        rows={3}
-                        value={fields.expression}
-                        aria-label="Expression"
-                        maxLength={8192}
-                        spellCheck={false}
-                        placeholder="e.g. price * (1 + rate)"
-                        onChange={event => changeField('expression', event.target.value)}
-                    />
                 </label>
             </div>
-            <div className="sql-function-preview sql-function-create-preview">
-                <h3>SQL preview</h3>
-                <pre>
-                    {sql ||
-                        (fields.name || fields.parameters || fields.expression
-                            ? validation
-                            : 'Enter a name, parameters and expression to preview your SQL.')}
-                </pre>
+            <div className="function-creation-workspace">
+                <section
+                    className="function-creation-preview sql-function-create-preview"
+                    aria-label="SQL preview"
+                >
+                    <div className="function-creation-section-heading">
+                        <h3>SQL preview</h3>
+                    </div>
+                    <pre>
+                        {sql ||
+                            (fields.name || fields.parameters || fields.expression
+                                ? validation
+                                : 'CREATE FUNCTION ... AS (...) -> ...;')}
+                    </pre>
+                </section>
+                <div className="creation-dialog-field function-creation-source">
+                    <span className="function-creation-section-heading">
+                        <span>Expression</span>
+                        <span className="function-creation-meta is-code">expression.sql</span>
+                    </span>
+                    <FunctionCodeEditor
+                        language="sql"
+                        label="Expression"
+                        value={fields.expression}
+                        disabled={busy}
+                        maxLength={8192}
+                        placeholder="e.g. price * (1 + rate)"
+                        onChange={value => changeField('expression', value)}
+                    />
+                </div>
             </div>
             {error && (
                 <p className="sql-function-error" role="alert">
                     {error}
                 </p>
             )}
-        </CreationDialog>
+        </FunctionCreationDialog>
     );
 }

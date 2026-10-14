@@ -233,30 +233,6 @@
     overflow-wrap: anywhere;
   }
 
-  .sql-function-fields {
-    display: grid;
-    min-width: 0;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
-    gap: 16px;
-  }
-
-  .sql-function-expression {
-    grid-column: 1 / -1;
-  }
-
-  .sql-function-expression textarea {
-    min-height: 100px;
-    resize: vertical;
-  }
-
-  .sql-function-create-preview h3 {
-    margin: 0;
-    color: var(--text-soft);
-    font-size: 12px;
-    font-weight: 600;
-  }
-
   .sql-function-delete-dialog {
     width: min(480px, calc(100vw - 32px));
   }

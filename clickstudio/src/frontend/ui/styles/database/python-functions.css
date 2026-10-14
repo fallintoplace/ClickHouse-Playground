@@ -1,55 +1,9 @@
 @layer components {
-  .python-function-dialog {
-    width: min(1040px, calc(100vw - 32px));
-  }
-
-  .python-function-dialog .creation-dialog-layout {
-    height: min(760px, calc(100dvh - 48px));
-  }
-
-  .python-function-dialog .creation-dialog-title {
-    letter-spacing: 0;
-  }
-
-  .python-function-dialog .creation-dialog-content {
-    position: relative;
-    display: block;
-    overflow: hidden;
-    padding: 0;
-    contain: paint;
-  }
-
-  .python-function-scroll {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    min-height: 0;
-    gap: 20px;
-    align-content: start;
-    overflow-y: auto;
-    scroll-padding-block: 16px;
-    padding: 20px 24px;
-    box-sizing: border-box;
-  }
-
   .python-function-argument-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 104px 32px;
     gap: 6px;
     min-width: 0;
-  }
-
-  .python-function-fields {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 140px;
-    gap: 16px;
-  }
-
-  .python-function-workspace {
-    display: grid;
-    grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr);
-    gap: 24px;
-    align-items: start;
   }
 
   .python-function-settings,
@@ -63,65 +17,8 @@
     gap: 24px;
   }
 
-  .python-function-section-heading {
-    display: flex;
-    min-height: 32px;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    color: var(--text-soft);
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  .python-function-section-heading h3 {
-    margin: 0;
-    font-size: inherit;
-    font-weight: inherit;
-  }
-
-  .python-function-optional,
-  .python-function-filename {
-    color: var(--muted);
-    font-size: 11px;
-    font-weight: 400;
-  }
-
-  .python-function-filename {
-    font-family: var(--font-mono);
-  }
-
-  .python-function-dialog .creation-dialog-control {
-    min-height: 34px;
-    padding: 7px 9px;
-    box-sizing: border-box;
-  }
-
-  .python-function-dialog .python-function-icon-button {
-    width: 32px;
-    min-height: 34px;
-    padding: 0;
-  }
-
   .python-function-dependencies textarea {
     resize: vertical;
-  }
-
-  .python-function-source {
-    gap: 8px;
-  }
-
-  .python-function-editor {
-    height: 360px;
-    min-width: 0;
-    overflow: hidden;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-control);
-    font-weight: 400;
-  }
-
-  .python-function-editor .cm-scroller {
-    overflow: auto;
   }
 
   .python-deployment-panel,
@@ -168,31 +65,8 @@
   }
 
   @media (width <= 720px) {
-    .python-function-fields {
-      grid-template-columns: minmax(0, 1fr) 110px;
-      gap: 12px;
-    }
-
-    .python-function-fields > :first-child {
-      grid-column: 1 / -1;
-    }
-
-    .python-function-workspace {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 20px;
-    }
-
     .python-function-settings {
       gap: 16px;
-    }
-
-    .python-function-editor {
-      height: 280px;
-    }
-
-    .python-function-scroll {
-      gap: 16px;
-      padding: 16px;
     }
   }
 }

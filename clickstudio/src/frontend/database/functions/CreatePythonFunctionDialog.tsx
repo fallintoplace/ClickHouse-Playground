@@ -7,11 +7,11 @@ import {
     type PythonFunctionDraft,
 } from '../../../shared/database/functions/python-functions';
 import { pythonUdfArtifact } from '../../../shared/database/functions/python-udf-package';
-import { CreationDialog } from '../../ui/components/CreationDialog';
 import { SelectControl } from '../../ui/components/SelectControl';
 import { Icon } from '../../ui/components/icons';
 import { message } from '../../api/client';
-import { PythonFunctionEditor } from './PythonFunctionEditor';
+import { FunctionCreationDialog } from './FunctionCreationDialog';
+import { FunctionCodeEditor } from './FunctionCodeEditor';
 import { PythonDeploymentPanel } from './PythonDeploymentPanel';
 
 export function CreatePythonFunctionDialog({
@@ -55,8 +55,8 @@ export function CreatePythonFunctionDialog({
         }
     };
     return (
-        <CreationDialog
-            className="sql-function-dialog python-function-dialog"
+        <FunctionCreationDialog
+            className="python-function-dialog"
             title="Create Python UDF"
             description="Python 3.11 · executable_pool · JSONEachRow"
             closeLabel="Close Create Python UDF"
@@ -75,7 +75,7 @@ export function CreatePythonFunctionDialog({
                         disabled={busy}
                         onClick={onClose}
                     >
-                        Close
+                        Cancel
                     </button>
                     <button
                         type="submit"
@@ -88,194 +88,192 @@ export function CreatePythonFunctionDialog({
                 </>
             }
         >
-            <div className="python-function-scroll">
-                <div className="python-function-fields">
-                    <div className="creation-dialog-field">
-                        <span>Template</span>
-                        <SelectControl
-                            className="select-control-field"
-                            label="Template"
-                            value={template}
-                            disabled={busy}
-                            options={PYTHON_FUNCTION_TEMPLATES.map((item, index) => ({
-                                value: String(index),
-                                label: item.label,
-                            }))}
-                            onChange={value => {
-                                setTemplate(value);
-                                setDraft(
-                                    structuredClone(PYTHON_FUNCTION_TEMPLATES[Number(value)]!),
-                                );
-                                setError('');
-                            }}
-                        />
-                    </div>
-                    <label className="creation-dialog-field">
-                        <span>Function name</span>
-                        <input
-                            ref={nameInput}
-                            className="creation-dialog-control"
-                            value={draft.name}
-                            onChange={event => update({ name: event.target.value })}
-                            maxLength={128}
-                        />
-                    </label>
-                    <div className="creation-dialog-field">
-                        <span>Returns</span>
-                        <SelectControl
-                            className="select-control-field"
-                            label="Return type"
-                            value={draft.returnType}
-                            disabled={busy}
-                            options={PYTHON_SCALAR_TYPES.map(type => ({
-                                value: type,
-                                label: type,
-                            }))}
-                            onChange={value =>
-                                update({
-                                    returnType: PYTHON_SCALAR_TYPES.find(type => type === value)!,
-                                })
-                            }
-                        />
-                    </div>
+            <div className="function-creation-fields has-return-type">
+                <div className="creation-dialog-field">
+                    <span>Template</span>
+                    <SelectControl
+                        className="select-control-field"
+                        label="Template"
+                        value={template}
+                        disabled={busy}
+                        options={PYTHON_FUNCTION_TEMPLATES.map((item, index) => ({
+                            value: String(index),
+                            label: item.label,
+                        }))}
+                        onChange={value => {
+                            setTemplate(value);
+                            setDraft(structuredClone(PYTHON_FUNCTION_TEMPLATES[Number(value)]!));
+                            setError('');
+                        }}
+                    />
                 </div>
-                <div className="python-function-workspace">
-                    <div className="python-function-settings">
-                        <section className="python-function-arguments" aria-label="Arguments">
-                            <div className="python-function-section-heading">
-                                <h3>Arguments</h3>
+                <label className="creation-dialog-field">
+                    <span>Function name</span>
+                    <input
+                        ref={nameInput}
+                        className="creation-dialog-control"
+                        value={draft.name}
+                        onChange={event => update({ name: event.target.value })}
+                        maxLength={128}
+                    />
+                </label>
+                <div className="creation-dialog-field">
+                    <span>Returns</span>
+                    <SelectControl
+                        className="select-control-field"
+                        label="Return type"
+                        value={draft.returnType}
+                        disabled={busy}
+                        options={PYTHON_SCALAR_TYPES.map(type => ({
+                            value: type,
+                            label: type,
+                        }))}
+                        onChange={value =>
+                            update({
+                                returnType: PYTHON_SCALAR_TYPES.find(type => type === value)!,
+                            })
+                        }
+                    />
+                </div>
+            </div>
+            <div className="function-creation-workspace">
+                <div className="python-function-settings">
+                    <section className="python-function-arguments" aria-label="Arguments">
+                        <div className="function-creation-section-heading">
+                            <h3>Arguments</h3>
+                            <button
+                                type="button"
+                                className="creation-dialog-button function-creation-icon-button"
+                                aria-label="Add argument"
+                                title="Add argument"
+                                disabled={draft.arguments.length >= 16}
+                                onClick={() =>
+                                    update({
+                                        arguments: [
+                                            ...draft.arguments,
+                                            {
+                                                name: `arg${draft.arguments.length + 1}`,
+                                                type: 'String',
+                                            },
+                                        ],
+                                    })
+                                }
+                            >
+                                <Icon name="plus" />
+                            </button>
+                        </div>
+                        {draft.arguments.map((argument, index) => (
+                            <div className="python-function-argument-row" key={index}>
+                                <input
+                                    className="creation-dialog-control"
+                                    aria-label={`Argument ${index + 1} name`}
+                                    value={argument.name}
+                                    onChange={event =>
+                                        update({
+                                            arguments: draft.arguments.map((item, at) =>
+                                                at === index
+                                                    ? { ...item, name: event.target.value }
+                                                    : item,
+                                            ),
+                                        })
+                                    }
+                                />
+                                <SelectControl
+                                    className="select-control-field"
+                                    label={`Argument ${index + 1} type`}
+                                    value={argument.type}
+                                    disabled={busy}
+                                    options={PYTHON_SCALAR_TYPES.map(type => ({
+                                        value: type,
+                                        label: type,
+                                    }))}
+                                    onChange={value =>
+                                        update({
+                                            arguments: draft.arguments.map((item, at) =>
+                                                at === index
+                                                    ? {
+                                                          ...item,
+                                                          type: PYTHON_SCALAR_TYPES.find(
+                                                              type => type === value,
+                                                          )!,
+                                                      }
+                                                    : item,
+                                            ),
+                                        })
+                                    }
+                                />
                                 <button
                                     type="button"
-                                    className="creation-dialog-button python-function-icon-button"
-                                    aria-label="Add argument"
-                                    title="Add argument"
-                                    disabled={draft.arguments.length >= 16}
+                                    className="creation-dialog-button function-creation-icon-button"
+                                    aria-label={`Remove argument ${index + 1}`}
+                                    title="Remove argument"
+                                    disabled={draft.arguments.length === 1}
                                     onClick={() =>
                                         update({
-                                            arguments: [
-                                                ...draft.arguments,
-                                                {
-                                                    name: `arg${draft.arguments.length + 1}`,
-                                                    type: 'String',
-                                                },
-                                            ],
+                                            arguments: draft.arguments.filter(
+                                                (_, at) => at !== index,
+                                            ),
                                         })
                                     }
                                 >
-                                    <Icon name="plus" />
+                                    <Icon name="trash" />
                                 </button>
                             </div>
-                            {draft.arguments.map((argument, index) => (
-                                <div className="python-function-argument-row" key={index}>
-                                    <input
-                                        className="creation-dialog-control"
-                                        aria-label={`Argument ${index + 1} name`}
-                                        value={argument.name}
-                                        onChange={event =>
-                                            update({
-                                                arguments: draft.arguments.map((item, at) =>
-                                                    at === index
-                                                        ? { ...item, name: event.target.value }
-                                                        : item,
-                                                ),
-                                            })
-                                        }
-                                    />
-                                    <SelectControl
-                                        className="select-control-field"
-                                        label={`Argument ${index + 1} type`}
-                                        value={argument.type}
-                                        disabled={busy}
-                                        options={PYTHON_SCALAR_TYPES.map(type => ({
-                                            value: type,
-                                            label: type,
-                                        }))}
-                                        onChange={value =>
-                                            update({
-                                                arguments: draft.arguments.map((item, at) =>
-                                                    at === index
-                                                        ? {
-                                                              ...item,
-                                                              type: PYTHON_SCALAR_TYPES.find(
-                                                                  type => type === value,
-                                                              )!,
-                                                          }
-                                                        : item,
-                                                ),
-                                            })
-                                        }
-                                    />
-                                    <button
-                                        type="button"
-                                        className="creation-dialog-button python-function-icon-button"
-                                        aria-label={`Remove argument ${index + 1}`}
-                                        title="Remove argument"
-                                        disabled={draft.arguments.length === 1}
-                                        onClick={() =>
-                                            update({
-                                                arguments: draft.arguments.filter(
-                                                    (_, at) => at !== index,
-                                                ),
-                                            })
-                                        }
-                                    >
-                                        <Icon name="trash" />
-                                    </button>
-                                </div>
-                            ))}
-                        </section>
-                        <label className="creation-dialog-field python-function-dependencies">
-                            <span className="python-function-section-heading">
-                                <span>requirements.txt</span>
-                                <span className="python-function-optional">Optional</span>
-                            </span>
-                            <textarea
-                                className="creation-dialog-control"
-                                aria-label="Python dependencies"
-                                value={draft.requirements}
-                                onChange={event => update({ requirements: event.target.value })}
-                                placeholder="No dependencies"
-                                rows={4}
-                                maxLength={16000}
-                                spellCheck={false}
-                            />
-                        </label>
-                    </div>
-                    <div className="creation-dialog-field python-function-source">
-                        <span className="python-function-section-heading">
-                            <span>Python source</span>
-                            <span className="python-function-filename">main.py</span>
+                        ))}
+                    </section>
+                    <label className="creation-dialog-field python-function-dependencies">
+                        <span className="function-creation-section-heading">
+                            <span>requirements.txt</span>
+                            <span className="function-creation-meta">Optional</span>
                         </span>
-                        <PythonFunctionEditor
-                            disabled={busy}
-                            value={draft.source}
-                            onChange={source => update({ source })}
+                        <textarea
+                            className="creation-dialog-control"
+                            aria-label="Python dependencies"
+                            value={draft.requirements}
+                            onChange={event => update({ requirements: event.target.value })}
+                            placeholder="No dependencies"
+                            rows={4}
+                            maxLength={16000}
+                            spellCheck={false}
                         />
-                    </div>
+                    </label>
                 </div>
-                {sourceIssue && (
-                    <p className="sql-function-error" role="status">
-                        {sourceIssue}
-                    </p>
-                )}
-                {!validation.success && (
-                    <p className="sql-function-error" role="status">
-                        {validation.error.issues[0]?.message}
-                    </p>
-                )}
-                {error && (
-                    <p className="sql-function-error" role="alert">
-                        {error}
-                    </p>
-                )}
-                <PythonDeploymentPanel
-                    name={draft.name}
-                    draft={validation.success && !sourceIssue ? validation.data : undefined}
-                    allowed={deployAllowed}
-                    onChanged={onPublished}
-                    onBusy={setBusy}
-                />
+                <div className="creation-dialog-field function-creation-source">
+                    <span className="function-creation-section-heading">
+                        <span>Python source</span>
+                        <span className="function-creation-meta is-code">main.py</span>
+                    </span>
+                    <FunctionCodeEditor
+                        language="python"
+                        label="Python source"
+                        disabled={busy}
+                        value={draft.source}
+                        onChange={source => update({ source })}
+                    />
+                </div>
             </div>
-        </CreationDialog>
+            {sourceIssue && (
+                <p className="sql-function-error" role="status">
+                    {sourceIssue}
+                </p>
+            )}
+            {!validation.success && (
+                <p className="sql-function-error" role="status">
+                    {validation.error.issues[0]?.message}
+                </p>
+            )}
+            {error && (
+                <p className="sql-function-error" role="alert">
+                    {error}
+                </p>
+            )}
+            <PythonDeploymentPanel
+                name={draft.name}
+                draft={validation.success && !sourceIssue ? validation.data : undefined}
+                allowed={deployAllowed}
+                onChanged={onPublished}
+                onBusy={setBusy}
+            />
+        </FunctionCreationDialog>
     );
 }

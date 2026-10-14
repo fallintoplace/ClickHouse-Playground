@@ -77,8 +77,11 @@ test('Custom function starts blank, previews SQL and creates a testable SQL UDF'
     try {
         await page.getByRole('button', { name: 'Create SQL UDF', exact: true }).click();
         const dialog = page.getByRole('dialog', { name: 'Create SQL Function', exact: true });
-        for (const name of ['Function name', 'Parameters', 'Expression'])
+        for (const name of ['Function name', 'Parameters'])
             await expect(dialog.getByLabel(name, { exact: true })).toHaveValue('');
+        await expect(dialog.getByLabel('Expression', { exact: true })).toContainText(
+            'e.g. price * (1 + rate)',
+        );
         await expect(dialog.getByLabel('Function name', { exact: true })).toBeFocused();
         await expect(
             dialog.getByRole('button', { name: 'Create UDF', exact: true }),

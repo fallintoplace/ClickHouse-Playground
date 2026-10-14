@@ -234,7 +234,7 @@ for (const { viewport, theme } of [
         await expect(name).toHaveCSS('border-top-style', 'solid');
         const nameBounds = await name.boundingBox();
         expect(nameBounds!.height).toBeLessThanOrEqual(40);
-        const editor = dialog.locator('.python-function-editor');
+        const editor = dialog.locator('.function-code-editor');
         await editor.scrollIntoViewIfNeeded();
         const editorBounds = await editor.boundingBox();
         const footerBounds = await dialog.locator('.creation-dialog-footer').boundingBox();
