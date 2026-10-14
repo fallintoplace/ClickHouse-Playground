@@ -27,15 +27,17 @@ export function PythonFunctionsTree({
                 expanded={expanded || Boolean(search)}
                 onToggle={() => setExpanded(value => !value)}
                 action={
-                    <button
-                        type="button"
-                        className="object-tree-inline-action"
-                        aria-label="Create Python UDF"
-                        title="Create Python UDF"
-                        onClick={state.create}
-                    >
-                        <Icon name="plus" />
-                    </button>
+                    state.canCreate ? (
+                        <button
+                            type="button"
+                            className="object-tree-inline-action"
+                            aria-label="Create Python UDF"
+                            title="Create Python UDF"
+                            onClick={state.create}
+                        >
+                            <Icon name="plus" />
+                        </button>
+                    ) : undefined
                 }
             />
             {(expanded || search) && (

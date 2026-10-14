@@ -75,34 +75,38 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
     } = state;
     const functionsEnabled = trusted && connection.id === CLICKHOUSE_CLOUD_CONNECTION_ID;
     const functions = useSqlFunctions(connection, functionsEnabled, props.functionCatalog);
-    const python = usePythonFunctions(connection, expert);
+    const python = usePythonFunctions(
+        connection,
+        expert,
+        !connection.readonly &&
+            (connection.id !== CLICKHOUSE_CLOUD_CONNECTION_ID || functions.canCreate),
+    );
     const functionDetails = functions.selected || python.selected;
     const deployPython =
         trusted && !connection.readonly && connection.id === CLICKHOUSE_CLOUD_CONNECTION_ID;
     const canDeleteFunction =
         !connection.readonly && !functions.loading && functions.catalog?.canDrop === true;
-    const sqlFunctionsSlot =
-        functionsEnabled && !functions.error ? (
-            <FunctionsTree
-                label={expert ? 'SQL Functions' : 'Functions'}
-                catalog={functions.catalog}
-                loading={functions.loading}
-                search={search}
-                canCreate={!connection.readonly && functions.catalog?.canCreate === true}
-                createReason={
-                    connection.readonly
-                        ? 'This connection is read only.'
-                        : functions.catalog?.createReason || 'Checking CREATE FUNCTION privileges…'
-                }
-                onCreate={functions.openCreate}
-                onSelect={functions.select}
-            />
-        ) : undefined;
+    const sqlFunctionsSlot = functions.visible ? (
+        <FunctionsTree
+            label={expert ? 'SQL Functions' : 'Functions'}
+            catalog={functions.catalog}
+            loading={functions.loading}
+            search={search}
+            canCreate={functions.canCreate}
+            createReason={
+                connection.readonly
+                    ? 'This connection is read only.'
+                    : functions.catalog?.createReason || 'Checking CREATE FUNCTION privileges…'
+            }
+            onCreate={functions.openCreate}
+            onSelect={functions.select}
+        />
+    ) : undefined;
     const functionsSlot =
-        sqlFunctionsSlot || expert ? (
+        sqlFunctionsSlot || python.visible ? (
             <>
                 {sqlFunctionsSlot}
-                {expert && (
+                {python.visible && (
                     <PythonFunctionsTree
                         state={python}
                         search={search}
@@ -242,7 +246,7 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                 <ObjectExplorerBrowser
                     state={state}
                     functionsSlot={functionsSlot}
-                    functionsEnabled={functionsEnabled || expert}
+                    functionsVisible={Boolean(functionsSlot)}
                     onRefreshFunctions={() => {
                         functions.refresh();
                         python.refresh();
@@ -305,12 +309,12 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
 function ObjectExplorerBrowser({
     state,
     functionsSlot,
-    functionsEnabled,
+    functionsVisible,
     onRefreshFunctions,
 }: {
     state: ReturnType<typeof useObjectExplorerState>;
     functionsSlot?: ReactNode;
-    functionsEnabled: boolean;
+    functionsVisible: boolean;
     onRefreshFunctions: () => void;
 }) {
     const {
@@ -376,7 +380,7 @@ function ObjectExplorerBrowser({
                         title={schemaLoading ? copy.loading : copy.refresh}
                         onClick={() => {
                             onRefreshSchema();
-                            if (functionsEnabled) onRefreshFunctions();
+                            onRefreshFunctions();
                         }}
                         disabled={schemaLoading || !trusted}
                     >
@@ -392,20 +396,15 @@ function ObjectExplorerBrowser({
                     <p>{copy.trustToInspect}</p>
                 </div>
             )}
-            {!trusted && functionsSlot && (
-                <div className="object-tree" role="tree" aria-label="Functions">
-                    {functionsSlot}
-                </div>
-            )}
             {schemaLoading && (
                 <div className="inspector-empty">
                     <Spinner />
                     <p>{copy.readingSchema}</p>
                 </div>
             )}
-            {trusted && ((schema && !schemaLoading) || functionsEnabled) && (
+            {trusted && ((schema && !schemaLoading) || functionsVisible) && (
                 <>
-                    {model.databases.length || functionsEnabled ? (
+                    {model.databases.length || functionsVisible ? (
                         <ObjectTree
                             {...{
                                 functionsSlot,

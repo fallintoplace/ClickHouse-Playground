@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { SqlFunction } from '../../../shared/database/functions/sql-functions';
 import type { Connected } from '../../workspace/workspace-types';
 import type { SqlFunctionCatalogState } from './useSqlFunctionCatalog';
@@ -14,12 +14,26 @@ export function useSqlFunctions(
     const [selection, setSelection] = useState<{ key: string; fn: SqlFunction }>();
     const [creating, setCreating] = useState<string>();
     const [deleting, setDeleting] = useState<{ key: string; fn: SqlFunction }>();
+    const canCreate = enabled && !connection.readonly && catalog.catalog?.canCreate === true;
+    const visible =
+        enabled &&
+        !catalog.error &&
+        (catalog.loading || canCreate || Boolean(catalog.catalog?.functions.length));
+    useEffect(() => {
+        if (!visible) {
+            setSelection(undefined);
+            setDeleting(undefined);
+        }
+        if (!visible || !canCreate) setCreating(undefined);
+    }, [visible, canCreate]);
 
     return {
         ...catalog,
-        selected: enabled && selection?.key === key ? selection.fn : undefined,
-        createOpen: enabled && creating === key,
-        deleteTarget: enabled && deleting?.key === key ? deleting.fn : undefined,
+        visible,
+        canCreate,
+        selected: visible && selection?.key === key ? selection.fn : undefined,
+        createOpen: visible && canCreate && creating === key,
+        deleteTarget: visible && deleting?.key === key ? deleting.fn : undefined,
         select: (fn: SqlFunction) => setSelection({ key, fn }),
         close: () => setSelection(undefined),
         openCreate: () => setCreating(key),

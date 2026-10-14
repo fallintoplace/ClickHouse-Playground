@@ -139,6 +139,7 @@ export function PythonDeploymentPanel({
                     <label className="creation-dialog-field">
                         <span>Target service</span>
                         <select
+                            className="creation-dialog-control"
                             aria-label="Target service"
                             value={selectedService}
                             disabled={busy}
@@ -211,6 +212,7 @@ export function PythonDeploymentPanel({
                             <label className="creation-dialog-field">
                                 <span>Build version</span>
                                 <select
+                                    className="creation-dialog-control"
                                     aria-label="Build version"
                                     value={selectedVersion}
                                     disabled={busy}

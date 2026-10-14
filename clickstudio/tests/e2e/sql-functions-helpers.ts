@@ -17,6 +17,7 @@ import type { ExecutableFunction } from '../../src/shared/database/functions/pyt
 
 type FunctionTestState = {
     executableFunctions: ExecutableFunction[];
+    executableError: boolean;
     canCreate: boolean;
     canDrop: boolean;
     failDrop: boolean;
@@ -183,6 +184,7 @@ export async function functionsWorkspace(
     options: {
         canCreate?: boolean;
         canDrop?: boolean;
+        executableError?: boolean;
         live?: boolean;
         existing?: boolean;
         path?: string;
@@ -194,6 +196,7 @@ export async function functionsWorkspace(
 ) {
     const state: FunctionTestState = {
         executableFunctions: [],
+        executableError: options.executableError ?? false,
         canCreate: options.canCreate ?? true,
         canDrop: options.canDrop ?? true,
         failDrop: false,
@@ -240,6 +243,13 @@ export async function functionsWorkspace(
         if (action === 'test')
             return route.fulfill({ json: cloudConnectionTest({ serverVersion: '26.6.8.7' }) });
         if (action === 'schema') return route.fulfill({ json: cloudSchema });
+        if (action === 'executable-functions' && state.executableError)
+            return route.fulfill({
+                status: 403,
+                json: {
+                    error: { code: 'FUNCTION_PERMISSION', message: 'Function access denied.' },
+                },
+            });
         if (action === 'executable-functions')
             return route.fulfill({ json: { functions: state.executableFunctions } });
         if (action === 'functions') {
@@ -297,7 +307,7 @@ export async function functionsWorkspace(
             .click();
     if (catalogResponse) {
         await catalogResponse;
-        if (options.invalidCatalog)
+        if (options.invalidCatalog || (options.canCreate === false && !options.existing))
             await expect(page.locator('.sql-functions-tree')).toHaveCount(0);
         else
             await expect(

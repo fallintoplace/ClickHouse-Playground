@@ -263,16 +263,10 @@ for (const mode of ['Standard', 'Experimental']) {
         await expect(page.getByText('Function metadata unavailable', { exact: true })).toHaveCount(
             0,
         );
-        if (mode === 'Experimental')
-            await expect(page.getByTestId('schema-search')).toHaveAttribute(
-                'placeholder',
-                'Search objects and functions…',
-            );
-        else
-            await expect(page.getByTestId('schema-search')).not.toHaveAttribute(
-                'placeholder',
-                'Search objects and functions…',
-            );
+        await expect(page.getByTestId('schema-search')).not.toHaveAttribute(
+            'placeholder',
+            'Search objects and functions…',
+        );
         await expect(
             page.getByRole('button', { name: 'events MergeTree', exact: true }),
         ).toBeVisible();
