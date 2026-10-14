@@ -17,14 +17,14 @@ import {
 import type { Selection, ScaleLinear, ScaleTime } from 'd3';
 import {
     chartNumber,
-    chartTimestamp,
     MAX_CHART_RENDER_POINTS,
 } from '../../../../../shared/queries/results/results';
 import type { CandlestickConfig } from '../../../../../shared/queries/results/chart-settings';
-import type { Column, Json } from '../../../../../shared/common/values';
+import type { Column } from '../../../../../shared/common/values';
 import type { Result } from '../../../../../shared/queries/results/types';
 import type { Copy } from '../../../../ui/copy';
 import { ScrollEdgeFrame } from '../../../../ui/components/ScrollEdgeShadows';
+import { candleValues } from './candlestick-data';
 
 interface Candle {
     time: number;
@@ -59,39 +59,20 @@ const SPREAD_BOTTOM = 610;
 const NAV_TOP = 658;
 const NAV_BOTTOM = 696;
 
-function indexValue(row: Json[], index: number | undefined) {
-    return index === undefined ? null : chartNumber(row[index]);
-}
-
 function toCandles(result: Result, x: number, config: CandlestickConfig): Candle[] {
     return result.rows
         .flatMap(row => {
-            const time = chartTimestamp(row[x]);
-            const open = indexValue(row, config.open);
-            const high = indexValue(row, config.high);
-            const low = indexValue(row, config.low);
-            const close = indexValue(row, config.close);
-            if (
-                time === null ||
-                open === null ||
-                high === null ||
-                low === null ||
-                close === null ||
-                high < Math.max(open, close) ||
-                low > Math.min(open, close)
-            )
-                return [];
-            const bid = indexValue(row, config.bid);
-            const ask = indexValue(row, config.ask);
-            const spread = indexValue(row, config.spread);
-            const quoteActivity = indexValue(row, config.quoteActivity);
+            const values = candleValues(row, x, config);
+            if (!values) return [];
+            const optionalValue = (index: number | undefined) =>
+                index === undefined ? null : chartNumber(row[index]);
+            const bid = optionalValue(config.bid);
+            const ask = optionalValue(config.ask);
+            const spread = optionalValue(config.spread);
+            const quoteActivity = optionalValue(config.quoteActivity);
             return [
                 {
-                    time,
-                    open,
-                    high,
-                    low,
-                    close,
+                    ...values,
                     ...(bid === null ? {} : { bid }),
                     ...(ask === null ? {} : { ask }),
                     ...(spread === null ? {} : { spread }),
