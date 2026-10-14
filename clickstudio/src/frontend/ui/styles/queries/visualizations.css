@@ -354,6 +354,10 @@
     opacity: 0.46;
   }
   .results-title .sql-flow-mode-tabs {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
     flex: none;
     gap: 1px;
     padding: 2px;
@@ -362,6 +366,7 @@
     min-height: 26px;
     padding-inline: 9px;
     font-size: 8px;
+    white-space: nowrap;
   }
   .pipeline-graph-toolbar {
     display: flex;
