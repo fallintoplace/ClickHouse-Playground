@@ -71,15 +71,19 @@ test('Functions can be browsed and tested when creation privileges are absent', 
     expect(requests.some(body => body.action === 'create-function')).toBe(false);
 });
 
-test('Custom function starts blank, previews SQL and creates a testable SQL UDF', async ({
-    page,
-}) => {
+test('Custom function starts blank and creates a testable SQL UDF', async ({ page }) => {
     const workspace = await functionsWorkspace(page, {
         live: Boolean(process.env.CLICKSTUDIO_UDF_TEST_URL),
     });
     try {
         await page.getByRole('button', { name: 'Create SQL UDF', exact: true }).click();
         const dialog = page.getByRole('dialog', { name: 'Create SQL Function', exact: true });
+        await expect(
+            dialog.getByRole('combobox', { name: 'Template', exact: true }),
+        ).toHaveAttribute('data-value', 'custom');
+        await expect(dialog.getByRole('region', { name: 'SQL preview', exact: true })).toHaveCount(
+            0,
+        );
         for (const name of ['Function name', 'Parameter 1 name'])
             await expect(dialog.getByLabel(name, { exact: true })).toHaveValue('');
         await expect(dialog.getByLabel('Expression', { exact: true })).toContainText(
@@ -96,12 +100,9 @@ test('Custom function starts blank, previews SQL and creates a testable SQL UDF'
         await dialog.getByLabel('Function name', { exact: true }).fill('add_tax_demo');
         await dialog.getByLabel('Parameter 1 name', { exact: true }).fill('price');
         await dialog.getByLabel('Expression', { exact: true }).fill('price * 1.19');
-        await expect(dialog.locator('pre')).toHaveText(
-            'CREATE FUNCTION `add_tax_demo` AS (`price`) -> price * 1.19;',
-        );
         for (const target of [
             dialog,
-            ...(await dialog.locator('input, textarea, .sql-function-preview').all()),
+            ...(await dialog.locator('input, textarea, .chart-select-trigger').all()),
         ])
             await expect(target).toHaveCSS('border-radius', '4px');
         await page.screenshot({ path: 'test-results/sql-functions/custom-function.png' });
@@ -123,6 +124,49 @@ test('Custom function starts blank, previews SQL and creates a testable SQL UDF'
     } finally {
         await workspace.close();
     }
+});
+
+test('SQL UDF presets fill the draft and Custom clears it', async ({ page }) => {
+    const { requests } = await functionsWorkspace(page, { existing: true });
+    await page.getByRole('button', { name: 'Create SQL UDF', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Create SQL Function', exact: true });
+    const template = dialog.getByRole('combobox', { name: 'Template', exact: true });
+    const name = dialog.getByLabel('Function name', { exact: true });
+    const expression = dialog.getByLabel('Expression', { exact: true });
+    const parameters = dialog.getByRole('region', { name: 'Parameters', exact: true });
+
+    for (const [index, preset] of SQL_FUNCTION_TEMPLATES.entries()) {
+        await chooseSelectOption(page, template, String(index));
+        await expect(template).toHaveAttribute('data-value', String(index));
+        await expect(template).toHaveAttribute('aria-valuetext', preset.label);
+        await expect(name).toHaveValue(preset.name);
+        await expect(parameters.locator('.sql-function-parameter-row')).toHaveCount(
+            preset.parameters.length,
+        );
+        for (const [parameterIndex, parameter] of preset.parameters.entries())
+            await expect(dialog.getByLabel(`Parameter ${parameterIndex + 1} name`)).toHaveValue(
+                parameter,
+            );
+        await expect(expression).toContainText(preset.expression);
+    }
+
+    await chooseSelectOption(page, template, 'custom');
+    await expect(template).toHaveAttribute('data-value', 'custom');
+    await expect(name).toHaveValue('');
+    await expect(parameters.locator('.sql-function-parameter-row')).toHaveCount(1);
+    await expect(dialog.getByLabel('Parameter 1 name', { exact: true })).toHaveValue('');
+    await expect(expression).toContainText('e.g. price * (1 + rate)');
+
+    await name.fill('custom_after_template');
+    await dialog.getByLabel('Parameter 1 name', { exact: true }).fill('value');
+    await expression.fill('value + 1');
+    await dialog.getByRole('button', { name: 'Create UDF', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    expect(requests.find(request => request.action === 'create-function')).toMatchObject({
+        name: 'custom_after_template',
+        parameters: ['value'],
+        expression: 'value + 1',
+    });
 });
 
 test('Adding SQL UDF parameters keeps the expression editor in place to their right', async ({
@@ -151,9 +195,10 @@ test('Create opens a clean custom function form with 4px corners', async ({ page
     await functionsWorkspace(page, { existing: true });
     await page.getByRole('button', { name: 'Create SQL UDF', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Create SQL Function', exact: true });
-    await expect(
-        dialog.getByRole('button', { name: /Remove array item|Remove map key|Custom function/ }),
-    ).toHaveCount(0);
+    await expect(dialog.getByRole('combobox', { name: 'Template', exact: true })).toHaveAttribute(
+        'data-value',
+        'custom',
+    );
     await expect(dialog.getByLabel('Function name', { exact: true })).toHaveValue('');
     const bounds = await dialog.boundingBox();
     const viewport = page.viewportSize();
@@ -187,6 +232,9 @@ test('Invalid creation fields and raw SQL tester input never reach the server', 
     const dialog = page.getByRole('dialog', { name: 'Create SQL Function', exact: true });
     await dialog.getByLabel('Expression', { exact: true }).fill('1; DROP TABLE events');
     await expect(dialog.getByRole('button', { name: 'Create UDF', exact: true })).toBeDisabled();
+    await expect(dialog.getByRole('status')).toHaveText(
+        'Enter one SQL expression without statement separators.',
+    );
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Create SQL UDF', exact: true })).toBeFocused();

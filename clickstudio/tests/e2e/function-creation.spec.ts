@@ -63,10 +63,8 @@ for (const theme of ['Dark', 'Light']) {
             await sql.getByLabel('Parameter 2 name', { exact: true }).fill('rate');
             const expression = sql.getByRole('textbox', { name: 'Expression', exact: true });
             await expression.fill('price * (1 + rate)');
-            await expect(
-                sql.getByRole('region', { name: 'SQL preview', exact: true }),
-            ).toContainText(
-                'CREATE FUNCTION `add_tax` AS (`price`, `rate`) -> price * (1 + rate);',
+            await expect(sql.getByRole('region', { name: 'SQL preview', exact: true })).toHaveCount(
+                0,
             );
             await expect(
                 sql.getByRole('button', { name: 'Create UDF', exact: true }),
@@ -105,9 +103,7 @@ test('SQL editor preserves multiline text, normal Tab navigation, and the expres
     const editor = dialog.getByRole('textbox', { name: 'Expression', exact: true });
     const expression = "concat(value,\n    '日本語 \\n')";
     await editor.fill(expression);
-    await expect(dialog.getByRole('region', { name: 'SQL preview', exact: true })).toContainText(
-        '日本語',
-    );
+    await expect(dialog.getByRole('region', { name: 'SQL preview', exact: true })).toHaveCount(0);
     await editor.press('Tab');
     await expect(dialog.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused();
     await editor.fill('x'.repeat(8193));
@@ -142,9 +138,9 @@ for (const mode of ['Standard', 'Experimental']) {
         await expect(dialog.getByLabel('Parameter 2 name', { exact: true })).toBeFocused();
         await expect(dialog.getByLabel('Parameter 1 name', { exact: true })).toHaveValue(' price ');
         await expect(dialog.getByLabel('Parameter 2 name', { exact: true })).toHaveValue('rate');
-        await expect(
-            dialog.getByRole('region', { name: 'SQL preview', exact: true }),
-        ).toContainText('AS (`price`, `rate`)');
+        await expect(dialog.getByRole('region', { name: 'SQL preview', exact: true })).toHaveCount(
+            0,
+        );
         await dialog.getByRole('button', { name: 'Add parameter', exact: true }).click();
         const third = dialog.getByLabel('Parameter 3 name', { exact: true });
         await expect(third).toHaveValue('');
@@ -153,9 +149,9 @@ for (const mode of ['Standard', 'Experimental']) {
         for (const invalid of [' rate ', 'x, y', 'bad-name']) {
             await third.fill(invalid);
             await expect(create).toBeDisabled();
-            await expect(
-                dialog.getByRole('region', { name: 'SQL preview', exact: true }),
-            ).toContainText('Enter 1–16 unique parameter names.');
+            await expect(dialog.getByRole('status')).toHaveText(
+                'Enter 1–16 unique parameter names.',
+            );
         }
         expect(requests.filter(request => request.action === 'create-function')).toHaveLength(0);
         await third.fill('scale');

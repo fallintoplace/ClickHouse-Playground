@@ -1,11 +1,13 @@
 import { useRef, useState, type FormEvent } from 'react';
 import {
+    SQL_FUNCTION_TEMPLATES,
     createSqlFunctionQuery,
     type SqlFunction,
 } from '../../../shared/database/functions/sql-functions';
 import { createClickHouseCloudFunction } from '../connections/cloud-connection';
 import { message } from '../../api/client';
 import { Icon } from '../../ui/components/icons';
+import { SelectControl } from '../../ui/components/SelectControl';
 import { FunctionCreationDialog } from './FunctionCreationDialog';
 import { FunctionCodeEditor } from './FunctionCodeEditor';
 
@@ -90,6 +92,7 @@ export function CreateSqlFunctionDialog({
 }) {
     const nameInput = useRef<HTMLInputElement>(null);
     const nextParameterId = useRef(1);
+    const [template, setTemplate] = useState('custom');
     const [fields, setFields] = useState({ name: '', expression: '' });
     const [parameters, setParameters] = useState<Parameter[]>([{ id: 0, name: '' }]);
     const [busy, setBusy] = useState(false);
@@ -106,6 +109,9 @@ export function CreateSqlFunctionDialog({
     } catch (error) {
         validation = message(error);
     }
+    const hasInput = Boolean(
+        fields.name || fields.expression || parameters.some(parameter => parameter.name),
+    );
 
     const changeField = (field: keyof typeof fields, value: string) => {
         setFields(current => ({ ...current, [field]: value }));
@@ -125,6 +131,18 @@ export function CreateSqlFunctionDialog({
     };
     const removeParameter = (id: number) => {
         setParameters(current => current.filter(parameter => parameter.id !== id));
+        setError('');
+    };
+    const applyTemplate = (value: string) => {
+        const selected = value === 'custom' ? undefined : SQL_FUNCTION_TEMPLATES[Number(value)];
+        setTemplate(selected ? value : 'custom');
+        setFields({ name: selected?.name ?? '', expression: selected?.expression ?? '' });
+        setParameters(
+            (selected?.parameters ?? ['']).map(name => ({
+                id: nextParameterId.current++,
+                name,
+            })),
+        );
         setError('');
     };
 
@@ -192,6 +210,23 @@ export function CreateSqlFunctionDialog({
             </div>
             <div className="function-creation-workspace">
                 <div className="sql-function-create-sidebar">
+                    <div className="creation-dialog-field">
+                        <span className="function-creation-section-heading">Template</span>
+                        <SelectControl
+                            className="select-control-field"
+                            label="Template"
+                            value={template}
+                            disabled={busy}
+                            options={[
+                                { value: 'custom', label: 'Custom' },
+                                ...SQL_FUNCTION_TEMPLATES.map((item, index) => ({
+                                    value: String(index),
+                                    label: item.label,
+                                })),
+                            ]}
+                            onChange={applyTemplate}
+                        />
+                    </div>
                     <SqlFunctionParameters
                         parameters={parameters}
                         busy={busy}
@@ -199,22 +234,6 @@ export function CreateSqlFunctionDialog({
                         onChange={changeParameter}
                         onRemove={removeParameter}
                     />
-                    <section
-                        className="function-creation-preview sql-function-create-preview"
-                        aria-label="SQL preview"
-                    >
-                        <div className="function-creation-section-heading">
-                            <h3>SQL preview</h3>
-                        </div>
-                        <pre>
-                            {sql ||
-                                (fields.name ||
-                                parameters.some(parameter => parameter.name) ||
-                                fields.expression
-                                    ? validation
-                                    : 'CREATE FUNCTION ... AS (...) -> ...;')}
-                        </pre>
-                    </section>
                 </div>
                 <div className="creation-dialog-field function-creation-source">
                     <span className="function-creation-section-heading">
@@ -232,6 +251,11 @@ export function CreateSqlFunctionDialog({
                     />
                 </div>
             </div>
+            {validation && hasInput && (
+                <p className="sql-function-error" role="status">
+                    {validation}
+                </p>
+            )}
             {error && (
                 <p className="sql-function-error" role="alert">
                     {error}

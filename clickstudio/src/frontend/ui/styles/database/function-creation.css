@@ -121,8 +121,7 @@
     padding: 0;
   }
 
-  .function-creation-source,
-  .function-creation-preview {
+  .function-creation-source {
     display: grid;
     min-width: 0;
     gap: 8px;
@@ -140,23 +139,6 @@
 
   .function-code-editor .cm-scroller {
     overflow: auto;
-  }
-
-  .function-creation-preview pre {
-    min-height: 100px;
-    max-height: 320px;
-    margin: 0;
-    padding: 10px;
-    overflow-y: auto;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-control);
-    background: var(--control-well);
-    color: var(--text-soft);
-    font-family: var(--font-mono);
-    font-size: 12px;
-    line-height: 1.55;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
   }
 
   @media (width <= 720px) {
