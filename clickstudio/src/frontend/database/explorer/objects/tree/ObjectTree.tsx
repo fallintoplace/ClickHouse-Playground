@@ -10,6 +10,7 @@ import {
 } from '../object-explorer-model';
 import type { ObjectExplorerProps } from './object-explorer-types';
 import { ExplorerGroupRow, ObjectLeafRow } from './ObjectTreeRows';
+import { canDropDatabase } from '../../../../../shared/database/databases/delete-database';
 
 export function ObjectTree({
     treeScroll,
@@ -23,6 +24,7 @@ export function ObjectTree({
     connection,
     trusted,
     onCreateTable,
+    onDeleteDatabase,
     functionsSlot,
 }: {
     functionsSlot?: ReactNode;
@@ -37,6 +39,7 @@ export function ObjectTree({
     connection: ObjectExplorerProps['connection'];
     trusted: boolean;
     onCreateTable: (database: string) => void;
+    onDeleteDatabase: (database: string) => void;
 }) {
     return (
         <div className="object-tree-scroll" ref={treeScroll}>
@@ -54,6 +57,7 @@ export function ObjectTree({
                                 trusted={trusted}
                                 copy={copy}
                                 onCreateTable={onCreateTable}
+                                onDeleteDatabase={onDeleteDatabase}
                             />
                             {databaseExpanded && (
                                 <div role="group" className="object-tree-children">
@@ -116,6 +120,7 @@ function DatabaseRow({
     trusted,
     copy,
     onCreateTable,
+    onDeleteDatabase,
 }: {
     database: string;
     count: number;
@@ -125,20 +130,35 @@ function DatabaseRow({
     trusted: boolean;
     copy: ObjectExplorerProps['copy'];
     onCreateTable: (database: string) => void;
+    onDeleteDatabase: (database: string) => void;
 }) {
     const permissions = useTablePermissions(connection, trusted, database);
-    const action =
-        permissions.create === true ? (
-            <button
-                type="button"
-                className="object-tree-inline-action object-create-table-inline-action"
-                title={`${copy.newTable} in ${database}`}
-                aria-label={`${copy.newTable} in ${database}`}
-                onClick={() => onCreateTable(database)}
-            >
-                <Icon name="plus" />
-            </button>
-        ) : undefined;
+    const action = (
+        <>
+            {permissions.dropDatabase === true && canDropDatabase(database) && (
+                <button
+                    type="button"
+                    className="object-tree-inline-action object-delete-database-inline-action"
+                    title={`Delete database ${database}`}
+                    aria-label={`Delete database ${database}`}
+                    onClick={() => onDeleteDatabase(database)}
+                >
+                    <Icon name="trash" />
+                </button>
+            )}
+            {permissions.create === true && (
+                <button
+                    type="button"
+                    className="object-tree-inline-action object-create-table-inline-action"
+                    title={`${copy.newTable} in ${database}`}
+                    aria-label={`${copy.newTable} in ${database}`}
+                    onClick={() => onCreateTable(database)}
+                >
+                    <Icon name="plus" />
+                </button>
+            )}
+        </>
+    );
 
     return (
         <ExplorerGroupRow

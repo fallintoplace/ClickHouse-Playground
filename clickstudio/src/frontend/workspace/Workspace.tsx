@@ -1,5 +1,6 @@
 import { createInspectorProps } from './layout/panels/workspace-inspector-props';
 import { createPortal } from 'react-dom';
+import { useRef } from 'react';
 import { download } from '../api/client';
 import { DetachedQueryPlaceholder } from '../queries/editor/components/DetachedQueryPlaceholder';
 import { ExportDialog } from '../queries/results/ExportDialog';
@@ -65,6 +66,7 @@ export function Workspace({
     connections,
     onSelectConnection,
     onRefreshConnections,
+    onDatabaseDeleted,
     trustActionRef,
     testConnectionActionRef,
     demoMode,
@@ -72,12 +74,15 @@ export function Workspace({
     dark,
     copy,
 }: WorkspaceProps) {
+    const currentConnection = useRef(connection);
+    currentConnection.current = connection;
     const model = useWorkspaceController({
         connection,
         connectionLabel,
         connections,
         onSelectConnection,
         onRefreshConnections,
+        onDatabaseDeleted,
         trustActionRef,
         testConnectionActionRef,
         demoMode,
@@ -141,6 +146,8 @@ export function Workspace({
     };
 
     const inspectorProps = createInspectorProps({
+        currentConnection,
+        onDatabaseDeleted,
         copy,
         connection,
         active,

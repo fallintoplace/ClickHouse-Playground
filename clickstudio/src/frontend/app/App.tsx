@@ -1,5 +1,12 @@
 import { THEMES, DEFAULT_ACCENT } from '../ui/styles/appearance-types';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    useCallback,
+    useEffect,
+    useRef,
+    useState,
+    type Dispatch,
+    type SetStateAction,
+} from 'react';
 import { api, apiResponses, message, post } from '../api/client';
 import { Button, cx, Spinner } from '../ui/components/primitives';
 import { Icon } from '../ui/components/icons';
@@ -65,6 +72,24 @@ function cloudProfileDefaults(connection?: Connected): SavedCloudConnectionProfi
     } catch {
         return undefined;
     }
+}
+
+function databaseDeletionHandler(
+    setConnections: Dispatch<SetStateAction<Connected[]>>,
+    source: Connected,
+) {
+    return (database: string) =>
+        setConnections(current =>
+            current.map(item =>
+                item.id === source.id &&
+                item.host === source.host &&
+                item.username === source.username &&
+                item.manifest?.testedAt === source.manifest?.testedAt &&
+                item.database === database
+                    ? { ...item, database: 'default' }
+                    : item,
+            ),
+        );
 }
 
 function App() {
@@ -344,6 +369,7 @@ function App() {
                     connectionLabel={connectionLabel(connection, session.demo)}
                     connections={connections}
                     onSelectConnection={selectConnection}
+                    onDatabaseDeleted={databaseDeletionHandler(setConnections, connection)}
                     onRefreshConnections={async () => {
                         const latest = await api(
                             '/connections',

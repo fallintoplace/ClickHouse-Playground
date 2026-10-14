@@ -53,6 +53,7 @@ import type {
 } from '../../../shared/database/explorer/explorers.js';
 import type { MergeTreePartsSnapshot } from '../../../shared/database/explorer/storage/parts.js';
 import * as apiResponses from '../../api/response-guards.js';
+import { isDatabaseDrop } from '../../../shared/database/databases/delete-database.js';
 
 export { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../../shared/database/connections/cloud-policy.js';
 
@@ -704,6 +705,27 @@ export async function dropClickHouseCloudTable(
         },
         isCloudTableDrop,
     );
+}
+
+export async function dropClickHouseCloudDatabase(database: string, confirmation: string) {
+    const cloud = requireCloudConnection(
+        'Reconnect to ClickHouse Cloud before deleting a database.',
+    );
+    const result = await requestCloud(
+        {
+            action: CLOUD_ACTIONS.dropDatabase,
+            credentials: cloud.credentials,
+            database,
+            confirmation,
+        },
+        isDatabaseDrop,
+    );
+    if (activeCloud === cloud && cloud.connection.database === database) {
+        cloud.connection = { ...cloud.connection, database: 'default' };
+        if (cloud.credentials) cloud.credentials = { ...cloud.credentials, database: 'default' };
+        saveCloudConnectionProfile(cloud.connection);
+    }
+    return result;
 }
 
 export async function loadClickHouseCloudTablePermissions(

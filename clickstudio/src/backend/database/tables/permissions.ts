@@ -11,6 +11,7 @@ import {
 import { requireThat } from '../../system/requests/errors.js';
 import type { ClickHouseClient } from '@clickhouse/client';
 import { isRecord } from '../../../shared/common/values.js';
+import { canDropDatabase } from '../../../shared/database/databases/delete-database.js';
 
 type PermissionQuery = (sql: string) => Promise<Record<string, unknown>[]>;
 
@@ -112,12 +113,25 @@ export async function loadTablePermissions(
         ddlDenied || systemDatabase || !target ? false : granted('DROP TABLE', target);
     const writableTarget = systemDatabase ? undefined : target;
     const insertPermission = writableTarget ? granted('INSERT', writableTarget) : undefined;
-    const [create, insert, drop] = await Promise.all([
+    const [create, insert, drop, dropDatabase] = await Promise.all([
         ddlDenied || systemDatabase ? false : granted('CREATE TABLE', `${qualifiedDatabase}.*`),
         systemDatabase ? false : insertPermission,
         target ? dropPermission : undefined,
+        table !== undefined || ddlDenied || !canDropDatabase(database)
+            ? false
+            : granted('DROP DATABASE', `${qualifiedDatabase}.*`),
     ]);
-    return preserveNarrowGrants(query, { create, insert, drop }, ddlDenied, systemDatabase);
+    const permissions = await preserveNarrowGrants(
+        query,
+        { create, insert, drop },
+        ddlDenied,
+        systemDatabase,
+    );
+    if (table !== undefined) return permissions;
+    return {
+        ...permissions,
+        dropDatabase,
+    };
 }
 
 export async function queryTablePermissions(

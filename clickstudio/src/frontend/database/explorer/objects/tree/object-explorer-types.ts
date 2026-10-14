@@ -25,6 +25,7 @@ export type ObjectExplorerProps = {
     onInsert: (value: string) => void;
     onOpenSqlDraft: OpenSqlDraft;
     onTableDeleted: (table: Pick<SchemaTable, 'database' | 'name'>) => void;
+    onDatabaseDeleted: (database: string) => void;
     onOpenReference: (name: string, type: string) => void;
     compact?: boolean;
 };

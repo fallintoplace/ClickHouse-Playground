@@ -19,6 +19,24 @@ const tested = {
     serverVersion: '25.1.1',
 };
 
+test('Deleting the connected database switches only its live local Cloud session to default', () => {
+    const sessions = new CloudConnectionSessions();
+    const token = sessions.create(
+        { ...credentials, database: 'analytics' },
+        { ...tested, database: 'analytics' },
+    );
+    const cookie = `${CLOUD_SESSION_COOKIE}=${token}`;
+    sessions.databaseDeleted('other', cookie);
+    assert.equal(sessions.credentials(cookie)?.database, 'analytics');
+    sessions.databaseDeleted('analytics', cookie);
+    assert.equal(sessions.credentials(cookie)?.database, 'default');
+    assert.equal(sessions.snapshot(cookie)?.tested.database, 'default');
+    assert.equal(sessions.snapshot(cookie)?.profile.database, 'default');
+    sessions.revoke(cookie);
+    sessions.databaseDeleted('analytics', cookie);
+    assert.equal(sessions.snapshot(cookie), undefined);
+});
+
 test('Local Cloud sessions keep credentials private and restore the tested connection profile', () => {
     const sessions = new CloudConnectionSessions(),
         token = sessions.create(credentials, tested);

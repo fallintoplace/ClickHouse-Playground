@@ -63,7 +63,7 @@ test('Disabling DDL keeps permitted inserts without probing create or drop grant
     assert.equal(queries[1], 'CHECK GRANT INSERT ON `analytics`.`events`');
 });
 
-test('A database without a selected table checks only creation rights', async () => {
+test('A database without a selected table checks creation and database deletion separately', async () => {
     const queries = [];
     const permissions = await loadTablePermissions(async sql => {
         queries.push(sql);
@@ -71,8 +71,57 @@ test('A database without a selected table checks only creation rights', async ()
             return [{ grants: 'GRANT SELECT ON analytics.* TO reader' }];
         return sql.startsWith('SELECT') ? [settings] : [{ result: '0' }];
     }, 'analytics');
-    assert.deepEqual(permissions, { create: false, insert: undefined, drop: undefined });
-    assert.equal(queries.length, 3);
+    assert.deepEqual(permissions, {
+        create: false,
+        insert: undefined,
+        drop: undefined,
+        dropDatabase: false,
+    });
+    assert.equal(queries.length, 4);
+    assert.ok(queries.includes('CHECK GRANT DROP DATABASE ON `analytics`.*'));
+});
+
+test('Database deletion requires its own grant and is independent of table creation', async () => {
+    for (const granted of [true, false]) {
+        const permissions = await loadTablePermissions(async sql => {
+            if (sql.startsWith('SELECT')) return [settings];
+            if (sql === 'SHOW GRANTS FINAL')
+                return [{ grants: 'GRANT SELECT ON analytics.* TO reader' }];
+            return [{ result: sql.startsWith('CHECK GRANT DROP DATABASE') && granted ? 1 : 0 }];
+        }, 'analytics');
+        assert.equal(permissions.create, false);
+        assert.equal(permissions.dropDatabase, granted);
+    }
+});
+
+test('Protected databases and disabled DDL never probe database deletion privileges', async () => {
+    for (const [database, allow_ddl] of [
+        ['default', 1],
+        ['DEFAULT', 1],
+        ['system', 1],
+        ['INFORMATION_SCHEMA', 1],
+        ['analytics', 0],
+    ]) {
+        const queries = [];
+        const permissions = await loadTablePermissions(async sql => {
+            queries.push(sql);
+            return sql.startsWith('SELECT') ? [{ readonly: 0, allow_ddl }] : [{ result: 1 }];
+        }, database);
+        assert.equal(permissions.dropDatabase, false);
+        assert.equal(
+            queries.some(sql => sql.startsWith('CHECK GRANT DROP DATABASE')),
+            false,
+        );
+    }
+});
+
+test('Unknown database deletion grants remain unavailable', async () => {
+    const permissions = await loadTablePermissions(async sql => {
+        if (sql.startsWith('SELECT')) return [settings];
+        if (sql.startsWith('CHECK GRANT DROP DATABASE')) throw new Error('Unsupported');
+        return [{ result: 1 }];
+    }, 'analytics');
+    assert.equal(permissions.dropDatabase, undefined);
 });
 
 test('Unsupported, empty, and malformed grant results stay unknown per operation', async () => {

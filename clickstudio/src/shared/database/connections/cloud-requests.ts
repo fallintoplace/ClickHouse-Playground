@@ -27,6 +27,7 @@ export const CLOUD_ACTIONS = {
     replication: 'replication',
     createTable: 'create-table',
     dropTable: 'drop-table',
+    dropDatabase: 'drop-database',
     importStatus: 'import-status',
     importCommit: 'import-commit',
 } as const;
@@ -76,6 +77,7 @@ type CloudRequestPayloads = {
         orderBy: string;
     };
     [CLOUD_ACTIONS.dropTable]: { database: string; table: string; confirmation: string };
+    [CLOUD_ACTIONS.dropDatabase]: { database: string; confirmation: string };
     [CLOUD_ACTIONS.importStatus]: {
         queryId: string;
         table: string;

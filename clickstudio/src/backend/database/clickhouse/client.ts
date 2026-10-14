@@ -76,6 +76,10 @@ import { quotedTable } from '../imports/imports.js';
 import { publicProfile, redactor, type Config, type Profile } from '../../system/config.js';
 import { queryTablePermissions } from '../tables/permissions.js';
 import { NO_TABLE_PERMISSIONS } from '../../../shared/database/tables/permissions.js';
+import {
+    canDropDatabase,
+    dropDatabaseSql,
+} from '../../../shared/database/databases/delete-database.js';
 import { loadExecutableFunctions } from '../functions/executable-functions.js';
 /** All database addresses and credentials are operator-owned; the API accepts only profile IDs. */
 export class ClickHouseDriver implements QueryDriver, ImportDriver, CreateTableDriver {
@@ -949,6 +953,33 @@ export class ClickHouseDriver implements QueryDriver, ImportDriver, CreateTableD
             });
         } catch (error) {
             throw this.safeError(error);
+        }
+    }
+    async dropDatabase(id: string, database: string, queryId: string) {
+        requireThat(
+            canDropDatabase(database) && !this.profile(id).publicPlayground,
+            403,
+            'DATABASE_DROP_NOT_ALLOWED',
+            'Choose a database other than default or a system database',
+        );
+        const client = this.client(id, true);
+        try {
+            await client.command({
+                query: dropDatabaseSql(database),
+                query_id: queryId,
+                abort_signal: AbortSignal.timeout(60000),
+                clickhouse_settings: { max_execution_time: 55, max_memory_usage: '536870912' },
+            });
+        } catch (error) {
+            throw this.safeError(error);
+        }
+        const profile = this.profile(id);
+        if (profile.database === database) {
+            profile.database = 'default';
+            const clients = [this.readers.get(id), this.writers.get(id)];
+            this.readers.delete(id);
+            this.writers.delete(id);
+            await Promise.allSettled(clients.map(value => value?.close()));
         }
     }
     async dropTable(id: string, database: string, table: string, queryId: string) {

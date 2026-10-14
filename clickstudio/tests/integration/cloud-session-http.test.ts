@@ -62,13 +62,29 @@ async function start() {
                         },
                         { status: 403 },
                     );
-                return Response.json({ ...tested, host: requestCredentials?.host ?? tested.host });
+                return Response.json({
+                    ...tested,
+                    host: requestCredentials?.host ?? tested.host,
+                    database: requestCredentials?.database ?? tested.database,
+                });
             }
             if (!requestCredentials)
                 return Response.json(
                     { error: { code: 'CLOUD_CREDENTIALS', message: 'Missing credentials.' } },
                     { status: 400 },
                 );
+            if (action === 'drop-database')
+                return body.confirmation === body.database
+                    ? Response.json({ database: body.database, queryId: 'drop-id' })
+                    : Response.json(
+                          {
+                              error: {
+                                  code: 'DATABASE_DROP_CONFIRMATION',
+                                  message: 'Type the exact database name.',
+                              },
+                          },
+                          { status: 400 },
+                      );
             return Response.json({ action, credentials: requestCredentials });
         },
     };
@@ -114,6 +130,33 @@ async function start() {
 function cookieFrom(response: Response) {
     return response.headers.get('set-cookie')?.split(';', 1)[0];
 }
+
+test('Local Cloud database deletion updates the saved session only after a successful drop', async t => {
+    const app = await start();
+    t.after(() => app.stop());
+    const connected = await app.call('/cloud/session', {
+        credentials: { ...credentials, database: 'analytics' },
+    });
+    const cookie = cookieFrom(connected)!;
+    const drop = (confirmation: string) =>
+        app.call(
+            '/cloud',
+            { action: 'drop-database', database: 'analytics', confirmation },
+            { cookie },
+        );
+    assert.equal((await drop('Analytics')).status, 400);
+    await app.call('/cloud', { action: 'schema' }, { cookie });
+    assert.equal(app.cloudCalls.at(-1)?.credentials?.database, 'analytics');
+    assert.equal((await drop('analytics')).status, 200);
+    await app.call('/cloud', { action: 'schema' }, { cookie });
+    assert.equal(app.cloudCalls.at(-1)?.credentials?.database, 'default');
+    const restored = jsonRecord(
+        await (await app.call('/cloud/session', undefined, { cookie })).json(),
+    );
+    const session = jsonRecord(restored.session);
+    assert.equal(jsonRecord(session.profile).database, 'default');
+    assert.equal(jsonRecord(session.tested).database, 'default');
+});
 
 test('Local Cloud connection restores after refresh without returning its password', async t => {
     const app = await start();

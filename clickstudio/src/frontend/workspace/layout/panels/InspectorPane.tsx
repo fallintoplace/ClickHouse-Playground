@@ -78,6 +78,7 @@ export type InspectorPaneProps = {
     onInsert: (value: string) => void;
     onOpenSqlDraft: OpenSqlDraft;
     onTableDeleted: (table: Pick<SchemaTable, 'database' | 'name'>) => void;
+    onDatabaseDeleted: (database: string) => void;
     onOpenRun: (run: Run) => void;
     onOpenDocument: (document: QueryDocument) => void;
     onLoadProfile: () => void;
@@ -251,6 +252,7 @@ export function InspectorPane({
     onInsert,
     onOpenSqlDraft,
     onTableDeleted,
+    onDatabaseDeleted,
     onOpenRun,
     onOpenDocument,
     onLoadProfile,
@@ -388,6 +390,7 @@ export function InspectorPane({
                         compact={docked}
                         onOpenSqlDraft={onOpenSqlDraft}
                         onTableDeleted={onTableDeleted}
+                        onDatabaseDeleted={onDatabaseDeleted}
                         onOpenReference={openReference}
                     />
                 )}

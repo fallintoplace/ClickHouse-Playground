@@ -16,6 +16,8 @@ import { ObjectExplorerDialogs } from './ObjectExplorerDialogs';
 import { usePythonFunctions } from '../../functions/usePythonFunctions';
 import { CreatePythonFunctionDialog } from '../../functions/CreatePythonFunctionDialog';
 import { PythonFunctionDetails } from '../../functions/PythonFunctionDetails';
+import { DeleteDatabaseDialog } from '../../databases/DeleteDatabaseDialog';
+import { metadataConnectionKey } from '../../schema/metadata-state';
 
 function ObjectExplorerEmptySearch({
     query,
@@ -34,6 +36,14 @@ function ObjectExplorerEmptySearch({
 
 export function ObjectExplorer(props: ObjectExplorerProps) {
     const state = useObjectExplorerState(props);
+    const [deleteDatabaseTarget, setDeleteDatabaseTarget] = useState<{
+        database: string;
+        connectionKey: string;
+    }>();
+    const connectionKey = metadataConnectionKey(props.connection);
+    const currentConnectionKey = useRef(connectionKey);
+    currentConnectionKey.current = connectionKey;
+    useEffect(() => setDeleteDatabaseTarget(undefined), [connectionKey, props.trusted]);
     const [functionExpansion, setFunctionExpansion] = useState({
         functions: true,
         sql: true,
@@ -242,6 +252,9 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
             {!functionDetails && !showCompactDetails && (
                 <ObjectExplorerBrowser
                     state={state}
+                    onDeleteDatabase={database =>
+                        setDeleteDatabaseTarget({ database, connectionKey })
+                    }
                     functionsSlot={functionsSlot}
                     functionsVisible={Boolean(functionsSlot)}
                     functionsLoading={functions.loading || python.loading}
@@ -249,6 +262,23 @@ export function ObjectExplorer(props: ObjectExplorerProps) {
                     onRefreshFunctions={() => {
                         functions.refresh();
                         python.refresh();
+                    }}
+                />
+            )}
+            {trusted && deleteDatabaseTarget?.connectionKey === connectionKey && (
+                <DeleteDatabaseDialog
+                    key={`${connectionKey}:${deleteDatabaseTarget.database}`}
+                    connection={connection}
+                    database={deleteDatabaseTarget.database}
+                    onClose={() => setDeleteDatabaseTarget(undefined)}
+                    onDeleted={database => {
+                        props.onDatabaseDeleted(database);
+                        if (currentConnectionKey.current !== connectionKey) return;
+                        setDeleteDatabaseTarget(undefined);
+                        setSelectedId(undefined);
+                        setDetailsOpen(false);
+                        setSearch('');
+                        onRefreshSchema();
                     }}
                 />
             )}
@@ -321,6 +351,7 @@ function functionRefreshErrors(
 
 function ObjectExplorerBrowser({
     state,
+    onDeleteDatabase,
     functionsSlot,
     functionsVisible,
     functionsLoading,
@@ -328,6 +359,7 @@ function ObjectExplorerBrowser({
     onRefreshFunctions,
 }: {
     state: ReturnType<typeof useObjectExplorerState>;
+    onDeleteDatabase: (database: string) => void;
     functionsSlot?: ReactNode;
     functionsVisible: boolean;
     functionsLoading: boolean;
@@ -443,6 +475,7 @@ function ObjectExplorerBrowser({
                                 connection,
                                 trusted,
                                 onCreateTable: setCreateTableDatabase,
+                                onDeleteDatabase,
                             }}
                         />
                     ) : (

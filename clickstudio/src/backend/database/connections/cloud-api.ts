@@ -75,6 +75,10 @@ import {
 import { createTableSql } from '../tables/create-table.js';
 import { queryTablePermissions } from '../tables/permissions.js';
 import {
+    canDropDatabase,
+    dropDatabaseSql,
+} from '../../../shared/database/databases/delete-database.js';
+import {
     canDropTableTarget,
     dropTableSql,
     isSystemDatabaseName,
@@ -633,6 +637,39 @@ async function dropCloudTable(
             });
         }
         return { database, table, queryId };
+    } finally {
+        await client.close();
+    }
+}
+
+async function dropCloudDatabase(
+    credentials: CloudCredentials,
+    url: string,
+    body: Record<string, unknown>,
+) {
+    const database = typeof body.database === 'string' ? body.database : '';
+    if (!canDropDatabase(database))
+        throw new AppError(
+            400,
+            'DATABASE_DROP_TARGET',
+            'Choose a database other than default or a system database.',
+        );
+    if (body.confirmation !== database)
+        throw new AppError(
+            400,
+            'DATABASE_DROP_CONFIRMATION',
+            'Type the exact database name to confirm deletion.',
+        );
+    const queryId = `clickstudio-drop-database-${randomUUID()}`;
+    const client = makeClient(credentials, url);
+    try {
+        await client.command({
+            query: dropDatabaseSql(database),
+            query_id: queryId,
+            abort_signal: AbortSignal.timeout(CLOUD_QUERY_TIMEOUT_MS),
+            clickhouse_settings: clickhouseSettings,
+        });
+        return { database, queryId };
     } finally {
         await client.close();
     }
@@ -1862,6 +1899,8 @@ async function post(request: Request): Promise<Response> {
                 return json(await createCloudTable(credentials, url, body));
             case CLOUD_ACTIONS.dropTable:
                 return json(await dropCloudTable(credentials, url, body));
+            case CLOUD_ACTIONS.dropDatabase:
+                return json(await dropCloudDatabase(credentials, url, body));
             case CLOUD_ACTIONS.importStatus:
                 return await handleCloudImportStatus(body, credentials, url);
         }

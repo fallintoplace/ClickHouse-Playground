@@ -73,6 +73,7 @@ export type WorkspaceProps = Readonly<{
     connections: readonly Connected[];
     onSelectConnection: (id: Connected['id']) => void;
     onRefreshConnections: () => Promise<void>;
+    onDatabaseDeleted: (database: string) => void;
     trustActionRef: WorkspaceActionRef;
     testConnectionActionRef: WorkspaceActionRef;
     demoMode: boolean;

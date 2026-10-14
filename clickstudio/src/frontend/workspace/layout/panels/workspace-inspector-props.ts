@@ -2,6 +2,8 @@ import type { Run } from '../../../../shared/queries/execution/types';
 import type { Result } from '../../../../shared/queries/results/types';
 import type { Schema, SchemaTable } from '../../../../shared/database/schema/types';
 import { sqlReferencesQualifiedTable } from '../../../../shared/database/tables/delete-table';
+import { sqlReferencesQualifiedDatabase } from '../../../../shared/database/databases/delete-database';
+import { metadataConnectionKey } from '../../../database/schema/metadata-state';
 import { api, apiResponses } from '../../../api/client';
 import { PLAYGROUND_CONNECTION_ID } from '../../../database/connections/playground-client';
 import type { Draft, WorkspaceState } from '../../../queries/editor/drafts/workspace-state';
@@ -62,12 +64,16 @@ export function createInspectorProps({
     active,
     experience,
     model,
+    onDatabaseDeleted,
+    currentConnection,
 }: {
     copy: WorkspaceProps['copy'];
     connection: WorkspaceProps['connection'];
     active: Draft;
     experience: WorkspaceProps['experience'];
     model: ReturnType<typeof useWorkspaceController>;
+    onDatabaseDeleted: (database: string) => void;
+    currentConnection: { current: WorkspaceProps['connection'] };
 }) {
     const {
         serverVersion: playgroundServerVersion,
@@ -194,6 +200,25 @@ export function createInspectorProps({
         onOpenSqlDraft: openSqlDraft,
         onTableDeleted: table =>
             setWorkspace(current => workspaceAfterTableDeleted(current, table)),
+        onDatabaseDeleted: database => {
+            onDatabaseDeleted(database);
+            if (
+                metadataConnectionKey(currentConnection.current) !==
+                metadataConnectionKey(connection)
+            )
+                return;
+            setWorkspace(current => ({
+                ...current,
+                tabs: current.tabs.map(draft =>
+                    draft.activeRunId && sqlReferencesQualifiedDatabase(draft.sql, database)
+                        ? {
+                              ...draft,
+                              invalidatedSource: { database, table: '*', runId: draft.activeRunId },
+                          }
+                        : draft,
+                ),
+            }));
+        },
         onOpenRun: openRun,
         onOpenDocument: openDocument,
         onLoadProfile: () => void perform(loadProfile, 'save'),

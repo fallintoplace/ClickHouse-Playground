@@ -104,6 +104,7 @@ const responses: Record<string, unknown> = {
         queryId: 'query-id',
     } satisfies Awaited<ReturnType<typeof cloud.createClickHouseCloudTable>>,
     'drop-table': { database: 'default', table: 'events', queryId: 'query-id' },
+    'drop-database': { database: 'analytics', queryId: 'drop-id' },
     'import-status': importJob,
     workload: {
         connectionId: 'clickhouse-cloud',
@@ -205,6 +206,7 @@ test('Cloud wrappers preserve action spellings and their JSON request fields', a
         orderBy: 'tuple()',
     });
     await cloud.dropClickHouseCloudTable('default', 'events', 'events');
+    await cloud.dropClickHouseCloudDatabase('analytics', 'analytics');
     await cloud.checkClickHouseCloudImport('import-id', 'default.events', 2, 'deduplication-token');
     await cloud.loadClickHouseCloudWorkload(60, new AbortController().signal);
     await cloud.loadClickHouseCloudReplication(new AbortController().signal);
@@ -245,6 +247,7 @@ test('Cloud wrappers preserve action spellings and their JSON request fields', a
             orderBy: 'tuple()',
         },
         { action: 'drop-table', database: 'default', table: 'events', confirmation: 'events' },
+        { action: 'drop-database', database: 'analytics', confirmation: 'analytics' },
         {
             action: 'import-status',
             queryId: 'import-id',

@@ -15,6 +15,7 @@ export type Driver = QueryDriver &
         | 'tablePermissions'
         | 'createTable'
         | 'dropTable'
+        | 'dropDatabase'
         | 'profileEvidence'
         | 'profilePipeline'
         | 'profileFlamegraph'

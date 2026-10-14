@@ -342,6 +342,9 @@ export class DemoDriver {
     async dropTable(_id: string, _database: string, _table: string, _queryId: string) {
         throw new AppError(403, 'DEMO_READ_ONLY', 'Fixture mode never deletes tables');
     }
+    async dropDatabase(_id: string, _database: string, _queryId: string) {
+        throw new AppError(403, 'DEMO_READ_ONLY', 'Fixture mode never deletes databases');
+    }
     async insert() {
         throw new AppError(403, 'DEMO_READ_ONLY', 'Fixture mode never inserts');
     }

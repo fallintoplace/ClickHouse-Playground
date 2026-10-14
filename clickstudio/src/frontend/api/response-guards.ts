@@ -388,7 +388,7 @@ export function isClickHouseDocumentationEntry(
 export function isTablePermissions(value: unknown): value is TablePermissions {
     return (
         isRecord(value) &&
-        ['create', 'insert', 'drop'].every(
+        ['create', 'insert', 'drop', 'dropDatabase'].every(
             key => value[key] === undefined || typeof value[key] === 'boolean',
         )
     );

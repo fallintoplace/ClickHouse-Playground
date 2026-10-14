@@ -100,6 +100,13 @@ export class CloudConnectionSessions {
         };
     }
 
+    databaseDeleted(database: string, cookie?: string) {
+        const hit = this.lookup(cookie);
+        if (hit?.session.credentials.database !== database) return;
+        hit.session.credentials.database = 'default';
+        hit.session.tested.database = 'default';
+    }
+
     revoke(cookie?: string) {
         for (const token of tokensFromCookie(cookie)) this.sessions.delete(keyFor(token));
     }

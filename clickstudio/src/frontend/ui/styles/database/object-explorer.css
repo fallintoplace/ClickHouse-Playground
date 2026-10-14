@@ -888,6 +888,13 @@
   width: 22px;
   height: 22px;
 }
+.object-tree-row.is-database .object-tree-group-action:has(.object-delete-database-inline-action) {
+  display: flex;
+  width: auto;
+  min-width: 22px;
+  height: 22px;
+  gap: 3px;
+}
 .object-tree-inline-action {
   display: grid;
   width: 25px;
@@ -909,6 +916,13 @@
 .object-tree-inline-action.object-create-table-inline-action {
   margin-right: 0;
   padding: 0;
+}
+.object-tree-inline-action.object-delete-database-inline-action {
+  margin-right: 0;
+  padding: 0;
+}
+.object-tree-inline-action.object-delete-database-inline-action:hover {
+  --tree-kind-color: var(--red);
 }
 .object-tree-inline-action svg {
   width: 13px;

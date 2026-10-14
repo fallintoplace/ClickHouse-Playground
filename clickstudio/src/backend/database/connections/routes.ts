@@ -213,6 +213,14 @@ export function registerCloudApi(
                 });
             }
             const response = await cloudApiClient.fetch(request);
+            if (
+                response.ok &&
+                contentType.toLowerCase().startsWith('application/json') &&
+                body(req).action === CLOUD_ACTIONS.dropDatabase &&
+                typeof body(req).database === 'string'
+            ) {
+                cloudSessions.databaseDeleted(String(body(req).database), req.get('cookie'));
+            }
             await forward(response, res);
         } catch (error) {
             next(error);

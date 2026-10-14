@@ -91,6 +91,15 @@ function isTrustRecord(value: unknown): value is { trusted: boolean; fingerprint
         (value.fingerprint === undefined || typeof value.fingerprint === 'string')
     );
 }
+function connectionTrustFingerprint(connection: Connection) {
+    return hash([
+        connection.dataSource ?? 'clickhouse',
+        connection.host,
+        connection.database,
+        connection.username,
+        connection.readonly,
+    ]);
+}
 export function terminal(run: Pick<Run, 'status'>) {
     return isTerminalRunStatus(run.status);
 }
@@ -147,14 +156,26 @@ export class RunService {
         return !this.closed;
     }
     private trustFingerprint(principal: Principal, connectionId: string): string {
-        const connection = this.connection(principal, connectionId);
-        return hash([
-            connection.dataSource ?? 'clickhouse',
-            connection.host,
-            connection.database,
-            connection.username,
-            connection.readonly,
-        ]);
+        return connectionTrustFingerprint(this.connection(principal, connectionId));
+    }
+    refreshTrustAfterDatabaseDeleted(principal: Principal, previous: Connection) {
+        canWrite(principal);
+        const key = hash([principal.id, previous.id]);
+        const trust = this.store.get('trust', key, isTrustRecord);
+        if (!trust?.trusted || trust.fingerprint !== connectionTrustFingerprint(previous)) return;
+        const current = this.connection(principal, previous.id);
+        if (
+            current.database !== 'default' ||
+            connectionTrustFingerprint({ ...current, database: previous.database }) !==
+                trust.fingerprint
+        )
+            return;
+        this.store.put('trust', key, {
+            owner: principal.id,
+            connectionId: previous.id,
+            trusted: true,
+            fingerprint: connectionTrustFingerprint(current),
+        });
     }
     isTrusted(principal: Principal, connectionId: string): boolean {
         const trust = this.store.get('trust', hash([principal.id, connectionId]), isTrustRecord);

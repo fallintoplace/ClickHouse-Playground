@@ -9,6 +9,8 @@ import { AssistantService, type AssistantDriver } from '../assistant/proposals/a
 import { ImportService } from '../database/imports/imports.js';
 import { TableCreationService } from '../database/tables/create-table.js';
 import { TableDeletionService } from '../database/tables/delete-table.js';
+import { DatabaseDeletionService } from '../database/databases/delete-database.js';
+import { registerDatabaseRoutes } from '../database/databases/routes.js';
 import { MonitorService } from '../queries/monitoring/monitors.js';
 import { SessionService } from '../system/login/sessions.js';
 import { CloudConnectionSessions } from '../database/connections/cloud-sessions.js';
@@ -71,6 +73,7 @@ export function createApp(
     const imports = new ImportService(store, driver, authorized),
         tableCreation = new TableCreationService(store, driver, authorized),
         tableDeletion = new TableDeletionService(store, driver, authorized),
+        databaseDeletion = new DatabaseDeletionService(store, driver, authorized),
         monitors = new MonitorService(store, runs, artifacts),
         sessions = new SessionService(config.token),
         cloudSessions = new CloudConnectionSessions(),
@@ -93,6 +96,7 @@ export function createApp(
     registerExplorerRoutes({ app, authorized, driver });
     registerDocumentationRoutes({ authorized, driver, app });
     registerTableRoutes({ app, tableCreation, tableDeletion, driver, authorized });
+    registerDatabaseRoutes({ app, databaseDeletion, driver, runs });
     registerRunRoutes({ app, runs, store, sessions, safeExport, authorized, driver, config });
     registerDocumentRoutes({ app, driver, artifacts, safeExport });
     registerAssistantRoutes({
