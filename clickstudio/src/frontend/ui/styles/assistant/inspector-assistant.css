@@ -131,22 +131,27 @@
   .inspector-tabs.is-browser-tabs .inspector-more-trigger {
     display: flex;
     width: auto;
-    min-width: 48px;
+    min-width: 56px;
     height: 34px;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    padding: 0 7px;
+    gap: 4px;
+    padding: 0 9px;
     border-color: transparent;
-    font-size: 8px;
+    font-size: var(--font-size-tab-compact);
+    font-weight: var(--font-weight-medium);
   }
   .inspector-more-trigger svg {
     /* stylelint-disable-next-line declaration-no-important -- Preserve component icon and control dimensions above utility styles. */
     width: 12px !important; /* stylelint-disable-next-line declaration-no-important -- Preserve component icon and control dimensions above utility styles. */
     height: 12px !important;
   }
-  .inspector-tabs.is-browser-tabs .inspector-more-trigger.is-active {
+  .inspector-tabs.is-browser-tabs
+    .inspector-more-trigger:is(.is-active, [aria-expanded="true"]) {
+    border-color: var(--active-border);
+    background: var(--active-surface);
     color: var(--accent);
+    box-shadow: var(--active-inset);
   }
   .inspector-more-menu {
     position: absolute;
