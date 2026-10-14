@@ -39,12 +39,10 @@ async function creationDialog(
         exact: true,
     });
     const fill = async () => {
-        await field.fill(kind === 'function' ? 'add_tax' : 'events_corporate');
+        await field.fill(kind === 'function' ? 'udf_array_distinct' : 'events_corporate');
         if (kind === 'function') {
-            await dialog.getByLabel('Parameter 1 name', { exact: true }).fill('price');
-            await dialog.getByRole('button', { name: 'Add parameter', exact: true }).click();
-            await dialog.getByLabel('Parameter 2 name', { exact: true }).fill('rate');
-            await dialog.getByLabel('Expression', { exact: true }).fill('price * (1 + rate)');
+            await dialog.getByLabel('Parameter 1 name', { exact: true }).fill('items');
+            await dialog.getByLabel('Expression', { exact: true }).fill('arrayDistinct(items)');
         }
     };
     return { trigger, dialog, field, fill };

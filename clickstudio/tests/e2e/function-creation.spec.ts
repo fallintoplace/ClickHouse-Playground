@@ -57,12 +57,14 @@ for (const theme of ['Dark', 'Light']) {
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
             await page.getByRole('button', { name: 'Create SQL UDF', exact: true }).click();
             const sql = page.getByRole('dialog', { name: 'Create SQL Function', exact: true });
-            await sql.getByLabel('Function name', { exact: true }).fill('add_tax');
-            await sql.getByLabel('Parameter 1 name', { exact: true }).fill('price');
+            await sql.getByLabel('Function name', { exact: true }).fill('udf_array_remove_at');
+            await sql.getByLabel('Parameter 1 name', { exact: true }).fill('items');
             await sql.getByRole('button', { name: 'Add parameter', exact: true }).click();
-            await sql.getByLabel('Parameter 2 name', { exact: true }).fill('rate');
+            await sql.getByLabel('Parameter 2 name', { exact: true }).fill('index');
             const expression = sql.getByRole('textbox', { name: 'Expression', exact: true });
-            await expression.fill('price * (1 + rate)');
+            await expression.fill(
+                'arrayFilter((value, position) -> position != index, items, arrayEnumerate(items))',
+            );
             await expect(sql.getByRole('region', { name: 'SQL preview', exact: true })).toHaveCount(
                 0,
             );

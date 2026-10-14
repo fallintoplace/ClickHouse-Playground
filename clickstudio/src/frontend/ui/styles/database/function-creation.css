@@ -4,7 +4,7 @@
   }
 
   .function-creation-dialog .creation-dialog-layout {
-    height: min(720px, calc(100dvh - 48px));
+    height: min(660px, calc(100dvh - 48px));
   }
 
   .function-creation-dialog .creation-dialog-title {
@@ -46,7 +46,7 @@
   }
 
   .sql-function-dialog .function-creation-fields {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1.5fr) minmax(220px, 1fr);
   }
 
   .sql-function-dialog .function-creation-fields .function-creation-section-heading {
@@ -149,6 +149,10 @@
 
     .function-creation-fields.has-return-type {
       grid-template-columns: minmax(0, 1fr) 110px;
+    }
+
+    .sql-function-dialog .function-creation-fields {
+      grid-template-columns: minmax(0, 1fr);
     }
 
     .function-creation-fields.has-return-type > :first-child {

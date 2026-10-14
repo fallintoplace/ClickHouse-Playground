@@ -118,20 +118,20 @@ for (const mode of ['Standard', 'Experimental']) {
         ).toHaveCount(0);
         await page.getByRole('button', { name: 'Clear object search', exact: true }).click();
         state.functions.push({
-            name: 'add_tax_demo',
-            parameters: ['price'],
-            createQuery: 'CREATE FUNCTION `add_tax_demo` AS (`price`) -> price * 1.19;',
+            name: 'udf_increment',
+            parameters: ['value'],
+            createQuery: 'CREATE FUNCTION `udf_increment` AS (`value`) -> value + 1;',
         });
         await page.locator('.object-refresh-action').click();
-        await tree.getByRole('button', { name: 'add_tax_demo SQL UDF', exact: true }).click();
+        await tree.getByRole('button', { name: 'udf_increment SQL UDF', exact: true }).click();
         await chooseSelectOption(
             page,
-            page.getByRole('combobox', { name: 'price input type', exact: true }),
+            page.getByRole('combobox', { name: 'value input type', exact: true }),
             'integer',
         );
-        await page.getByLabel('price', { exact: true }).fill('100');
+        await page.getByLabel('value', { exact: true }).fill('100');
         await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
-        await expect(page.locator('.sql-function-output pre')).toHaveText('119');
+        await expect(page.locator('.sql-function-output pre')).toHaveText('101');
         expect(requests.filter(body => body.action === 'run')).toHaveLength(1);
         expect(requests.some(body => body.action === 'create-function')).toBe(false);
     });
@@ -143,24 +143,24 @@ for (const mode of ['Standard', 'Experimental']) {
         ).toBeVisible();
         await page.getByRole('button', { name: 'Create SQL UDF', exact: true }).click();
         const dialog = page.getByRole('dialog', { name: 'Create SQL Function', exact: true });
-        await dialog.getByLabel('Function name', { exact: true }).fill('add_tax_demo');
-        await dialog.getByLabel('Parameter 1 name', { exact: true }).fill('price');
-        await dialog.getByLabel('Expression', { exact: true }).fill('price * 1.19');
+        await dialog.getByLabel('Function name', { exact: true }).fill('udf_increment');
+        await dialog.getByLabel('Parameter 1 name', { exact: true }).fill('value');
+        await dialog.getByLabel('Expression', { exact: true }).fill('value + 1');
         await dialog.getByRole('button', { name: 'Create UDF', exact: true }).click();
         await expect(dialog).toHaveCount(0);
-        await expect(page.locator('.sql-function-details h3')).toHaveText('add_tax_demo');
+        await expect(page.locator('.sql-function-details h3')).toHaveText('udf_increment');
         await chooseSelectOption(
             page,
-            page.getByRole('combobox', { name: 'price input type', exact: true }),
+            page.getByRole('combobox', { name: 'value input type', exact: true }),
             'integer',
         );
-        await page.getByLabel('price', { exact: true }).fill('100');
+        await page.getByLabel('value', { exact: true }).fill('100');
         await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
-        await expect(page.locator('.sql-function-output pre')).toHaveText('119');
+        await expect(page.locator('.sql-function-output pre')).toHaveText('101');
         expect(requests.filter(body => body.action === 'create-function')).toHaveLength(1);
         await page.locator('.object-back-button').click();
         await expect(
-            page.getByRole('button', { name: 'add_tax_demo SQL UDF', exact: true }),
+            page.getByRole('button', { name: 'udf_increment SQL UDF', exact: true }),
         ).toBeVisible();
     });
 

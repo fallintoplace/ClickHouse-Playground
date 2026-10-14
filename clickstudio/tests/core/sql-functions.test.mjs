@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { Readable } from 'node:stream';
 import {
     SQL_FUNCTION_TEMPLATES,
+    SQL_FUNCTION_CREATION_TEMPLATES,
     createSqlFunctionQuery,
     sqlFunctionParameters,
     functionArgumentSql,
@@ -64,6 +65,17 @@ test('SQL UDF templates use the requested names and existing higher-order functi
     }
     assert.match(first.expression, /arrayEnumerate/);
     assert.match(second.expression, /mapFilter/);
+});
+
+test('SQL UDF creation presets have unique names and valid ClickHouse expressions', () => {
+    const names = SQL_FUNCTION_CREATION_TEMPLATES.map(template => template.name);
+    assert.equal(new Set(names).size, names.length);
+    for (const template of SQL_FUNCTION_CREATION_TEMPLATES) {
+        const sql = createSqlFunctionQuery(template);
+        assert.deepEqual(sqlFunctionParameters(sql), template.parameters);
+        assert.match(sql, / -> .+;$/);
+    }
+    assert.equal(SQL_FUNCTION_CREATION_TEMPLATES.length, 5);
 });
 
 test('Create SQL validates identifiers, unique bounded parameters and one expression', () => {

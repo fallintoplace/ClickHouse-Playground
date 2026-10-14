@@ -1,6 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react';
 import {
-    SQL_FUNCTION_TEMPLATES,
+    SQL_FUNCTION_CREATION_TEMPLATES,
     createSqlFunctionQuery,
     type SqlFunction,
 } from '../../../shared/database/functions/sql-functions';
@@ -52,7 +52,7 @@ function SqlFunctionParameters({
                         value={parameter.name}
                         disabled={busy}
                         maxLength={128}
-                        placeholder={index === 0 ? 'e.g. price' : 'e.g. rate'}
+                        placeholder={index === 0 ? 'e.g. value' : 'e.g. other_value'}
                         onChange={event => onChange(parameter.id, event.target.value)}
                     />
                     <button
@@ -134,7 +134,8 @@ export function CreateSqlFunctionDialog({
         setError('');
     };
     const applyTemplate = (value: string) => {
-        const selected = value === 'custom' ? undefined : SQL_FUNCTION_TEMPLATES[Number(value)];
+        const selected =
+            value === 'custom' ? undefined : SQL_FUNCTION_CREATION_TEMPLATES[Number(value)];
         setTemplate(selected ? value : 'custom');
         setFields({ name: selected?.name ?? '', expression: selected?.expression ?? '' });
         setParameters(
@@ -203,30 +204,30 @@ export function CreateSqlFunctionDialog({
                         disabled={busy}
                         aria-label="Function name"
                         maxLength={128}
-                        placeholder="e.g. add_tax"
+                        placeholder="e.g. udf_lowercase_utf8"
                         onChange={event => changeField('name', event.target.value)}
                     />
                 </label>
+                <div className="creation-dialog-field">
+                    <span className="function-creation-section-heading">Template</span>
+                    <SelectControl
+                        className="select-control-field"
+                        label="Template"
+                        value={template}
+                        disabled={busy}
+                        options={[
+                            { value: 'custom', label: 'Custom' },
+                            ...SQL_FUNCTION_CREATION_TEMPLATES.map((item, index) => ({
+                                value: String(index),
+                                label: item.label,
+                            })),
+                        ]}
+                        onChange={applyTemplate}
+                    />
+                </div>
             </div>
             <div className="function-creation-workspace">
                 <div className="sql-function-create-sidebar">
-                    <div className="creation-dialog-field">
-                        <span className="function-creation-section-heading">Template</span>
-                        <SelectControl
-                            className="select-control-field"
-                            label="Template"
-                            value={template}
-                            disabled={busy}
-                            options={[
-                                { value: 'custom', label: 'Custom' },
-                                ...SQL_FUNCTION_TEMPLATES.map((item, index) => ({
-                                    value: String(index),
-                                    label: item.label,
-                                })),
-                            ]}
-                            onChange={applyTemplate}
-                        />
-                    </div>
                     <SqlFunctionParameters
                         parameters={parameters}
                         busy={busy}
@@ -246,7 +247,7 @@ export function CreateSqlFunctionDialog({
                         value={fields.expression}
                         disabled={busy}
                         maxLength={8192}
-                        placeholder="e.g. price * (1 + rate)"
+                        placeholder="e.g. lowerUTF8(value)"
                         onChange={value => changeField('expression', value)}
                     />
                 </div>

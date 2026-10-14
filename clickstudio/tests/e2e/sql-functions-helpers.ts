@@ -82,15 +82,15 @@ async function fulfillFunctionRun(
             },
         });
     }
-    if (String(body.sql).includes('add_tax_demo')) {
+    if (String(body.sql).includes('udf_increment')) {
         return route.fulfill({
             json: {
                 queryId: body.queryId,
                 columns: [
-                    { name: 'result', type: 'Float64' },
+                    { name: 'result', type: 'Int64' },
                     { name: 'result_json', type: 'String' },
                 ],
-                rows: [[119, '119']],
+                rows: [[101, '101']],
                 elapsedMs: 3,
                 bytes: 16,
                 truncated: false,

@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { SQL_FUNCTION_TEMPLATES } from '../../src/shared/database/functions/sql-functions.js';
+import {
+    SQL_FUNCTION_CREATION_TEMPLATES,
+    SQL_FUNCTION_TEMPLATES,
+} from '../../src/shared/database/functions/sql-functions.js';
 import { functionsWorkspace } from './sql-functions-helpers.js';
 import { workspacePath } from './helpers.js';
 import { chooseChartOption as chooseSelectOption } from './chart-control-helpers.js';
@@ -86,8 +89,12 @@ test('Custom function starts blank and creates a testable SQL UDF', async ({ pag
         );
         for (const name of ['Function name', 'Parameter 1 name'])
             await expect(dialog.getByLabel(name, { exact: true })).toHaveValue('');
+        await expect(dialog.getByLabel('Function name', { exact: true })).toHaveAttribute(
+            'placeholder',
+            'e.g. udf_lowercase_utf8',
+        );
         await expect(dialog.getByLabel('Expression', { exact: true })).toContainText(
-            'e.g. price * (1 + rate)',
+            'e.g. lowerUTF8(value)',
         );
         await expect(dialog.getByLabel('Expression', { exact: true })).toHaveCSS(
             'caret-color',
@@ -97,9 +104,9 @@ test('Custom function starts blank and creates a testable SQL UDF', async ({ pag
         await expect(
             dialog.getByRole('button', { name: 'Create UDF', exact: true }),
         ).toBeDisabled();
-        await dialog.getByLabel('Function name', { exact: true }).fill('add_tax_demo');
-        await dialog.getByLabel('Parameter 1 name', { exact: true }).fill('price');
-        await dialog.getByLabel('Expression', { exact: true }).fill('price * 1.19');
+        await dialog.getByLabel('Function name', { exact: true }).fill('udf_increment');
+        await dialog.getByLabel('Parameter 1 name', { exact: true }).fill('value');
+        await dialog.getByLabel('Expression', { exact: true }).fill('value + 1');
         for (const target of [
             dialog,
             ...(await dialog.locator('input, textarea, .chart-select-trigger').all()),
@@ -107,19 +114,19 @@ test('Custom function starts blank and creates a testable SQL UDF', async ({ pag
             await expect(target).toHaveCSS('border-radius', '4px');
         await page.screenshot({ path: 'test-results/sql-functions/custom-function.png' });
         await dialog.getByRole('button', { name: 'Create UDF', exact: true }).click();
-        await expect(page.locator('.sql-function-details h3')).toHaveText('add_tax_demo');
+        await expect(page.locator('.sql-function-details h3')).toHaveText('udf_increment');
         await chooseSelectOption(
             page,
-            page.getByRole('combobox', { name: 'price input type', exact: true }),
+            page.getByRole('combobox', { name: 'value input type', exact: true }),
             'integer',
         );
-        await page.getByLabel('price', { exact: true }).fill('100');
+        await page.getByLabel('value', { exact: true }).fill('100');
         await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
-        await expect(page.locator('.sql-function-output pre')).toHaveText('119');
+        await expect(page.locator('.sql-function-output pre')).toHaveText('101');
         expect(workspace.requests.find(body => body.action === 'create-function')).toMatchObject({
-            name: 'add_tax_demo',
-            parameters: ['price'],
-            expression: 'price * 1.19',
+            name: 'udf_increment',
+            parameters: ['value'],
+            expression: 'value + 1',
         });
     } finally {
         await workspace.close();
@@ -135,7 +142,7 @@ test('SQL UDF presets fill the draft and Custom clears it', async ({ page }) => 
     const expression = dialog.getByLabel('Expression', { exact: true });
     const parameters = dialog.getByRole('region', { name: 'Parameters', exact: true });
 
-    for (const [index, preset] of SQL_FUNCTION_TEMPLATES.entries()) {
+    for (const [index, preset] of SQL_FUNCTION_CREATION_TEMPLATES.entries()) {
         await chooseSelectOption(page, template, String(index));
         await expect(template).toHaveAttribute('data-value', String(index));
         await expect(template).toHaveAttribute('aria-valuetext', preset.label);
@@ -148,6 +155,7 @@ test('SQL UDF presets fill the draft and Custom clears it', async ({ page }) => 
                 parameter,
             );
         await expect(expression).toContainText(preset.expression);
+        await expect(dialog.getByRole('button', { name: 'Create UDF', exact: true })).toBeEnabled();
     }
 
     await chooseSelectOption(page, template, 'custom');
@@ -155,7 +163,7 @@ test('SQL UDF presets fill the draft and Custom clears it', async ({ page }) => 
     await expect(name).toHaveValue('');
     await expect(parameters.locator('.sql-function-parameter-row')).toHaveCount(1);
     await expect(dialog.getByLabel('Parameter 1 name', { exact: true })).toHaveValue('');
-    await expect(expression).toContainText('e.g. price * (1 + rate)');
+    await expect(expression).toContainText('e.g. lowerUTF8(value)');
 
     await name.fill('custom_after_template');
     await dialog.getByLabel('Parameter 1 name', { exact: true }).fill('value');
@@ -179,8 +187,13 @@ test('Adding SQL UDF parameters keeps the expression editor in place to their ri
     const expression = dialog.locator('.function-creation-source');
     const initialExpression = await expression.boundingBox();
     const parameterBounds = await parameters.boundingBox();
+    const nameBounds = await dialog.getByLabel('Function name', { exact: true }).boundingBox();
+    const templateBounds = await dialog
+        .getByRole('combobox', { name: 'Template', exact: true })
+        .boundingBox();
 
     expect(parameterBounds!.x + parameterBounds!.width).toBeLessThan(initialExpression!.x);
+    expect(nameBounds!.y).toBe(templateBounds!.y);
 
     for (let index = 0; index < 3; index++)
         await dialog.getByRole('button', { name: 'Add parameter', exact: true }).click();

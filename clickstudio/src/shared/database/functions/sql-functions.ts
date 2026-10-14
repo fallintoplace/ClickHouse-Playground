@@ -61,6 +61,33 @@ export const SQL_FUNCTION_TEMPLATES = [
     }
 >;
 
+export const SQL_FUNCTION_CREATION_TEMPLATES = [
+    ...SQL_FUNCTION_TEMPLATES.map(({ name, label, parameters, expression }) => ({
+        name,
+        label,
+        parameters,
+        expression,
+    })),
+    {
+        name: 'udf_array_distinct',
+        label: 'Keep unique array items',
+        parameters: ['items'],
+        expression: 'arrayDistinct(items)',
+    },
+    {
+        name: 'udf_lowercase_utf8',
+        label: 'Lowercase UTF-8 text',
+        parameters: ['value'],
+        expression: 'lowerUTF8(value)',
+    },
+    {
+        name: 'udf_start_of_month',
+        label: 'Start of month',
+        parameters: ['date_time'],
+        expression: 'toStartOfMonth(date_time)',
+    },
+] satisfies Array<SqlFunctionInput & { label: string }>;
+
 const identifier = /^[A-Za-z_][A-Za-z0-9_]{0,127}$/;
 
 export function createSqlFunctionQuery(input: SqlFunctionInput): string {
