@@ -79,7 +79,7 @@
     flex: 1;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
   }
   .results-title .results-runtime-heading {
     min-width: 0;
