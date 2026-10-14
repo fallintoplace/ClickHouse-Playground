@@ -1491,7 +1491,7 @@
   .assistant-empty-chat {
     display: grid;
     justify-items: center;
-    gap: 10px;
+    gap: 14px;
     padding: 24px 16px;
     color: var(--muted);
     text-align: center;
@@ -1522,13 +1522,12 @@
     flex-wrap: wrap;
     max-width: 320px;
     justify-content: center;
-    gap: 8px;
-    margin-top: 5px;
+    gap: 10px;
   }
   .assistant-starter-actions .button-base {
     min-height: 32px;
     padding-inline: 12px;
-    border-radius: 999px;
+    border-radius: 4px;
     font-size: 10px;
   }
   .assistant-turn {
