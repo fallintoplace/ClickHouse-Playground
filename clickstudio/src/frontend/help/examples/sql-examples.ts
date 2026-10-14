@@ -125,10 +125,10 @@ ORDER BY year, month`,
             'Compare quarterly question volume for Python, JavaScript, Java, and Rust as a developer-interest signal.',
         sql: `SELECT
     toStartOfQuarter(CreationDate) AS quarter,
-    countIf(Tags LIKE '%<python>%') AS python,
-    countIf(Tags LIKE '%<javascript>%') AS javascript,
-    countIf(Tags LIKE '%<java>%') AS java,
-    countIf(Tags LIKE '%<rust>%') AS rust
+    countIf(Tags LIKE '%|python|%') AS python,
+    countIf(Tags LIKE '%|javascript|%') AS javascript,
+    countIf(Tags LIKE '%|java|%') AS java,
+    countIf(Tags LIKE '%|rust|%') AS rust
 FROM stackoverflow.posts
 WHERE PostTypeId = 'Question'
     AND CreationDate >= toDateTime('2018-01-01 00:00:00')
@@ -141,6 +141,27 @@ ORDER BY quarter`,
             ys: [1, 2, 3, 4],
             title: 'Quarterly technology question volume',
         },
+    },
+    {
+        id: 'stackoverflow-popular-tags',
+        name: 'Top Stack Overflow question tags',
+        category: 'engineering',
+        dataset: 'Stack Overflow',
+        featuredOrder: 12,
+        description: 'Rank common question tags from January 2023 through March 2024.',
+        sql: `SELECT
+    tag,
+    count() AS questions
+FROM stackoverflow.posts
+ARRAY JOIN splitByChar('|', Tags) AS tag
+WHERE PostTypeId = 'Question'
+    AND CreationDate >= toDateTime('2023-01-01 00:00:00')
+    AND CreationDate < toDateTime('2024-04-01 00:00:00')
+    AND tag != ''
+GROUP BY tag
+ORDER BY questions DESC
+LIMIT 15`,
+        chart: { kind: 'bar', x: 0, ys: [1], title: 'Most common question tags' },
     },
     {
         id: 'github-daily-activity',

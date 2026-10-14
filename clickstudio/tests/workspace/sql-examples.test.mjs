@@ -99,6 +99,15 @@ test('new Playground examples have unique read-only queries and valid chart colu
             0,
         ],
         [
+            'stackoverflow-popular-tags',
+            'Stack Overflow',
+            'bar',
+            'FROM stackoverflow.posts',
+            2,
+            [1],
+            0,
+        ],
+        [
             'pypi-package-downloads',
             'PyPI',
             'heatmap',
@@ -172,6 +181,27 @@ test('new Playground examples have unique read-only queries and valid chart colu
     assert.match(byId.get('uk-house-prices-by-county')?.sql ?? '', /LIMIT 12\s*$/);
     assert.match(byId.get('imdb-ratings-by-year')?.sql ?? '', /LIMIT 200\s*$/);
     assert.match(byId.get('noaa-central-park-weather')?.sql ?? '', /LIMIT 240\s*$/);
+});
+
+test('Stack Overflow examples match the Playground tag format and stay chart friendly', () => {
+    const examples = sqlExamplesFor({ id: 'playground', dataSource: 'clickhouse' });
+    const byId = new Map(examples.map(example => [example.id, example]));
+    const trends = byId.get('stackoverflow-technology-trends');
+    const popularTags = byId.get('stackoverflow-popular-tags');
+
+    assert.ok(trends);
+    for (const tag of ['python', 'javascript', 'java', 'rust']) {
+        assert.ok(trends.sql.includes(`Tags LIKE '%|${tag}|%'`), `${tag} should match a full tag`);
+    }
+    assert.doesNotMatch(trends.sql, /Tags LIKE '%<[^>]+>%/);
+
+    assert.ok(popularTags);
+    assert.match(popularTags.sql, /ARRAY JOIN splitByChar\('\|', Tags\) AS tag/);
+    assert.match(popularTags.sql, /tag != ''/);
+    assert.match(popularTags.sql, /LIMIT 15\s*$/);
+    assert.equal(popularTags.featuredOrder, 12);
+    assert.equal(popularTags.chart.kind, 'bar');
+    assert.deepEqual(popularTags.chart.ys, [1]);
 });
 
 test('Featured Playground examples lead with enterprise workflows', () => {
