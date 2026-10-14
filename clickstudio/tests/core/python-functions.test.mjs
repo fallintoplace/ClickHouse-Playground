@@ -4,6 +4,7 @@ import { gunzipSync, unzipSync, strFromU8 } from 'fflate';
 import { randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import {
+    PYTHON_FUNCTION_CUSTOM_DRAFT,
     PYTHON_FUNCTION_TEMPLATES,
     PYTHON_SCALAR_TYPES,
     pythonDraftSchema,
@@ -54,6 +55,31 @@ test('Python signatures accept only the six scalar types and distinct named argu
         { requirements: 'x'.repeat(16001) },
     ])
         assert.equal(pythonDraftSchema.safeParse({ ...draft, ...patch }).success, false);
+});
+
+test('Python templates have unique names and valid transform signatures; Custom starts unnamed', () => {
+    assert.deepEqual(
+        PYTHON_FUNCTION_TEMPLATES.map(template => template.label),
+        [
+            'String similarity',
+            'Double',
+            'LLM token count',
+            'Normalize text',
+            'Word count',
+            'Round number',
+            'ISO weekday',
+        ],
+    );
+    assert.equal(
+        new Set(PYTHON_FUNCTION_TEMPLATES.map(template => template.name)).size,
+        PYTHON_FUNCTION_TEMPLATES.length,
+    );
+    for (const template of PYTHON_FUNCTION_TEMPLATES)
+        assert.equal(pythonSourceIssue(template), '', template.label);
+    assert.equal(PYTHON_FUNCTION_CUSTOM_DRAFT.name, '');
+    assert.equal(PYTHON_FUNCTION_CUSTOM_DRAFT.arguments[0].name, 'value');
+    assert.equal(pythonSourceIssue(PYTHON_FUNCTION_CUSTOM_DRAFT), '');
+    assert.equal(pythonDraftSchema.safeParse(PYTHON_FUNCTION_CUSTOM_DRAFT).success, false);
 });
 
 test('Cloud definition and self-hosted XML agree with the generated chunk protocol', () => {

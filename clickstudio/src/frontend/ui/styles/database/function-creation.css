@@ -49,6 +49,10 @@
     grid-template-columns: minmax(0, 1.5fr) minmax(220px, 1fr);
   }
 
+  .python-function-dialog .function-creation-fields.has-return-type {
+    grid-template-columns: minmax(0, 1.5fr) minmax(220px, 1fr) 140px;
+  }
+
   .sql-function-dialog .function-creation-fields .function-creation-section-heading {
     min-height: 34px;
   }
@@ -148,6 +152,10 @@
     }
 
     .function-creation-fields.has-return-type {
+      grid-template-columns: minmax(0, 1fr) 110px;
+    }
+
+    .python-function-dialog .function-creation-fields.has-return-type {
       grid-template-columns: minmax(0, 1fr) 110px;
     }
 

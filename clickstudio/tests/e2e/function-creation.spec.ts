@@ -79,13 +79,17 @@ for (const theme of ['Dark', 'Light']) {
             await page.getByRole('button', { name: 'Create Python UDF', exact: true }).click();
             const python = page.getByRole('dialog', { name: 'Create Python UDF', exact: true });
             await expect(python.getByLabel('Function name', { exact: true })).toBeFocused();
+            await expect(
+                python.getByRole('combobox', { name: 'Template', exact: true }),
+            ).toHaveAttribute('data-value', 'custom');
+            await expect(python.getByLabel('Function name', { exact: true })).toHaveValue('');
             expect(await design(python)).toEqual(sqlDesign);
             await expectDialogFits(python);
             await python.getByLabel('Function name', { exact: true }).scrollIntoViewIfNeeded();
             await python.screenshot({ path: info.outputPath('python-creator.png') });
             await expect(
                 python.getByRole('button', { name: 'Export ZIP', exact: true }),
-            ).toBeEnabled();
+            ).toBeDisabled();
             await python.getByRole('button', { name: 'Cancel', exact: true }).click();
             await expect(
                 page.getByRole('button', { name: 'Create Python UDF', exact: true }),

@@ -13,6 +13,14 @@ test('Python ZIP export includes offline tokenizer assets without management cre
     await functionsWorkspace(page);
     await page.getByRole('button', { name: 'Create Python UDF', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Create Python UDF', exact: true });
+    const template = dialog.getByRole('combobox', { name: 'Template', exact: true });
+    await expect(template).toHaveAttribute('data-value', 'custom');
+    await expect(dialog.getByLabel('Function name', { exact: true })).toHaveValue('');
+    await expect(dialog.getByRole('button', { name: 'Export ZIP', exact: true })).toBeDisabled();
+    await expect(dialog.getByRole('textbox', { name: 'Python source' })).toContainText(
+        'def transform(value):',
+    );
+    await chooseSelectOption(page, template, '0');
     const pending = page.waitForEvent('download');
     await dialog.getByRole('button', { name: 'Export ZIP', exact: true }).click();
     expect((await pending).suggestedFilename()).toBe('py_similarity.zip');
@@ -239,6 +247,28 @@ for (const { viewport, theme } of [
         const dialog = page.getByRole('dialog', { name: 'Create Python UDF', exact: true });
         await expect(dialog.getByLabel('Function name', { exact: true })).toBeFocused();
         await expect(dialog.locator('select')).toHaveCount(0);
+        await expect(
+            dialog.getByRole('combobox', { name: 'Template', exact: true }),
+        ).toHaveAttribute('data-value', 'custom');
+        await expect(dialog.getByLabel('Function name', { exact: true })).toHaveAttribute(
+            'placeholder',
+            'e.g. py_normalize_text',
+        );
+        await expect(
+            dialog.getByRole('button', { name: 'Export ZIP', exact: true }),
+        ).toBeDisabled();
+        await expect(dialog.getByRole('textbox', { name: 'Python source' })).toContainText(
+            'return value',
+        );
+        await dialog.getByLabel('Function name', { exact: true }).scrollIntoViewIfNeeded();
+        await dialog.screenshot({
+            path: info.outputPath(`python-creator-${theme}-${viewport.width}.png`),
+        });
+        await chooseSelectOption(
+            page,
+            dialog.getByRole('combobox', { name: 'Template', exact: true }),
+            '0',
+        );
         await expect(dialog.getByRole('textbox', { name: 'Python source' })).toContainText(
             'SequenceMatcher',
         );
@@ -267,10 +297,6 @@ for (const { viewport, theme } of [
         const editorBounds = await editor.boundingBox();
         const footerBounds = await dialog.locator('.creation-dialog-footer').boundingBox();
         expect(editorBounds!.y + editorBounds!.height).toBeLessThanOrEqual(footerBounds!.y + 1);
-        await name.scrollIntoViewIfNeeded();
-        await dialog.screenshot({
-            path: info.outputPath(`python-creator-${theme}-${viewport.width}.png`),
-        });
         await dialog.getByLabel('Function name', { exact: true }).fill('_invalid');
         await expect(
             dialog.getByRole('button', { name: 'Export ZIP', exact: true }),
@@ -293,10 +319,10 @@ for (const { width, height } of [
         await returns.click();
         const returnOptions = page.getByRole('listbox', { name: 'Return type', exact: true });
         await expect(
-            returnOptions.getByRole('option', { name: 'Float64', exact: true }),
+            returnOptions.getByRole('option', { name: 'String', exact: true }),
         ).toHaveAttribute('data-active', 'true');
         await page.keyboard.press('Enter');
-        await expect(returns).toHaveAttribute('data-value', 'Float64');
+        await expect(returns).toHaveAttribute('data-value', 'String');
         const template = dialog.getByRole('combobox', { name: 'Template', exact: true });
         const listbox = page.getByRole('listbox', { name: 'Template', exact: true });
         await template.press('ArrowDown');
@@ -307,6 +333,7 @@ for (const { width, height } of [
         expect(bounds!.y).toBeGreaterThanOrEqual(8);
         expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(height - 8);
         await page.screenshot({ path: info.outputPath(`python-template-menu-${width}.png`) });
+        await page.keyboard.press('ArrowDown');
         await page.keyboard.press('ArrowDown');
         await page.keyboard.press('Enter');
         await expect(template).toHaveAttribute('data-value', '1');
@@ -334,14 +361,14 @@ for (const { width, height } of [
         await template.click();
         await expect(listbox).toBeFocused();
         await page.keyboard.press('Shift+Tab');
-        await expect(
-            dialog.getByRole('button', { name: 'Close Create Python UDF', exact: true }),
-        ).toBeFocused();
+        await expect(dialog.getByLabel('Function name', { exact: true })).toBeFocused();
         await expect(listbox).toBeHidden();
         await template.click();
         await expect(listbox).toBeFocused();
         await page.keyboard.press('Tab');
-        await expect(dialog.getByLabel('Function name', { exact: true })).toBeFocused();
+        await expect(
+            dialog.getByRole('combobox', { name: 'Return type', exact: true }),
+        ).toBeFocused();
         await expect(listbox).toBeHidden();
     });
 }
@@ -519,6 +546,11 @@ test('Cloud timeout disables another publish until actual state has been checked
     await functionsWorkspace(page);
     await page.getByRole('button', { name: 'Create Python UDF', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Create Python UDF', exact: true });
+    await chooseSelectOption(
+        page,
+        dialog.getByRole('combobox', { name: 'Template', exact: true }),
+        '0',
+    );
     await dialog.getByRole('button', { name: 'Enable deployment session', exact: true }).click();
     await chooseSelectOption(
         page,

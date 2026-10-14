@@ -120,6 +120,11 @@ for (const mode of ['Standard', 'Experimental']) {
         await functionsWorkspace(page, { path: workspacePath(mode) });
         await page.getByRole('button', { name: 'Create Python UDF', exact: true }).click();
         const dialog = page.getByRole('dialog', { name: 'Create Python UDF', exact: true });
+        await chooseSelectOption(
+            page,
+            dialog.getByRole('combobox', { name: 'Template', exact: true }),
+            '0',
+        );
         await expect(
             dialog.getByRole('button', { name: 'Publish function', exact: true }),
         ).toHaveCount(0);

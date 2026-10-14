@@ -113,7 +113,50 @@ export const PYTHON_FUNCTION_TEMPLATES = [
         requirements: 'tiktoken==0.14.0\n',
         source: TOKENIZER_SOURCE,
     },
+    {
+        label: 'Normalize text',
+        name: 'py_normalize_text',
+        arguments: [{ name: 'text', type: 'String' }],
+        returnType: 'String',
+        requirements: '',
+        source: 'def transform(text):\n    return text.strip().casefold()\n',
+    },
+    {
+        label: 'Word count',
+        name: 'py_word_count',
+        arguments: [{ name: 'text', type: 'String' }],
+        returnType: 'UInt64',
+        requirements: '',
+        source: 'def transform(text):\n    return len(text.split())\n',
+    },
+    {
+        label: 'Round number',
+        name: 'py_round_number',
+        arguments: [
+            { name: 'value', type: 'Float64' },
+            { name: 'digits', type: 'Int32' },
+        ],
+        returnType: 'Float64',
+        requirements: '',
+        source: 'def transform(value, digits):\n    return round(value, digits)\n',
+    },
+    {
+        label: 'ISO weekday',
+        name: 'py_iso_weekday',
+        arguments: [{ name: 'date_text', type: 'String' }],
+        returnType: 'Int32',
+        requirements: '',
+        source: 'from datetime import date\n\ndef transform(date_text):\n    return date.fromisoformat(date_text).isoweekday()\n',
+    },
 ] satisfies Array<PythonFunctionDraft & { label: string }>;
+
+export const PYTHON_FUNCTION_CUSTOM_DRAFT: PythonFunctionDraft = {
+    name: '',
+    arguments: [{ name: 'value', type: 'String' }],
+    returnType: 'String',
+    requirements: '',
+    source: 'def transform(value):\n    return value\n',
+};
 
 export function pythonCloudDefinition(draft: PythonFunctionDraft) {
     const value = pythonDraftSchema.parse(draft);

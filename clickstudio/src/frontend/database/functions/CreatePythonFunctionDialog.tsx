@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import {
+    PYTHON_FUNCTION_CUSTOM_DRAFT,
     PYTHON_FUNCTION_TEMPLATES,
     PYTHON_SCALAR_TYPES,
     pythonDraftSchema,
@@ -24,17 +25,26 @@ export function CreatePythonFunctionDialog({
     deployAllowed: boolean;
 }) {
     const nameInput = useRef<HTMLInputElement>(null);
-    const [template, setTemplate] = useState('0');
+    const [template, setTemplate] = useState('custom');
     const [draft, setDraft] = useState<PythonFunctionDraft>(() =>
-        structuredClone(PYTHON_FUNCTION_TEMPLATES[0]!),
+        structuredClone(PYTHON_FUNCTION_CUSTOM_DRAFT),
     );
     const [error, setError] = useState('');
+    const [showValidation, setShowValidation] = useState(false);
     const [busy, setBusy] = useState(false);
     const validation = pythonDraftSchema.safeParse(draft);
     const sourceIssue = validation.success ? pythonSourceIssue(validation.data) : '';
     const update = (patch: Partial<PythonFunctionDraft>) => {
         setDraft(current => ({ ...current, ...patch }));
         setError('');
+        setShowValidation(true);
+    };
+    const applyTemplate = (value: string) => {
+        const selected = value === 'custom' ? undefined : PYTHON_FUNCTION_TEMPLATES[Number(value)];
+        setTemplate(selected ? value : 'custom');
+        setDraft(structuredClone(selected ?? PYTHON_FUNCTION_CUSTOM_DRAFT));
+        setError('');
+        setShowValidation(false);
     };
     const download = async () => {
         if (!validation.success || sourceIssue || busy) return;
@@ -89,24 +99,6 @@ export function CreatePythonFunctionDialog({
             }
         >
             <div className="function-creation-fields has-return-type">
-                <div className="creation-dialog-field">
-                    <span>Template</span>
-                    <SelectControl
-                        className="select-control-field"
-                        label="Template"
-                        value={template}
-                        disabled={busy}
-                        options={PYTHON_FUNCTION_TEMPLATES.map((item, index) => ({
-                            value: String(index),
-                            label: item.label,
-                        }))}
-                        onChange={value => {
-                            setTemplate(value);
-                            setDraft(structuredClone(PYTHON_FUNCTION_TEMPLATES[Number(value)]!));
-                            setError('');
-                        }}
-                    />
-                </div>
                 <label className="creation-dialog-field">
                     <span>Function name</span>
                     <input
@@ -115,8 +107,26 @@ export function CreatePythonFunctionDialog({
                         value={draft.name}
                         onChange={event => update({ name: event.target.value })}
                         maxLength={128}
+                        placeholder="e.g. py_normalize_text"
                     />
                 </label>
+                <div className="creation-dialog-field">
+                    <span>Template</span>
+                    <SelectControl
+                        className="select-control-field"
+                        label="Template"
+                        value={template}
+                        disabled={busy}
+                        options={[
+                            { value: 'custom', label: 'Custom' },
+                            ...PYTHON_FUNCTION_TEMPLATES.map((item, index) => ({
+                                value: String(index),
+                                label: item.label,
+                            })),
+                        ]}
+                        onChange={applyTemplate}
+                    />
+                </div>
                 <div className="creation-dialog-field">
                     <span>Returns</span>
                     <SelectControl
@@ -252,12 +262,12 @@ export function CreatePythonFunctionDialog({
                     />
                 </div>
             </div>
-            {sourceIssue && (
+            {showValidation && sourceIssue && (
                 <p className="sql-function-error" role="status">
                     {sourceIssue}
                 </p>
             )}
-            {!validation.success && (
+            {showValidation && !validation.success && (
                 <p className="sql-function-error" role="status">
                     {validation.error.issues[0]?.message}
                 </p>
