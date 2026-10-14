@@ -45,6 +45,7 @@ import { createExampleDraft } from '../queries/execution/useWorkspaceExecution';
 import { useSqlEditorSessions } from '../queries/editor/components/useSqlEditorSessions';
 import { useWorkspaceDocumentSaveShortcut } from '../queries/saved-queries/useWorkspaceDocumentSave';
 import type { RunKind } from '../../shared/queries/execution/status';
+import type { ResultsView } from './workspace-types';
 
 function openImportedSqlQuery(
     name: string,
@@ -378,6 +379,7 @@ function renderWorkspaceLayout({
         emptySqlActionRef,
         setDrawerOpen,
     } = model;
+    const helpHint = resultsHelpHint(visibleResultsView, copy.common);
 
     return (
         <div
@@ -572,9 +574,30 @@ function renderWorkspaceLayout({
                 model,
                 queryPanel,
                 serverLabel,
+                helpHint,
             })}
         </div>
     );
+}
+
+function resultsHelpHint(
+    view: ResultsView,
+    copy: WorkspaceProps['copy']['common'],
+): string | undefined {
+    switch (view) {
+        case 'indexes':
+            return copy.helpExplainIndexesDescription;
+        case 'plan':
+            return copy.helpExplainPlanDescription;
+        case 'pipeline':
+            return copy.helpExplainPipelineDescription;
+        case 'runtime':
+            return copy.helpExplainAnalyzeDescription;
+        case 'sqlmap':
+            return copy.helpQueryEngineDescription;
+        default:
+            return undefined;
+    }
 }
 
 function renderWorkspaceOverlays({
@@ -586,6 +609,7 @@ function renderWorkspaceOverlays({
     model,
     queryPanel,
     serverLabel,
+    helpHint,
 }: {
     experience: WorkspaceProps['experience'];
     copy: WorkspaceProps['copy'];
@@ -595,6 +619,7 @@ function renderWorkspaceOverlays({
     model: ReturnType<typeof useWorkspaceController>;
     queryPanel: import('react').ReactElement;
     serverLabel: string;
+    helpHint?: string;
 }) {
     const { active } = model.tabs;
     const { run, eventState } = model.evidence;
@@ -710,6 +735,7 @@ function renderWorkspaceOverlays({
                 onOpenDetails={experience === 'expert' ? () => showInspector('details') : undefined}
                 scriptRunning={script?.status === 'running'}
                 serverLabel={serverLabel}
+                helpHint={helpHint}
                 copy={copy.common}
                 helpButton={
                     <HelpButton copy={copy.common} open={helpPanelOpen} onOpen={openHelp} />

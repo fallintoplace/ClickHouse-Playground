@@ -98,18 +98,22 @@ export const copy = {
         helpOpenMonitoring: 'Open monitoring',
         helpQueryEngine: 'Query engine',
         helpQueryEngineDescription:
-            'Inspect logical SQL flow, the native ClickHouse AST, and the server analyzer query tree for the current statement.',
+            'Choose Logical flow to follow the query stages, Native AST to see how ClickHouse parses the SQL, or Analyzer to inspect the tables and columns resolved by the server. These views explain query structure without running the query.',
         helpGeo: 'Geo',
         helpGeoTitle: 'Native geometry on a spatial canvas',
         helpGeoDescription:
             'Explore a 20-city hotspot map, flight paths, and delivery zones with native ClickHouse geometry.',
         helpExplain: 'EXPLAIN',
-        helpExplainDescription: 'Learn what ClickHouse plans, skips, and runs for your query.',
+        helpExplainDescription:
+            'Choose an EXPLAIN view to understand what ClickHouse plans, what data it may skip, or how its work is measured. Analyze runs the query, so use it only when executing this SQL is safe.',
         helpExplainIndexesDescription:
-            'See whether an index can skip data and speed up this query.',
-        helpExplainPlanDescription: 'See what ClickHouse plans to do before it runs your query.',
-        helpExplainPipelineDescription: 'See which query steps can run at the same time.',
-        helpExplainAnalyzeDescription: 'See which query steps take the most time.',
+            'See whether an index lets ClickHouse skip parts of a table before reading them. When the index matches your filters, ClickHouse may scan less data; this view shows which checks helped.',
+        helpExplainPlanDescription:
+            'See what ClickHouse plans to do before it runs your query. Follow the expected steps, such as reading tables, filtering rows, grouping results, and sorting them. This is only a plan; it does not show actual run time or rows read.',
+        helpExplainPipelineDescription:
+            'See how ClickHouse turns the plan into processor steps and connects them. Branches can show work that runs in parallel, which helps explain how the query is organized. This is the planned pipeline, not measured run time.',
+        helpExplainAnalyzeDescription:
+            'Run the query and measure what happened. Compare time, rows read, bytes, and memory to find expensive work. Analyze executes the SQL, so use it only when running the query is safe.',
         helpStorage: 'Storage',
         helpStorageDescription:
             'Explore MergeTree parts, live merges, and mutations from ClickHouse system metadata.',
@@ -424,9 +428,12 @@ export const copy = {
         queryTreeTruncatedWarning:
             'This query tree is large. The view shows a bounded set of analyzer nodes.',
         sqlFlowLogicalMode: 'Logical flow',
-        sqlFlowLogicalModeDescription: 'Follow each query step to see how it builds the result.',
-        sqlFlowNativeAstDescription: 'See how ClickHouse breaks your SQL into parts.',
-        sqlFlowAnalyzerDescription: 'Check which tables and columns ClickHouse will use.',
+        sqlFlowLogicalModeDescription:
+            'Follow the main stages in the SQL and see how each contributes to the result. This is a readable outline, not the server execution plan.',
+        sqlFlowNativeAstDescription:
+            'Inspect the syntax tree built by the local ClickHouse parser to see how parts of the SQL fit together. This explains query structure, not execution.',
+        sqlFlowAnalyzerDescription:
+            'Inspect the query tree built by the ClickHouse server to see which tables and columns it resolved. This is server-side analysis, not run-time measurement.',
         sqlAstClickNode: 'Select a node to inspect its parser fields.',
         sqlAstGraphHint: 'Select a node to inspect it. Double-click to expand or collapse.',
         sqlAstUnavailable: 'Native AST is unavailable for this statement.',

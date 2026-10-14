@@ -621,10 +621,6 @@ function renderResultsHeader({
     const headerView = showFailure ? 'results' : visibleResultsView;
     const headerPanelLabel = showFailure ? copy.common.queryResults : resultsPanelLabel;
     const showQueryCard = ['results', 'chart', 'insights'].includes(headerView);
-    const headerDescription =
-        !showFailure && !showQueryCard
-            ? resultsHeaderDescription(visibleResultsView, structureMode, copy.common)
-            : undefined;
     const querySql = showFailure ? failureSql : (execution?.sql ?? run?.sql);
     const queryCard = renderResultsQueryCard({
         showQueryCard,
@@ -657,9 +653,6 @@ function renderResultsHeader({
                 {!showQueryCard && (
                     <div className="results-heading">
                         <h2>{resultsTitle}</h2>
-                        {headerDescription && (
-                            <span className="results-title-description">{headerDescription}</span>
-                        )}
                     </div>
                 )}
                 {visibleResultsView === 'sqlmap' && (
@@ -750,36 +743,6 @@ function renderResultsHeader({
             </div>
         </div>
     );
-}
-
-function resultsHeaderDescription(
-    view: ResultsView,
-    structureMode: StructureView,
-    copy: Copy['common'],
-): string | undefined {
-    if (view === 'sqlmap') {
-        switch (structureMode) {
-            case 'flow':
-                return copy.sqlFlowLogicalModeDescription;
-            case 'ast':
-                return copy.sqlFlowNativeAstDescription;
-            case 'analyzer':
-                return copy.sqlFlowAnalyzerDescription;
-        }
-    }
-
-    switch (view) {
-        case 'indexes':
-            return copy.helpExplainIndexesDescription;
-        case 'plan':
-            return copy.helpExplainPlanDescription;
-        case 'pipeline':
-            return copy.helpExplainPipelineDescription;
-        case 'runtime':
-            return copy.helpExplainAnalyzeDescription;
-        default:
-            return undefined;
-    }
 }
 
 function renderResultsQueryCard({

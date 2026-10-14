@@ -2428,6 +2428,13 @@
   .execution-right {
     flex: none;
   }
+  .execution-help-hint {
+    max-width: min(42vw, 660px);
+    margin: 0;
+    color: var(--text-soft);
+    font-size: 12px;
+    line-height: 1.35;
+  }
   .execution-details-button {
     min-height: 27px;
     padding-inline: 8px;
@@ -2937,6 +2944,9 @@
   .execution-telemetry {
     justify-content: flex-start;
   }
+  .execution-help-hint {
+    max-width: 60vw;
+  }
   .execution-right code {
     max-width: 90px;
   }
@@ -2977,6 +2987,10 @@
   }
   .execution-right {
     margin-left: auto;
+  }
+  .execution-help-hint {
+    max-width: calc(100vw - 82px);
+    font-size: 11px;
   }
   .execution-right code {
     max-width: 76px;

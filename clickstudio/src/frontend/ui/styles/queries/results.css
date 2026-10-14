@@ -81,16 +81,6 @@
     font-weight: var(--font-weight-emphasis);
     white-space: nowrap;
   }
-  .results-title-description {
-    min-width: 0;
-    max-width: min(320px, 32vw);
-    overflow: hidden;
-    color: var(--text-soft);
-    font-size: 8px;
-    line-height: 1.25;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
   .results-title > .inline-flex {
     margin-left: 5px;
   }

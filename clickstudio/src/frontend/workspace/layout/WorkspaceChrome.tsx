@@ -174,6 +174,7 @@ export function ExecutionBar({
     onOpenDetails,
     scriptRunning,
     serverLabel,
+    helpHint,
     helpButton,
     copy,
 }: {
@@ -184,6 +185,7 @@ export function ExecutionBar({
     onOpenDetails?: () => void;
     scriptRunning: boolean;
     serverLabel: string;
+    helpHint?: string;
     helpButton: ReactNode;
     copy: Copy['common'];
 }) {
@@ -296,7 +298,10 @@ export function ExecutionBar({
                     )}
                 </div>
             )}
-            <div className="execution-right">{helpButton}</div>
+            <div className="execution-right">
+                {helpHint && <p className="execution-help-hint">{helpHint}</p>}
+                {helpButton}
+            </div>
             {executionInProgress && <span className="execution-progress-line" />}
         </footer>
     );
