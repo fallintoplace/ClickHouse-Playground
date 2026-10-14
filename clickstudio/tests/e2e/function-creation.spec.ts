@@ -27,6 +27,13 @@ async function design(dialog: Locator) {
 
 async function expectDialogFits(dialog: Locator) {
     expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    const bounds = await dialog.boundingBox();
+    for (const button of await dialog.locator('.creation-dialog-footer button').all()) {
+        const action = await button.boundingBox();
+        if (!action) continue;
+        expect(action.x).toBeGreaterThanOrEqual(bounds!.x + 1);
+        expect(action.x + action.width).toBeLessThanOrEqual(bounds!.x + bounds!.width - 1);
+    }
     const editor = dialog.locator('.function-code-editor');
     await editor.scrollIntoViewIfNeeded();
     const source = await editor.boundingBox();
@@ -38,6 +45,8 @@ for (const theme of ['Dark', 'Light']) {
     for (const viewport of [
         { width: 1280, height: 900 },
         { width: 390, height: 844 },
+        { width: 360, height: 800 },
+        { width: 320, height: 720 },
     ]) {
         test(`${theme} function creators share the same design at ${viewport.width}px`, async ({
             page,

@@ -161,5 +161,10 @@
       gap: 16px;
       padding: 16px;
     }
+
+    .function-creation-dialog .creation-dialog-footer {
+      flex-wrap: wrap;
+      padding: 16px;
+    }
   }
 }
