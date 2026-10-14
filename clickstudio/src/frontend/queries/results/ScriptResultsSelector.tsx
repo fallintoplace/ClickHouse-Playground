@@ -301,9 +301,6 @@ export function ScriptResultsSelector({
                     focusedItem?.scrollIntoView({ block: 'nearest' });
                 }}
             >
-                <div className="script-results-menu-heading" aria-hidden="true">
-                    Statement results
-                </div>
                 {statements.map((statement, index) => {
                     const active = index === selectedIndex;
                     const run = statement.runId ? byId.get(statement.runId) : undefined;
