@@ -99,8 +99,8 @@ export function categoryAxisLayout(labels: readonly string[], viewportWidth = 65
 
 export function chartPlotBounds(categoricalAxis: boolean, measuredHeight = 230) {
     const viewportHeight = categoricalAxis ? measuredHeight || 230 : 230;
-    const plotTop = categoricalAxis ? 24 : 40;
-    const plotBottom = categoricalAxis ? Math.max(plotTop + 1, viewportHeight - 44) : 190;
+    const plotTop = categoricalAxis ? 24 : 28;
+    const plotBottom = categoricalAxis ? Math.max(plotTop + 1, viewportHeight - 44) : 198;
     return {
         viewportHeight,
         plotTop,

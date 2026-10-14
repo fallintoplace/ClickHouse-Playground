@@ -9,7 +9,7 @@
     padding: 17px 18px;
   }
   .chart-workspace {
-    padding: 0 10px 8px;
+    padding: 0 6px 4px;
   }
   .chart-workspace:has(> .chart-canvas) {
     display: flex;
@@ -1614,8 +1614,8 @@
     min-height: 120px;
     max-height: 250px;
     flex: 1;
-    margin: 12px 0 0;
-    padding: 8px 12px 0;
+    margin: 8px 0 0;
+    padding: 4px 8px 0;
     border: 1px solid var(--line);
     border-radius: var(--radius-panel);
     background:
