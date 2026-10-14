@@ -184,13 +184,14 @@ test('Heatmaps keep native context and suppress redundant axis titles', async ({
             json: {
                 ...snapshot,
                 columns: [
-                    { name: 'weekday', type: 'String' },
-                    { name: 'hour', type: 'String' },
-                    { name: 'trips', type: 'UInt64' },
+                    { name: 'artist', type: 'String' },
+                    { name: 'title', type: 'String' },
+                    { name: 'plays', type: 'UInt64' },
                 ],
                 rows: [
-                    ['Mon', 'Morning', 5],
-                    ['Tue', 'Evening', 8],
+                    ['Avicii', 'Around Town', 5],
+                    ['Beck', "Don't Turn the Lights On", 8],
+                    ['Bastille', 'Supermassive Black Hole', 12_345],
                 ],
                 completeness: 'complete',
             },
@@ -207,8 +208,20 @@ test('Heatmaps keep native context and suppress redundant axis titles', async ({
     );
     const table = results.locator('.heatmap-grid');
     await expect(table.locator('.heatmap-row-label').first()).toHaveAttribute('title', '');
-    const cell = table.getByLabel('Morning, Mon: 5', { exact: true });
-    await expect(cell).toHaveAttribute('title', 'hour: Morning · weekday: Mon · trips: 5');
+    const headers = table.locator('thead .heatmap-axis-label');
+    await expect(headers).toHaveText([
+        'Around Town',
+        "Don't Turn the Lights On",
+        'Supermassive Black Hole',
+    ]);
+    await expect(table).toHaveCSS('table-layout', 'fixed');
+    await expect(headers.first()).toHaveCSS('white-space', 'normal');
+    const columnWidths = await headers.evaluateAll(elements =>
+        elements.map(element => element.getBoundingClientRect().width),
+    );
+    expect(columnWidths.every(width => Math.abs(width - columnWidths[0]!) < 1)).toBe(true);
+    const cell = table.getByLabel('Around Town, Avicii: 5', { exact: true });
+    await expect(cell).toHaveAttribute('title', 'artist: Avicii · title: Around Town · plays: 5');
     await cell.hover();
     await expect(page.getByRole('tooltip')).toHaveCount(0);
 });

@@ -1824,7 +1824,8 @@
     background: transparent;
   }
   .heatmap-grid {
-    min-width: max-content;
+    width: max-content;
+    table-layout: fixed;
     border-collapse: separate;
     border-spacing: 3px;
     padding: 7px;
@@ -1840,18 +1841,31 @@
     white-space: nowrap;
   }
   .heatmap-corner {
+    width: 175px;
+    max-width: 175px;
     font-family: var(--font-sans);
     text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .heatmap-axis-label:not(.heatmap-row-label) {
+    width: 68px;
+    max-width: 68px;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   .heatmap-row-label {
-    max-width: 200px;
+    width: 175px;
+    max-width: 175px;
     overflow: hidden;
     text-align: left;
     text-overflow: ellipsis;
   }
   .heatmap-cell {
     position: relative;
-    min-width: 26px;
+    width: 68px;
+    min-width: 68px;
+    max-width: 68px;
     height: 27px;
     padding: 2px;
     border: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
