@@ -191,7 +191,12 @@ export function functionArgumentSql(argument: FunctionArgument): string {
     }
     if (!['json', 'array', 'map'].includes(argument.kind))
         throw new Error('Choose a supported input type.');
-    const value: unknown = JSON.parse(argument.value);
+    let value: unknown;
+    try {
+        value = JSON.parse(argument.value);
+    } catch {
+        throw new Error('Enter valid JSON. Check quotes, commas, and brackets.');
+    }
     if (argument.kind === 'json') return literal(value);
     if (argument.kind === 'array') {
         if (!Array.isArray(value)) throw new Error('Enter a JSON array, e.g. [1, 2, 3].');

@@ -59,7 +59,7 @@ for (const mode of ['Standard', 'Experimental']) {
         const run = details.getByRole('button', { name: 'Run on ClickHouse', exact: true });
         await expect(type).toHaveAttribute('data-value', 'string');
         await expect(input).toHaveValue('');
-        await expect(input).toHaveAccessibleDescription('Plain text; quotes are not needed.');
+        await expect(input).toHaveAccessibleDescription('Text, no quotes needed.');
         await input.fill("hello'\\\nworld");
         await run.click();
         await expect(details.locator('.sql-function-output')).toBeVisible();
@@ -180,10 +180,10 @@ for (const mode of ['Standard', 'Experimental']) {
                 .getByRole('button', { name: 'python_double Executable UDF', exact: true })
                 .click();
             const details = page.locator('.sql-function-details');
-            await expect(details.locator('.object-details-hero')).toContainText('3 arguments');
+            await expect(details.locator('.object-details-hero')).toContainText('Server-wide');
             await expect(details.locator('.sql-function-argument')).toHaveCount(3);
-            await expect(details.locator('.sql-function-arguments-heading')).toContainText(
-                '3 detected',
+            await expect(details.locator('.sql-function-arguments-heading')).not.toContainText(
+                'detected',
             );
             await expect(details.getByRole('combobox')).toHaveCount(0);
             await expect(
@@ -233,9 +233,7 @@ for (const mode of ['Standard', 'Experimental']) {
             .getByRole('button', { name: 'python_double Executable UDF', exact: true })
             .click();
         const details = page.locator('.sql-function-details');
-        await expect(details.locator('.object-details-hero')).toContainText(
-            'Signature unavailable',
-        );
+        await expect(details.locator('.object-details-hero')).toContainText('Server-wide');
         await expect(details.locator('.sql-function-arguments-heading')).toContainText(
             'Manual signature',
         );
@@ -307,7 +305,7 @@ test('Detected unsupported and zero-argument signatures remain accurate without 
     ).toBeDisabled();
     await page.locator('.object-back-button').click();
     await page.getByRole('button', { name: 'no_inputs Executable UDF', exact: true }).click();
-    await expect(page.locator('.object-details-hero')).toContainText('0 arguments');
+    await expect(page.locator('.object-details-hero')).toContainText('No arguments');
     await expect(page.locator('.sql-function-argument')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Add argument', exact: true })).toHaveCount(0);
     await expect(

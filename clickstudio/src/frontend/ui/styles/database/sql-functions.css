@@ -294,7 +294,11 @@
 
   .sql-function-error {
     margin: 0;
-    color: var(--red);
+    padding: 7px 9px;
+    border: 1px solid color-mix(in srgb, var(--red) 32%, var(--line));
+    border-radius: var(--radius-control);
+    background: color-mix(in srgb, var(--red) 6%, var(--panel));
+    color: color-mix(in srgb, var(--red) 82%, var(--text));
     font-size: 11px;
     line-height: 1.6;
     overflow-wrap: anywhere;

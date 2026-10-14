@@ -11,7 +11,7 @@ import { PYTHON_SCALAR_TYPES } from '../../../shared/database/functions/python-f
 import { SelectControl } from '../../ui/components/SelectControl';
 
 const inputHints: Record<FunctionArgumentKind, string> = {
-    string: 'Plain text; quotes are not needed.',
+    string: 'Text, no quotes needed.',
     integer: 'Whole number, e.g. 42.',
     float: 'Decimal number, e.g. 3.14 or 1e3.',
     boolean: 'true or false.',

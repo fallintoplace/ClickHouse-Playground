@@ -166,6 +166,18 @@ test('Tester rejects raw SQL, JSON objects, unsafe numbers, huge maps and deep i
         assert.throws(() => functionArgumentSql({ kind: 'map', value }));
 });
 
+test('Malformed JSON inputs show one short, actionable validation message', () => {
+    const invalid = [
+        { kind: 'array', value: '[1, 2' },
+        { kind: 'map', value: '[["key", 1]' },
+        { kind: 'json', value: '{"key":}' },
+    ];
+    for (const argument of invalid)
+        assert.throws(() => functionArgumentSql(argument), {
+            message: 'Enter valid JSON. Check quotes, commas, and brackets.',
+        });
+});
+
 test('String inputs accept plain text and escape it as one SQL literal', () => {
     for (const value of [
         '',

@@ -140,7 +140,7 @@ function functionResultHint(
     if (busy) return 'Waiting for ClickHouse…';
     if (!trusted) return 'Trust this connection to run the function.';
     if (attempt && attempt.sql !== sql) return 'Arguments changed. Run again to update the result.';
-    return 'Run the function to see its result.';
+    return 'No result yet.';
 }
 
 function FunctionDetailsHero({
@@ -161,12 +161,35 @@ function FunctionDetailsHero({
                 <h3>{fn.name}</h3>
             </div>
             <small>
-                Server-wide ·{' '}
-                {manual
-                    ? 'Signature unavailable'
-                    : `${fn.parameters.length} ${fn.parameters.length === 1 ? 'argument' : 'arguments'}`}
+                Server-wide{!manual && fn.parameters.length === 0 ? ' · No arguments' : ''}
             </small>
         </header>
+    );
+}
+
+function FunctionSignatureStatus({
+    manual,
+    onRefresh,
+}: {
+    manual: boolean;
+    onRefresh?: () => void;
+}) {
+    if (!manual && !onRefresh) return null;
+    return (
+        <div className="sql-function-signature-status">
+            {manual && <small className="sql-function-input-hint">Manual signature</small>}
+            {onRefresh && (
+                <Button
+                    variant="secondary"
+                    className="toolbar-small sql-function-refresh-signature"
+                    onClick={onRefresh}
+                    title="Refresh signature"
+                    aria-label="Refresh signature"
+                >
+                    <Icon name="refresh" />
+                </Button>
+            )}
+        </div>
     );
 }
 
@@ -314,24 +337,10 @@ export function SqlFunctionDetails({
                     <div className="sql-function-arguments">
                         <div className="sql-function-arguments-heading">
                             <h4>Arguments</h4>
-                            <div className="sql-function-signature-status">
-                                <small className="sql-function-input-hint">
-                                    {manualSignature
-                                        ? 'Manual signature'
-                                        : `${fn.parameters.length} detected`}
-                                </small>
-                                {onRefreshSignature && (
-                                    <Button
-                                        variant="secondary"
-                                        className="toolbar-small sql-function-refresh-signature"
-                                        onClick={onRefreshSignature}
-                                        title="Refresh signature"
-                                        aria-label="Refresh signature"
-                                    >
-                                        <Icon name="refresh" />
-                                    </Button>
-                                )}
-                            </div>
+                            <FunctionSignatureStatus
+                                manual={manualSignature}
+                                onRefresh={onRefreshSignature}
+                            />
                         </div>
                         <FunctionInputs
                             parameters={fn.parameters}

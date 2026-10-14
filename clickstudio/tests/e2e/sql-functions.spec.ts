@@ -243,6 +243,8 @@ test('Invalid creation fields and raw SQL tester input never reach the server', 
     const { requests } = await functionsWorkspace(page, { existing: true });
     await page.getByRole('button', { name: 'Create SQL UDF', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Create SQL Function', exact: true });
+    await dialog.getByLabel('Function name', { exact: true }).fill('valid_function');
+    await dialog.getByLabel('Parameter 1 name', { exact: true }).fill('value');
     await dialog.getByLabel('Expression', { exact: true }).fill('1; DROP TABLE events');
     await expect(dialog.getByRole('button', { name: 'Create UDF', exact: true })).toBeDisabled();
     await expect(dialog.getByRole('status')).toHaveText(
@@ -305,6 +307,32 @@ test('Changing inputs clears the previous result and prevents stale output durin
     ).toBeEnabled();
     await expect(page.locator('.sql-function-output')).toHaveCount(0);
 });
+
+for (const theme of ['Dark', 'Light']) {
+    test(`${theme} function tester explains malformed JSON and styles the error`, async ({
+        page,
+    }) => {
+        const { requests } = await functionsWorkspace(page, { existing: true });
+        await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+        await page
+            .getByRole('button', { name: 'udf_array_remove_at SQL UDF', exact: true })
+            .click();
+        const details = page.locator('.sql-function-details');
+        await details.getByLabel('items', { exact: true }).fill('[10, 20');
+
+        const error = details.locator('.sql-function-error');
+        await expect(error).toHaveText('Enter valid JSON. Check quotes, commas, and brackets.');
+        await expect(error).toHaveCSS('border-top-width', '1px');
+        await expect(error).toHaveCSS('border-top-style', 'solid');
+        expect(await error.evaluate(element => getComputedStyle(element).backgroundColor)).not.toBe(
+            'rgba(0, 0, 0, 0)',
+        );
+        await expect(
+            details.getByRole('button', { name: 'Run on ClickHouse', exact: true }),
+        ).toBeDisabled();
+        expect(requests.filter(body => body.action === 'run')).toHaveLength(0);
+    });
+}
 
 test('Reusing a tester draft after switching tabs cannot show its old result on failure', async ({
     page,
@@ -488,7 +516,7 @@ for (const theme of ['Dark', 'Light']) {
         const details = page.locator('.sql-function-details');
         await expect(
             page.getByRole('region', { name: 'Function result', exact: true }),
-        ).toContainText('Run the function to see its result.');
+        ).toContainText('No result yet.');
         const input = details.getByLabel(parameter, { exact: true });
         await chooseSelectOption(
             page,
