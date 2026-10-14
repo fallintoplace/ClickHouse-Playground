@@ -395,7 +395,7 @@
   .pipeline-graph-toolbar .pipeline-graph-controls {
     flex: none;
   }
-  .is-sql-flow-graph .pipeline-graph-controls button {
+  :is(.is-sql-flow-graph, .tree-graph-card) .pipeline-graph-controls button {
     min-height: 28px;
     padding-inline: 7px;
   }

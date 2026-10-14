@@ -10,6 +10,7 @@ import {
 } from './tree-model';
 import type { Copy } from '../copy';
 import { ScrollEdgeFrame } from './ScrollEdgeShadows';
+import { Icon } from './icons';
 
 const nodeWidth = 220;
 const nodeHeight = 72;
@@ -30,6 +31,102 @@ type TreeGraphPresentation = {
 function compact(value: string | undefined, max = 30) {
     if (!value) return '';
     return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
+}
+
+function TreeGraphToolbar({
+    heading,
+    hint,
+    nodeCount,
+    copy,
+    zoom,
+    canToggleSelected,
+    selectedExpanded,
+    onToggleSelected,
+    onZoomOut,
+    onZoomIn,
+    onFocusNode,
+    onFitGraph,
+}: {
+    heading: string;
+    hint: string;
+    nodeCount: number;
+    copy: Copy['common'];
+    zoom: number;
+    canToggleSelected: boolean;
+    selectedExpanded: boolean;
+    onToggleSelected: () => void;
+    onZoomOut: () => void;
+    onZoomIn: () => void;
+    onFocusNode: () => void;
+    onFitGraph: () => void;
+}) {
+    return (
+        <div className="pipeline-graph-toolbar">
+            <div className="pipeline-graph-heading">
+                <div>
+                    <span className="eyebrow">{heading.toUpperCase()}</span>
+                    <strong>
+                        {nodeCount.toLocaleString()} {copy.sqlAstNodes}
+                    </strong>
+                </div>
+                <small>{hint}</small>
+            </div>
+            <div
+                className="pipeline-graph-controls"
+                role="group"
+                aria-label={copy.pipelineZoomControls}
+            >
+                {canToggleSelected && (
+                    <button
+                        type="button"
+                        className="ast-expand-selected"
+                        onClick={onToggleSelected}
+                    >
+                        {selectedExpanded ? copy.collapse : copy.expand}
+                    </button>
+                )}
+                <button
+                    type="button"
+                    aria-label={copy.pipelineZoomOut}
+                    title={copy.pipelineZoomOut}
+                    disabled={zoom <= 0.02}
+                    onClick={onZoomOut}
+                >
+                    −
+                </button>
+                <output aria-label={copy.pipelineZoomLevel}>{Math.round(zoom * 100)}%</output>
+                <button
+                    type="button"
+                    aria-label={copy.pipelineZoomIn}
+                    title={copy.pipelineZoomIn}
+                    disabled={zoom >= 2.5}
+                    onClick={onZoomIn}
+                >
+                    +
+                </button>
+                <button
+                    type="button"
+                    className="pipeline-control-action pipeline-focus-node"
+                    aria-label={copy.pipelineFocusNode}
+                    title={copy.pipelineFocusNode}
+                    onClick={onFocusNode}
+                >
+                    <Icon name="focus" />
+                    <span>{copy.pipelineFocusNode}</span>
+                </button>
+                <button
+                    type="button"
+                    className="pipeline-control-action pipeline-zoom-fit"
+                    aria-label={copy.pipelineFit}
+                    title={copy.pipelineFit}
+                    onClick={onFitGraph}
+                >
+                    <Icon name="fit" />
+                    <span>{copy.pipelineFit}</span>
+                </button>
+            </div>
+        </div>
+    );
 }
 
 export function TreeGraph({
@@ -124,79 +221,53 @@ export function TreeGraph({
         setZoom(Math.min(1, availableWidth / graphWidth, availableHeight / graphHeight));
         viewport.scrollTo({ top: 0, left: 0 });
     };
+    const focusSelectedNode = () => {
+        const viewport = graphViewport.current;
+        const node = viewport?.querySelector<SVGGElement>('.ast-graph-node.is-selected');
+        if (!viewport || !node) return;
+        const nodeRect = node.getBoundingClientRect();
+        const viewportRect = viewport.getBoundingClientRect();
+        viewport.scrollTo({
+            left:
+                viewport.scrollLeft +
+                nodeRect.left +
+                nodeRect.width / 2 -
+                (viewportRect.left + viewport.clientWidth / 2),
+            top:
+                viewport.scrollTop +
+                nodeRect.top +
+                nodeRect.height / 2 -
+                (viewportRect.top + viewport.clientHeight / 2),
+            behavior: 'smooth',
+        });
+        node.focus({ preventScroll: true });
+    };
 
     return (
         <div
-            className="pipeline-graph-card ast-graph-card grid gap-3 rounded-xl border p-3"
+            className="pipeline-graph-card ast-graph-card tree-graph-card grid gap-2 rounded-xl border p-3"
             role="group"
             aria-label={presentation.label}
         >
-            <div className="pipeline-graph-heading">
-                <div>
-                    <span className="eyebrow">{presentation.heading.toUpperCase()}</span>
-                    <strong>
-                        {model.nodeCount.toLocaleString()} {copy.sqlAstNodes}
-                    </strong>
-                </div>
-                <small>{presentation.hint}</small>
-            </div>
+            <TreeGraphToolbar
+                heading={presentation.heading}
+                hint={presentation.hint}
+                nodeCount={model.nodeCount}
+                copy={copy}
+                zoom={zoom}
+                canToggleSelected={selected.children.length > 0}
+                selectedExpanded={selectedExpanded}
+                onToggleSelected={() => toggle(selected)}
+                onZoomOut={() => setZoom(current => Math.max(0.02, current / 1.2))}
+                onZoomIn={() => setZoom(current => Math.min(2.5, current * 1.2))}
+                onFocusNode={focusSelectedNode}
+                onFitGraph={fitGraph}
+            />
             {(model.truncated || visible.truncated) && (
                 <p className="pipeline-graph-warning" role="status">
                     {presentation.truncated}
                 </p>
             )}
-            <div
-                className="pipeline-graph-controls"
-                role="group"
-                aria-label={copy.pipelineZoomControls}
-            >
-                {selected.children.length > 0 && (
-                    <button
-                        type="button"
-                        className="ast-expand-selected"
-                        onClick={() => toggle(selected)}
-                    >
-                        {selectedExpanded ? copy.collapse : copy.expand}
-                    </button>
-                )}
-                <button
-                    type="button"
-                    aria-label={copy.pipelineZoomOut}
-                    title={copy.pipelineZoomOut}
-                    disabled={zoom <= 0.02}
-                    onClick={() => setZoom(current => Math.max(0.02, current / 1.2))}
-                >
-                    −
-                </button>
-                <button
-                    type="button"
-                    className="pipeline-zoom-reset"
-                    aria-label={copy.pipelineZoomReset}
-                    title={copy.pipelineZoomReset}
-                    onClick={() => setZoom(1)}
-                >
-                    100%
-                </button>
-                <output aria-label={copy.pipelineZoomLevel}>{Math.round(zoom * 100)}%</output>
-                <button
-                    type="button"
-                    aria-label={copy.pipelineZoomIn}
-                    title={copy.pipelineZoomIn}
-                    disabled={zoom >= 2.5}
-                    onClick={() => setZoom(current => Math.min(2.5, current * 1.2))}
-                >
-                    +
-                </button>
-                <button
-                    type="button"
-                    className="pipeline-zoom-fit"
-                    aria-label={copy.pipelineFit}
-                    title={copy.pipelineFit}
-                    onClick={fitGraph}
-                >
-                    {copy.pipelineFit}
-                </button>
-            </div>
             <ScrollEdgeFrame<HTMLDivElement>
                 className="pipeline-graph-viewport-frame"
                 onViewport={setGraphViewport}
