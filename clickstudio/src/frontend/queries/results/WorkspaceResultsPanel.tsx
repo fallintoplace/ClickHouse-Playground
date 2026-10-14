@@ -14,7 +14,11 @@ import type { WorkspaceViewState } from '../../workspace/layout/useWorkspaceView
 import { ChartView, GeoView, InsightsView, ResultGrid } from './ResultViews';
 import { ExplainAnalyzeView } from '../inspection/performance/ExplainAnalyzeView';
 import { ExplainIndexesView } from '../inspection/plans/ExplainIndexesView';
-import { ExplainPlanView } from '../inspection/plans/ExplainPlanView';
+import {
+    ExplainPlanView,
+    ExplainPlanViewControls,
+    type ExplainPlanViewMode,
+} from '../inspection/plans/ExplainPlanView';
 import { PipelineGraph } from '../inspection/diagrams/PipelineGraph';
 import {
     SqlFlowModeTabs,
@@ -84,6 +88,7 @@ export function WorkspaceResultsPanel({
     const [tableToolbar, setTableToolbar] = useState<HTMLDivElement | null>(null);
     const [tableRowCount, setTableRowCount] = useState<HTMLSpanElement | null>(null);
     const [structureMode, setStructureMode] = useState<StructureView>('flow');
+    const [planView, setPlanView] = useState<ExplainPlanViewMode>('graph');
     const {
         copy,
         run,
@@ -160,6 +165,8 @@ export function WorkspaceResultsPanel({
                 state,
                 structureMode,
                 onStructureModeChange: setStructureMode,
+                planView,
+                onPlanViewChange: setPlanView,
             })}
             <WorkspaceInlineNotice feedback={state.readFeedback} onRetry={actions.onRetryRead} />
             {runningScript && visibleResultsView === 'results' && !panels.resultsCollapsed && (
@@ -196,6 +203,7 @@ export function WorkspaceResultsPanel({
                         tableToolbar={tableToolbar}
                         tableRowCount={tableRowCount}
                         structureMode={structureMode}
+                        planView={planView}
                     />
                 )}
             </ScrollEdgeFrame>
@@ -221,6 +229,7 @@ type WorkspaceResultsBodyProps = {
     tableToolbar: HTMLDivElement | null;
     tableRowCount: HTMLSpanElement | null;
     structureMode: StructureView;
+    planView: ExplainPlanViewMode;
 };
 
 function WorkspaceResultsBody({
@@ -241,6 +250,7 @@ function WorkspaceResultsBody({
     tableToolbar,
     tableRowCount,
     structureMode,
+    planView,
 }: WorkspaceResultsBodyProps) {
     const {
         active,
@@ -341,6 +351,7 @@ function WorkspaceResultsBody({
                         rowsUnavailable={rowsUnavailable}
                         tableToolbar={tableToolbar}
                         tableRowCount={tableRowCount}
+                        planView={planView}
                     />
                 </>
             )}
@@ -361,6 +372,7 @@ type WorkspaceResultViewProps = Pick<
     | 'rowsUnavailable'
     | 'tableToolbar'
     | 'tableRowCount'
+    | 'planView'
 >;
 
 function WorkspaceResultView({
@@ -375,6 +387,7 @@ function WorkspaceResultView({
     rowsUnavailable,
     tableToolbar,
     tableRowCount,
+    planView,
 }: WorkspaceResultViewProps) {
     const {
         active,
@@ -437,6 +450,7 @@ function WorkspaceResultView({
                     plan={explainPlan}
                     loading={!retainedSnapshot && run.resultState === 'reopenable'}
                     copy={copy.common}
+                    view={planView}
                 />
             );
         case 'pipeline':
@@ -593,6 +607,8 @@ function renderResultsHeader({
     state,
     structureMode,
     onStructureModeChange,
+    planView,
+    onPlanViewChange,
 }: {
     showFailure: boolean;
     setTableToolbar: import('react').Dispatch<
@@ -608,6 +624,8 @@ function renderResultsHeader({
     state: WorkspaceResultsPanelState;
     structureMode: StructureView;
     onStructureModeChange: (mode: StructureView) => void;
+    planView: ExplainPlanViewMode;
+    onPlanViewChange: (mode: ExplainPlanViewMode) => void;
 }) {
     const {
         visibleResultsView,
@@ -653,6 +671,14 @@ function renderResultsHeader({
                 {!showQueryCard && (
                     <div className="results-heading">
                         <h2>{resultsTitle}</h2>
+                        {visibleResultsView === 'plan' && viewState.explainPlan && (
+                            <ExplainPlanViewControls
+                                view={planView}
+                                onViewChange={onPlanViewChange}
+                                nodeCount={viewState.explainPlan.nodeCount}
+                                copy={copy.common}
+                            />
+                        )}
                     </div>
                 )}
                 {visibleResultsView === 'sqlmap' && (

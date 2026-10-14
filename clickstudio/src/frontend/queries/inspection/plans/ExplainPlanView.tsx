@@ -16,6 +16,8 @@ import type { Copy } from '../../../ui/copy';
 
 const MAX_PROPERTY_TEXT = 12_000;
 
+export type ExplainPlanViewMode = 'graph' | 'tree';
+
 function propertyCount(value: Json) {
     if (Array.isArray(value)) return value.length.toLocaleString();
     if (value !== null && typeof value === 'object')
@@ -158,12 +160,13 @@ export function ExplainPlanView({
     plan,
     loading,
     copy,
+    view,
 }: {
     plan?: ExplainPlan;
     loading: boolean;
     copy: Copy['common'];
+    view: ExplainPlanViewMode;
 }) {
-    const [view, setView] = useState<'graph' | 'tree'>('graph');
     const graph = useMemo(
         () => (plan ? planGraph(plan, copy.planUnknownStep, copy.planDepthLimit) : undefined),
         [plan, copy.planDepthLimit, copy.planUnknownStep],
@@ -184,39 +187,6 @@ export function ExplainPlanView({
         <ScrollEdgeFrame<HTMLDivElement> className="explain-plan-view-frame">
             {ref => (
                 <div ref={ref} className="explain-plan-view">
-                    <header className="explain-plan-heading">
-                        <h3>{copy.logicalPlan}</h3>
-                        <div className="explain-plan-heading-actions">
-                            <div
-                                className="explain-plan-view-switch"
-                                role="group"
-                                aria-label={copy.logicalPlan}
-                            >
-                                <button
-                                    type="button"
-                                    aria-pressed={view === 'graph'}
-                                    onClick={() => setView('graph')}
-                                >
-                                    <Icon name="graph" />
-                                    {copy.planGraphView}
-                                </button>
-                                <button
-                                    type="button"
-                                    aria-pressed={view === 'tree'}
-                                    onClick={() => setView('tree')}
-                                >
-                                    <Icon name="tree" />
-                                    {copy.planTreeView}
-                                </button>
-                            </div>
-                            <strong>
-                                {copy.planNodeCount.replace(
-                                    '{count}',
-                                    plan.nodeCount.toLocaleString(),
-                                )}
-                            </strong>
-                        </div>
-                    </header>
                     {plan.truncated && (
                         <p className="pipeline-graph-warning" role="status">
                             {copy.planTruncated}
@@ -270,5 +240,41 @@ export function ExplainPlanView({
                 </div>
             )}
         </ScrollEdgeFrame>
+    );
+}
+
+export function ExplainPlanViewControls({
+    view,
+    onViewChange,
+    nodeCount,
+    copy,
+}: {
+    view: ExplainPlanViewMode;
+    onViewChange: (view: ExplainPlanViewMode) => void;
+    nodeCount: number;
+    copy: Copy['common'];
+}) {
+    return (
+        <div className="results-plan-controls">
+            <div className="explain-plan-view-switch" role="group" aria-label={copy.logicalPlan}>
+                <button
+                    type="button"
+                    aria-pressed={view === 'graph'}
+                    onClick={() => onViewChange('graph')}
+                >
+                    <Icon name="graph" />
+                    {copy.planGraphView}
+                </button>
+                <button
+                    type="button"
+                    aria-pressed={view === 'tree'}
+                    onClick={() => onViewChange('tree')}
+                >
+                    <Icon name="tree" />
+                    {copy.planTreeView}
+                </button>
+            </div>
+            <strong>{copy.planNodeCount.replace('{count}', nodeCount.toLocaleString())}</strong>
+        </div>
     );
 }

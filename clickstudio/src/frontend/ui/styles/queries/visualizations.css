@@ -941,43 +941,6 @@
     overflow: auto;
     padding: 8px;
   }
-  .explain-plan-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 7px 10px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-panel);
-    background: linear-gradient(
-      115deg,
-      color-mix(in srgb, var(--accent) 6%, var(--panel-raised)),
-      var(--panel-raised) 68%
-    );
-  }
-  .explain-plan-heading h3 {
-    margin: 0;
-    color: var(--text);
-    font-size: 12px;
-    font-weight: 700;
-  }
-  .explain-plan-heading-actions > strong {
-    padding: 4px 7px;
-    border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
-    border-radius: var(--radius-label);
-    background: color-mix(in srgb, var(--accent) 5%, var(--panel));
-    color: var(--text-soft);
-    font-family: var(--font-mono);
-    font-size: 8px;
-    white-space: nowrap;
-  }
-  .explain-plan-heading-actions {
-    display: flex;
-    min-width: 0;
-    align-items: center;
-    justify-content: end;
-    gap: 7px;
-  }
   .explain-plan-view-switch {
     display: inline-flex;
     align-items: center;
@@ -2283,14 +2246,6 @@
   }
   .pipeline-graph-heading > small {
     text-align: left;
-  }
-  .explain-plan-heading {
-    align-items: flex-start;
-    flex-wrap: wrap;
-  }
-  .explain-plan-heading-actions {
-    width: 100%;
-    justify-content: space-between;
   }
   .sql-flow-heading {
     align-items: start;

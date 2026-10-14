@@ -81,6 +81,23 @@
     font-weight: var(--font-weight-emphasis);
     white-space: nowrap;
   }
+  .results-plan-controls {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    align-self: center;
+    gap: 7px;
+    white-space: nowrap;
+  }
+  .results-plan-controls > strong {
+    padding: 4px 7px;
+    border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+    border-radius: var(--radius-label);
+    background: color-mix(in srgb, var(--accent) 5%, var(--panel));
+    color: var(--text-soft);
+    font-family: var(--font-mono);
+    font-size: 8px;
+  }
   .results-title > .inline-flex {
     margin-left: 5px;
   }
