@@ -209,6 +209,7 @@
   .inspector-content.is-assistant-content {
     display: flex;
     overflow: hidden;
+    background: #15181b;
   }
   .inspector-section {
     display: grid;
