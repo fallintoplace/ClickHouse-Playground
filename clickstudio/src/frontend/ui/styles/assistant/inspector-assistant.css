@@ -2429,11 +2429,15 @@
     flex: none;
   }
   .execution-help-hint {
+    min-width: 0;
     max-width: min(42vw, 660px);
     margin: 0;
+    overflow: hidden;
     color: var(--text-soft);
     font-size: 12px;
     line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .execution-details-button {
     min-height: 27px;
