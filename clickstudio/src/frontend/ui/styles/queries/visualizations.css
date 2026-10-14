@@ -2279,6 +2279,17 @@
   flex: 0 1 160px;
 }
 
+.chart-select.select-control-field {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+
+.select-control-field > .chart-select-trigger {
+  height: 34px;
+  min-height: 34px;
+}
+
 .chart-select-trigger {
   display: inline-flex;
   min-width: 0;

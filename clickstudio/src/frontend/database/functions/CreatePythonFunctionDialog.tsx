@@ -8,6 +8,7 @@ import {
 } from '../../../shared/database/functions/python-functions';
 import { pythonUdfArtifact } from '../../../shared/database/functions/python-udf-package';
 import { CreationDialog } from '../../ui/components/CreationDialog';
+import { SelectControl } from '../../ui/components/SelectControl';
 import { Icon } from '../../ui/components/icons';
 import { message } from '../../api/client';
 import { PythonFunctionEditor } from './PythonFunctionEditor';
@@ -23,6 +24,7 @@ export function CreatePythonFunctionDialog({
     deployAllowed: boolean;
 }) {
     const nameInput = useRef<HTMLInputElement>(null);
+    const [template, setTemplate] = useState('0');
     const [draft, setDraft] = useState<PythonFunctionDraft>(() =>
         structuredClone(PYTHON_FUNCTION_TEMPLATES[0]!),
     );
@@ -88,28 +90,26 @@ export function CreatePythonFunctionDialog({
         >
             <div className="python-function-scroll">
                 <div className="python-function-fields">
-                    <label className="creation-dialog-field">
+                    <div className="creation-dialog-field">
                         <span>Template</span>
-                        <select
-                            className="creation-dialog-control"
-                            aria-label="Template"
-                            defaultValue="0"
-                            onChange={event => {
+                        <SelectControl
+                            className="select-control-field"
+                            label="Template"
+                            value={template}
+                            disabled={busy}
+                            options={PYTHON_FUNCTION_TEMPLATES.map((item, index) => ({
+                                value: String(index),
+                                label: item.label,
+                            }))}
+                            onChange={value => {
+                                setTemplate(value);
                                 setDraft(
-                                    structuredClone(
-                                        PYTHON_FUNCTION_TEMPLATES[Number(event.target.value)]!,
-                                    ),
+                                    structuredClone(PYTHON_FUNCTION_TEMPLATES[Number(value)]!),
                                 );
                                 setError('');
                             }}
-                        >
-                            {PYTHON_FUNCTION_TEMPLATES.map((template, index) => (
-                                <option key={template.name} value={index}>
-                                    {template.label}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
+                        />
+                    </div>
                     <label className="creation-dialog-field">
                         <span>Function name</span>
                         <input
@@ -120,25 +120,24 @@ export function CreatePythonFunctionDialog({
                             maxLength={128}
                         />
                     </label>
-                    <label className="creation-dialog-field">
+                    <div className="creation-dialog-field">
                         <span>Returns</span>
-                        <select
-                            className="creation-dialog-control"
-                            aria-label="Return type"
+                        <SelectControl
+                            className="select-control-field"
+                            label="Return type"
                             value={draft.returnType}
-                            onChange={event =>
+                            disabled={busy}
+                            options={PYTHON_SCALAR_TYPES.map(type => ({
+                                value: type,
+                                label: type,
+                            }))}
+                            onChange={value =>
                                 update({
-                                    returnType: PYTHON_SCALAR_TYPES.find(
-                                        type => type === event.target.value,
-                                    )!,
+                                    returnType: PYTHON_SCALAR_TYPES.find(type => type === value)!,
                                 })
                             }
-                        >
-                            {PYTHON_SCALAR_TYPES.map(type => (
-                                <option key={type}>{type}</option>
-                            ))}
-                        </select>
-                    </label>
+                        />
+                    </div>
                 </div>
                 <div className="python-function-workspace">
                     <div className="python-function-settings">
@@ -182,30 +181,30 @@ export function CreatePythonFunctionDialog({
                                             })
                                         }
                                     />
-                                    <select
-                                        className="creation-dialog-control"
-                                        aria-label={`Argument ${index + 1} type`}
+                                    <SelectControl
+                                        className="select-control-field"
+                                        label={`Argument ${index + 1} type`}
                                         value={argument.type}
-                                        onChange={event =>
+                                        disabled={busy}
+                                        options={PYTHON_SCALAR_TYPES.map(type => ({
+                                            value: type,
+                                            label: type,
+                                        }))}
+                                        onChange={value =>
                                             update({
                                                 arguments: draft.arguments.map((item, at) =>
                                                     at === index
                                                         ? {
                                                               ...item,
                                                               type: PYTHON_SCALAR_TYPES.find(
-                                                                  type =>
-                                                                      type === event.target.value,
+                                                                  type => type === value,
                                                               )!,
                                                           }
                                                         : item,
                                                 ),
                                             })
                                         }
-                                    >
-                                        {PYTHON_SCALAR_TYPES.map(type => (
-                                            <option key={type}>{type}</option>
-                                        ))}
-                                    </select>
+                                    />
                                     <button
                                         type="button"
                                         className="creation-dialog-button python-function-icon-button"

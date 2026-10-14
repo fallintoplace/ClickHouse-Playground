@@ -7,6 +7,7 @@ import type {
 } from '../../../shared/database/functions/python-functions';
 import { message } from '../../api/client';
 import { Icon } from '../../ui/components/icons';
+import { SelectControl } from '../../ui/components/SelectControl';
 import {
     attachPythonFunction,
     publishPythonFunction,
@@ -136,24 +137,26 @@ export function PythonDeploymentPanel({
             )}
             {allowed && capability?.serviceId && (
                 <>
-                    <label className="creation-dialog-field">
+                    <div className="creation-dialog-field">
                         <span>Target service</span>
-                        <select
-                            className="creation-dialog-control"
-                            aria-label="Target service"
+                        <SelectControl
+                            className="select-control-field"
+                            label="Target service"
                             value={selectedService}
                             disabled={busy}
-                            onChange={event => {
-                                setSelectedService(event.target.value);
+                            options={[
+                                { value: '', label: 'Select service' },
+                                {
+                                    value: capability.serviceId,
+                                    label: `${capability.serviceName} (${capability.serviceId})`,
+                                },
+                            ]}
+                            onChange={value => {
+                                setSelectedService(value);
                                 setConfirmed(false);
                             }}
-                        >
-                            <option value="">Select service</option>
-                            <option value={capability.serviceId}>
-                                {capability.serviceName} ({capability.serviceId})
-                            </option>
-                        </select>
-                    </label>
+                        />
+                    </div>
                     <div className="python-deployment-actions">
                         <button
                             type="button"
@@ -209,31 +212,30 @@ export function PythonDeploymentPanel({
                     )}
                     {status && (
                         <>
-                            <label className="creation-dialog-field">
+                            <div className="creation-dialog-field">
                                 <span>Build version</span>
-                                <select
-                                    className="creation-dialog-control"
-                                    aria-label="Build version"
+                                <SelectControl
+                                    className="select-control-field"
+                                    label="Build version"
                                     value={selectedVersion}
                                     disabled={busy}
-                                    onChange={event => {
+                                    options={[
+                                        { value: '', label: 'Select version' },
+                                        ...status.versions.map(version => ({
+                                            value: String(version.version),
+                                            label: `v${version.version} - ${version.status}`,
+                                        })),
+                                    ]}
+                                    onChange={value => {
                                         const version = status.versions.find(
-                                            version =>
-                                                String(version.version) === event.target.value,
+                                            version => String(version.version) === value,
                                         );
-                                        setSelectedVersion(event.target.value);
+                                        setSelectedVersion(value);
                                         setConfirmed(false);
                                         if (version) onSignature?.(version.arguments);
                                     }}
-                                >
-                                    <option value="">Select version</option>
-                                    {status.versions.map(version => (
-                                        <option key={version.version} value={version.version}>
-                                            v{version.version} - {version.status}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
+                                />
+                            </div>
                             {selected?.error && (
                                 <p className="sql-function-error" role="alert">
                                     {selected.error}

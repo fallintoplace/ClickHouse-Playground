@@ -13,6 +13,7 @@ export function SelectControl({
     onChange,
     searchable = false,
     hideDisabledOptions = true,
+    disabled = false,
     className = '',
 }: {
     label: string;
@@ -21,6 +22,7 @@ export function SelectControl({
     onChange: (value: string) => void;
     searchable?: boolean;
     hideDisabledOptions?: boolean;
+    disabled?: boolean;
     className?: string;
 }) {
     const id = useId();
@@ -68,13 +70,7 @@ export function SelectControl({
 
     const showMenu = () => {
         const element = menu.current;
-        if (!element || !hasEnabledOptions || element.matches(':popover-open')) return;
-        setSearch('');
-        const selectedIndex = availableOptions.findIndex(
-            option => option.value === value && !option.disabled,
-        );
-        const firstEnabledIndex = availableOptions.findIndex(option => !option.disabled);
-        setActiveIndex(Math.max(0, selectedIndex >= 0 ? selectedIndex : firstEnabledIndex));
+        if (!element || disabled || !hasEnabledOptions || element.matches(':popover-open')) return;
         element.showPopover();
     };
 
@@ -85,7 +81,7 @@ export function SelectControl({
     };
 
     const chooseOption = (option: SelectControlOption | undefined) => {
-        if (!option || option.disabled) return;
+        if (disabled || !option || option.disabled) return;
         onChange(option.value);
         hideMenu(true);
     };
@@ -118,9 +114,20 @@ export function SelectControl({
 
     useEffect(() => {
         const element = menu.current;
-        if ((hasEnabledOptions && !hasSingleOption) || !element?.matches(':popover-open')) return;
+        if (
+            (!disabled && hasEnabledOptions && !hasSingleOption) ||
+            !element?.matches(':popover-open')
+        )
+            return;
         element.hidePopover();
-    }, [hasEnabledOptions, hasSingleOption]);
+    }, [disabled, hasEnabledOptions, hasSingleOption]);
+
+    useEffect(() => {
+        if (open)
+            listbox.current
+                ?.querySelector<HTMLElement>('[data-active="true"]')
+                ?.scrollIntoView({ block: 'nearest' });
+    }, [open, activeIndex, search]);
 
     useEffect(() => {
         if (!open) return;
@@ -165,7 +172,7 @@ export function SelectControl({
                     ref={trigger}
                     type="button"
                     className="chart-select-trigger"
-                    disabled={!hasEnabledOptions}
+                    disabled={disabled || !hasEnabledOptions}
                     role="combobox"
                     aria-label={label}
                     aria-haspopup="listbox"
@@ -200,6 +207,16 @@ export function SelectControl({
                         setSearch('');
                         return;
                     }
+                    setSearch('');
+                    const selectedIndex = availableOptions.findIndex(
+                        option => option.value === value && !option.disabled,
+                    );
+                    const firstEnabledIndex = availableOptions.findIndex(
+                        option => !option.disabled,
+                    );
+                    setActiveIndex(
+                        Math.max(0, selectedIndex >= 0 ? selectedIndex : firstEnabledIndex),
+                    );
                     positionMenu();
                     requestAnimationFrame(() => {
                         if (searchable) searchInput.current?.focus({ preventScroll: true });
@@ -210,7 +227,7 @@ export function SelectControl({
                     if (event.key === 'Escape') {
                         event.preventDefault();
                         hideMenu(true);
-                    }
+                    } else if (event.key === 'Tab') hideMenu(true);
                 }}
             >
                 {searchable && (

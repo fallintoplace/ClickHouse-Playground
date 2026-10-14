@@ -8,6 +8,7 @@ import {
 import type { OpenSqlDraft } from '../../queries/execution/sql-draft-observer';
 import { quoteIdentifier } from '../../../shared/sql/sql';
 import { Icon } from '../../ui/components/icons';
+import { SelectControl } from '../../ui/components/SelectControl';
 import { SqlFunctionDetails, type FunctionTestEvidence } from './SqlFunctionDetails';
 import { PythonDeploymentPanel } from './PythonDeploymentPanel';
 
@@ -52,31 +53,32 @@ export function PythonFunctionDetails({
                 <div className="python-function-signature">
                     <h4>Test signature</h4>
                     {arguments_.map((argument, index) => (
-                        <label key={index} className="creation-dialog-field">
+                        <div key={index} className="creation-dialog-field">
                             <span>{argument.name}</span>
-                            <select
-                                aria-label={`Test argument ${index + 1} type`}
+                            <SelectControl
+                                className="select-control-field"
+                                label={`Test argument ${index + 1} type`}
                                 value={argument.type}
-                                onChange={event =>
+                                options={PYTHON_SCALAR_TYPES.map(type => ({
+                                    value: type,
+                                    label: type,
+                                }))}
+                                onChange={value =>
                                     setArguments(current =>
-                                        current.map((value, at) =>
+                                        current.map((argument, at) =>
                                             at === index
                                                 ? {
-                                                      ...value,
+                                                      ...argument,
                                                       type: PYTHON_SCALAR_TYPES.find(
-                                                          type => type === event.target.value,
+                                                          type => type === value,
                                                       )!,
                                                   }
-                                                : value,
+                                                : argument,
                                         ),
                                     )
                                 }
-                            >
-                                {PYTHON_SCALAR_TYPES.map(type => (
-                                    <option key={type}>{type}</option>
-                                ))}
-                            </select>
-                        </label>
+                            />
+                        </div>
                     ))}
                     <div className="python-deployment-actions">
                         <button

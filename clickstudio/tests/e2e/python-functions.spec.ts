@@ -5,6 +5,7 @@ import { functionsWorkspace } from './sql-functions-helpers.js';
 import { setWorkspaceMode, workspacePath } from './helpers.js';
 import { PLAYGROUND_CONNECTION } from '../../src/shared/database/connections/playground.js';
 import { cloudSchema } from '../helpers/cloud-fixtures.js';
+import { chooseChartOption as chooseSelectOption } from './chart-control-helpers.js';
 
 test('Python ZIP export includes offline tokenizer assets without management credentials', async ({
     page,
@@ -15,7 +16,11 @@ test('Python ZIP export includes offline tokenizer assets without management cre
     const pending = page.waitForEvent('download');
     await dialog.getByRole('button', { name: 'Export ZIP', exact: true }).click();
     expect((await pending).suggestedFilename()).toBe('py_similarity.zip');
-    await dialog.getByLabel('Template', { exact: true }).selectOption('2');
+    await chooseSelectOption(
+        page,
+        dialog.getByRole('combobox', { name: 'Template', exact: true }),
+        '2',
+    );
     const tokenDownload = page.waitForEvent('download');
     await dialog.getByRole('button', { name: 'Export ZIP', exact: true }).click();
     const tokenizer = await tokenDownload;
@@ -134,7 +139,11 @@ test('Existing Python functions remain testable without creation privileges', as
         0,
     );
     await page.getByRole('button', { name: 'python_double Executable UDF', exact: true }).click();
-    await page.getByLabel('Test argument 1 type', { exact: true }).selectOption('Int64');
+    await chooseSelectOption(
+        page,
+        page.getByRole('combobox', { name: 'Test argument 1 type', exact: true }),
+        'Int64',
+    );
     await page.getByLabel('arg1', { exact: true }).fill('21');
     await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
     await expect(page.locator('.sql-function-output')).toHaveText('"42"');
@@ -201,6 +210,7 @@ for (const { viewport, theme } of [
         await page.getByRole('button', { name: 'Create Python UDF', exact: true }).click();
         const dialog = page.getByRole('dialog', { name: 'Create Python UDF', exact: true });
         await expect(dialog.getByLabel('Function name', { exact: true })).toBeFocused();
+        await expect(dialog.locator('select')).toHaveCount(0);
         await expect(dialog.getByRole('textbox', { name: 'Python source' })).toContainText(
             'SequenceMatcher',
         );
@@ -240,6 +250,168 @@ for (const { viewport, theme } of [
     });
 }
 
+for (const { width, height } of [
+    { width: 1280, height: 900 },
+    { width: 390, height: 844 },
+]) {
+    test(`Python custom selectors support keyboard navigation inside the dialog at ${width}px`, async ({
+        page,
+    }, info) => {
+        await page.setViewportSize({ width, height });
+        await functionsWorkspace(page);
+        await page.getByRole('button', { name: 'Create Python UDF', exact: true }).click();
+        const dialog = page.getByRole('dialog', { name: 'Create Python UDF', exact: true });
+        const returns = dialog.getByRole('combobox', { name: 'Return type', exact: true });
+        await returns.click();
+        const returnOptions = page.getByRole('listbox', { name: 'Return type', exact: true });
+        await expect(
+            returnOptions.getByRole('option', { name: 'Float64', exact: true }),
+        ).toHaveAttribute('data-active', 'true');
+        await page.keyboard.press('Enter');
+        await expect(returns).toHaveAttribute('data-value', 'Float64');
+        const template = dialog.getByRole('combobox', { name: 'Template', exact: true });
+        const listbox = page.getByRole('listbox', { name: 'Template', exact: true });
+        await template.press('ArrowDown');
+        await expect(listbox).toBeFocused();
+        const bounds = await listbox.boundingBox();
+        expect(bounds!.x).toBeGreaterThanOrEqual(8);
+        expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width - 8);
+        expect(bounds!.y).toBeGreaterThanOrEqual(8);
+        expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(height - 8);
+        await page.screenshot({ path: info.outputPath(`python-template-menu-${width}.png`) });
+        await page.keyboard.press('ArrowDown');
+        await page.keyboard.press('Enter');
+        await expect(template).toHaveAttribute('data-value', '1');
+        await expect(template).toBeFocused();
+        await expect(dialog.getByLabel('Function name', { exact: true })).toHaveValue(
+            'python_double',
+        );
+        await expect(
+            dialog.getByRole('combobox', { name: 'Return type', exact: true }),
+        ).toHaveAttribute('data-value', 'Int64');
+        await chooseSelectOption(
+            page,
+            dialog.getByRole('combobox', { name: 'Argument 1 type', exact: true }),
+            'UInt64',
+        );
+        await expect(
+            dialog.getByRole('combobox', { name: 'Argument 1 type', exact: true }),
+        ).toHaveAttribute('data-value', 'UInt64');
+        await template.click();
+        await expect(listbox).toBeFocused();
+        await page.keyboard.press('Escape');
+        await expect(listbox).toBeHidden();
+        await expect(dialog).toBeVisible();
+        await expect(template).toBeFocused();
+        await template.click();
+        await expect(listbox).toBeFocused();
+        await page.keyboard.press('Shift+Tab');
+        await expect(
+            dialog.getByRole('button', { name: 'Close Create Python UDF', exact: true }),
+        ).toBeFocused();
+        await expect(listbox).toBeHidden();
+        await template.click();
+        await expect(listbox).toBeFocused();
+        await page.keyboard.press('Tab');
+        await expect(dialog.getByLabel('Function name', { exact: true })).toBeFocused();
+        await expect(listbox).toBeHidden();
+    });
+}
+
+test('Deployment custom selectors keep keyboard versions visible and lock during attachment', async ({
+    page,
+}) => {
+    let release = () => {};
+    const attached = new Promise<void>(resolve => {
+        release = resolve;
+    });
+    let attachment: unknown;
+    await page.route('**/api/python-functions/**', async route => {
+        const path = new URL(route.request().url()).pathname;
+        if (path.endsWith('/capabilities'))
+            return route.fulfill({
+                json: {
+                    available: true,
+                    reason: '',
+                    serviceId: 'service-id',
+                    serviceName: 'Cloud test',
+                },
+            });
+        if (path.endsWith('/status'))
+            return route.fulfill({
+                json: {
+                    versions: Array.from({ length: 24 }, (_, index) => ({
+                        name: 'python_double',
+                        version: index + 1,
+                        status: 'ready',
+                        error: null,
+                        arguments: [{ name: 'value', type: 'Int64' }],
+                        returnType: 'Int64',
+                    })),
+                },
+            });
+        if (path.endsWith('/attach')) {
+            attachment = route.request().postDataJSON();
+            await attached;
+            return route.fulfill({
+                json: {
+                    name: 'python_double',
+                    serviceId: 'service-id',
+                    serviceName: 'Cloud test',
+                    phase: 'attached',
+                    version: 24,
+                    message: 'Attached version 24.',
+                },
+            });
+        }
+        return route.fulfill({ status: 404, json: {} });
+    });
+    try {
+        const { state } = await functionsWorkspace(page);
+        state.executableFunctions.push({ name: 'python_double', createQuery: '' });
+        await page.locator('.object-refresh-action').click();
+        await page
+            .getByRole('button', { name: 'python_double Executable UDF', exact: true })
+            .click();
+        await page.getByRole('tab', { name: 'Deployment', exact: true }).click();
+        const service = page.getByRole('combobox', { name: 'Target service', exact: true });
+        await chooseSelectOption(page, service, 'service-id');
+        const version = page.getByRole('combobox', { name: 'Build version', exact: true });
+        await version.press('ArrowDown');
+        const versions = page.getByRole('listbox', { name: 'Build version', exact: true });
+        await expect(versions).toBeFocused();
+        await page.keyboard.press('End');
+        const last = versions.getByRole('option', { name: 'v24 - ready', exact: true });
+        await expect(last).toHaveAttribute('data-active', 'true');
+        await expect(last).toBeInViewport();
+        await page.keyboard.press('Enter');
+        await expect(version).toHaveAttribute('data-value', '24');
+        await page
+            .getByRole('listbox', { name: 'Build version', exact: true, includeHidden: true })
+            .evaluate(element => {
+                element.scrollTop = 0;
+            });
+        await version.click();
+        await expect(last).toHaveAttribute('data-active', 'true');
+        await expect(last).toBeInViewport();
+        await page.keyboard.press('Enter');
+        await expect(version).toHaveAttribute('data-value', '24');
+        await page.getByRole('checkbox', { name: /I confirm attachment/ }).check();
+        await page.getByRole('button', { name: 'Attach selected version', exact: true }).click();
+        await expect(service).toBeDisabled();
+        await expect(version).toBeDisabled();
+        await expect
+            .poll(() => attachment)
+            .toEqual({ version: 24, serviceId: 'service-id', confirmRestart: true });
+        release();
+        await expect(service).toBeEnabled();
+        await expect(version).toBeEnabled();
+    } finally {
+        release();
+        await page.unrouteAll({ behavior: 'wait' });
+    }
+});
+
 test('Python tester routes typed SQL and query results through the existing runner', async ({
     page,
 }) => {
@@ -247,7 +419,11 @@ test('Python tester routes typed SQL and query results through the existing runn
     state.executableFunctions.push({ name: 'python_double', createQuery: '' });
     await page.locator('.object-refresh-action').click();
     await page.getByRole('button', { name: 'python_double Executable UDF', exact: true }).click();
-    await page.getByLabel('Test argument 1 type', { exact: true }).selectOption('Int64');
+    await chooseSelectOption(
+        page,
+        page.getByRole('combobox', { name: 'Test argument 1 type', exact: true }),
+        'Int64',
+    );
     await page.getByLabel('arg1', { exact: true }).fill('21');
     await page.getByRole('button', { name: 'Run on ClickHouse', exact: true }).click();
     await expect(page.locator('.sql-function-output')).toHaveText('"42"');
@@ -316,7 +492,11 @@ test('Cloud timeout disables another publish until actual state has been checked
     await page.getByRole('button', { name: 'Create Python UDF', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Create Python UDF', exact: true });
     await dialog.getByRole('button', { name: 'Enable deployment session', exact: true }).click();
-    await dialog.getByLabel('Target service', { exact: true }).selectOption('service-id');
+    await chooseSelectOption(
+        page,
+        dialog.getByRole('combobox', { name: 'Target service', exact: true }),
+        'service-id',
+    );
     const publish = dialog.getByRole('button', { name: 'Publish function', exact: true });
     await expect(publish).toBeEnabled();
     await publish.click();
