@@ -1005,8 +1005,8 @@
   }
   .run-detail-hero {
     display: grid;
-    gap: 7px;
-    padding: 11px;
+    gap: 9px;
+    padding: 12px;
     border: 1px solid var(--line);
     border-radius: var(--radius-panel);
     background:
@@ -1017,16 +1017,30 @@
       ),
       var(--panel-raised);
   }
-  .run-detail-hero > strong {
-    overflow: hidden;
-    color: var(--text-soft);
-    font-family: var(--font-mono);
-    font-size: 9px;
-    text-overflow: ellipsis;
+  .run-detail-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
   }
-  .run-detail-hero > small {
+  .run-detail-status {
+    display: inline-flex;
+    min-height: 24px;
+    flex: none;
+    align-items: center;
+    padding: 3px 7px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    background: var(--panel);
+  }
+  .run-detail-status .status-light {
+    width: 6px;
+    height: 6px;
+  }
+  .run-detail-hero > time {
     color: var(--muted);
-    font-size: 8px;
+    font-size: 9px;
+    line-height: 1.4;
   }
   .run-fact-list {
     display: grid;
@@ -1038,27 +1052,38 @@
   }
   .run-fact-list > div {
     display: flex;
-    min-height: 33px;
+    min-height: 36px;
     align-items: center;
-    gap: 6px;
-    padding: 6px 9px;
+    gap: 8px;
+    padding: 7px 10px;
     background: var(--panel);
   }
   .run-fact-list > div > span {
+    min-width: 0;
     flex: 1;
+    overflow: hidden;
     color: var(--muted);
-    font-size: 8px;
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .run-fact-list > div > strong {
+    min-width: 0;
+    max-width: 62%;
+    overflow: hidden;
     color: var(--text-soft);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: 9px;
     font-weight: 560;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .run-fact-list > div > button {
     display: grid;
-    width: 21px;
-    height: 21px;
+    width: 24px;
+    height: 24px;
+    flex: none;
     place-items: center;
     border: 0;
     border-radius: var(--radius-control);
@@ -1073,6 +1098,24 @@
   .run-fact-list > div > button svg {
     width: 12px;
     height: 12px;
+  }
+  .callout.run-detail-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 12px 0 0;
+    padding: 10px 11px;
+    color: var(--text-soft);
+  }
+  .run-detail-note > svg {
+    width: 14px;
+    height: 14px;
+    flex: none;
+    margin-top: 1px;
+    color: var(--accent);
+  }
+  .run-detail-note > span {
+    min-width: 0;
   }
   .pipeline-list {
     display: grid;

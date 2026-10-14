@@ -149,7 +149,75 @@ test('Execution IDs are available from copyable details instead of the footer', 
     await page.getByTestId('execution-details').click();
     const queryId = page.getByTestId('run-query-id');
     await expect(queryId.locator('strong')).toHaveText(run.queryId);
-    await expect(queryId.locator('button[title="Copy query ID"]')).toBeVisible();
+    await expect(queryId.getByRole('button', { name: 'Copy query ID', exact: true })).toBeVisible();
+    await expect(page.locator('.run-detail-status [data-run-status]')).toHaveAttribute(
+        'data-run-status',
+        'succeeded',
+    );
+    await expect(page.locator('.run-detail-hero time')).toHaveAttribute(
+        'datetime',
+        /^\d{4}-\d{2}-\d{2}T/,
+    );
+
+    await page.locator('.inspector-pane').evaluate(element => {
+        element.setAttribute('style', 'flex: 0 0 230px; width: 230px');
+    });
+    await expect(queryId.locator('strong')).toHaveCSS('text-overflow', 'ellipsis');
+    await expect(queryId.locator('strong')).toHaveCSS('white-space', 'nowrap');
+    expect(
+        await queryId.locator('strong').evaluate(element => {
+            return element.scrollWidth > element.clientWidth;
+        }),
+    ).toBe(true);
+    expect(
+        await page.locator('.inspector-content').evaluate(element => {
+            return element.scrollWidth - element.clientWidth;
+        }),
+    ).toBe(0);
+
+    await page.evaluate(() => {
+        Object.defineProperty(navigator, 'clipboard', {
+            configurable: true,
+            value: {
+                writeText: async (value: string) => {
+                    document.body.dataset.copiedQueryId = value;
+                },
+            },
+        });
+    });
+    await queryId.getByRole('button', { name: 'Copy query ID', exact: true }).click();
+    await expect(page.locator('body')).toHaveAttribute('data-copied-query-id', run.queryId);
+});
+
+test('Unavailable query-log profiling is explained without a load action', async ({ page }) => {
+    const reason = 'Query-log profiling is not enabled for this connection.';
+    await page.route(
+        url => url.pathname === '/api/connections',
+        async route => {
+            const response = await route.fetch();
+            const connections: unknown[] = await response.json();
+            await route.fulfill({
+                response,
+                json: connections.map(value => {
+                    const connection = jsonRecord(value, 'Connection');
+                    const manifest = jsonRecord(connection.manifest ?? {}, 'Connection manifest');
+                    return {
+                        ...connection,
+                        manifest: { ...manifest, queryLog: { available: false, reason } },
+                    };
+                }),
+            });
+        },
+    );
+    await trust(page);
+    await runButton(page).click();
+    await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'succeeded');
+    await page.getByTestId('execution-details').click();
+
+    const note = page.locator('.run-detail-note[role="note"]');
+    await expect(note).toContainText(reason);
+    await expect(note.locator('svg')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Load query log evidence' })).toHaveCount(0);
 });
 
 async function switchConnection(page: Page, name: string) {

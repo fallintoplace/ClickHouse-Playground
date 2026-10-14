@@ -1175,6 +1175,13 @@ test('A failed saved run shows its submitted error in Output', async ({ page }) 
             'Syntax error at position 15',
         );
         await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'failed');
+        await page.getByTestId('execution-details').click();
+        await expect(page.locator('.run-detail-status [data-run-status]')).toHaveAttribute(
+            'data-run-status',
+            'failed',
+        );
+        await expect(page.locator('.callout-error')).toContainText('SYNTAX_ERROR');
+        await expect(page.locator('.callout-error')).toContainText('Syntax error at position 15');
         await expect(results).not.toContainText('No retained result');
         await expect(results.locator('.result-provenance-header')).toHaveCount(0);
         await expect(page.locator('.result-failure-location')).toContainText('Line 2, column 16');

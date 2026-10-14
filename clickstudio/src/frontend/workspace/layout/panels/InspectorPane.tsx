@@ -835,9 +835,13 @@ function RunDetails({
     return (
         <section className="inspector-section">
             <div className="run-detail-hero">
-                <span className="eyebrow">LATEST EXECUTION</span>
-                <Status run={run} />
-                <small>{new Date(run.createdAt).toLocaleString()}</small>
+                <div className="run-detail-heading">
+                    <span className="eyebrow">LATEST EXECUTION</span>
+                    <span className="run-detail-status">
+                        <Status run={run} />
+                    </span>
+                </div>
+                <time dateTime={run.createdAt}>{new Date(run.createdAt).toLocaleString()}</time>
             </div>
             <div className="run-fact-list">
                 {items.map(([label, value]) => (
@@ -846,9 +850,11 @@ function RunDetails({
                         data-testid={label === 'Query ID' ? 'run-query-id' : undefined}
                     >
                         <span>{label}</span>
-                        <strong>{value}</strong>
+                        <strong title={value}>{value}</strong>
                         {label === 'Query ID' && (
                             <button
+                                type="button"
+                                aria-label="Copy query ID"
                                 title="Copy query ID"
                                 onClick={() => void navigator.clipboard.writeText(value)}
                             >
@@ -864,7 +870,10 @@ function RunDetails({
                 </div>
             )}
             {unavailableReason ? (
-                <p className="profile-note">{unavailableReason}</p>
+                <div className="callout run-detail-note" role="note">
+                    <Icon name="info" />
+                    <span>{unavailableReason}</span>
+                </div>
             ) : (
                 <Button variant="secondary" className="w-full mt-4" onClick={onLoad}>
                     Load query log evidence
