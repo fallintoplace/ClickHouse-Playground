@@ -61,6 +61,7 @@ export function SqlFlowModeTabs({
                 type="button"
                 aria-label={copy.sqlFlowLogicalMode}
                 aria-describedby={`${descriptionId}-flow`}
+                data-footer-help={copy.sqlFlowLogicalModeDescription}
                 aria-pressed={mode === 'flow'}
                 className={mode === 'flow' ? 'is-active' : ''}
                 onClick={() => onModeChange('flow')}
@@ -74,6 +75,7 @@ export function SqlFlowModeTabs({
                 type="button"
                 aria-label={copy.sqlFlowNativeAst}
                 aria-describedby={`${descriptionId}-ast`}
+                data-footer-help={copy.sqlFlowNativeAstDescription}
                 aria-pressed={mode === 'ast'}
                 className={mode === 'ast' ? 'is-active' : ''}
                 disabled={!ast.available && mode !== 'ast'}
@@ -89,6 +91,7 @@ export function SqlFlowModeTabs({
                 type="button"
                 aria-label={copy.sqlFlowAnalyzer}
                 aria-describedby={`${descriptionId}-analyzer`}
+                data-footer-help={copy.sqlFlowAnalyzerDescription}
                 aria-pressed={mode === 'analyzer'}
                 className={mode === 'analyzer' ? 'is-active' : ''}
                 disabled={!analyzerAvailable}
