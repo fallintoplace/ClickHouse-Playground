@@ -64,11 +64,11 @@ type SqlDiffRow = {
 type SqlDiffChange = ReturnType<typeof diffLines>[number];
 
 const generateTaskPrompts = [
-    'Create a small ClickHouse table for coffee shop orders, insert a few sample rows, then query sales by drink.',
-    'Create a small ClickHouse table for bike rentals, insert sample rows, then query ride counts by hour.',
-    'Create a small ClickHouse table for website visits, insert sample rows, then query the most visited pages.',
-    'Create a small ClickHouse table for city weather, insert sample rows, then query average temperature by city.',
-    'Create a small ClickHouse table for movie ratings, insert sample rows, then query the top-rated movies.',
+    'Create a ClickHouse table for order fulfillment with order date, region, and status. Insert representative sample records, then query fulfillment rate by region.',
+    'Create a ClickHouse table for inventory movements with event date, warehouse, product, movement type, and quantity. Insert representative sample records, then query net movement by warehouse and product.',
+    'Create a ClickHouse table for support cases with priority, opened time, resolved time, and SLA status. Insert representative sample records, then query average resolution time and SLA attainment by priority.',
+    'Create a ClickHouse table for payment settlements with payment date, method, status, and amount. Insert representative sample records, then query settled amount and failure rate by method.',
+    'Create a ClickHouse table for service events with service, event time, status code, and latency. Insert representative sample records, then query request volume, error rate, and 95th percentile latency by service.',
 ] as const;
 
 function sqlDiffRows(changes: readonly SqlDiffChange[]): SqlDiffRow[] {
