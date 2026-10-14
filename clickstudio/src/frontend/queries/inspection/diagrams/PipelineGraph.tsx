@@ -137,7 +137,7 @@ export function PipelineGraph({
     const setGraphViewport = useCallback((element: HTMLDivElement | null) => {
         graphViewport.current = element;
     }, []);
-    const graphWidth = Math.max(480, layout.width);
+    const graphWidth = graphKind === 'sql-flow' ? layout.width : Math.max(480, layout.width);
     const graphHeight = Math.max(160, layout.height);
     useEffect(() => {
         const initialNodeId = firstNodeId;
@@ -580,6 +580,7 @@ function renderPipelineGraphViewport({
                 >
                     <svg
                         className="pipeline-graph-svg"
+                        style={graphKind === 'sql-flow' ? { marginInline: 'auto' } : undefined}
                         width={Math.round(graphWidth * zoom)}
                         height={Math.round(graphHeight * zoom)}
                         viewBox={`0 0 ${graphWidth} ${graphHeight}`}
