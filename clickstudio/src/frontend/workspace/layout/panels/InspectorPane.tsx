@@ -321,6 +321,8 @@ export function InspectorPane({
     const isExpert = Boolean(expert);
     const primaryNavigation = primaryInspectorNavigation(isExpert);
     const hasPrimaryInspectorTab = primaryNavigation.some(item => item.id === inspector);
+    const hideHeading =
+        isExpert && docked && (hasPrimaryInspectorTab || inspector === 'documents');
     const moreItems = inspectorMoreNavigation(isExpert, Boolean(run));
     const selectInspector = (next: Inspector) => {
         if (next === 'reference') setReferenceTarget(undefined);
@@ -335,7 +337,7 @@ export function InspectorPane({
                 inspector={inspector}
                 expert={isExpert}
                 docked={docked}
-                hideHeading={isExpert && docked && hasPrimaryInspectorTab}
+                hideHeading={hideHeading}
                 primaryNavigation={primaryNavigation}
                 onSelect={selectInspector}
                 onClose={onClose}
@@ -357,7 +359,7 @@ export function InspectorPane({
                         onSelect={selectInspector}
                         items={moreItems}
                     />
-                    {hasPrimaryInspectorTab && (
+                    {hideHeading && (
                         <div>
                             <InspectorCloseButton onClose={onClose} />
                         </div>
