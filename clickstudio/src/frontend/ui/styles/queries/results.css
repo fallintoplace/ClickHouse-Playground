@@ -476,14 +476,16 @@
     position: sticky;
     z-index: var(--z-local-control);
     left: 0;
-    min-width: 46px;
-    max-width: 46px;
+    width: 48px;
+    min-width: 48px;
+    max-width: 48px;
+    padding-inline: 8px;
     border-right-color: var(--line-bright);
     background: var(--panel-raised);
     color: var(--muted);
     font-size: var(--font-size-result-row-number);
     font-weight: var(--font-weight-medium);
-    text-align: left;
+    text-align: center;
   }
   .data-table th.row-number {
     z-index: var(--z-local-intersection);
