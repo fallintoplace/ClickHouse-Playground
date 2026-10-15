@@ -842,9 +842,9 @@ function RunDetails({
 }) {
     if (!run) return <div className="inspector-empty">Run a query to see execution details.</div>;
     const summary = profile?.summary;
-    const items: Array<[string, string]> = [
-        ['Query ID', run.queryId],
-        ['Duration', `${Math.round(summary?.durationMs ?? run.elapsedMs)} ms`],
+    const metrics: Array<[string, string, string?]> = [
+        ['Duration', Math.round(summary?.durationMs ?? run.elapsedMs).toLocaleString(), 'ms'],
+        ['Rows returned', run.rowCount.toLocaleString()],
         ...(summary?.readRows === undefined
             ? []
             : [['Rows read', Number(summary.readRows).toLocaleString()] as [string, string]]),
@@ -854,45 +854,61 @@ function RunDetails({
         ...(summary?.memory === undefined
             ? []
             : [['Memory', formatBytes(summary.memory)] as [string, string]]),
-        ['Rows returned', run.rowCount.toLocaleString()],
+    ];
+    const items: Array<[string, string]> = [
+        ['Query ID', run.queryId],
         ...(run.executedAs ? [['Executed as', run.executedAs] as [string, string]] : []),
         ...(run.serverVersion ? [['Server', run.serverVersion] as [string, string]] : []),
     ];
     const createdAt = new Date(run.createdAt);
     return (
-        <section className="inspector-section">
+        <section className="inspector-section run-details-section">
             <div className="run-detail-hero">
                 <div className="run-detail-heading">
                     <span className="eyebrow">LATEST EXECUTION</span>
-                    <span className="run-detail-status">
-                        <Status run={run} />
-                    </span>
+                    <time dateTime={run.createdAt}>
+                        {createdAt.toLocaleString(undefined, {
+                            dateStyle: 'medium',
+                            timeStyle: 'short',
+                        })}
+                    </time>
                 </div>
-                <time dateTime={run.createdAt}>
-                    {createdAt.toLocaleString(undefined, {
-                        dateStyle: 'medium',
-                        timeStyle: 'short',
-                    })}
-                </time>
+                <span className="run-detail-status">
+                    <Status run={run} />
+                </span>
+            </div>
+            <div className="run-metric-grid" role="group" aria-label="Execution metrics">
+                {metrics.map(([label, value, unit]) => (
+                    <div className="run-metric" key={label}>
+                        <span>{label}</span>
+                        <strong title={unit ? `${value} ${unit}` : value}>
+                            <span>{value}</span>
+                            {unit && <small>{unit}</small>}
+                        </strong>
+                    </div>
+                ))}
             </div>
             <div className="run-fact-list">
                 {items.map(([label, value]) => (
                     <div
                         key={label}
+                        className={label === 'Query ID' ? 'is-query-id' : undefined}
                         data-testid={label === 'Query ID' ? 'run-query-id' : undefined}
                     >
                         <span>{label}</span>
-                        <strong title={value}>{value}</strong>
-                        {label === 'Query ID' && (
-                            <button
-                                type="button"
-                                aria-label="Copy query ID"
-                                title="Copy query ID"
-                                onClick={() => void navigator.clipboard.writeText(value)}
-                            >
-                                <Icon name="copy" />
-                            </button>
-                        )}
+                        <div className="run-fact-value">
+                            <strong title={value}>{value}</strong>
+                            {label === 'Query ID' && (
+                                <button
+                                    type="button"
+                                    aria-label="Copy query ID"
+                                    title="Copy query ID"
+                                    onClick={() => void navigator.clipboard.writeText(value)}
+                                >
+                                    <Icon name="copy" />
+                                </button>
+                            )}
+                        </div>
                     </div>
                 ))}
             </div>
@@ -907,7 +923,7 @@ function RunDetails({
                     <span>{unavailableReason}</span>
                 </div>
             ) : (
-                <Button variant="secondary" className="w-full mt-4" onClick={onLoad}>
+                <Button variant="secondary" className="run-detail-load" onClick={onLoad}>
                     Load query log evidence
                 </Button>
             )}

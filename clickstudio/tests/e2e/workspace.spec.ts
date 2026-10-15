@@ -219,6 +219,70 @@ test('Unavailable query-log profiling is explained without a load action', async
     await expect(page.getByRole('button', { name: 'Load query log evidence' })).toHaveCount(0);
 });
 
+test('Run details keep zero-valued profile metrics and fit a narrow inspector', async ({
+    page,
+}) => {
+    await page.route(
+        url => /\/api\/runs\/[^/]+\/profile$/.test(url.pathname),
+        async route => {
+            const response = await route.fetch();
+            const profile = jsonRecord(await response.json(), 'Query profile');
+            await route.fulfill({
+                response,
+                json: {
+                    ...profile,
+                    summary: {
+                        ...jsonRecord(profile.summary, 'Profile summary'),
+                        durationMs: 0,
+                        readRows: '0',
+                        readBytes: '0',
+                        memory: '0',
+                    },
+                },
+            });
+        },
+    );
+    await trust(page);
+    await runButton(page).click();
+    await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'succeeded');
+    await page.getByTestId('execution-details').click();
+    const inspector = page.locator('.inspector-pane');
+    await expect(inspector.locator('.run-metric')).toHaveCount(2);
+    await inspector.getByRole('button', { name: 'Load query log evidence', exact: true }).click();
+    await expect(inspector.locator('.run-metric')).toHaveCount(5);
+    await expect(inspector.locator('.run-metric > span')).toHaveText([
+        'Duration',
+        'Rows returned',
+        'Rows read',
+        'Bytes read',
+        'Memory',
+    ]);
+    for (const [label, value] of [
+        ['Duration', '0 ms'],
+        ['Rows read', '0'],
+        ['Bytes read', '0 B'],
+        ['Memory', '0 B'],
+    ] as const) {
+        const metric = inspector.locator('.run-metric').filter({
+            has: page.getByText(label, { exact: true }),
+        });
+        await expect(metric.locator('strong')).toHaveAttribute('title', value);
+    }
+    await inspector.evaluate(element => {
+        element.setAttribute('style', 'flex: 0 0 230px; width: 230px');
+    });
+    expect(
+        await inspector
+            .locator('.inspector-content')
+            .evaluate(element => element.scrollWidth <= element.clientWidth),
+    ).toBe(true);
+    const memory = await inspector.locator('.run-metric').last().boundingBox();
+    const grid = await inspector.locator('.run-metric-grid').boundingBox();
+    expect(memory).not.toBeNull();
+    expect(grid).not.toBeNull();
+    expect(memory!.width).toBeCloseTo(grid!.width, 0);
+});
+
 async function switchConnection(page: Page, name: string) {
     const picker = page.locator('.connection-trigger');
     await picker.click();

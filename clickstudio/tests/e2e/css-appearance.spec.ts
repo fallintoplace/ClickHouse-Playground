@@ -204,7 +204,42 @@ for (const theme of ['Light', 'Dark']) {
 
         const inspector = page.locator('.inspector-pane');
         await expect(inspector.locator('.run-detail-note')).toContainText(reason);
-        await expectReferenceStyles(page, info, 'run-details', inspector);
+        await expect(inspector.locator('.run-metric > span')).toHaveText([
+            'Duration',
+            'Rows returned',
+        ]);
+        for (const width of [1600, 900]) {
+            await page.setViewportSize({ width, height: 900 });
+            const summary = await inspector.locator('.run-detail-hero').boundingBox();
+            const status = await inspector.locator('.run-detail-status').boundingBox();
+            expect(summary).not.toBeNull();
+            expect(status).not.toBeNull();
+            expect(
+                Math.abs(status!.y + status!.height / 2 - (summary!.y + summary!.height / 2)),
+            ).toBeLessThanOrEqual(1);
+            await expectReferenceStyles(page, info, `run-details-${width}`, inspector);
+            if (width === 1600)
+                await inspector.locator('.run-details-section').screenshot({
+                    path: info.outputPath('run-details-preview.png'),
+                });
+        }
+        await inspector.evaluate(element => {
+            element.setAttribute('style', 'flex: 0 0 230px; width: 230px');
+        });
+        expect(
+            await inspector
+                .locator('.inspector-content')
+                .evaluate(element => element.scrollWidth <= element.clientWidth),
+        ).toBe(true);
+        await expectReferenceStyles(page, info, 'run-details-narrow', inspector);
+        const copyId = inspector.getByRole('button', { name: 'Copy query ID', exact: true });
+        await copyId.focus();
+        await page.keyboard.press('Shift+Tab');
+        await page.keyboard.press('Tab');
+        await expect(copyId).toBeFocused();
+        expect(await copyId.evaluate(element => element.matches(':focus-visible'))).toBe(true);
+        await expectReferenceStyles(page, info, 'run-details-copy-focus', inspector);
+        await page.unrouteAll({ behavior: 'wait' });
     });
 
     for (const mode of [theme === 'Light' ? 'Standard' : 'Experimental']) {
