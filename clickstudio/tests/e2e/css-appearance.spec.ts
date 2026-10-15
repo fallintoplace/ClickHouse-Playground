@@ -32,6 +32,37 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const theme of ['Light', 'Dark']) {
+    test(`CSS preserves ${theme} unsaved query version history`, async ({ page }, info) => {
+        await trust(page);
+        await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+        await page.getByRole('button', { name: 'More workspace panels', exact: true }).click();
+        await page.getByRole('menuitem', { name: 'Version history', exact: true }).click();
+        const section = page.locator('.revision-history-section');
+        await expect(section.getByRole('alert')).toHaveCount(0);
+        await expect(
+            section.getByRole('button', { name: 'Save query', exact: true }),
+        ).toBeEnabled();
+        for (const width of [1600, 900]) {
+            await page.setViewportSize({ width, height: 900 });
+            await expectReferenceStyles(page, info, `unsaved-versions-${width}`, section);
+            if (width === 1600)
+                await section.screenshot({ path: info.outputPath('unsaved-versions-preview.png') });
+        }
+        await page.locator('.inspector-pane').evaluate(element => {
+            element.setAttribute('style', 'flex: 0 0 230px; width: 230px');
+        });
+        expect(await section.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(
+            true,
+        );
+        const save = section.getByRole('button', { name: 'Save query', exact: true });
+        await save.focus();
+        await page.keyboard.press('Shift+Tab');
+        await page.keyboard.press('Tab');
+        await expect(save).toBeFocused();
+        expect(await save.evaluate(element => element.matches(':focus-visible'))).toBe(true);
+        await expectReferenceStyles(page, info, 'unsaved-versions-narrow-focus', section);
+    });
+
     test(`CSS preserves ${theme} saved queries and centered current versions`, async ({
         page,
     }, info) => {

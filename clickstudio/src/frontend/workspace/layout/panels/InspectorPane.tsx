@@ -62,6 +62,9 @@ export type InspectorPaneProps = {
     search: string;
     setSearch: (search: string) => void;
     documents: QueryDocument[];
+    hasSavedQuery: boolean;
+    canSaveQuery: boolean;
+    savingQuery: boolean;
     revisions: QueryDocument[];
     revisionsDocumentId?: string;
     revisionLoading: boolean;
@@ -88,6 +91,7 @@ export type InspectorPaneProps = {
     trusted: boolean;
     onRefreshDocuments: () => void;
     onRefreshRevisions: () => void;
+    onSaveQuery: () => void;
     onRestoreRevision: (revision: QueryDocument) => void;
     assistantQuestion: string;
     onAssistantQuestion: (question: string) => void;
@@ -242,6 +246,9 @@ export function InspectorPane({
     search,
     setSearch,
     documents,
+    hasSavedQuery,
+    canSaveQuery,
+    savingQuery,
     revisions,
     revisionsDocumentId,
     revisionLoading,
@@ -268,6 +275,7 @@ export function InspectorPane({
     trusted,
     onRefreshDocuments,
     onRefreshRevisions,
+    onSaveQuery,
     onRestoreRevision,
     assistantQuestion,
     onAssistantQuestion,
@@ -429,10 +437,14 @@ export function InspectorPane({
                 />
                 {inspector === 'revisions' &&
                     renderRevisionHistory({
+                        hasSavedQuery,
+                        canSaveQuery,
+                        savingQuery,
                         revisionsDocumentId,
                         revisions,
                         currentRevision,
                         onRefreshRevisions,
+                        onSaveQuery,
                         revisionLoading,
                         revisionError,
                         selectedRevision,
@@ -576,10 +588,14 @@ function InspectorSavedViews({
 }
 
 function renderRevisionHistory({
+    hasSavedQuery,
+    canSaveQuery,
+    savingQuery,
     revisionsDocumentId,
     revisions,
     currentRevision,
     onRefreshRevisions,
+    onSaveQuery,
     revisionLoading,
     revisionError,
     selectedRevision,
@@ -588,10 +604,14 @@ function renderRevisionHistory({
     onRestoreRevision,
     unsavedDraft,
 }: {
+    hasSavedQuery: InspectorPaneProps['hasSavedQuery'];
+    canSaveQuery: InspectorPaneProps['canSaveQuery'];
+    savingQuery: InspectorPaneProps['savingQuery'];
     revisionsDocumentId: InspectorPaneProps['revisionsDocumentId'];
     revisions: InspectorPaneProps['revisions'];
     currentRevision: InspectorPaneProps['currentRevision'];
     onRefreshRevisions: InspectorPaneProps['onRefreshRevisions'];
+    onSaveQuery: InspectorPaneProps['onSaveQuery'];
     revisionLoading: InspectorPaneProps['revisionLoading'];
     revisionError: InspectorPaneProps['revisionError'];
     selectedRevision: QueryDocument | undefined;
@@ -611,40 +631,63 @@ function renderRevisionHistory({
                               ?.name ?? 'QUERY VERSIONS')
                         : 'QUERY VERSIONS'}
                 </span>
-                <Button
-                    variant="ghost"
-                    className="inspector-refresh-action"
-                    aria-label={revisionLoading ? 'Refreshing versions' : 'Refresh versions'}
-                    title={revisionLoading ? 'Refreshing versions' : 'Refresh versions'}
-                    aria-busy={revisionLoading}
-                    onClick={onRefreshRevisions}
-                    disabled={revisionLoading || !revisionsDocumentId}
-                >
-                    {revisionLoading ? <Spinner size={14} /> : <Icon name="refresh" />}
-                </Button>
+                {hasSavedQuery && (
+                    <Button
+                        variant="ghost"
+                        className="inspector-refresh-action"
+                        aria-label={revisionLoading ? 'Refreshing versions' : 'Refresh versions'}
+                        title={revisionLoading ? 'Refreshing versions' : 'Refresh versions'}
+                        aria-busy={revisionLoading}
+                        onClick={onRefreshRevisions}
+                        disabled={revisionLoading || !revisionsDocumentId}
+                    >
+                        {revisionLoading ? <Spinner size={14} /> : <Icon name="refresh" />}
+                    </Button>
+                )}
             </div>
-            <p className="revision-history-help">
-                Browse saved versions. Restoring one creates a new version.
-            </p>
-            {revisionError && (
+            {!hasSavedQuery && (
+                <div className="revision-empty-state">
+                    <span className="revision-empty-mark" aria-hidden="true">
+                        <Icon name="history" />
+                    </span>
+                    <strong>Save your first version</strong>
+                    <p>Keep a saved copy of this query so you can return to it later.</p>
+                    <Button
+                        variant="secondary"
+                        className="revision-empty-action"
+                        onClick={onSaveQuery}
+                        disabled={!canSaveQuery || savingQuery}
+                        aria-busy={savingQuery}
+                    >
+                        {savingQuery ? <Spinner size={14} /> : <Icon name="documents" />}
+                        {savingQuery ? 'Saving…' : 'Save query'}
+                    </Button>
+                </div>
+            )}
+            {hasSavedQuery && (
+                <p className="revision-history-help">
+                    Browse saved versions. Restoring one creates a new version.
+                </p>
+            )}
+            {hasSavedQuery && revisionError && (
                 <div className="callout callout-error" role="alert">
                     {revisionError}
                 </div>
             )}
-            {revisionLoading && !revisions.length && (
+            {hasSavedQuery && revisionLoading && !revisions.length && (
                 <div className="inspector-empty">
                     <Spinner />
                     <p>Loading saved versions…</p>
                 </div>
             )}
-            {!revisionLoading && !revisionError && !revisions.length && (
+            {hasSavedQuery && !revisionLoading && !revisionError && !revisions.length && (
                 <div className="inspector-empty">
                     <Icon name="history" />
                     <strong>No saved versions</strong>
                     <p>Save this query to start a version history.</p>
                 </div>
             )}
-            {revisions.length > 0 && (
+            {hasSavedQuery && revisions.length > 0 && (
                 <>
                     <div className="revision-list" aria-label="Saved query versions">
                         {revisions.map(revision => (

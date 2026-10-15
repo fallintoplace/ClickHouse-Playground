@@ -143,7 +143,7 @@ export function useWorkspaceData({
                 revisionsRequestRef.current++;
                 setRevisionsDocumentId(undefined);
                 setDocumentRevisions([]);
-                setRevisionError('Save this query before opening version history.');
+                setRevisionError('');
                 setRevisionLoading(false);
                 return;
             }
