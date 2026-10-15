@@ -1,6 +1,40 @@
 import { test, expect } from '@playwright/test';
 import { openSqlExamples, trust } from './helpers.js';
 
+for (const mode of ['Standard', 'Experimental'])
+    test(`${mode} Help opens SQL examples by default on every visit`, async ({ page }) => {
+        let runRequests = 0;
+        page.on('request', request => {
+            if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/runs')
+                runRequests++;
+        });
+        await trust(page, mode);
+        const originalSql = await page.locator('.cm-content').textContent();
+        const trigger = page.getByRole('button', { name: 'Help', exact: true });
+        const dialog = await openSqlExamples(page);
+        const search = dialog.getByTestId('sql-example-search');
+        await expect(search).toBeFocused();
+        await expect(dialog.locator('#workspace-help-panel-examples')).toBeVisible();
+
+        for (const section of ['tour', 'workflows', 'assistant']) {
+            await search.fill('query-with-no-matching-example');
+            await dialog.getByTestId(`help-section-${section}`).click();
+            await expect(dialog.locator(`#workspace-help-panel-${section}`)).toBeVisible();
+            await dialog.getByRole('button', { name: 'Close help', exact: true }).click();
+            await expect(dialog).toHaveCount(0);
+            await expect(trigger).toBeFocused();
+            await openSqlExamples(page);
+            await expect(search).toBeFocused();
+            await expect(search).toHaveValue('');
+        }
+
+        await page.keyboard.press('Escape');
+        await expect(dialog).toHaveCount(0);
+        await expect(trigger).toBeFocused();
+        await expect.poll(() => page.locator('.cm-content').textContent()).toBe(originalSql);
+        expect(runRequests).toBe(0);
+    });
+
 test('SQL examples open in a new tab without changing or running the current query', async ({
     page,
 }) => {
@@ -93,6 +127,7 @@ test('Help tour exposes ClickStudio native workflows from one place', async ({ p
     await page.getByRole('button', { name: 'Help', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });
     await expect(dialog).toBeVisible();
+    await dialog.getByTestId('help-section-tour').click();
 
     for (const section of [
         'tour',

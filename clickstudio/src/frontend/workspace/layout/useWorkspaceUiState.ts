@@ -12,7 +12,7 @@ import { canOpenInspector } from './panels/inspector-navigation';
 function useWorkspaceHelpState() {
     const [helpPanelOpen, setHelpPanelOpen] = useState(false);
     const [observabilityOpen, setObservabilityOpen] = useState(false);
-    const [helpPanelSection, setHelpPanelSection] = useState<HelpPanelSection>('tour');
+    const [helpPanelSection, setHelpPanelSection] = useState<HelpPanelSection>('examples');
     const helpPanelOpenerRef = useRef<HTMLButtonElement | null>(null);
     const openHelpPanel = useCallback((section: HelpPanelSection, opener: HTMLButtonElement) => {
         helpPanelOpenerRef.current = opener;
@@ -24,7 +24,7 @@ function useWorkspaceHelpState() {
         if (restoreFocus) window.requestAnimationFrame(() => helpPanelOpenerRef.current?.focus());
     }, []);
     const openHelp = useCallback(
-        (opener: HTMLButtonElement) => openHelpPanel('tour', opener),
+        (opener: HTMLButtonElement) => openHelpPanel('examples', opener),
         [openHelpPanel],
     );
 

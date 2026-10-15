@@ -234,6 +234,7 @@ for (const previousTopic of ['reference', 'compare'])
             'compare',
         ];
         await page.getByRole('button', { name: 'Help', exact: true }).click();
+        await help.getByTestId('help-section-tour').click();
         await expect(help.locator('.workspace-help-tour-experimental')).toBeVisible();
         for (const topic of experimentalTopics)
             await expect(help.getByTestId(`help-section-${topic}`)).toBeVisible();
@@ -287,10 +288,11 @@ for (const previousTopic of ['reference', 'compare'])
         await help.getByRole('button', { name: 'Close help', exact: true }).click();
         await setWorkspaceMode(page, 'Experimental');
         await page.getByRole('button', { name: 'Help', exact: true }).click();
-        await expect(help.getByTestId('help-section-tour')).toHaveAttribute(
+        await expect(help.getByTestId('help-section-examples')).toHaveAttribute(
             'aria-selected',
             'true',
         );
+        await help.getByTestId('help-section-tour').click();
         await expect(help.locator('.workspace-help-tour-experimental')).toBeVisible();
         for (const topic of experimentalTopics)
             await expect(help.getByTestId(`help-section-${topic}`)).toBeVisible();
