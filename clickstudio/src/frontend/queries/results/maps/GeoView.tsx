@@ -4,6 +4,7 @@ import {
     useRef,
     useState,
     type PointerEvent as ReactPointerEvent,
+    type MouseEvent as ReactMouseEvent,
 } from 'react';
 import {
     geoCentroid,
@@ -95,6 +96,56 @@ function mapPointerDelta(event: ReactPointerEvent<SVGSVGElement>, start: { x: nu
     return { x: pointer.x - origin.x, y: pointer.y - origin.y };
 }
 
+function useMapViewport() {
+    const [viewport, setViewport] = useState({ x: 0, y: 0, scale: 1 });
+    const drag = useRef<
+        { pointerId: number; x: number; y: number; originX: number; originY: number } | undefined
+    >(undefined);
+    const dragMoved = useRef(false);
+    const zoom = (factor: number) =>
+        setViewport(current => ({
+            ...current,
+            scale: Math.max(1, Math.min(8, current.scale * factor)),
+        }));
+    const reset = () => setViewport({ x: 0, y: 0, scale: 1 });
+    const onPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
+        if (event.button !== 0) return;
+        dragMoved.current = false;
+        // Keep capture on the hit feature so ordinary clicks reach its selection handler.
+        if (event.target instanceof Element) event.target.setPointerCapture(event.pointerId);
+        drag.current = {
+            pointerId: event.pointerId,
+            x: event.clientX,
+            y: event.clientY,
+            originX: viewport.x,
+            originY: viewport.y,
+        };
+    };
+    const onPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
+        const current = drag.current;
+        if (!current || current.pointerId !== event.pointerId) return;
+        if (Math.hypot(event.clientX - current.x, event.clientY - current.y) > 3)
+            dragMoved.current = true;
+        const delta = mapPointerDelta(event, current);
+        if (!delta) return;
+        setViewport(value => ({
+            ...value,
+            x: current.originX + delta.x,
+            y: current.originY + delta.y,
+        }));
+    };
+    const finishDrag = (event: ReactPointerEvent<SVGSVGElement>) => {
+        if (drag.current?.pointerId === event.pointerId) drag.current = undefined;
+    };
+    const onClickCapture = (event: ReactMouseEvent<SVGSVGElement>) => {
+        if (!dragMoved.current) return;
+        dragMoved.current = false;
+        event.preventDefault();
+        event.stopPropagation();
+    };
+    return { viewport, zoom, reset, onPointerDown, onPointerMove, finishDrag, onClickCapture };
+}
+
 function MapCanvas({
     prepared,
     columns,
@@ -109,10 +160,8 @@ function MapCanvas({
     const [selectedIndex, setSelectedIndex] = useState<number>();
     const [hoveredIndex, setHoveredIndex] = useState<number>();
     const [countryFeatures, setCountryFeatures] = useState<CountryFeature[]>([]);
-    const [viewport, setViewport] = useState({ x: 0, y: 0, scale: 1 });
-    const drag = useRef<
-        { pointerId: number; x: number; y: number; originX: number; originY: number } | undefined
-    >(undefined);
+    const { viewport, zoom, reset, onPointerDown, onPointerMove, finishDrag, onClickCapture } =
+        useMapViewport();
     useEffect(() => {
         const controller = new AbortController();
         void fetch(`${import.meta.env.BASE_URL}geo/countries-50m.geojson`, {
@@ -202,37 +251,6 @@ function MapCanvas({
         minimum,
     });
     const selected = selectedIndex === undefined ? undefined : prepared.features[selectedIndex];
-    const zoom = (factor: number) =>
-        setViewport(current => ({
-            ...current,
-            scale: Math.max(1, Math.min(8, current.scale * factor)),
-        }));
-    const reset = () => setViewport({ x: 0, y: 0, scale: 1 });
-    const onPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
-        if (event.button !== 0) return;
-        event.currentTarget.setPointerCapture(event.pointerId);
-        drag.current = {
-            pointerId: event.pointerId,
-            x: event.clientX,
-            y: event.clientY,
-            originX: viewport.x,
-            originY: viewport.y,
-        };
-    };
-    const onPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
-        const current = drag.current;
-        if (!current || current.pointerId !== event.pointerId) return;
-        const delta = mapPointerDelta(event, current);
-        if (!delta) return;
-        setViewport(value => ({
-            ...value,
-            x: current.originX + delta.x,
-            y: current.originY + delta.y,
-        }));
-    };
-    const finishDrag = (event: ReactPointerEvent<SVGSVGElement>) => {
-        if (drag.current?.pointerId === event.pointerId) drag.current = undefined;
-    };
     return (
         <>
             <div className="geo-stage">
@@ -253,6 +271,7 @@ function MapCanvas({
                     role="img"
                     aria-label={`Spatial result map with ${prepared.features.length} rendered features`}
                     onClick={() => setSelectedIndex(undefined)}
+                    onClickCapture={onClickCapture}
                     onPointerDown={onPointerDown}
                     onPointerMove={onPointerMove}
                     onPointerUp={finishDrag}

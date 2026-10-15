@@ -1,4 +1,5 @@
 import type { Result } from '../queries/results/types.js';
+import { NYC_AFTER_DARK_PREVIEW, NYC_AFTER_DARK_SQL } from './nyc-after-dark.js';
 
 export type GeoHelpCity = {
     city: string;
@@ -114,66 +115,6 @@ const flightRouteSql = flightRoutes
     })
     .join('\n');
 
-const deliveryZones = [
-    {
-        zone: 'West Coast',
-        ring: [
-            [-126, 32],
-            [-117, 32],
-            [-117, 49],
-            [-126, 49],
-            [-126, 32],
-        ],
-        orders: 1800,
-    },
-    {
-        zone: 'Europe',
-        ring: [
-            [-10, 35],
-            [30, 35],
-            [30, 60],
-            [-10, 60],
-            [-10, 35],
-        ],
-        orders: 2900,
-    },
-    {
-        zone: 'East Africa',
-        ring: [
-            [29, -12],
-            [52, -12],
-            [52, 13],
-            [29, 13],
-            [29, -12],
-        ],
-        orders: 950,
-    },
-    {
-        zone: 'Southeast Asia',
-        ring: [
-            [95, -11],
-            [130, -11],
-            [130, 22],
-            [95, 22],
-            [95, -11],
-        ],
-        orders: 2400,
-    },
-] as const;
-
-const deliveryZoneSql = deliveryZones
-    .map(({ zone, ring, orders }, index) => {
-        const select = index === 0 ? 'SELECT' : 'UNION ALL SELECT';
-        const zoneAlias = index === 0 ? ' AS zone' : '';
-        const coverageAlias = index === 0 ? ' AS coverage' : '';
-        const ordersAlias = index === 0 ? ' AS orders' : '';
-        const points = ring
-            .map(([longitude, latitude]) => `(${longitude}, ${latitude})`)
-            .join(', ');
-        return `${select} ${quoteSqlString(zone)}${zoneAlias}, [[${points}]]::Polygon${coverageAlias}, ${orders}${ordersAlias}`;
-    })
-    .join('\n');
-
 export const GEO_HELP_PREVIEW_ROWS: Record<string, Pick<Result, 'columns' | 'rows'>> = {
     'clickhouse-geo-cities': {
         columns: [
@@ -199,24 +140,13 @@ export const GEO_HELP_PREVIEW_ROWS: Record<string, Pick<Result, 'columns' | 'row
             route.passengers,
         ]),
     },
-    'clickhouse-geo-delivery-zones': {
-        columns: [
-            { name: 'zone', type: 'String' },
-            { name: 'coverage', type: 'Polygon' },
-            { name: 'orders', type: 'UInt16' },
-        ],
-        rows: deliveryZones.map(zone => [
-            zone.zone,
-            [zone.ring.map(position => [...position])],
-            zone.orders,
-        ]),
-    },
+    'nyc-taxi-after-dark': NYC_AFTER_DARK_PREVIEW,
 };
 
 export const GEO_HELP_SQL = {
     'clickhouse-geo-cities': citySql,
     'clickhouse-geo-flight-routes': flightRouteSql,
-    'clickhouse-geo-delivery-zones': deliveryZoneSql,
+    'nyc-taxi-after-dark': NYC_AFTER_DARK_SQL,
 };
 
 const normalizedSql = (sql: string) =>

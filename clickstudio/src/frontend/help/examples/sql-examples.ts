@@ -2,7 +2,7 @@ import type { ChartConfig } from '../../../shared/queries/results/chart-settings
 import type { Connection } from '../../../shared/database/connections/types.js';
 import type { Schema } from '../../../shared/database/schema/types.js';
 import { DEMO_PREVIEW_STARTERS } from '../../api/browser-workspace-api.js';
-import { GEO_HELP_EXAMPLES } from '../previews/geo-help-examples.js';
+import { GEO_HELP_EXAMPLES, PLAYGROUND_GEO_HELP_EXAMPLES } from '../previews/geo-help-examples.js';
 import {
     PLAYGROUND_CONNECTION_ID,
     PLAYGROUND_STARTER_SQL,
@@ -35,7 +35,7 @@ export type SqlExample = {
 };
 
 const playgroundExamples: SqlExample[] = [
-    ...GEO_HELP_EXAMPLES,
+    ...PLAYGROUND_GEO_HELP_EXAMPLES,
     {
         id: 'github-recent-events',
         name: 'Recent GitHub events',
@@ -1447,7 +1447,8 @@ export function sqlExamplesFor(
     schema?: Schema,
 ): SqlExample[] {
     if (connection.id === PLAYGROUND_CONNECTION_ID) return playgroundExamples;
-    if (connection.dataSource === 'fixture') return [...demoExamples, ...GEO_HELP_EXAMPLES];
+    if (connection.dataSource === 'fixture')
+        return [...demoExamples, ...PLAYGROUND_GEO_HELP_EXAMPLES];
 
     const tableExamples: SqlExample[] = (schema?.tables ?? [])
         .filter(table => !['system', 'information_schema'].includes(table.database.toLowerCase()))

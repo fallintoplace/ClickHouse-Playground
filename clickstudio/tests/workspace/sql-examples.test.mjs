@@ -324,7 +324,7 @@ test('Retired ClickHouse and Cities categories rehome every example into an avai
         [playground, 'nyc-taxi-fare-quantiles', 'operations'],
         [playground, 'clickhouse-geo-cities', 'operations'],
         [playground, 'clickhouse-geo-flight-routes', 'operations'],
-        [playground, 'clickhouse-geo-delivery-zones', 'operations'],
+        [playground, 'nyc-taxi-after-dark', 'operations'],
         [fixtures, 'preview-starter-latency-anomaly', 'timeSeries'],
         [fixtures, 'preview-starter-latest-event', 'basics'],
         [fixtures, 'preview-starter-top-pages-country', 'aggregation'],
@@ -351,7 +351,6 @@ test('Native geometry examples open Geography charts with explicit labels and me
         for (const [id, geometryName] of [
             ['clickhouse-geo-cities', 'location'],
             ['clickhouse-geo-flight-routes', 'path'],
-            ['clickhouse-geo-delivery-zones', 'coverage'],
         ]) {
             const example = examples.find(candidate => candidate.id === id);
             assert.ok(example, id);
@@ -364,6 +363,34 @@ test('Native geometry examples open Geography charts with explicit labels and me
             assert.equal(example.chart.geography.swapCoordinates, false);
             assert.doesNotThrow(() => validatePlaygroundQuery(example.sql), id);
         }
+    }
+});
+
+test('NYC after dark stays in Playground and offline demo catalogs with its nighttime share measure', () => {
+    for (const connection of [
+        { id: 'playground', dataSource: 'clickhouse' },
+        { id: 'demo', dataSource: 'fixture' },
+    ]) {
+        const examples = sqlExamplesFor(connection);
+        const example = examples.find(candidate => candidate.id === 'nyc-taxi-after-dark');
+        assert.ok(example);
+        assert.equal(example.dataset, 'NYC Taxi');
+        assert.equal(example.chart.kind, 'geography');
+        assert.deepEqual(example.chart.geography, {
+            source: { mode: 'geometry', column: 1 },
+            sourceColumnNames: ['coverage'],
+            label: 0,
+            measure: 3,
+            swapCoordinates: false,
+        });
+        assert.doesNotThrow(() => validatePlaygroundQuery(example.sql));
+        assert.ok(!examples.some(candidate => candidate.id === 'clickhouse-geo-delivery-zones'));
+    }
+    const cloud = { id: 'production', dataSource: 'clickhouse' };
+    for (const schema of [undefined, { tables: [], columns: [] }]) {
+        const examples = sqlExamplesFor(cloud, schema);
+        assert.ok(!examples.some(example => example.id === 'nyc-taxi-after-dark'));
+        assert.ok(!examples.some(example => example.id === 'clickhouse-geo-delivery-zones'));
     }
 });
 
@@ -437,7 +464,6 @@ test('SQL examples use safe generic queries until a real connection schema is av
             'Generate a number series',
             'Native Point cities',
             'Intercontinental flight paths',
-            'Colorful delivery zones',
         ],
     );
     assert.ok(generic.every(example => /^SELECT/.test(example.sql)));

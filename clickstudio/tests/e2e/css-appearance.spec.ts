@@ -66,11 +66,11 @@ for (const theme of ['Light', 'Dark']) {
             await trust(page, mode);
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
             const dialog = await openSqlExamples(page);
-            await dialog.getByTestId('sql-example-search').fill('Colorful delivery zones');
-            await dialog.getByTestId('sql-example-clickhouse-geo-delivery-zones').click();
+            await dialog.getByTestId('sql-example-search').fill('NYC after dark');
+            await dialog.getByTestId('sql-example-nyc-taxi-after-dark').click();
             await dialog.getByTestId('run-sql-example').click();
             const stage = page.locator('.geo-stage');
-            await expect(stage.locator('.geo-feature.is-area')).toHaveCount(4);
+            await expect(stage.locator('.geo-feature.is-area')).toHaveCount(52);
             await expect.poll(() => stage.locator('.geo-country').count()).toBeGreaterThan(100);
             const workspace = page.locator('.geo-workspace-frame');
             for (const width of [1440, 900]) {

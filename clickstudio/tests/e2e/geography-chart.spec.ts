@@ -48,7 +48,7 @@ for (const mode of ['Standard', 'Experimental']) {
     for (const [id, name, count] of [
         ['clickhouse-geo-cities', 'Native Point cities', 20],
         ['clickhouse-geo-flight-routes', 'Intercontinental flight paths', 8],
-        ['clickhouse-geo-delivery-zones', 'Colorful delivery zones', 4],
+        ['nyc-taxi-after-dark', 'NYC after dark', 52],
     ] as const)
         test(`${mode} ${id} opens Geography by default from SQL examples`, async ({
             page,
@@ -74,7 +74,7 @@ for (const mode of ['Standard', 'Experimental']) {
             await expect(results.locator('.geo-map-caption')).toContainText(
                 `${count} valid features`,
             );
-            if (id === 'clickhouse-geo-delivery-zones') {
+            if (id === 'nyc-taxi-after-dark') {
                 const boxes = await results.locator('.geo-feature.is-area').evaluateAll(paths =>
                     paths.map(path => {
                         if (!(path instanceof SVGGraphicsElement))
@@ -96,7 +96,7 @@ for (const mode of ['Standard', 'Experimental']) {
                         };
                     }),
                 );
-                expect(new Set(boxes.map(box => JSON.stringify(box))).size).toBe(4);
+                expect(new Set(boxes.map(box => JSON.stringify(box))).size).toBe(count);
                 for (const box of boxes) {
                     expect(box.width).toBeGreaterThan(0);
                     expect(box.width).toBeLessThan(480);
@@ -108,7 +108,7 @@ for (const mode of ['Standard', 'Experimental']) {
                     .poll(() => results.locator('.geo-country').count())
                     .toBeGreaterThan(100);
                 await results.locator('.geo-stage').screenshot({
-                    path: info.outputPath(`delivery-zones-${mode}.png`),
+                    path: info.outputPath(`nyc-after-dark-${mode}.png`),
                 });
                 const map = results.locator('.geo-map');
                 const origin = () =>
@@ -137,6 +137,36 @@ for (const mode of ['Standard', 'Experimental']) {
                     .toBe(true);
                 await results.getByRole('button', { name: 'Fit', exact: true }).click();
                 await expect.poll(origin).toEqual(initial);
+                const cell = results.locator('.geo-feature.is-area').first();
+                const details = results.locator('.geo-selection');
+                const cellBounds = await cell.boundingBox();
+                if (!cellBounds) throw new Error('Expected the pickup cell bounds');
+                const cellCenter = {
+                    x: cellBounds.x + cellBounds.width / 2,
+                    y: cellBounds.y + cellBounds.height / 2,
+                };
+                await page.mouse.move(cellCenter.x, cellCenter.y);
+                await page.mouse.down();
+                await page.mouse.move(cellCenter.x + 60, cellCenter.y + 30);
+                await page.mouse.up();
+                await expect(details).toContainText('Select a point, line, or region');
+                await expect
+                    .poll(async () => {
+                        const moved = await origin();
+                        return Math.abs(moved.x - initial.x - 60) < 1;
+                    })
+                    .toBe(true);
+                await results.getByRole('button', { name: 'Fit', exact: true }).click();
+                await expect.poll(origin).toEqual(initial);
+                await cell.click();
+                await expect(details).toContainText('Hudson Yards-Chelsea-Flatiron-Union Square');
+                await expect(details).toContainText('avg_night_fare_usd');
+                await expect(details).toContainText('h3_cell');
+                await expect(details).toContainText('221494');
+                await expect(details).toContainText('night_share_pct');
+                await expect(details).toContainText('34.4');
+                await map.click({ position: { x: 15, y: 15 } });
+                await expect(details).toContainText('Select a point, line, or region');
             }
         });
 

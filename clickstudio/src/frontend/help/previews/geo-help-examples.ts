@@ -52,24 +52,28 @@ export const GEO_HELP_EXAMPLES: SqlExample[] = [
         },
         featuredOrder: 10,
     },
+];
+
+export const PLAYGROUND_GEO_HELP_EXAMPLES: SqlExample[] = [
+    ...GEO_HELP_EXAMPLES,
     {
-        id: 'clickhouse-geo-delivery-zones',
-        name: 'Colorful delivery zones',
+        id: 'nyc-taxi-after-dark',
+        name: 'NYC after dark',
         description:
-            'Map four delivery regions and compare their order volume with native Polygon values.',
-        dataset: 'ClickHouse Geo',
+            'See where NYC comes alive after dark. Color shows the share of pickups between 8pm and 5am; select a hexagon for trip counts and fares (July–September 2015).',
+        dataset: 'NYC Taxi',
         category: 'operations',
-        sql: GEO_HELP_SQL['clickhouse-geo-delivery-zones'],
+        sql: GEO_HELP_SQL['nyc-taxi-after-dark'],
         chart: {
             kind: 'geography',
             x: 0,
-            ys: [2],
-            title: 'Delivery orders by region',
+            ys: [3],
+            title: 'NYC after dark: nighttime pickup share',
             geography: {
                 source: { mode: 'geometry', column: 1 },
                 sourceColumnNames: ['coverage'],
                 label: 0,
-                measure: 2,
+                measure: 3,
                 swapCoordinates: false,
             },
         },
