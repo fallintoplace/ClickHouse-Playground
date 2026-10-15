@@ -67,10 +67,12 @@ function StatementCardContent({
                 </small>
                 {notice && <span className="script-statement-notice">{notice}</span>}
             </span>
-            <span className={cx('script-status', `status-${statement.status}`)}>
-                {rich && <Icon name={statusIcons[statement.status]} />}
-                {rich ? statementStatusLabels[statement.status] : statement.status}
-            </span>
+            {(!rich || statement.status !== 'succeeded') && (
+                <span className={cx('script-status', `status-${statement.status}`)}>
+                    {rich && <Icon name={statusIcons[statement.status]} />}
+                    {rich ? statementStatusLabels[statement.status] : statement.status}
+                </span>
+            )}
         </>
     );
 }

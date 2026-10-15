@@ -115,6 +115,10 @@
   outline-offset: var(--focus-inset);
 }
 
+.script-results-menu .script-statement:focus-visible {
+  outline-color: var(--text-soft);
+}
+
 .document-tab:focus-within > button {
   opacity: 1;
 }

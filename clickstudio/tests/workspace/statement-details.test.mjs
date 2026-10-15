@@ -90,8 +90,9 @@ test('A matching run supplies its error details', () => {
     );
 });
 
-test('An unavailable run shows status without invented metrics', () => {
-    assert.equal(statementDetails(statement, undefined, true), 'Succeeded');
+test('An unavailable run avoids a redundant success label in the menu', () => {
+    assert.equal(statementDetails(statement, undefined, true), '');
+    assert.equal(statementDetails(statement), 'Succeeded');
     assert.equal(statementNotice(statement), '');
 });
 

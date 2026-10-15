@@ -35,7 +35,7 @@ export function statementDetails(statement: ResultStatement, run?: Run, includeC
         details.push(`${Math.round(current.elapsedMs)} ms`);
         return details.join(' · ');
     }
-    return statementStatusLabels[status];
+    return includeColumns && status === 'succeeded' ? '' : statementStatusLabels[status];
 }
 
 export function statementNotice(statement: ResultStatement, run?: Run) {

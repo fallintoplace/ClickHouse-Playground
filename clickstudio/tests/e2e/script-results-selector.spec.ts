@@ -9,9 +9,7 @@ import {
 import { test, expect } from '@playwright/test';
 import type { Run, Script } from '../../src/shared/queries/execution/types.js';
 
-test('Rich statement rows show outcomes, warnings and bounded SQL in both modes', async ({
-    page,
-}, info) => {
+test('Compact statement rows show outcomes and warnings in both modes', async ({ page }, info) => {
     await trust(page);
     await replaceSql(page, 'SELECT 1');
     const response = page.waitForResponse(
@@ -142,20 +140,20 @@ test('Rich statement rows show outcomes, warnings and bounded SQL in both modes'
                 await page.keyboard.press('Home');
                 await expect(rows.nth(0)).toBeFocused();
                 await expect(rows.nth(0)).toHaveCSS('outline-width', '2px');
-                await expect(rows.nth(0).locator('.script-status')).toHaveCSS(
-                    'background-color',
-                    'rgba(0, 0, 0, 0)',
+                await expect(rows.nth(0).locator('.script-status')).toHaveCount(0);
+                await expect(rows.nth(0)).toHaveCSS(
+                    'outline-color',
+                    await rows.nth(0).evaluate(element => getComputedStyle(element).color),
                 );
+                await expect(rows.nth(5)).toHaveCSS('box-shadow', 'none');
+                expect((await rows.nth(1).boundingBox())!.height).toBeLessThanOrEqual(40);
                 const bounds = (await menu.boundingBox())!;
-                expect(bounds.width).toBe(Math.min(420, width - 16));
+                expect(bounds.width).toBe(Math.min(300, width - 16));
                 expect(bounds.x).toBeGreaterThanOrEqual(0);
                 expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
                 for (const content of [rows.nth(0).locator('code'), rows.nth(5).locator('small')]) {
-                    const dimensions = await content.evaluate(element => ({
-                        height: element.getBoundingClientRect().height,
-                        line: Number.parseFloat(getComputedStyle(element).lineHeight),
-                    }));
-                    expect(dimensions.height).toBeLessThanOrEqual(dimensions.line * 2 + 1);
+                    await expect(content).toHaveCSS('white-space', 'nowrap');
+                    expect((await content.boundingBox())!.height).toBeLessThanOrEqual(16);
                 }
                 expect(
                     await menu.evaluate(element => element.scrollWidth <= element.clientWidth),
