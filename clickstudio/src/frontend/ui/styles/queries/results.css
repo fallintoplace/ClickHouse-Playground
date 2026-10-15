@@ -48,6 +48,7 @@
   }
   .result-actions-dropdown {
     position: relative;
+    display: flex;
     flex: none;
   }
   .result-actions-trigger {

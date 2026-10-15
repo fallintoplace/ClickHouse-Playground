@@ -85,6 +85,10 @@ for (const theme of ['Light', 'Dark']) {
             'SELECT trip_distance, fare_amount FROM trips WHERE trip_distance > 5; SELECT 2;',
         );
         await runScript(page);
+        await expect(page.locator('.script-results-trigger .script-statement-index')).toHaveClass(
+            /status-succeeded/,
+        );
+        await expect(page.locator('.script-running-results')).toHaveCount(0);
         const results = page.getByRole('region', { name: 'Query results', exact: true });
         for (const mode of ['Standard', 'Experimental']) {
             await setWorkspaceMode(page, mode);

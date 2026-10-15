@@ -972,15 +972,23 @@ for (const theme of ['Dark', 'Light'])
                         return sum + linear * [0.2126, 0.7152, 0.0722][index]!;
                     }, 0);
                 const background = rgb(style.backgroundColor);
+                const icon = rgb(getComputedStyle(element.querySelector('svg')!).color);
                 const light = luminance(rgb(style.color));
                 const dark = luminance(background);
+                const iconLight = luminance(icon);
                 return {
-                    red: background[0]! > background[1]! && background[0]! > background[2]!,
+                    redIcon: icon[0]! > icon[1]! && icon[0]! > icon[2]!,
+                    redBackground:
+                        background[0]! > background[1]! && background[0]! > background[2]!,
                     ratio: (Math.max(light, dark) + 0.05) / (Math.min(light, dark) + 0.05),
+                    iconRatio:
+                        (Math.max(iconLight, dark) + 0.05) / (Math.min(iconLight, dark) + 0.05),
                 };
             });
-            expect(contrast.red).toBe(true);
+            expect(contrast.redIcon).toBe(true);
+            expect(contrast.redBackground).toBe(false);
             expect(contrast.ratio).toBeGreaterThanOrEqual(4.5);
+            expect(contrast.iconRatio).toBeGreaterThanOrEqual(3);
             await expect(page.locator('.editor-surface').getByTestId('query-failure')).toHaveCount(
                 0,
             );
