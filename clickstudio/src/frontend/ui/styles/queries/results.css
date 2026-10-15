@@ -47,6 +47,58 @@
     font-weight: 700;
     box-shadow: var(--shadow-inset);
   }
+  .result-actions-dropdown {
+    position: relative;
+    flex: none;
+  }
+  .result-actions-trigger {
+    width: 28px;
+    min-height: 28px;
+    padding: 0;
+  }
+  .result-actions-trigger svg {
+    width: 15px;
+    height: 15px;
+  }
+  .result-actions-menu {
+    position: absolute;
+    z-index: var(--z-popover);
+    top: calc(100% + 4px);
+    left: 0;
+    width: max-content;
+    padding: 4px;
+    border: 1px solid var(--line-bright);
+    border-radius: var(--radius-control);
+    background: var(--panel-raised);
+    box-shadow: var(--shadow-dialog);
+  }
+  .result-actions-menu > button {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: var(--radius-label);
+    background: transparent;
+    color: var(--text);
+    text-align: left;
+    font-size: 11px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .result-actions-menu > button:hover {
+    background: var(--control-hover);
+  }
+  .result-actions-menu svg {
+    width: 14px;
+    height: 14px;
+  }
+  .materialized-view-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
   .results-fix-with-ai:hover:not(:disabled) {
     background: color-mix(in srgb, var(--red) 90%, var(--text));
   }

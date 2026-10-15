@@ -31,6 +31,8 @@ import {
 import { Button, cx, Spinner } from '../../ui/components/primitives';
 import { Icon } from '../../ui/components/icons';
 import { ScriptResultsSelector, ScriptRunningResults } from './ScriptResultsSelector';
+import { ResultActions, type OpenResultSql } from './ResultActions';
+import type { Schema } from '../../../shared/database/schema/types';
 import { ScrollEdgeFrame } from '../../ui/components/ScrollEdgeShadows';
 import { QueryFailureNotice } from './QueryFailureNotice';
 import { resultsTabLabel, resultsViewHelpHint } from '../../workspace/workspace-helpers';
@@ -40,6 +42,7 @@ import type { WorkspaceFeedback } from '../../workspace/layout/notifications/use
 export type WorkspaceResultsPanelState = Readonly<{
     active: Draft;
     connection: Connected;
+    schema?: Schema;
     copy: Copy;
     run?: Run;
     failedAttempt?: FailedQueryError;
@@ -64,6 +67,7 @@ export type WorkspaceResultsPanelState = Readonly<{
 }>;
 
 export type WorkspaceResultsPanelActions = Readonly<{
+    onOpenSql: OpenResultSql;
     onSelectView: (view: ResultsView) => void;
     onSelectScriptRun: (runId: string) => void;
     onSelectScriptError: () => void;
@@ -724,6 +728,20 @@ function renderResultsHeader({
                 />
             </div>
             <div className="results-actions">
+                {state.experience === 'expert' &&
+                    !showFailure &&
+                    !execution &&
+                    !panels.resultsCollapsed &&
+                    showQueryCard &&
+                    run && (
+                        <ResultActions
+                            key={`${state.connection.id}:${state.connection.database}:${run.id}`}
+                            run={run}
+                            database={state.connection.database}
+                            schema={state.schema}
+                            onOpenSql={actions.onOpenSql}
+                        />
+                    )}
                 <div
                     ref={setTableToolbar}
                     className="results-table-tools"

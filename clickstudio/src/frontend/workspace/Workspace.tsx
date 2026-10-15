@@ -219,6 +219,7 @@ export function Workspace({
             state={{
                 active,
                 connection,
+                schema,
                 copy,
                 run,
                 failedAttempt: failedQueryError,
@@ -246,6 +247,15 @@ export function Workspace({
                     model.evidence.assetReadFeedback,
             }}
             actions={{
+                onOpenSql: (name, sql, parameters) => {
+                    const opened = model.openSqlDraft(name, sql, false);
+                    if (opened)
+                        update(opened.draftId, draft => ({
+                            ...draft,
+                            parameters: { ...parameters },
+                        }));
+                    return Boolean(opened);
+                },
                 onRetryRead:
                     !model.scriptReadFeedback &&
                     (model.evidence.runReadFeedback || model.evidence.resultReadFeedback)
