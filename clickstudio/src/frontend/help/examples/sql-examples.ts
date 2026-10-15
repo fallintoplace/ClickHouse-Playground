@@ -116,6 +116,316 @@ ORDER BY year, month`,
         },
     },
     {
+        id: 'amazon-monthly-review-volume',
+        name: 'Monthly Amazon review volume',
+        category: 'business',
+        dataset: 'Amazon Reviews',
+        description:
+            'Compare verified and unverified purchase reviews across 24 full months of historical data.',
+        sql: `WITH (SELECT toStartOfMonth(max(review_date)) FROM amazon.amazon_reviews) AS latest_month
+SELECT
+    toStartOfMonth(review_date) AS month,
+    countIf(verified_purchase) AS verified_reviews,
+    countIf(NOT verified_purchase) AS unverified_reviews
+FROM amazon.amazon_reviews
+WHERE review_date >= latest_month - INTERVAL 24 MONTH
+    AND review_date < latest_month
+GROUP BY month
+ORDER BY month
+LIMIT 24`,
+        chart: { kind: 'line', x: 0, ys: [1, 2], title: 'Monthly Amazon review volume' },
+    },
+    {
+        id: 'amazon-category-ratings',
+        name: 'Top-rated product categories',
+        category: 'business',
+        dataset: 'Amazon Reviews',
+        description:
+            'Rank 15 product categories by average star rating, each with at least 100,000 reviews.',
+        sql: `SELECT
+    product_category,
+    round(avg(star_rating), 2) AS average_stars,
+    count() AS reviews
+FROM amazon.amazon_reviews
+WHERE product_category != ''
+    AND star_rating BETWEEN 1 AND 5
+GROUP BY product_category
+HAVING reviews >= 100000
+ORDER BY average_stars DESC, product_category
+LIMIT 15`,
+        chart: { kind: 'bar', x: 0, ys: [1], title: 'Average rating by product category' },
+    },
+    {
+        id: 'uk-monthly-property-sales',
+        name: 'Monthly property sales',
+        category: 'business',
+        dataset: 'UK property data',
+        description:
+            'Compare new-build and existing-home sales over 36 full months in the property dataset.',
+        sql: `WITH (SELECT toStartOfMonth(max(date)) FROM uk.uk_price_paid) AS latest_month
+SELECT
+    toStartOfMonth(date) AS month,
+    countIf(is_new = 0) AS existing_home_sales,
+    countIf(is_new = 1) AS new_build_sales
+FROM uk.uk_price_paid
+WHERE date >= latest_month - INTERVAL 36 MONTH
+    AND date < latest_month
+GROUP BY month
+ORDER BY month
+LIMIT 36`,
+        chart: { kind: 'line', x: 0, ys: [1, 2], title: 'Monthly property sales' },
+    },
+    {
+        id: 'uk-town-median-prices',
+        name: 'Property prices by town',
+        category: 'business',
+        dataset: 'UK property data',
+        description:
+            'Compare median prices in GBP for 15 towns with at least 1,000 sales in the last full dataset year.',
+        sql: `WITH (SELECT toStartOfYear(max(date)) FROM uk.uk_price_paid) AS latest_year
+SELECT
+    town,
+    round(quantileTDigest(0.50)(price), 0) AS median_price_gbp,
+    count() AS sales
+FROM uk.uk_price_paid
+WHERE date >= latest_year - INTERVAL 1 YEAR
+    AND date < latest_year
+    AND town != ''
+    AND price > 0
+GROUP BY town
+HAVING sales >= 1000
+ORDER BY median_price_gbp DESC, town
+LIMIT 15`,
+        chart: { kind: 'bar', x: 0, ys: [1], title: 'Median property prices in GBP' },
+    },
+    {
+        id: 'otel-service-request-volume',
+        name: 'Service request traffic',
+        category: 'observability',
+        dataset: 'OpenTelemetry',
+        description:
+            'Compare frontend, cart, and product-catalog requests in 30 complete two-minute buckets.',
+        sql: `WITH (
+    SELECT toStartOfInterval(max(Timestamp), INTERVAL 2 MINUTE)
+    FROM otel_v2.otel_traces
+) AS window_end
+SELECT
+    toStartOfInterval(Timestamp, INTERVAL 2 MINUTE) AS minute,
+    countIf(ServiceName = 'frontend') AS frontend_requests,
+    countIf(ServiceName = 'cart') AS cart_requests,
+    countIf(ServiceName = 'product-catalog') AS catalog_requests
+FROM otel_v2.otel_traces
+WHERE Timestamp >= window_end - INTERVAL 60 MINUTE
+    AND Timestamp < window_end
+    AND SpanKind IN ('Server', 'SPAN_KIND_SERVER')
+    AND ServiceName IN ('frontend', 'cart', 'product-catalog')
+GROUP BY minute
+ORDER BY minute
+LIMIT 30`,
+        chart: { kind: 'line', x: 0, ys: [1, 2, 3], title: 'Requests per two minutes' },
+    },
+    {
+        id: 'otel-service-latency-ranking',
+        name: 'Service latency comparison',
+        category: 'observability',
+        dataset: 'OpenTelemetry',
+        description:
+            'Compare median and p95 latency in milliseconds for up to 15 busy services in the latest hour.',
+        sql: `WITH (SELECT max(Timestamp) FROM otel_v2.otel_traces) AS latest
+SELECT
+    ServiceName AS service,
+    round(quantileTDigest(0.50)(Duration) / 1000000, 2) AS p50_ms,
+    round(quantileTDigest(0.95)(Duration) / 1000000, 2) AS p95_ms,
+    count() AS requests
+FROM otel_v2.otel_traces
+WHERE Timestamp >= latest - INTERVAL 60 MINUTE
+    AND SpanKind IN ('Server', 'SPAN_KIND_SERVER')
+    AND ServiceName != ''
+GROUP BY service
+HAVING requests >= 1000
+ORDER BY p95_ms DESC, service
+LIMIT 15`,
+        chart: { kind: 'bar', x: 0, ys: [1, 2], title: 'Service latency in milliseconds' },
+    },
+    {
+        id: 'otel-span-error-trend',
+        name: 'Span errors over time',
+        category: 'observability',
+        dataset: 'OpenTelemetry',
+        description: 'Spot error spikes across all span kinds in 30 complete two-minute buckets.',
+        sql: `WITH (
+    SELECT toStartOfInterval(max(Timestamp), INTERVAL 2 MINUTE)
+    FROM otel_v2.otel_traces
+) AS window_end
+SELECT
+    toStartOfInterval(Timestamp, INTERVAL 2 MINUTE) AS minute,
+    countIf(StatusCode IN ('Error', 'STATUS_CODE_ERROR')) AS error_spans
+FROM otel_v2.otel_traces
+WHERE Timestamp >= window_end - INTERVAL 60 MINUTE
+    AND Timestamp < window_end
+GROUP BY minute
+ORDER BY minute
+LIMIT 30`,
+        chart: { kind: 'line', x: 0, ys: [1], title: 'Error spans per two minutes' },
+    },
+    {
+        id: 'otel-service-latency-heatmap',
+        name: 'Service latency heatmap',
+        category: 'observability',
+        dataset: 'OpenTelemetry',
+        description:
+            'Find slow services across six complete ten-minute windows in a 42-cell p95 latency heatmap.',
+        sql: `WITH (
+    SELECT toStartOfInterval(max(Timestamp), INTERVAL 10 MINUTE)
+    FROM otel_v2.otel_traces
+) AS window_end
+SELECT
+    ServiceName AS service,
+    toStartOfInterval(Timestamp, INTERVAL 10 MINUTE) AS minute,
+    round(quantileTDigest(0.95)(Duration) / 1000000, 2) AS p95_ms
+FROM otel_v2.otel_traces
+WHERE Timestamp >= window_end - INTERVAL 60 MINUTE
+    AND Timestamp < window_end
+    AND SpanKind IN ('Server', 'SPAN_KIND_SERVER')
+    AND ServiceName IN ('frontend', 'frontend-proxy', 'cart', 'checkout', 'payment', 'product-catalog', 'currency')
+GROUP BY service, minute
+ORDER BY service, minute
+LIMIT 42`,
+        chart: {
+            kind: 'heatmap',
+            x: 1,
+            groupBy: 0,
+            ys: [2],
+            title: 'Service p95 latency in milliseconds',
+        },
+    },
+    {
+        id: 'ontime-airline-delay-rates',
+        name: 'Airline departure delay rates',
+        category: 'operations',
+        dataset: 'US flights',
+        description:
+            'Compare departures delayed at least 15 minutes for up to 15 busy airlines in the latest year with all 12 months.',
+        sql: `WITH (
+    SELECT max(Year)
+    FROM (
+        SELECT Year
+        FROM ontime.ontime
+        GROUP BY Year
+        HAVING uniqExact(Month) = 12
+    )
+) AS latest_full_year
+SELECT
+    Reporting_Airline AS airline,
+    round(100.0 * countIf(DepDelay >= 15) / count(), 1) AS delayed_pct,
+    count() AS flights
+FROM ontime.ontime
+WHERE Year = latest_full_year
+    AND Cancelled = 0
+    AND Diverted = 0
+GROUP BY airline
+HAVING flights >= 10000
+ORDER BY delayed_pct DESC, airline
+LIMIT 15`,
+        chart: { kind: 'bar', x: 0, ys: [1], title: 'Departures delayed at least 15 minutes (%)' },
+    },
+    {
+        id: 'ontime-airport-delay-minutes',
+        name: 'Airport departure delay minutes',
+        category: 'operations',
+        dataset: 'US flights',
+        description:
+            'Compare average and p95 departure delays for 15 busy airports in the latest year with all 12 months.',
+        sql: `WITH (
+    SELECT max(Year)
+    FROM (
+        SELECT Year
+        FROM ontime.ontime
+        GROUP BY Year
+        HAVING uniqExact(Month) = 12
+    )
+) AS latest_full_year
+SELECT
+    trimBoth(toString(Origin), char(0)) AS airport,
+    round(avg(greatest(DepDelay, 0)), 1) AS average_delay_minutes,
+    round(quantileTDigest(0.95)(greatest(DepDelay, 0)), 1) AS p95_delay_minutes,
+    count() AS flights
+FROM ontime.ontime
+WHERE Year = latest_full_year
+    AND Cancelled = 0
+    AND Diverted = 0
+GROUP BY airport
+HAVING flights >= 10000
+ORDER BY average_delay_minutes DESC, airport
+LIMIT 15`,
+        chart: { kind: 'bar', x: 0, ys: [1, 2], title: 'Airport departure delays in minutes' },
+    },
+    {
+        id: 'ontime-monthly-disruption-rates',
+        name: 'Monthly flight disruption rates',
+        category: 'operations',
+        dataset: 'US flights',
+        description:
+            'Track cancellation and diversion rates across the latest two consecutive years with all 24 months available.',
+        sql: `WITH complete_years AS (
+    SELECT Year
+    FROM ontime.ontime
+    GROUP BY Year
+    HAVING uniqExact(Month) = 12
+), (
+    SELECT max(Year)
+    FROM complete_years
+    WHERE Year - 1 IN (SELECT Year FROM complete_years)
+) AS latest_full_year
+SELECT
+    toStartOfMonth(FlightDate) AS month,
+    round(100.0 * countIf(Cancelled = 1) / count(), 2) AS cancelled_pct,
+    round(100.0 * countIf(Diverted = 1) / count(), 2) AS diverted_pct
+FROM ontime.ontime
+WHERE Year BETWEEN latest_full_year - 1 AND latest_full_year
+GROUP BY month
+ORDER BY month
+LIMIT 24`,
+        chart: { kind: 'line', x: 0, ys: [1, 2], title: 'Flight disruption rates (%)' },
+    },
+    {
+        id: 'ontime-weekly-delay-heatmap',
+        name: 'Departure delay patterns',
+        category: 'operations',
+        dataset: 'US flights',
+        description:
+            'Spot delay-prone weekdays and four-hour departure windows in a 42-cell heatmap for the latest year with all 12 months.',
+        sql: `WITH (
+    SELECT max(Year)
+    FROM (
+        SELECT Year
+        FROM ontime.ontime
+        GROUP BY Year
+        HAVING uniqExact(Month) = 12
+    )
+) AS latest_full_year
+SELECT
+    toDayOfWeek(FlightDate) AS weekday,
+    intDiv(CRSDepTime, 400) * 4 AS departure_hour,
+    round(100.0 * countIf(DepDelay >= 15) / count(), 1) AS delayed_pct
+FROM ontime.ontime
+WHERE Year = latest_full_year
+    AND Cancelled = 0
+    AND Diverted = 0
+    AND CRSDepTime >= 0
+    AND CRSDepTime < 2400
+GROUP BY weekday, departure_hour
+ORDER BY weekday, departure_hour
+LIMIT 42`,
+        chart: {
+            kind: 'heatmap',
+            x: 1,
+            groupBy: 0,
+            ys: [2],
+            title: 'Departure delay rate by weekday and hour (%)',
+        },
+    },
+    {
         id: 'stackoverflow-technology-trends',
         name: 'Developer Technology Trends',
         category: 'engineering',

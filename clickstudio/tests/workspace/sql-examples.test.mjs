@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PLAYGROUND_STARTER_SQL } from '../../.workspace-build/src/frontend/database/connections/playground-client.js';
+import {
+    PLAYGROUND_STARTER_SQL,
+    validatePlaygroundQuery,
+} from '../../.workspace-build/src/frontend/database/connections/playground-client.js';
 import { sqlExamplesFor } from '../../.workspace-build/src/frontend/help/examples/sql-examples.js';
 
 test('SQL example catalogs match the selected Playground or fixture source', () => {
@@ -202,6 +205,107 @@ test('Stack Overflow examples match the Playground tag format and stay chart fri
     assert.equal(popularTags.featuredOrder, 12);
     assert.equal(popularTags.chart.kind, 'bar');
     assert.deepEqual(popularTags.chart.ys, [1]);
+});
+
+test('Business, Observability, and Operations each offer five bounded chart examples', () => {
+    const examples = sqlExamplesFor({ id: 'playground', dataSource: 'clickhouse' });
+    const cases = [
+        ['amazon-monthly-review-volume', 'business', 'amazon.amazon_reviews', 'line', 24, 3],
+        ['amazon-category-ratings', 'business', 'amazon.amazon_reviews', 'bar', 15, 3],
+        ['uk-monthly-property-sales', 'business', 'uk.uk_price_paid', 'line', 36, 3],
+        ['uk-town-median-prices', 'business', 'uk.uk_price_paid', 'bar', 15, 3],
+        ['otel-service-request-volume', 'observability', 'otel_v2.otel_traces', 'line', 30, 4],
+        ['otel-service-latency-ranking', 'observability', 'otel_v2.otel_traces', 'bar', 15, 4],
+        ['otel-span-error-trend', 'observability', 'otel_v2.otel_traces', 'line', 30, 2],
+        ['otel-service-latency-heatmap', 'observability', 'otel_v2.otel_traces', 'heatmap', 42, 3],
+        ['ontime-airline-delay-rates', 'operations', 'ontime.ontime', 'bar', 15, 3],
+        ['ontime-airport-delay-minutes', 'operations', 'ontime.ontime', 'bar', 15, 4],
+        ['ontime-monthly-disruption-rates', 'operations', 'ontime.ontime', 'line', 24, 3],
+        ['ontime-weekly-delay-heatmap', 'operations', 'ontime.ontime', 'heatmap', 42, 3],
+    ];
+
+    for (const category of ['business', 'observability', 'operations']) {
+        const categoryExamples = examples.filter(example => example.category === category);
+        assert.equal(categoryExamples.length, 5, category);
+        assert.ok(categoryExamples.every(example => example.chart.kind !== 'table'));
+    }
+
+    for (const [id, category, table, kind, limit, columnCount] of cases) {
+        const example = examples.find(candidate => candidate.id === id);
+        assert.ok(example, `missing ${id}`);
+        assert.equal(example.category, category);
+        assert.equal(example.chart.kind, kind);
+        assert.ok(example.sql.includes(`FROM ${table}`), id);
+        assert.doesNotThrow(() => validatePlaygroundQuery(example.sql), id);
+        assert.match(example.sql, new RegExp(`LIMIT ${limit}\\s*$`));
+        assert.match(example.sql, /GROUP BY/);
+        assert.match(example.sql, /ORDER BY/);
+        assert.doesNotMatch(example.sql, /\b(?:now|today)\s*\(/i);
+        assert.equal(example.featuredOrder, undefined);
+        assert.ok(example.chart.ys.length > 0);
+        assert.ok(
+            [example.chart.x, ...example.chart.ys, example.chart.groupBy]
+                .filter(index => index !== undefined)
+                .every(index => Number.isInteger(index) && index >= 0 && index < columnCount),
+            id,
+        );
+        assert.ok(!example.chart.ys.includes(example.chart.x), id);
+        if (kind === 'heatmap') {
+            assert.equal(example.chart.x, 1);
+            assert.equal(example.chart.groupBy, 0);
+            assert.deepEqual(example.chart.ys, [2]);
+        }
+    }
+
+    assert.equal(
+        new Set(cases.map(([id]) => examples.find(example => example.id === id).sql)).size,
+        12,
+    );
+});
+
+test('New trend examples exclude partial time buckets and anchor windows to available data', () => {
+    const examples = sqlExamplesFor({ id: 'playground', dataSource: 'clickhouse' });
+    const cases = [
+        ['amazon-monthly-review-volume', 'review_date', 'latest_month', '24 MONTH'],
+        ['uk-monthly-property-sales', 'date', 'latest_month', '36 MONTH'],
+        ['otel-service-request-volume', 'Timestamp', 'window_end', '60 MINUTE'],
+        ['otel-span-error-trend', 'Timestamp', 'window_end', '60 MINUTE'],
+        ['otel-service-latency-heatmap', 'Timestamp', 'window_end', '60 MINUTE'],
+    ];
+
+    for (const [id, column, anchor, window] of cases) {
+        const sql = examples.find(example => example.id === id).sql;
+        assert.ok(sql.includes(`max(${column})`), id);
+        assert.ok(sql.includes(`${column} >= ${anchor} - INTERVAL ${window}`), id);
+        assert.ok(sql.includes(`${column} < ${anchor}`), id);
+    }
+});
+
+test('Flight delay examples exclude unfinished flights while disruption rates include them', () => {
+    const examples = sqlExamplesFor({ id: 'playground', dataSource: 'clickhouse' });
+    for (const id of [
+        'ontime-airline-delay-rates',
+        'ontime-airport-delay-minutes',
+        'ontime-weekly-delay-heatmap',
+    ]) {
+        const sql = examples.find(example => example.id === id).sql;
+        assert.match(sql, /SELECT max\(Year\)/);
+        assert.match(sql, /HAVING uniqExact\(Month\) = 12/);
+        assert.match(sql, /WHERE Year = latest_full_year/);
+        assert.match(sql, /AND Cancelled = 0/);
+        assert.match(sql, /AND Diverted = 0/);
+    }
+
+    const disruptions = examples.find(example => example.id === 'ontime-monthly-disruption-rates');
+    assert.match(disruptions.sql, /HAVING uniqExact\(Month\) = 12/);
+    assert.match(disruptions.sql, /WHERE Year - 1 IN \(SELECT Year FROM complete_years\)/);
+    assert.match(disruptions.sql, /WHERE Year BETWEEN latest_full_year - 1 AND latest_full_year/);
+    assert.match(disruptions.sql, /countIf\(Cancelled = 1\) \/ count\(\)/);
+    assert.match(disruptions.sql, /countIf\(Diverted = 1\) \/ count\(\)/);
+    assert.doesNotMatch(disruptions.sql, /AND (?:Cancelled|Diverted) = 0/);
+    const heatmap = examples.find(example => example.id === 'ontime-weekly-delay-heatmap');
+    assert.match(heatmap.sql, /CRSDepTime >= 0/);
+    assert.match(heatmap.sql, /CRSDepTime < 2400/);
 });
 
 test('Featured Playground examples lead with enterprise workflows', () => {
