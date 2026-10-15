@@ -290,11 +290,13 @@ test('One Run button and the explain actions stay visible in Experimental mode',
     await expect(run).toBeFocused();
 });
 
-test('EXPLAIN INDEXES opens an interactive index graph and keeps the raw result available', async ({
+test('EXPLAIN INDEXES opens the raw result and keeps an interactive index graph available', async ({
     page,
 }) => {
     await trust(page);
     await page.getByTestId('run-action-explain').click();
+    await expect(page.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
+    await page.getByRole('tab', { name: 'Explain indexes', exact: true }).click();
 
     const graph = page.getByRole('region', { name: 'Index pruning graph · Graph', exact: true });
     await expect(graph).toBeVisible();
@@ -331,11 +333,13 @@ test('EXPLAIN INDEXES opens an interactive index graph and keeps the raw result 
     await expect(page.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
 });
 
-test('EXPLAIN PLAN opens a graph with a tree view and keeps the raw result available', async ({
+test('EXPLAIN PLAN opens the raw result and keeps graph and tree views available', async ({
     page,
 }) => {
     await trust(page);
     await page.getByTestId('run-action-explain-plan').click();
+    await expect(page.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
+    await page.getByRole('tab', { name: 'Explain plan', exact: true }).click();
 
     const plan = page.locator('.results-surface[aria-label="Explain plan"]');
     await expect(plan).toContainText('Expression');
@@ -393,11 +397,13 @@ test('EXPLAIN PLAN opens a graph with a tree view and keeps the raw result avail
     await expect(page.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
 });
 
-test('EXPLAIN ANALYZE opens a measured runtime graph and retains the raw result', async ({
+test('EXPLAIN ANALYZE opens the raw result and keeps a measured runtime graph available', async ({
     page,
 }) => {
     await trust(page);
     await page.getByTestId('run-action-explain-analyze').click();
+    await expect(page.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
+    await page.getByRole('tab', { name: 'Explain analyze', exact: true }).click();
 
     const runtime = page.locator('.results-surface[aria-label="Explain analyze"]');
     await expect(runtime.locator('.runtime-summary-grid')).toContainText('31.42 ms');
@@ -422,6 +428,8 @@ test('EXPLAIN PIPELINE opens an interactive ClickHouse operator graph', async ({
     await page.setViewportSize({ width: 1280, height: 644 });
     await trust(page);
     await page.getByTestId('run-action-explain-pipeline').click();
+    await expect(page.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
+    await page.getByRole('tab', { name: 'Explain pipeline', exact: true }).click();
 
     const graph = page.getByRole('region', { name: 'Scrollable operator graph', exact: true });
     const controls = page.getByRole('group', { name: 'Graph view controls', exact: true });

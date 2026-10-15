@@ -670,25 +670,7 @@ function createDraftExecutor({
                     )
                         trackSchemaRefresh(created.id, draft.id, importedSqlBaseline);
                     setRunForRun(created.id, created, true);
-                    const getExplainView = (): ResultsView => {
-                        switch (kind) {
-                            case 'explain':
-                                return 'indexes';
-
-                            case 'plan':
-                                return 'plan';
-
-                            case 'pipeline':
-                                return 'pipeline';
-
-                            case 'analyze':
-                                return 'runtime';
-
-                            default:
-                                return options.view ?? 'results';
-                        }
-                    };
-                    setViewForDraft(draft.id, getExplainView(), true);
+                    setViewForDraft(draft.id, options.view ?? 'results', true);
                     update(draft.id, current => ({
                         ...current,
                         activeRunId: created.id,

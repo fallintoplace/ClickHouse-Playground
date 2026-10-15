@@ -138,8 +138,15 @@ test('SQL Map requests server analysis only after choosing Analyzer', async ({ p
     expect(requests).toEqual(['/api/connections/demo/query-tree']);
 });
 
-for (const action of ['explain', 'explain-plan', 'explain-pipeline', 'explain-analyze'])
-    test(`SQL Map opens after ${action} without starting another run`, async ({ page }) => {
+for (const [action, graphTab] of [
+    ['explain', 'Explain indexes'],
+    ['explain-plan', 'Explain plan'],
+    ['explain-pipeline', 'Explain pipeline'],
+    ['explain-analyze', 'Explain analyze'],
+])
+    test(`${action} opens Table first on each run and keeps SQL Map available`, async ({
+        page,
+    }) => {
         await trust(page);
         let executions = 0;
         page.on('request', request => {
@@ -151,6 +158,32 @@ for (const action of ['explain', 'explain-plan', 'explain-pipeline', 'explain-an
             'data-run-status',
             'succeeded',
         );
+        await expect(page.getByRole('tab', { name: 'Table', exact: true })).toHaveAttribute(
+            'aria-selected',
+            'true',
+        );
+        await expect(
+            page.getByRole('table', { name: 'Retained query rows', exact: true }),
+        ).toBeVisible();
+        await setWorkspaceMode(page, 'Standard');
+        await expect(page.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
+        await setWorkspaceMode(page, 'Experimental');
+        const graph = page.getByRole('tab', { name: graphTab, exact: true });
+        await graph.click();
+        await expect(graph).toHaveAttribute('aria-selected', 'true');
+        await page.getByTestId(`run-action-${action}`).click();
+        await expect.poll(() => executions).toBe(2);
+        await expect(page.locator('.execution-bar')).toHaveAttribute(
+            'data-run-status',
+            'succeeded',
+        );
+        await expect(page.getByRole('tab', { name: 'Table', exact: true })).toHaveAttribute(
+            'aria-selected',
+            'true',
+        );
+        await expect(
+            page.getByRole('table', { name: 'Retained query rows', exact: true }),
+        ).toBeVisible();
         await page.getByTestId('run-action-sql-map').click();
         await expect(page.locator('.sql-flow-view')).toBeVisible();
         await expect(page.getByRole('tab', { name: 'SQL map', exact: true })).toHaveAttribute(
@@ -161,5 +194,5 @@ for (const action of ['explain', 'explain-plan', 'explain-pipeline', 'explain-an
         await expect(
             page.getByRole('table', { name: 'Retained query rows', exact: true }),
         ).toBeVisible();
-        expect(executions).toBe(1);
+        expect(executions).toBe(2);
     });

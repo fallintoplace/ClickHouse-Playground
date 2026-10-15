@@ -209,6 +209,7 @@ for (const theme of ['Dark', 'Light'])
 test('Fix with AI uses the Results header after viewing an EXPLAIN pipeline', async ({ page }) => {
     await trust(page);
     await page.getByTestId('run-action-explain-pipeline').click();
+    await page.getByRole('tab', { name: 'Explain pipeline', exact: true }).click();
     const header = page.locator('.results-header');
     await expect(
         header.getByRole('heading', { name: 'Explain pipeline', exact: true }),
