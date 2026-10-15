@@ -296,7 +296,7 @@ for (const previousTopic of ['reference', 'compare'])
             await expect(help.getByTestId(`help-section-${topic}`)).toBeVisible();
         await help.getByTestId('help-section-workflows').click();
         await expect(help.locator('#workspace-help-panel-workflows')).toContainText(
-            'SQL map, or Insights in Experimental mode.',
+            'or SQL map in Experimental mode.',
         );
     });
 

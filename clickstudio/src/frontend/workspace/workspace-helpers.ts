@@ -80,7 +80,7 @@ export function resultsViews(
     if (run?.kind === 'plan') return ['results', 'plan', 'sqlmap'];
     if (run?.kind === 'pipeline') return ['results', 'pipeline', 'sqlmap'];
     if (run?.kind === 'analyze') return ['results', 'runtime', 'sqlmap'];
-    return ['results', 'chart', 'sqlmap', 'insights'];
+    return ['results', 'chart', 'sqlmap'];
 }
 
 export function resultsViewTitle(view: ResultsView, copy: Copy['common']): string {

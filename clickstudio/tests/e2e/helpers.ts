@@ -49,6 +49,13 @@ export async function openSqlExamples(page: Page) {
     return dialog;
 }
 
+export async function openRunComparison(page: Page) {
+    await page.getByRole('button', { name: 'Help', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });
+    await dialog.getByTestId('help-section-compare').click();
+    return dialog;
+}
+
 export async function replaceSql(page: Page, sql: string) {
     const editor = page.locator('.cm-content');
     await editor.focus();

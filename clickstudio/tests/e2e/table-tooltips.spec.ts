@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { replaceSql, runButton, trust } from './helpers.js';
+import { openRunComparison, replaceSql, runButton, trust } from './helpers.js';
 import { chooseExistingTable, mockWritableWorkspace, schema } from './import-helpers.js';
 import { chooseChartOption } from './chart-control-helpers.js';
 
@@ -149,10 +149,7 @@ test('Comparison keeps exact metric details and styling after redundant titles a
             'succeeded',
         );
     }
-    const results = page.getByRole('region', { name: 'Query results', exact: true });
-    await results.getByRole('tab', { name: 'Insights', exact: true }).click();
-    await results.getByRole('button', { name: 'Compare runs', exact: true }).click();
-    const dialog = page.getByRole('dialog', { name: 'Compare query runs', exact: true });
+    const dialog = await openRunComparison(page);
     const duration = dialog
         .getByRole('row')
         .filter({ has: page.getByRole('rowheader', { name: /^Duration/ }) })

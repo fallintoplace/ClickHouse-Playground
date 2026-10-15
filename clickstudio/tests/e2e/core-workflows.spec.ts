@@ -1950,89 +1950,41 @@ test('Connection switches keep run evidence isolated and recover each connection
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-query-id', firstQueryId);
 });
 
-test('Insights compare one run with its ClickHouse pipeline evidence', async ({ page }) => {
-    await trust(page);
-    const startedRunResponse = page.waitForResponse(
-        response =>
-            response.request().method() === 'POST' &&
-            new URL(response.url()).pathname === '/api/runs',
-    );
-    const results = await runQuery(page);
-    const startedRun = runIdentity(await (await startedRunResponse).json());
-    const queryPlan = page.getByRole('region', { name: 'Run and query plan comparison' });
-
-    await results.getByRole('tab', { name: 'Insights', exact: true }).click();
-    await expect(queryPlan).toContainText(startedRun.queryId);
-    const pipelineRequest = page.waitForRequest(
-        request =>
-            new URL(request.url()).pathname === `/api/runs/${startedRun.id}/profile/pipeline`,
-    );
-    await queryPlan.getByRole('button', { name: 'Load ClickHouse pipeline', exact: true }).click();
-    await pipelineRequest;
-    await expect(queryPlan).toContainText('EXPLAIN PIPELINE');
-    await expect(queryPlan).toContainText('ReadFromFixture');
-    const graph = queryPlan.getByRole('region', { name: 'Scrollable operator graph' });
-    await expect(graph.locator('[data-node-id]').filter({ hasText: 'Resize 2 → 1' })).toBeVisible();
-    await graph.locator('[data-node-id]').filter({ hasText: 'Resize 2 → 1' }).click();
-    await expect(queryPlan.locator('.pipeline-node-inspector')).toContainText('Resize 2 → 1');
-    await expect(page.locator('.execution-bar')).toHaveAttribute(
-        'data-query-id',
-        startedRun.queryId,
-    );
-});
-
-test('Refreshing a pipeline selects the first operator in the new graph', async ({ page }) => {
-    let refreshCount = 0;
-    await page.route(
-        url => url.pathname.endsWith('/profile/pipeline'),
-        async route => {
-            refreshCount++;
-            const label = refreshCount === 1 ? 'First' : 'Next';
-            await route.fulfill({
-                json: {
-                    available: true,
-                    source: 'explain_pipeline',
-                    notice: 'Fixture pipeline',
-                    nodes: [
-                        { id: 'source', label: `${label} reader`, kind: 'read', status: 'planned' },
-                        {
-                            id: 'output',
-                            label: `${label} output`,
-                            kind: 'output',
-                            status: 'planned',
-                        },
-                    ],
-                    edges: [{ source: 'source', target: 'output' }],
-                },
-            });
-        },
-    );
-    await trust(page);
-    await useAdvancedMode(page);
-    const results = await runQuery(page);
-    await results.getByRole('tab', { name: 'Insights', exact: true }).click();
-    const section = page.getByRole('region', { name: 'Run and query plan comparison' });
-    const load = section.getByRole('button', { name: 'Load ClickHouse pipeline', exact: true });
-    await expect(load).toBeEnabled();
-    const firstLoad = page.waitForResponse(response =>
-        response.url().includes('/profile/pipeline'),
-    );
-    await load.click();
-    await firstLoad;
-    const graph = section.getByRole('region', { name: 'Scrollable operator graph' });
-    await graph.locator('[data-node-id="output"]').click();
-    await expect(section.locator('.pipeline-node-inspector')).toContainText('First output');
-
-    const refresh = section.getByRole('button', { name: 'Refresh pipeline', exact: true });
-    const refreshed = page.waitForResponse(response =>
-        response.url().includes('/profile/pipeline'),
-    );
-    await refresh.click();
-    await refreshed;
-    await expect(section.locator('.pipeline-node-inspector')).toContainText('Next reader');
-    await expect(graph.locator('[data-node-id="source"]')).toHaveAttribute('aria-pressed', 'true');
-    await expect(graph.locator('[data-node-id="output"]')).toHaveAttribute('aria-pressed', 'false');
-});
+for (const theme of ['Dark', 'Light'])
+    test(`Query results omit Insights and keep Table, Chart, and SQL map in ${theme} mode`, async ({
+        page,
+    }) => {
+        const requests: string[] = [];
+        page.on('request', request => {
+            const path = new URL(request.url()).pathname;
+            if (request.method() === 'POST' && path === '/api/runs') requests.push(path);
+            if (/\/profile(?:\/|$)/.test(path)) requests.push(path);
+        });
+        await trust(page);
+        await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+        await runQuery(page);
+        const results = page.locator('.results-surface');
+        const queryId = await currentQueryId(page);
+        const tabs = results.locator('.results-tabs');
+        await expect(tabs.getByRole('tab')).toHaveText(['Table', 'Chart', 'SQL map']);
+        await expect(results.locator('.insights-view')).toHaveCount(0);
+        await results.getByRole('tab', { name: 'Chart', exact: true }).click();
+        await expect(results.getByRole('tab', { name: 'Chart', exact: true })).toHaveAttribute(
+            'aria-selected',
+            'true',
+        );
+        await results.getByRole('tab', { name: 'SQL map', exact: true }).click();
+        await expect(results.locator('.sql-flow-view')).toBeVisible();
+        await setWorkspaceMode(page, 'Standard');
+        await expect(tabs.getByRole('tab')).toHaveText(['Table', 'Chart']);
+        await expect(results.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
+        await setWorkspaceMode(page, 'Experimental');
+        await expect(tabs.getByRole('tab')).toHaveText(['Table', 'Chart', 'SQL map']);
+        await results.getByRole('tab', { name: 'Table', exact: true }).click();
+        await expect(results.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
+        await expect(page.locator('.execution-bar')).toHaveAttribute('data-query-id', queryId);
+        expect(requests).toEqual(['/api/runs']);
+    });
 
 test('Result filtering searches only the visible retained page without mutating the run', async ({
     page,
@@ -3144,10 +3096,8 @@ test('Cancellation stays available while execution profile loading is pending', 
         const profileRequest = page.waitForRequest(
             request => new URL(request.url()).pathname === `/api/runs/${run.id}/profile`,
         );
-        await page
-            .locator('.results-tabs')
-            .getByRole('tab', { name: 'Insights', exact: true })
-            .click();
+        await page.getByTestId('execution-details').click();
+        await page.getByRole('button', { name: 'Load query log evidence', exact: true }).click();
         await profileRequest;
         await expect(cancel).toBeEnabled();
         const cancelled = page.waitForResponse(

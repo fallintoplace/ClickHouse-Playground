@@ -169,7 +169,7 @@ test('Standard exposes assignment actions and can run a query without opening AI
     await expect(page.locator('.editor-control-rail')).toBeVisible();
     await expect(page.locator('.parser-switch')).toHaveCount(0);
     await expect(results.getByRole('tab', { name: 'Chart', exact: true })).toBeVisible();
-    await expect(results.getByRole('tab', { name: 'Insights', exact: true })).toBeVisible();
+    await expect(results.getByRole('tab', { name: 'Insights', exact: true })).toHaveCount(0);
     await expect(
         page.getByRole('tablist', { name: 'SQL documents', exact: true }).getByRole('tab'),
     ).toHaveCount(1);
@@ -496,14 +496,8 @@ test('Switching to Experimental keeps the AI chat, query and run evidence', asyn
     const queryId = await currentQueryId(page);
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();
     await expect(results.locator('.chart-canvas svg[role="img"]')).toBeVisible();
-    await expect(results.getByRole('tab', { name: 'Insights', exact: true })).toBeVisible();
-    await results.getByRole('tab', { name: 'Insights', exact: true }).click();
-    const loadDetails = results.getByRole('button', {
-        name: 'Load execution details',
-        exact: true,
-    });
-    if (await loadDetails.count()) await loadDetails.click();
-    await expect(results.getByText('Execution time', { exact: true })).toBeVisible();
+    await expect(results.getByRole('tab', { name: 'Insights', exact: true })).toHaveCount(0);
+    await results.getByRole('tab', { name: 'Table', exact: true }).click();
 
     await expect(page.locator('.cm-content')).toContainText(generatedSql);
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-query-id', queryId);
@@ -522,7 +516,7 @@ test('Switching to Experimental keeps the AI chat, query and run evidence', asyn
     await expect(page.locator('.assistant-supporting-details')).toHaveCount(1);
     await expect(page.locator('.assistant-user-message')).toContainText('Show event counts by day');
     await expect(prompt).toHaveValue('');
-    await expect(results.getByRole('tab', { name: 'Insights', exact: true })).toHaveAttribute(
+    await expect(results.getByRole('tab', { name: 'Table', exact: true })).toHaveAttribute(
         'aria-selected',
         'true',
     );
@@ -792,7 +786,7 @@ test('Standard import opens from the left rail and formatting is available in th
     ]);
 });
 
-test('Experimental insights and AI requests do not execute SQL', async ({ page }) => {
+test('Experimental AI requests do not execute extra SQL', async ({ page }) => {
     const runRequests: unknown[] = [];
     const assistantRequests: Record<string, unknown>[] = [];
     page.on('request', request => {
@@ -847,18 +841,8 @@ test('Experimental insights and AI requests do not execute SQL', async ({ page }
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'succeeded');
     const queryId = await currentQueryId(page);
 
-    await results.getByRole('tab', { name: 'Insights', exact: true }).click();
-    const loadDetails = results.getByRole('button', {
-        name: 'Load execution details',
-        exact: true,
-    });
-    if (await loadDetails.count()) await loadDetails.click();
-    await expect(results.getByText('Execution time', { exact: true })).toBeVisible();
+    await results.getByRole('tab', { name: 'Table', exact: true }).click();
 
-    await results.getByRole('button', { name: 'Load ClickHouse pipeline', exact: true }).click();
-    await expect(
-        results.getByRole('region', { name: 'Scrollable operator graph', exact: true }),
-    ).toBeVisible();
     await page.getByTestId('open-ai').click();
     await expect(page.locator('.assistant-task-picker')).toHaveCount(0);
     const question = page.getByRole('textbox', { name: 'Ask AI', exact: true });

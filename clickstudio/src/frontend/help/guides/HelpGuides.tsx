@@ -96,12 +96,8 @@ export function HelpWorkflows({ copy, expert }: { copy: Copy['common']; expert: 
                         <p>
                             Inspect each script statement and its run in Results, then switch to{' '}
                             {copy.chart}
-                            {expert ? (
-                                <>, SQL map, or {copy.insights} in Experimental mode.</>
-                            ) : (
-                                '.'
-                            )}{' '}
-                            Cancel a running query from the execution bar.
+                            {expert ? <> or SQL map in Experimental mode.</> : '.'} Cancel a running
+                            query from the execution bar.
                         </p>
                     </article>
                 </div>

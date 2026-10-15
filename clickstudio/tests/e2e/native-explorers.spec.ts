@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { trust, runButton } from './helpers.js';
+import { trust, runButton, openRunComparison } from './helpers.js';
 import { jsonRecord, stringValue } from '../helpers/type-guards.js';
 
 test('Materialized views have selectable dependency edges and refresh details', async ({
@@ -231,10 +231,7 @@ test('Run comparison searches full SQL and swaps retained runs without executing
         if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/runs')
             submissions++;
     });
-    const results = page.getByRole('region', { name: 'Query results', exact: true });
-    await results.getByRole('tab', { name: 'Insights', exact: true }).click();
-    await results.getByRole('button', { name: 'Compare runs', exact: true }).click();
-    const dialog = page.getByRole('dialog', { name: 'Compare query runs', exact: true });
+    const dialog = await openRunComparison(page);
     const beforePicker = dialog.getByRole('combobox', { name: 'Before run', exact: true });
     await expect(beforePicker).toBeVisible();
     await expect(dialog.getByRole('combobox', { name: 'After run', exact: true })).toBeVisible();

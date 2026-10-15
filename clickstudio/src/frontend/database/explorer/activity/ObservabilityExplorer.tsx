@@ -69,10 +69,6 @@ export function ObservabilityExplorer({
                             capability={queryLog}
                             trusted={trusted}
                         />
-                        <p className="observability-profile-hint">
-                            For one query’s call stacks, open its run and choose{' '}
-                            <strong>Insights → CPU profile</strong>.
-                        </p>
                     </div>
                 ) : (
                     <div
