@@ -1699,7 +1699,7 @@
     overflow: hidden;
     border: 1px solid var(--line);
     border-radius: var(--radius-panel);
-    background: transparent;
+    background: color-mix(in srgb, var(--text) 1%, transparent);
   }
   .sql-proposal-diff-toggle {
     display: grid;
