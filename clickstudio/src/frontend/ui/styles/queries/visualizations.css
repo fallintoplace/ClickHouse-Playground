@@ -2056,7 +2056,9 @@
   }
   .geo-stage {
     position: relative;
+    display: grid;
     min-height: 300px;
+    grid-template-rows: minmax(0, 1fr) auto;
     margin-top: 13px;
     overflow: hidden;
     border: 1px solid var(--line);
@@ -2072,7 +2074,8 @@
   .geo-map {
     display: block;
     width: 100%;
-    min-height: 300px;
+    height: 100%;
+    min-height: 0;
     max-height: min(66vh, 760px);
     aspect-ratio: 960 / 470;
     cursor: grab;
@@ -2276,9 +2279,6 @@
     .geo-detail-row,
     .geo-selection {
       grid-template-columns: minmax(0, 1fr);
-    }
-    .geo-map {
-      min-height: 250px;
     }
   }
 } /* Light theme */

@@ -50,7 +50,9 @@ for (const mode of ['Standard', 'Experimental']) {
         ['clickhouse-geo-flight-routes', 'Intercontinental flight paths', 8],
         ['clickhouse-geo-delivery-zones', 'Colorful delivery zones', 4],
     ] as const)
-        test(`${mode} ${id} opens Geography by default from SQL examples`, async ({ page }) => {
+        test(`${mode} ${id} opens Geography by default from SQL examples`, async ({
+            page,
+        }, info) => {
             await trust(page, mode);
             const dialog = await openSqlExamples(page);
             await expect(
@@ -72,6 +74,70 @@ for (const mode of ['Standard', 'Experimental']) {
             await expect(results.locator('.geo-map-caption')).toContainText(
                 `${count} valid features`,
             );
+            if (id === 'clickhouse-geo-delivery-zones') {
+                const boxes = await results.locator('.geo-feature.is-area').evaluateAll(paths =>
+                    paths.map(path => {
+                        if (!(path instanceof SVGGraphicsElement))
+                            throw new Error('Expected an SVG geometry path');
+                        const box = path.getBBox();
+                        const rendered = path.getBoundingClientRect();
+                        const stage = path.closest('.geo-stage')?.getBoundingClientRect();
+                        if (!stage) throw new Error('Expected the map stage');
+                        return {
+                            x: box.x,
+                            y: box.y,
+                            width: box.width,
+                            height: box.height,
+                            visible:
+                                rendered.top >= stage.top &&
+                                rendered.bottom <= stage.bottom &&
+                                rendered.left >= stage.left &&
+                                rendered.right <= stage.right,
+                        };
+                    }),
+                );
+                expect(new Set(boxes.map(box => JSON.stringify(box))).size).toBe(4);
+                for (const box of boxes) {
+                    expect(box.width).toBeGreaterThan(0);
+                    expect(box.width).toBeLessThan(480);
+                    expect(box.height).toBeGreaterThan(0);
+                    expect(box.height).toBeLessThan(235);
+                    expect(box.visible).toBe(true);
+                }
+                await expect
+                    .poll(() => results.locator('.geo-country').count())
+                    .toBeGreaterThan(100);
+                await results.locator('.geo-stage').screenshot({
+                    path: info.outputPath(`delivery-zones-${mode}.png`),
+                });
+                const map = results.locator('.geo-map');
+                const origin = () =>
+                    map.evaluate(svg => {
+                        const matrix = svg.querySelector('g')?.getScreenCTM();
+                        if (!matrix) throw new Error('Expected the map viewport transform');
+                        const point = new DOMPoint(0, 0).matrixTransform(matrix);
+                        return { x: point.x, y: point.y };
+                    });
+                const initial = await origin();
+                const bounds = await map.boundingBox();
+                if (!bounds) throw new Error('Expected the map viewport bounds');
+                const start = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+                await page.mouse.move(start.x, start.y);
+                await page.mouse.down();
+                await page.mouse.move(start.x + 60, start.y + 30);
+                await page.mouse.up();
+                await expect
+                    .poll(async () => {
+                        const moved = await origin();
+                        return (
+                            Math.abs(moved.x - initial.x - 60) < 1 &&
+                            Math.abs(moved.y - initial.y - 30) < 1
+                        );
+                    })
+                    .toBe(true);
+                await results.getByRole('button', { name: 'Fit', exact: true }).click();
+                await expect.poll(origin).toEqual(initial);
+            }
         });
 
     test(`${mode} Geography reuses the chart toolbar and preserves setup without running SQL`, async ({

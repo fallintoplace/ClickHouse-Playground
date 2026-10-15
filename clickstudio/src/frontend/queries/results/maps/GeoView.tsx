@@ -22,6 +22,7 @@ import {
     type GeoRecommendation,
 } from './geo';
 import { geoHueForValue } from './geo-color';
+import { geometryForProjection } from './geo-projection';
 import type { Column } from '../../../../shared/common/values';
 import type { Result } from '../../../../shared/queries/results/types';
 import { isRecord } from '../../../../shared/common/values';
@@ -39,7 +40,7 @@ const geometryObject = (
 ): ExtendedFeature<GeoJSON.GeometryObject, Record<string, never>> => ({
     type: 'Feature',
     properties: {},
-    geometry: feature.geometry,
+    geometry: geometryForProjection(feature.geometry),
 });
 type CountryFeature = GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon, { name?: string }>;
 
@@ -83,6 +84,16 @@ type PointLabelPlacement = {
     label: string;
     measure?: string;
 };
+
+function mapPointerDelta(event: ReactPointerEvent<SVGSVGElement>, start: { x: number; y: number }) {
+    const screen = event.currentTarget.getScreenCTM();
+    if (!screen) return undefined;
+    // The SVG can be letterboxed inside a wide, short map stage.
+    const inverse = screen.inverse();
+    const origin = new DOMPoint(start.x, start.y).matrixTransform(inverse);
+    const pointer = new DOMPoint(event.clientX, event.clientY).matrixTransform(inverse);
+    return { x: pointer.x - origin.x, y: pointer.y - origin.y };
+}
 
 function MapCanvas({
     prepared,
@@ -211,13 +222,12 @@ function MapCanvas({
     const onPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
         const current = drag.current;
         if (!current || current.pointerId !== event.pointerId) return;
-        const rect = event.currentTarget.getBoundingClientRect();
-        const scaleX = WIDTH / Math.max(1, rect.width),
-            scaleY = HEIGHT / Math.max(1, rect.height);
+        const delta = mapPointerDelta(event, current);
+        if (!delta) return;
         setViewport(value => ({
             ...value,
-            x: current.originX + (event.clientX - current.x) * scaleX,
-            y: current.originY + (event.clientY - current.y) * scaleY,
+            x: current.originX + delta.x,
+            y: current.originY + delta.y,
         }));
     };
     const finishDrag = (event: ReactPointerEvent<SVGSVGElement>) => {
@@ -326,7 +336,8 @@ function MapCanvas({
                                     </g>
                                 );
                             }
-                            const path = map.path(geometryObject(feature));
+                            const projectedFeature = collection.features[index];
+                            const path = projectedFeature ? map.path(projectedFeature) : undefined;
                             if (!path) return null;
                             const line =
                                 feature.geometry.type === 'LineString' ||
