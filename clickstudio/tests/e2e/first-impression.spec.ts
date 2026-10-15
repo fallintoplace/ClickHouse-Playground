@@ -76,6 +76,44 @@ test('Experimental mode keeps Objects and AI primary and moves Reference into Mo
     await expect(page.getByRole('button', { name: 'Run', exact: true })).toBeVisible();
 });
 
+for (const theme of ['Dark', 'Light'])
+    test(`Pipeline is absent from inspector navigation after a run in ${theme} mode`, async ({
+        page,
+    }) => {
+        await trust(page);
+        await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+        const rail = page.locator('.icon-rail');
+        await expect(
+            rail.getByRole('button', { name: 'Pipeline', exact: true, includeHidden: true }),
+        ).toHaveCount(0);
+        await page.getByTestId('run-button').click();
+        await expect(page.locator('.execution-bar')).toHaveAttribute(
+            'data-run-status',
+            'succeeded',
+        );
+        const inspector = page.locator('.inspector-pane.is-docked-inspector');
+        await inspector.getByRole('button', { name: 'More workspace panels', exact: true }).click();
+        await expect(page.getByRole('menuitem')).toHaveText([
+            'Reference',
+            'Saved queries',
+            'Version history',
+            'Run details',
+            'ClickHouse parser',
+        ]);
+        await page.getByRole('menuitem', { name: 'Run details', exact: true }).click();
+        await expect(inspector).toHaveAccessibleName('Run details');
+        await expect(inspector.getByTestId('run-query-id')).toBeVisible();
+        await setWorkspaceMode(page, 'Standard');
+        await expect(
+            rail.getByRole('button', { name: 'Pipeline', exact: true, includeHidden: true }),
+        ).toHaveCount(0);
+        await setWorkspaceMode(page, 'Experimental');
+        await expect(inspector).toHaveAccessibleName('Run details');
+        await expect(
+            rail.getByRole('button', { name: 'Pipeline', exact: true, includeHidden: true }),
+        ).toHaveCount(0);
+    });
+
 test('Standard keeps Objects and AI while preserving execution and saving', async ({ page }) => {
     await trust(page, 'beginner');
     const rail = page.locator('.icon-rail');

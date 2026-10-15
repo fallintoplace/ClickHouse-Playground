@@ -10,7 +10,7 @@ import {
     useState,
     type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
-import type { ProfilePipeline, QueryProfile } from '../../../../shared/queries/inspection/types';
+import type { QueryProfile } from '../../../../shared/queries/inspection/types';
 import type { QueryDocument } from '../../../../shared/queries/saved-queries/types';
 import type { Run } from '../../../../shared/queries/execution/types';
 import type { Schema, SchemaTable } from '../../../../shared/database/schema/types';
@@ -72,7 +72,6 @@ export type InspectorPaneProps = {
     run?: Run;
     functionTest?: FunctionTestEvidence;
     profile?: QueryProfile;
-    pipeline?: ProfilePipeline;
     onRefreshSchema: () => void;
     onLoadMoreSchema?: () => void;
     importedTableTarget?: ImportedTableTarget;
@@ -83,8 +82,6 @@ export type InspectorPaneProps = {
     onDatabaseDeleted: (database: string) => void;
     onOpenDocument: (document: QueryDocument) => void;
     onLoadProfile: () => void;
-    onLoadPipeline: () => void;
-    onOpenGraph: () => void;
     connectionId: string;
     sql: string;
     draftId: string;
@@ -255,7 +252,6 @@ export function InspectorPane({
     run,
     functionTest,
     profile,
-    pipeline,
     onRefreshSchema,
     onLoadMoreSchema,
     importedTableTarget,
@@ -266,8 +262,6 @@ export function InspectorPane({
     onDatabaseDeleted,
     onOpenDocument,
     onLoadProfile,
-    onLoadPipeline,
-    onOpenGraph,
     connectionId,
     sql,
     draftId,
@@ -454,9 +448,7 @@ export function InspectorPane({
                         onRetry={onRetryParser}
                     />
                 )}
-                {['details', 'pipeline'].includes(inspector) && (
-                    <WorkspaceInlineNotice feedback={evidenceFeedback} />
-                )}
+                {inspector === 'details' && <WorkspaceInlineNotice feedback={evidenceFeedback} />}
                 {inspector === 'details' && (
                     <RunDetails
                         run={run}
@@ -465,21 +457,6 @@ export function InspectorPane({
                         unavailableReason={
                             connection.manifest?.queryLog.available === false
                                 ? connection.manifest.queryLog.reason
-                                : undefined
-                        }
-                    />
-                )}
-                {inspector === 'pipeline' && (
-                    <PipelineView
-                        run={run}
-                        profile={profile}
-                        pipeline={pipeline}
-                        onLoad={onLoadPipeline}
-                        onOpenGraph={onOpenGraph}
-                        available={connection.manifest?.pipeline.available !== false}
-                        unavailableReason={
-                            connection.manifest?.pipeline.available === false
-                                ? connection.manifest.pipeline.reason
                                 : undefined
                         }
                     />
@@ -923,98 +900,6 @@ function RunDetails({
                 </Button>
             )}
             {profile?.notice && <p className="profile-note">{profile.notice}</p>}
-        </section>
-    );
-}
-
-function PipelineView({
-    run,
-    profile,
-    pipeline,
-    onLoad,
-    onOpenGraph,
-    available,
-    unavailableReason,
-}: {
-    run?: Run;
-    profile?: QueryProfile;
-    pipeline?: ProfilePipeline;
-    onLoad: () => void;
-    onOpenGraph: () => void;
-    available: boolean;
-    unavailableReason?: string;
-}) {
-    if (!run)
-        return (
-            <div className="inspector-empty">Run a query to inspect its execution pipeline.</div>
-        );
-    const stages = pipeline?.nodes ?? profile?.pipeline.nodes ?? [];
-    return (
-        <section className="inspector-section">
-            <div className="schema-heading">
-                <span>EXECUTION PIPELINE</span>
-                <Button
-                    variant="ghost"
-                    className="toolbar-small"
-                    onClick={onLoad}
-                    disabled={!available}
-                    title={unavailableReason}
-                >
-                    Load evidence
-                </Button>
-            </div>
-            {pipeline?.notice && <p className="profile-note">{pipeline.notice}</p>}
-            {stages.length ? (
-                <>
-                    <Button variant="secondary" className="w-full" onClick={onOpenGraph}>
-                        Open operator graph in Insights
-                    </Button>
-                    <div className="pipeline-list">
-                        {stages.map((stage, index) => (
-                            <article
-                                className={`pipeline-stage stage-${stage.status}`}
-                                key={stage.id}
-                            >
-                                <span className="pipeline-stage-index">
-                                    {String(index + 1).padStart(2, '0')}
-                                </span>
-                                <span className="pipeline-connector" />
-                                <span className="pipeline-stage-body">
-                                    <strong>{stage.label}</strong>
-                                    <small>
-                                        {stage.detail ?? stage.kind} · {stage.status}
-                                    </small>
-                                    <span>
-                                        {[
-                                            stage.durationMs === undefined
-                                                ? ''
-                                                : `${Math.round(stage.durationMs)} ms`,
-                                            stage.rows ? `${stage.rows} rows` : '',
-                                            stage.bytes ? `${stage.bytes} bytes` : '',
-                                        ]
-                                            .filter(Boolean)
-                                            .join(' · ') || 'No stage-level measurements'}
-                                    </span>
-                                </span>
-                                <span className="stage-evidence">{stage.status}</span>
-                            </article>
-                        ))}
-                    </div>
-                </>
-            ) : (
-                <div className="inspector-empty">
-                    <Icon name="pipeline" />
-                    <strong>
-                        {available
-                            ? 'Pipeline evidence is not loaded'
-                            : 'Pipeline evidence is unavailable'}
-                    </strong>
-                    <p>
-                        {unavailableReason ??
-                            'Available ClickHouse versions can return an EXPLAIN PIPELINE graph.'}
-                    </p>
-                </div>
-            )}
         </section>
     );
 }

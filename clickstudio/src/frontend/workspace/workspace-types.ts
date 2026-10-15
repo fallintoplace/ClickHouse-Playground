@@ -15,7 +15,6 @@ export const INSPECTORS = [
     'revisions',
     'details',
     'profile',
-    'pipeline',
     'parser',
     'assistant',
 ] as const;

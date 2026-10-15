@@ -510,14 +510,13 @@ export function useWorkspaceController({
     });
     const queryExports = createQueryExportActions({ setError, active, evidence });
     const resultActions = { ...evidenceActions, ...queryExports };
-    const { loadProfile, loadPipeline } = evidenceActions;
+    const { loadProfile } = evidenceActions;
 
     const showInspector = (next: Inspector) => {
         if (!canOpenInspector(next, experience === 'expert')) return;
         setInspector(next);
         setDrawerOpen(true);
         if (next === 'profile') void perform(loadProfile, 'save');
-        if (next === 'pipeline') void perform(loadPipeline, 'save');
     };
 
     const { trustConnection, testConnection } = createWorkspaceConnectionActions({

@@ -97,7 +97,7 @@ export function createInspectorProps({
         loadDocuments,
         loadDocumentRevisions,
     } = model.data;
-    const { run, profile, pipeline, snapshot } = model.evidence;
+    const { run, profile, snapshot } = model.evidence;
     const {
         assistantQuestion,
         changeAssistantQuestion,
@@ -134,8 +134,6 @@ export function createInspectorProps({
         openDocument,
         perform,
         loadProfile,
-        loadPipeline,
-        setView,
         trusted,
         restoreDocumentRevision,
         selectableRunId,
@@ -188,7 +186,6 @@ export function createInspectorProps({
             busy: Boolean(model.busy || (run && !terminal(run))),
         },
         profile,
-        pipeline,
         onRefreshSchema: () => void loadSchema(true),
         onLoadMoreSchema: () => void loadMoreSchema(),
         importedTableTarget: importedReveal.importedTableTarget,
@@ -218,10 +215,6 @@ export function createInspectorProps({
         },
         onOpenDocument: openDocument,
         onLoadProfile: () => void perform(loadProfile, 'save'),
-        onLoadPipeline: () => void perform(loadPipeline, 'save'),
-        onOpenGraph: () => {
-            setView('insights');
-        },
         connectionId: connection.id,
         sql: active.sql,
         draftId: active.id,

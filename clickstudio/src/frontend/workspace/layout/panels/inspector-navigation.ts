@@ -51,14 +51,6 @@ export const INSPECTOR_NAVIGATION: readonly InspectorNavigationDestination[] = [
         requiresRun: true,
         railSection: 'execution',
     },
-    {
-        group: 'more',
-        id: 'pipeline',
-        icon: 'pipeline',
-        expertOnly: true,
-        requiresRun: true,
-        railSection: 'execution',
-    },
     { group: 'more', id: 'parser', icon: 'parser', expertOnly: true, railSection: 'execution' },
 ];
 

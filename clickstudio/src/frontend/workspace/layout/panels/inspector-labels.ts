@@ -8,7 +8,6 @@ export function inspectorLabel(value: Inspector): string {
         revisions: 'Version history',
         details: 'Run details',
         profile: 'Query profile',
-        pipeline: 'Pipeline',
         parser: 'ClickHouse parser',
         assistant: 'AI copilot',
     }[value];

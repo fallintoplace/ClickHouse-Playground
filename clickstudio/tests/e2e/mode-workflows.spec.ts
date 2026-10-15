@@ -855,11 +855,7 @@ test('Experimental insights and AI requests do not execute SQL', async ({ page }
     if (await loadDetails.count()) await loadDetails.click();
     await expect(results.getByText('Execution time', { exact: true })).toBeVisible();
 
-    await openWorkspacePanel(page, 'pipeline');
-    await expect(page.locator('.pipeline-stage').first()).toBeVisible();
-    await page
-        .getByRole('button', { name: 'Open operator graph in Insights', exact: true })
-        .click();
+    await results.getByRole('button', { name: 'Load ClickHouse pipeline', exact: true }).click();
     await expect(
         results.getByRole('region', { name: 'Scrollable operator graph', exact: true }),
     ).toBeVisible();

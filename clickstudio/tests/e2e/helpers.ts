@@ -59,7 +59,7 @@ export async function replaceSql(page: Page, sql: string) {
         .toContain(sql.replace(/\s/g, ''));
 }
 
-type WorkspacePanel = 'parser' | 'pipeline' | 'reference';
+type WorkspacePanel = 'parser' | 'reference';
 
 export async function openWorkspacePanel(page: Page, panel: WorkspacePanel) {
     await page.getByTestId('workspace-panels').click();
