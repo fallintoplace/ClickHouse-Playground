@@ -2,7 +2,15 @@ import { chooseImportOption } from './import-helpers.js';
 import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
 import { GEO_HELP_CITIES } from '../../src/frontend/help/previews/geo-help-examples.js';
-import { openBlankSql, openSqlExamples, openWorkspacePanel, replaceSql } from './helpers.js';
+import {
+    openBlankSql,
+    openSqlExamples,
+    openWorkspacePanel,
+    replaceSql,
+    runButton,
+    workspacePath,
+} from './helpers.js';
+import { chooseChartOption } from './chart-control-helpers.js';
 import { jsonRecord } from '../helpers/type-guards.js';
 import {
     previewCloudSchema,
@@ -1367,3 +1375,84 @@ test('ClickHouse Cloud import can be closed and forgotten so another file can be
     expect(imports[0]).toContain('filename="stuck.csv"');
     expect(imports[1]).toContain('filename="other.csv"');
 });
+
+const movieRatings = [
+    [1980, 5.58, 781],
+    [1990, 5.33, 1136],
+    [2004, 6.22, 1138],
+];
+
+for (const mode of ['Standard', 'Experimental']) {
+    test(`${mode} movie ratings open as a trend and scatter uses readable year axes`, async ({
+        page,
+    }, info) => {
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        let queryCount = 0;
+        await page.route('https://sql-clickhouse.clickhouse.com:8443/**', async route => {
+            const sql = route.request().postData() ?? '';
+            let body = '[]\n[]\n';
+            if (sql.includes('FROM imdb.movies')) {
+                queryCount++;
+                body =
+                    [
+                        ['year', 'average_rating', 'rated_movies'],
+                        ['UInt32', 'Float64', 'UInt64'],
+                        ...movieRatings,
+                    ]
+                        .map(row => JSON.stringify(row))
+                        .join('\n') + '\n';
+            }
+            await route.fulfill({ body, contentType: 'text/plain' });
+        });
+        await page.goto(`${workspacePath(mode)}?connection=playground`);
+        const dialog = await openSqlExamples(page);
+        await dialog.getByTestId('sql-example-category-datasets').click();
+        await dialog.getByTestId('sql-example-imdb-ratings-by-year').click();
+        await expect(dialog.locator('.sql-example-preview code')).toContainText('rated_movies');
+        await dialog.getByTestId('open-sql-example').click();
+        expect(queryCount).toBe(0);
+        await runButton(page).click();
+        const results = page.getByRole('region', { name: 'Query results', exact: true });
+        await expect(
+            results.getByRole('columnheader', { name: 'rated_movies UInt64' }),
+        ).toBeVisible();
+        await results.getByRole('tab', { name: 'Chart', exact: true }).click();
+        await expect(results.locator('.chart-line')).toHaveCount(1);
+        await expect(results.locator('.chart-point')).toHaveCount(movieRatings.length);
+        const labels = results.locator('.chart-x-labels text');
+        await expect(labels.first().locator('title')).toHaveText('1980');
+        await expect(labels.last().locator('title')).toHaveText('2004');
+        await chooseChartOption(
+            page,
+            results.getByRole('combobox', { name: 'Type', exact: true }),
+            'scatter',
+        );
+        await expect(labels).toHaveCount(3);
+        await expect(labels.first()).toContainText('1980');
+        await expect(labels.last()).toContainText('2004');
+        for (const width of [1440, 900]) {
+            await page.setViewportSize({ width, height: 900 });
+            await expect
+                .poll(() =>
+                    results.locator('.chart-canvas svg').evaluate(svg => {
+                        const points = [...svg.querySelectorAll('circle')];
+                        const xs = points.map(point => Number(point.getAttribute('cx')));
+                        const ys = points.map(point => Number(point.getAttribute('cy')));
+                        const grids = [...svg.querySelectorAll('.chart-gridline')];
+                        const grid = grids[0]!;
+                        const gridYs = grids.map(line => Number(line.getAttribute('y1')));
+                        const plotHeight = Math.max(...gridYs) - Math.min(...gridYs);
+                        const plotWidth =
+                            Number(grid.getAttribute('x2')) - Number(grid.getAttribute('x1'));
+                        return Math.min(
+                            (Math.max(...xs) - Math.min(...xs)) / plotWidth,
+                            (Math.max(...ys) - Math.min(...ys)) / plotHeight,
+                        );
+                    }),
+                )
+                .toBeGreaterThan(0.95);
+        }
+        await results.screenshot({ path: info.outputPath('movie-ratings-scatter.png') });
+        expect(queryCount).toBe(1);
+    });
+}

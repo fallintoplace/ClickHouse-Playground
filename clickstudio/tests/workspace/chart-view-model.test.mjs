@@ -278,7 +278,7 @@ test('Numeric scatter axes and named categories follow the viewport', () => {
         652,
         1200,
     );
-    assert.equal(scatter.svg.scatterX(10), 1172);
+    assert.equal(scatter.svg.scatterX(10), (80 + 1172) / 2);
     const categories = prepare(
         result(
             [
@@ -438,6 +438,161 @@ test('A zero-only scatter plot centers its point and collapses duplicate ticks',
     assert.deepEqual(view.chartYTicks, [{ value: 0, position: view.svg.plotMiddle }]);
     assert.deepEqual(view.svg.chartXTicks, [{ label: '0', position: 406 }]);
 });
+
+for (const rows of [
+    [
+        [1980, 5.58],
+        [1990, 5.33],
+        [2004, 6.22],
+    ],
+    [
+        [-2004, -6.22],
+        [-1990, -5.33],
+        [-1980, -5.58],
+    ],
+    [
+        [-10, -20],
+        [0, 0],
+        [10, 20],
+    ],
+]) {
+    test(`Scatter points use the full plot range for ${JSON.stringify(rows)}`, () => {
+        const view = prepare(
+            result(
+                [
+                    ['x', 'Float64'],
+                    ['y', 'Float64'],
+                ],
+                rows,
+            ),
+            { kind: 'scatter' },
+        );
+        const xs = rows.map(row => row[0]);
+        const ys = rows.map(row => row[1]);
+        assert.equal(view.svg.scatterX(Math.min(...xs)), view.svg.plotLeft);
+        assert.equal(view.svg.scatterX(Math.max(...xs)), view.svg.plotRight);
+        assert.equal(view.svg.scatterY(Math.min(...ys)), view.svg.plotBottom);
+        assert.equal(view.svg.scatterY(Math.max(...ys)), view.svg.plotTop);
+        const labels = view.svg.chartXTicks.map(tick => tick.label);
+        assert.equal(new Set(labels).size, labels.length);
+    });
+}
+
+test('Scatter year labels remain readable and nearby rating ticks stay distinct', () => {
+    const view = prepare(
+        result(
+            [
+                ['year', 'UInt32'],
+                ['rating', 'Float64'],
+            ],
+            [
+                [1980, 5.51],
+                [2004, 5.53],
+            ],
+        ),
+        { kind: 'scatter' },
+    );
+    assert.deepEqual(
+        view.svg.chartXTicks.map(tick => tick.label),
+        ['1980', '1992', '2004'],
+    );
+    assert.deepEqual(
+        view.chartYTicks.map(tick => view.svg.compactNumber.format(tick.value)),
+        ['5.53', '5.52', '5.51'],
+    );
+});
+
+test('Scatter axes retain compact labels when their values are distinguishable', () => {
+    const view = prepare(
+        result(
+            [
+                ['x', 'Float64'],
+                ['y', 'Float64'],
+            ],
+            [
+                [1000, 10],
+                [3000, 30],
+            ],
+        ),
+        { kind: 'scatter' },
+    );
+    assert.deepEqual(
+        view.svg.chartXTicks.map(tick => tick.label),
+        ['1K', '2K', '3K'],
+    );
+});
+
+test('Precise scatter years keep large Y measures compact', () => {
+    const view = prepare(
+        result(
+            [
+                ['year', 'UInt32'],
+                ['bytes', 'Float64'],
+            ],
+            [
+                [1980, 1e12],
+                [2004, 3e12],
+            ],
+        ),
+        { kind: 'scatter' },
+    );
+    assert.deepEqual(
+        view.svg.chartXTicks.map(tick => tick.label),
+        ['1980', '1992', '2004'],
+    );
+    assert.deepEqual(
+        view.chartYTicks.map(tick => view.svg.compactNumber.format(tick.value)),
+        ['3T', '2T', '1T'],
+    );
+});
+
+for (const rows of [
+    [],
+    [
+        [null, 10],
+        [1980, null],
+    ],
+    [[1980, 6]],
+    [
+        [1980, 6],
+        [1980, 6],
+    ],
+    [
+        [1980, 5],
+        [2004, 5],
+    ],
+    [
+        [1980, 5],
+        [1980, 6],
+    ],
+]) {
+    test(`Empty and constant scatter axes stay centered and finite for ${JSON.stringify(rows)}`, () => {
+        const view = prepare(
+            result(
+                [
+                    ['x', 'Nullable(Float64)'],
+                    ['y', 'Nullable(Float64)'],
+                ],
+                rows,
+            ),
+            { kind: 'scatter' },
+        );
+        const points = view.svg.scatterPoints;
+        if (new Set(points.map(point => point.x)).size <= 1) {
+            assert.equal(view.svg.chartXTicks.length, 1);
+            assert.equal(view.svg.chartXTicks[0].position, 406);
+            for (const point of points) assert.equal(view.svg.scatterX(point.x), 406);
+        }
+        if (new Set(points.map(point => point.y)).size <= 1) {
+            assert.equal(view.chartYTicks.length, 1);
+            assert.equal(view.chartYTicks[0].position, view.svg.plotMiddle);
+            for (const point of points)
+                assert.equal(view.svg.scatterY(point.y), view.svg.plotMiddle);
+        }
+        assert.ok(view.svg.chartXTicks.every(tick => Number.isFinite(tick.position)));
+        assert.ok(view.chartYTicks.every(tick => Number.isFinite(tick.position)));
+    });
+}
 
 test('Continuous charts sample large results while retaining both endpoints', () => {
     const rows = Array.from({ length: 600 }, (_, index) => [index, index * 2]);

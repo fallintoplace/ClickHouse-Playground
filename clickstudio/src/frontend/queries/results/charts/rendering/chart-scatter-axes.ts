@@ -12,6 +12,12 @@ import {
     type ChartSeries,
 } from '../chart-helpers.js';
 
+function scatterNumberFormat(values: number[], compactNumber: Intl.NumberFormat) {
+    return new Set(values.map(value => compactNumber.format(value))).size === values.length
+        ? compactNumber
+        : new Intl.NumberFormat('en', { useGrouping: false, maximumSignificantDigits: 15 });
+}
+
 export function prepareScatterAxes({
     chartRows,
     xIndex,
@@ -66,10 +72,22 @@ export function prepareScatterAxes({
                 point.x !== null && point.y !== null,
         );
     const scatterSummary = `${chartText(chartCopy.plottedPoints, { points: formatCount(scatterPoints.length) })}${chartRows.length < result.rows.length ? ` · ${rowSummary}` : ''}`;
-    const scatterMinX = Math.min(...scatterPoints.map(point => point.x), 0);
-    const scatterMaxX = Math.max(...scatterPoints.map(point => point.x), 0);
-    const scatterMinY = Math.min(...scatterPoints.map(point => point.y), 0);
-    const scatterMaxY = Math.max(...scatterPoints.map(point => point.y), 0);
+    // A zero baseline compresses offset values such as release years into one corner.
+    const scatterMinX = scatterPoints.length ? Math.min(...scatterPoints.map(point => point.x)) : 0;
+    const scatterMaxX = scatterPoints.length ? Math.max(...scatterPoints.map(point => point.x)) : 0;
+    const scatterMinY = scatterPoints.length ? Math.min(...scatterPoints.map(point => point.y)) : 0;
+    const scatterMaxY = scatterPoints.length ? Math.max(...scatterPoints.map(point => point.y)) : 0;
+    const xValues =
+        scatterMinX === scatterMaxX
+            ? [scatterMinX]
+            : [scatterMinX, (scatterMinX + scatterMaxX) / 2, scatterMaxX];
+    const yValues =
+        scatterMinY === scatterMaxY
+            ? [scatterMinY]
+            : [scatterMaxY, (scatterMinY + scatterMaxY) / 2, scatterMinY];
+    // Keep nearby values distinguishable, including years that all round to "2K".
+    const scatterXNumber = scatterNumberFormat(xValues, compactNumber);
+    const scatterNumber = scatterNumberFormat(yValues, compactNumber);
     const scatterRangeX = scatterMaxX - scatterMinX || 1;
     const scatterRangeY = scatterMaxY - scatterMinY || 1;
     const scatterX = (value: number) =>
@@ -83,15 +101,7 @@ export function prepareScatterAxes({
     let chartYTicks;
 
     if (chartKind === 'scatter') {
-        if (scatterMinY === scatterMaxY) {
-            chartYTicks = [{ value: scatterMinY, position: plotMiddle }];
-        } else {
-            chartYTicks = [
-                { value: scatterMaxY, position: plotTop },
-                { value: (scatterMinY + scatterMaxY) / 2, position: plotMiddle },
-                { value: scatterMinY, position: plotBottom },
-            ];
-        }
+        chartYTicks = yValues.map(value => ({ value, position: scatterY(value) }));
     } else if (min === max) {
         chartYTicks = [{ value: min, position: plotBottom }];
     } else {
@@ -104,23 +114,10 @@ export function prepareScatterAxes({
     let chartXTicks: ChartAxisTick[];
 
     if (chartKind === 'scatter') {
-        if (scatterMinX === scatterMaxX) {
-            chartXTicks = [
-                {
-                    label: compactNumber.format(scatterMinX),
-                    position: (plotLeft + plotRight) / 2,
-                },
-            ];
-        } else {
-            chartXTicks = [
-                { label: compactNumber.format(scatterMinX), position: plotLeft },
-                {
-                    label: compactNumber.format((scatterMinX + scatterMaxX) / 2),
-                    position: (plotLeft + plotRight) / 2,
-                },
-                { label: compactNumber.format(scatterMaxX), position: plotRight },
-            ];
-        }
+        chartXTicks = xValues.map(value => ({
+            label: scatterXNumber.format(value),
+            position: scatterX(value),
+        }));
     } else if (categoricalAxis) {
         chartXTicks =
             plotSeries[0]?.points.map((point, index) => ({
@@ -134,5 +131,13 @@ export function prepareScatterAxes({
         }));
     }
     chartXTicks = categoricalAxis ? fitCategoryTicks(chartXTicks) : fitChartTicks(chartXTicks);
-    return { chartYTicks, scatterPoints, scatterX, scatterY, chartXTicks, scatterSummary };
+    return {
+        chartYTicks,
+        scatterPoints,
+        scatterX,
+        scatterY,
+        chartXTicks,
+        scatterSummary,
+        scatterNumber,
+    };
 }

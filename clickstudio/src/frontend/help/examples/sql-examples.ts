@@ -719,17 +719,20 @@ LIMIT 12`,
         name: 'Movie ratings by year',
         category: 'datasets',
         dataset: 'IMDb',
-        description: 'Compare average IMDb ratings across movie release years.',
+        description:
+            'Follow average IMDb ratings for 1980–2004 releases, with rated movie counts in the table.',
         sql: `SELECT
     year,
-    round(avg(rank), 2) AS average_rating
+    round(avg(rank), 2) AS average_rating,
+    count() AS rated_movies
 FROM imdb.movies
-WHERE year >= 1980
+WHERE year BETWEEN 1980 AND 2004
     AND rank > 0
+    AND rank <= 10
 GROUP BY year
 ORDER BY year
-LIMIT 200`,
-        chart: { kind: 'scatter', x: 0, ys: [1], title: 'Average movie rating by year' },
+LIMIT 25`,
+        chart: { kind: 'line', x: 0, ys: [1], title: 'Average movie rating by year' },
     },
     {
         id: 'noaa-central-park-weather',

@@ -142,7 +142,7 @@ test('new Playground examples have unique read-only queries and valid chart colu
             [1],
             0,
         ],
-        ['imdb-ratings-by-year', 'IMDb', 'scatter', 'FROM imdb.movies', 2, [1], 0],
+        ['imdb-ratings-by-year', 'IMDb', 'line', 'FROM imdb.movies', 3, [1], 0],
         ['noaa-central-park-weather', 'NOAA weather', 'heatmap', 'FROM noaa.noaa', 3, [2], 0, 1],
         ['forex-eur-usd-monthly', 'Forex', 'line', 'FROM forex.forex', 2, [1], 0],
         [
@@ -186,8 +186,22 @@ test('new Playground examples have unique read-only queries and valid chart colu
     assert.match(byId.get('pypi-package-downloads')?.sql ?? '', /LIMIT 100\s*$/);
     assert.match(byId.get('stackoverflow-qa-volume')?.sql ?? '', /LIMIT 100\s*$/);
     assert.match(byId.get('uk-house-prices-by-county')?.sql ?? '', /LIMIT 12\s*$/);
-    assert.match(byId.get('imdb-ratings-by-year')?.sql ?? '', /LIMIT 200\s*$/);
+    assert.match(byId.get('imdb-ratings-by-year')?.sql ?? '', /LIMIT 25\s*$/);
     assert.match(byId.get('noaa-central-park-weather')?.sql ?? '', /LIMIT 240\s*$/);
+});
+
+test('Movie ratings show an ordered archive trend with movie counts kept off the rating axis', () => {
+    const example = sqlExamplesFor({ id: 'playground', dataSource: 'clickhouse' }).find(
+        candidate => candidate.id === 'imdb-ratings-by-year',
+    );
+    assert.ok(example);
+    assert.match(example.description, /1980.*2004/);
+    assert.match(example.sql, /year BETWEEN 1980 AND 2004/);
+    assert.match(example.sql, /rank > 0\s+AND rank <= 10/);
+    assert.match(example.sql, /count\(\) AS rated_movies/);
+    assert.match(example.sql, /GROUP BY year\s+ORDER BY year/);
+    assert.equal(example.chart.kind, 'line');
+    assert.deepEqual(example.chart.ys, [1]);
 });
 
 test('Stack Overflow examples match the Playground tag format and stay chart friendly', () => {
