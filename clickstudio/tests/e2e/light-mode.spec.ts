@@ -181,9 +181,7 @@ test(`Light mode keeps workspace and help text readable with brown accent`, asyn
         'workflows',
         'assistant',
         'reference',
-        'monitoring',
         'query',
-        'geo',
         'explain',
         'storage',
         'dependencies',
@@ -196,8 +194,8 @@ test(`Light mode keeps workspace and help text readable with brown accent`, asyn
         );
         await expectReadableText(help, section);
     }
-    await help.getByTestId('help-section-monitoring').click();
-    await page.screenshot({ path: info.outputPath('light-monitoring.png') });
+    await help.getByTestId('help-section-tour').click();
+    await page.screenshot({ path: info.outputPath('light-help.png') });
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Export', exact: true }).click();
     await expectReadableText(page.getByRole('dialog', { name: 'Export', exact: true }), 'Export');

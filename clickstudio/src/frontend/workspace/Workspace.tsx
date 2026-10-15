@@ -777,7 +777,6 @@ function renderDocumentTabs({
         helpPanelSection,
         setHelpPanelSection,
         closeHelpPanel,
-        setObservabilityOpen,
         showInspector,
         sqlExamples,
         trusted,
@@ -840,7 +839,6 @@ function renderDocumentTabs({
                         section={helpPanelSection}
                         onSectionChange={setHelpPanelSection}
                         onClose={closeHelpPanel}
-                        onOpenMonitoring={() => setObservabilityOpen(true)}
                         onOpenAssistant={() => showInspector('assistant')}
                         examples={sqlExamples}
                         sourceLabel={connectionLabel}

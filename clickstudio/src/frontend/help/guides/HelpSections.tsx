@@ -10,9 +10,7 @@ import type { WorkspaceHelpPanelProps } from '../workspace-help-types';
 import type { HelpExplainAction } from '../workspace-help-types';
 import { HelpSectionHeading } from '../HelpSectionHeading';
 import { SqlExamplesHelp } from '../examples/SqlExamplesHelp';
-import { GeoHelpPreview } from '../previews/HelpFeaturePreviews';
 import { AssistantHelpPreview } from '../previews/HelpFeaturePreviews';
-import { MonitoringHelp } from '../previews/HelpFeaturePreviews';
 import { HelpTour } from './HelpGuides';
 import { HelpWorkflows } from './HelpGuides';
 import { HelpExplain } from './HelpGuides';
@@ -107,20 +105,6 @@ export function HelpSections({
             )}
 
             {renderTabPanel(
-                'monitoring',
-                'workspace-help-feature-view workspace-help-monitoring',
-                section === 'monitoring' ? (
-                    <MonitoringHelp
-                        copy={props.copy}
-                        connection={props.connection}
-                        trusted={props.trusted}
-                        onClose={props.onClose}
-                        onOpenMonitoring={props.onOpenMonitoring}
-                    />
-                ) : null,
-            )}
-
-            {renderTabPanel(
                 'examples',
                 'workspace-help-examples',
                 section === 'examples' ? (
@@ -162,34 +146,6 @@ export function HelpSections({
                         <div className="workspace-help-feature-scroll">
                             <SqlFlowView {...queryEngine} />
                         </div>
-                    </>
-                ) : null,
-            )}
-
-            {renderTabPanel(
-                'geo',
-                'workspace-help-feature-view workspace-help-geo',
-                section === 'geo' ? (
-                    <>
-                        <HelpSectionHeading
-                            eyebrow="CLICKHOUSE GEO"
-                            title={copy.helpGeoTitle}
-                            description={copy.helpGeoDescription}
-                        />
-                        {
-                            <GeoHelpPreview
-                                onOpenExample={props.onOpenExample}
-                                onClose={props.onClose}
-                                copy={props.copy}
-                                onRunExample={props.onRunExample}
-                            />
-                        }
-                        <p className="workspace-help-safe-note">
-                            <span className="status-light is-trusted" />
-                            Uses native ClickHouse <code>Point</code> values. The map renders the
-                            bounded retained result without another SQL request or an external map
-                            service.
-                        </p>
                     </>
                 ) : null,
             )}

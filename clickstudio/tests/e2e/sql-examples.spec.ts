@@ -98,9 +98,7 @@ test('Help tour exposes ClickStudio native workflows from one place', async ({ p
         'tour',
         'examples',
         'workflows',
-        'monitoring',
         'query',
-        'geo',
         'explain',
         'storage',
         'dependencies',
@@ -114,24 +112,23 @@ test('Help tour exposes ClickStudio native workflows from one place', async ({ p
         .getByRole('tab');
     await expect(tabs.first()).toHaveAttribute('data-testid', 'help-section-tour');
     await expect(dialog.getByTestId('help-section-tour')).toHaveAttribute('aria-selected', 'true');
+    for (const section of ['monitoring', 'geo']) {
+        await expect(dialog.getByTestId('help-section-' + section)).toHaveCount(0);
+        await expect(dialog.locator('#workspace-help-panel-' + section)).toHaveCount(0);
+    }
+    await expect(
+        dialog.locator('.workspace-help-feature-card').filter({ hasText: /Monitoring|Geo/ }),
+    ).toHaveCount(0);
+    await dialog.getByTestId('help-section-reference').focus();
+    await dialog.getByTestId('help-section-reference').press('ArrowDown');
+    await expect(dialog.getByTestId('help-section-query')).toBeFocused();
+    await dialog.getByTestId('help-section-query').press('ArrowDown');
+    await expect(dialog.getByTestId('help-section-explain')).toBeFocused();
     await dialog.getByTestId('help-section-workflows').click();
     await expect(dialog.getByText('Bind typed values', { exact: true })).toBeVisible();
     await expect(
         dialog.getByText(/executes all SQL in the editor and stops after the first error/),
     ).toBeVisible();
-
-    await dialog.getByTestId('help-section-monitoring').click();
-    await expect(dialog.getByRole('heading', { name: 'Workload', exact: true })).toBeVisible();
-    await expect(dialog.getByRole('heading', { name: 'Replication', exact: true })).toBeVisible();
-
-    await dialog.getByTestId('help-section-geo').click();
-    await expect(
-        dialog.getByText('Native geometry on a spatial canvas', { exact: true }),
-    ).toBeVisible();
-    await expect(dialog.locator('.workspace-help-geo-copy code')).toContainText(
-        '(13.405, 52.52)::Point',
-    );
-    await expect(dialog.getByTestId('run-geo-example')).toBeVisible();
 
     await dialog.getByTestId('help-section-storage').click();
     await expect(dialog.getByRole('button', { name: 'Parts', exact: true })).toBeVisible();
@@ -141,8 +138,4 @@ test('Help tour exposes ClickStudio native workflows from one place', async ({ p
     await dialog.getByTestId('help-section-explain').click();
     await expect(dialog.getByRole('button', { name: /Explain plan/ })).toBeVisible();
     await expect(dialog.getByRole('button', { name: /Explain pipeline/ })).toBeVisible();
-
-    await dialog.getByTestId('help-section-monitoring').click();
-    await dialog.getByRole('button', { name: 'Open monitoring', exact: true }).click();
-    await expect(page.getByRole('dialog', { name: 'Monitoring', exact: true })).toBeVisible();
 });

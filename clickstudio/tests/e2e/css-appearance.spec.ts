@@ -237,9 +237,7 @@ for (const theme of ['Light', 'Dark']) {
         for (const section of [
             'tour',
             'assistant',
-            'monitoring',
             'query',
-            'geo',
             'storage',
             'dependencies',
             'compare',

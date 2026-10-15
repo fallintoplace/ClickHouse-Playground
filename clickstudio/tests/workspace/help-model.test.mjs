@@ -19,9 +19,7 @@ test('experimental help topics stay grouped after the standard help topics', () 
 
     assert.deepEqual(experimental, [
         'reference',
-        'monitoring',
         'query',
-        'geo',
         'explain',
         'storage',
         'dependencies',

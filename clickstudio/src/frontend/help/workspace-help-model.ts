@@ -6,9 +6,7 @@ type HelpSectionIcon =
     | 'examples'
     | 'play'
     | 'assistant'
-    | 'observability'
     | 'parser'
-    | 'chart'
     | 'bolt'
     | 'database'
     | 'pipeline'
@@ -20,9 +18,7 @@ export type HelpPanelSection =
     | 'examples'
     | 'workflows'
     | 'assistant'
-    | 'monitoring'
     | 'query'
-    | 'geo'
     | 'explain'
     | 'storage'
     | 'dependencies'
@@ -146,24 +142,10 @@ export function helpSections(copy: Copy['common'], expert = true): HelpSectionDe
             experimental: true,
         },
         {
-            id: 'monitoring',
-            label: copy.helpMonitoring,
-            description: copy.helpMonitoringDescription,
-            icon: 'observability',
-            experimental: true,
-        },
-        {
             id: 'query',
             label: copy.helpQueryEngine,
             description: copy.helpQueryEngineDescription,
             icon: 'parser',
-            experimental: true,
-        },
-        {
-            id: 'geo',
-            label: copy.helpGeo,
-            description: copy.helpGeoDescription,
-            icon: 'chart',
             experimental: true,
         },
         {

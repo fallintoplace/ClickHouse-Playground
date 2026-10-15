@@ -90,7 +90,7 @@ export const copy = {
         },
         helpCenterTitle: 'Explore ClickStudio',
         helpCenterDescription:
-            'Explore SQL examples, query workflows, ClickHouse observability, EXPLAIN views, storage, and reference docs.',
+            'Explore SQL examples, query workflows, EXPLAIN views, storage, and reference docs.',
         helpStandardCenterDescription: 'Explore SQL examples, query workflows, and AI assistance.',
         helpPanelSections: 'Explore ClickStudio sections',
         helpFeatureLabel: 'STORAGE VISUALIZER',
@@ -102,7 +102,7 @@ export const copy = {
         helpTour: 'Tour',
         helpTourTitle: 'Everything worth showing is one click away',
         helpTourDescription:
-            'Use this panel as a fast tour of SQL examples, query workflows, AI assistance, and reference docs, plus experimental monitoring, query structure, EXPLAIN, storage, data flow, and run comparisons.',
+            'Use this panel as a fast tour of SQL examples, query workflows, AI assistance, and reference docs, plus experimental query structure, EXPLAIN, storage, data flow, and run comparisons.',
         helpStandardTourDescription:
             'Use this panel as a fast tour of SQL examples, query workflows, and AI assistance.',
         helpQueryWorkflows: 'Query workflows',
@@ -121,17 +121,9 @@ export const copy = {
         helpAssistantExampleSql:
             'SELECT\n    toDate(event_time) AS day,\n    count() AS events\nFROM analytics.events\nWHERE event_time >= now() - INTERVAL 30 DAY\nGROUP BY day\nORDER BY day',
         helpOpenAssistant: 'Open AI assistant',
-        helpMonitoring: 'Monitoring',
-        helpMonitoringDescription:
-            'Review query workload and local replica health for the active ClickHouse connection.',
-        helpOpenMonitoring: 'Open monitoring',
         helpQueryEngine: 'Query engine',
         helpQueryEngineDescription:
             'Choose Logical flow to follow the query stages, Native AST to see how ClickHouse parses the SQL, or Analyzer to inspect the tables and columns resolved by the server. These views explain query structure without running the query.',
-        helpGeo: 'Geo',
-        helpGeoTitle: 'Native geometry on a spatial canvas',
-        helpGeoDescription:
-            'Explore a 20-city hotspot map, flight paths, and delivery zones with native ClickHouse geometry.',
         helpExplain: 'EXPLAIN',
         helpExplainDescription:
             'Choose an EXPLAIN view to understand what ClickHouse plans, what data it may skip, or how its work is measured. Analyze runs the query, so use it only when executing this SQL is safe.',

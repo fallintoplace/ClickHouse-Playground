@@ -19,7 +19,6 @@ export type WorkspaceHelpPanelProps = {
     onOpenExample: (example: SqlExample) => boolean;
     onRunExample: (example: SqlExample, view: 'results' | 'chart' | 'geography') => boolean;
     onStartBlankSql: () => boolean;
-    onOpenMonitoring: () => void;
     onOpenAssistant: () => void;
     connection: Connected;
     databases?: readonly string[];

@@ -218,7 +218,7 @@ for (const panel of ['Objects', 'Reference', 'Saved queries', 'Version history']
     });
 }
 
-for (const previousTopic of ['reference', 'monitoring'])
+for (const previousTopic of ['reference', 'compare'])
     test(`Standard Help hides Experimental topics after visiting ${previousTopic}`, async ({
         page,
     }, info) => {
@@ -227,9 +227,7 @@ for (const previousTopic of ['reference', 'monitoring'])
         const help = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });
         const experimentalTopics = [
             'reference',
-            'monitoring',
             'query',
-            'geo',
             'explain',
             'storage',
             'dependencies',
