@@ -24,12 +24,9 @@ export function WorkspaceHelpPanel(props: WorkspaceHelpPanelProps) {
     } = props;
     const {
         panelRef,
-        searchRef,
         tabRefs,
         optionRefs,
         explainActions,
-        search,
-        setSearch,
         category,
         setCategory,
         setSelectedId,
@@ -174,9 +171,6 @@ export function WorkspaceHelpPanel(props: WorkspaceHelpPanelProps) {
                                         availableCategories,
                                         category,
                                         setCategory,
-                                        searchRef,
-                                        search,
-                                        setSearch,
                                         cloudSchemaNotice,
                                         filteredExamples,
                                         optionRefs,

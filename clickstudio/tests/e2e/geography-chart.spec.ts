@@ -61,8 +61,9 @@ for (const mode of ['Standard', 'Experimental']) {
             await expect(dialog.getByRole('button', { name: 'Cities', exact: true })).toHaveCount(
                 0,
             );
-            await dialog.getByTestId('sql-example-search').fill(name);
+            await dialog.getByTestId('sql-example-category-all').click();
             await dialog.getByTestId(`sql-example-${id}`).click();
+            await expect(dialog.locator('.sql-example-preview h3')).toHaveText(`${name}.sql`);
             await expect(dialog.locator('.sql-example-preview')).toContainText('Geography');
             await dialog.getByTestId('run-sql-example').click();
             const results = page.getByRole('region', { name: 'Query results', exact: true });

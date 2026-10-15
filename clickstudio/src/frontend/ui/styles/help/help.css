@@ -1186,41 +1186,6 @@
   .sql-examples-schema-notice .button-base {
     flex: none;
   }
-  .sql-example-search {
-    display: flex;
-    min-width: 200px;
-    min-height: var(--help-control-height);
-    flex: 0 1 260px;
-    align-items: center;
-    gap: 8px;
-    padding: 0 10px;
-    border: 1px solid var(--help-border);
-    border-radius: var(--help-radius-control);
-    background: var(--panel);
-    color: var(--muted);
-    transition:
-      border-color 0.14s ease,
-      box-shadow 0.14s ease;
-  }
-  .sql-example-search svg {
-    width: 15px;
-    height: 15px;
-    flex: none;
-  }
-  .sql-example-search input {
-    width: 100%;
-    min-width: 0;
-    border: 0;
-    outline: 0;
-    background: transparent;
-    color: var(--text);
-    font: inherit;
-    font-size: var(--help-text-body);
-  }
-  .sql-example-search input::placeholder {
-    color: var(--muted);
-  }
-
   .sql-examples-layout {
     display: grid;
     min-height: 0;
@@ -1578,10 +1543,6 @@
   }
   .sql-examples-toolbar {
     align-items: stretch;
-  }
-  .sql-example-search {
-    min-width: 100%;
-    flex-basis: 100%;
   }
   .sql-examples-layout {
     grid-template-columns: minmax(190px, 0.8fr) minmax(0, 1.2fr);

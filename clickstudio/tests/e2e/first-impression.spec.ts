@@ -279,7 +279,8 @@ for (const previousTopic of ['reference', 'compare'])
             'true',
         );
         await help.getByTestId('help-section-examples').click();
-        await expect(help.getByTestId('sql-example-search')).toBeVisible();
+        await expect(help.locator('.sql-example-categories')).toBeVisible();
+        await expect(help.getByRole('searchbox')).toHaveCount(0);
         await help.getByTestId('help-section-workflows').click();
         await expect(help.locator('#workspace-help-panel-workflows')).toContainText(
             'Cancel a running query',

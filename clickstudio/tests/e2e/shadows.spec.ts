@@ -261,10 +261,7 @@ for (const theme of ['Dark', 'Light'])
             expect(dialogShadow).not.toBe(menuShadow);
             const scrim = await backdrop(page.locator('.workspace-help-backdrop'));
             await help.getByTestId('help-section-examples').click();
-            await expectWrappedSearchFocus(
-                help.getByTestId('sql-example-search'),
-                help.locator('.sql-example-search'),
-            );
+            await expect(help.getByRole('searchbox')).toHaveCount(0);
             await help.getByTestId('help-section-reference').click();
             await expectWrappedSearchFocus(
                 help.getByRole('textbox', { name: 'Search ClickHouse…', exact: true }),
@@ -287,10 +284,7 @@ for (const theme of ['Dark', 'Light'])
             );
             await page.getByRole('button', { name: 'Help', exact: true }).click();
             await help.getByTestId('help-section-examples').click();
-            await expectWrappedSearchFocus(
-                help.getByTestId('sql-example-search'),
-                help.locator('.sql-example-search'),
-            );
+            await expect(help.getByRole('searchbox')).toHaveCount(0);
             await help.getByTestId('help-section-reference').click();
             await expectWrappedSearchFocus(
                 help.getByRole('textbox', { name: 'Search ClickHouse…', exact: true }),

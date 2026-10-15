@@ -57,6 +57,10 @@
   outline-offset: var(--focus-offset);
 }
 
+.workspace-help-panel:focus {
+  outline: none;
+}
+
 :root
   :is(
     input:not([type="radio"], [type="checkbox"], [type="file"], [type="range"], [type="hidden"]),
@@ -74,14 +78,11 @@
   border-color: var(--red);
 }
 
-:root
-  :is(.object-search, .reference-search, .sql-example-search, .assistant-chat-search):has(
-    input:focus
-  ) {
+:root :is(.object-search, .reference-search, .assistant-chat-search):has(input:focus) {
   border-color: var(--focus-color);
 }
 
-:is(.object-search, .reference-search, .sql-example-search, .assistant-chat-search) input:focus {
+:is(.object-search, .reference-search, .assistant-chat-search) input:focus {
   outline: none;
   box-shadow: none;
 }

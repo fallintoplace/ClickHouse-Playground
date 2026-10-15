@@ -12,20 +12,19 @@ for (const mode of ['Standard', 'Experimental'])
         const originalSql = await page.locator('.cm-content').textContent();
         const trigger = page.getByRole('button', { name: 'Help', exact: true });
         const dialog = await openSqlExamples(page);
-        const search = dialog.getByTestId('sql-example-search');
-        await expect(search).toBeFocused();
+        await expect(dialog.getByRole('searchbox')).toHaveCount(0);
+        await expect(dialog.locator('button:focus, input:focus')).toHaveCount(0);
         await expect(dialog.locator('#workspace-help-panel-examples')).toBeVisible();
 
         for (const section of ['tour', 'workflows', 'assistant']) {
-            await search.fill('query-with-no-matching-example');
             await dialog.getByTestId(`help-section-${section}`).click();
             await expect(dialog.locator(`#workspace-help-panel-${section}`)).toBeVisible();
             await dialog.getByRole('button', { name: 'Close help', exact: true }).click();
             await expect(dialog).toHaveCount(0);
             await expect(trigger).toBeFocused();
             await openSqlExamples(page);
-            await expect(search).toBeFocused();
-            await expect(search).toHaveValue('');
+            await expect(dialog.getByRole('searchbox')).toHaveCount(0);
+            await expect(dialog.locator('button:focus, input:focus')).toHaveCount(0);
         }
 
         await page.keyboard.press('Escape');
@@ -60,7 +59,7 @@ test('SQL examples open in a new tab without changing or running the current que
     const dialog = await openSqlExamples(page);
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText('Sample data', { exact: true })).toBeVisible();
-    await dialog.getByTestId('sql-example-search').fill('Top countries');
+    await dialog.getByTestId('sql-example-category-all').click();
     const example = dialog.getByTestId('sql-example-preview-starter-top-countries');
     await expect(example).toBeVisible();
     await example.click();
@@ -81,24 +80,32 @@ test('SQL examples open in a new tab without changing or running the current que
     await expect(dialog).toHaveCount(0);
 });
 
-test('SQL examples search handles no matches and Escape restores focus', async ({ page }) => {
+test('SQL examples support keyboard browsing and Escape restores focus', async ({ page }) => {
     await trust(page);
     const trigger = page.getByRole('button', { name: 'Help', exact: true });
     const dialog = await openSqlExamples(page);
-    const search = dialog.getByTestId('sql-example-search');
-    await search.fill('query-with-no-matching-example');
-    await expect(dialog.getByRole('status')).toHaveText('No examples match your search.');
-    await search.press('Escape');
+    const options = dialog.getByRole('option');
+    await options.first().focus();
+    await options.first().press('End');
+    await expect(options.last()).toBeFocused();
+    await expect(options.last()).toHaveAttribute('aria-selected', 'true');
+    await options.last().press('Home');
+    await expect(options.first()).toBeFocused();
+    await options.first().press('Escape');
     await expect(dialog).toHaveCount(0);
     await expect(trigger).toBeFocused();
 });
 
-test('Help section navigation preserves search until the panel is reopened', async ({ page }) => {
+test('Help section navigation preserves the example selection until the panel is reopened', async ({
+    page,
+}) => {
     await trust(page);
     const trigger = page.getByRole('button', { name: 'Help', exact: true });
     const dialog = await openSqlExamples(page);
-    const search = dialog.getByTestId('sql-example-search');
-    await search.fill('Top countries');
+    const defaultExample = dialog.getByRole('option', { selected: true });
+    const defaultId = await defaultExample.getAttribute('data-testid');
+    await dialog.getByTestId('sql-example-category-all').click();
+    await dialog.getByTestId('sql-example-preview-starter-top-countries').click();
     const examplesTab = dialog.getByTestId('help-section-examples');
     await examplesTab.click();
     await examplesTab.press('End');
@@ -110,15 +117,24 @@ test('Help section navigation preserves search until the panel is reopened', asy
     await expect(tourTab).toBeFocused();
     await tourTab.press('ArrowRight');
     await expect(examplesTab).toBeFocused();
-    await expect(search).toHaveValue('Top countries');
-    await expect(dialog.getByTestId('sql-example-preview-starter-top-countries')).toBeVisible();
+    await expect(dialog.getByTestId('sql-example-category-all')).toHaveAttribute(
+        'aria-pressed',
+        'true',
+    );
+    await expect(dialog.getByTestId('sql-example-preview-starter-top-countries')).toHaveAttribute(
+        'aria-selected',
+        'true',
+    );
     await expect(page.locator('#root')).toHaveJSProperty('inert', true);
     await examplesTab.press('Escape');
     await expect(dialog).toHaveCount(0);
     await expect(trigger).toBeFocused();
     await expect(page.locator('#root')).toHaveJSProperty('inert', false);
     await openSqlExamples(page);
-    await expect(search).toHaveValue('');
+    await expect(dialog.getByRole('option', { selected: true })).toHaveAttribute(
+        'data-testid',
+        defaultId!,
+    );
 });
 
 test('Help tour exposes ClickStudio native workflows from one place', async ({ page }) => {

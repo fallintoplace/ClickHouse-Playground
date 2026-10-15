@@ -34,6 +34,31 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const theme of ['Light', 'Dark']) {
+    for (const mode of ['Standard', 'Experimental'])
+        test(`CSS preserves ${theme} ${mode} SQL examples without search autofocus`, async ({
+            page,
+        }, info) => {
+            await trust(page, mode);
+            await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+            const dialog = await openSqlExamples(page);
+            await expect(dialog.getByRole('searchbox')).toHaveCount(0);
+            await expect(dialog.locator('button:focus, input:focus')).toHaveCount(0);
+            await expect(dialog).toHaveCSS('outline-style', 'none');
+            await page.keyboard.press('Escape');
+            await expect(dialog).toHaveCount(0);
+            await page.getByRole('button', { name: 'Help', exact: true }).press('Enter');
+            await expect(dialog).toBeVisible();
+            await expect(dialog.locator('button:focus, input:focus')).toHaveCount(0);
+            await expect(dialog).toHaveCSS('outline-style', 'none');
+            for (const width of [1440, 700]) {
+                await page.setViewportSize({ width, height: 900 });
+                await expectReferenceStyles(page, info, `sql-examples-${mode}-${width}`, dialog);
+                await dialog.screenshot({
+                    path: info.outputPath(`sql-examples-${mode}-${width}.png`),
+                });
+            }
+        });
+
     test(`CSS preserves ${theme} rich statement result menus`, async ({ page }, info) => {
         await trust(page);
         await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
@@ -66,7 +91,7 @@ for (const theme of ['Light', 'Dark']) {
             await trust(page, mode);
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
             const dialog = await openSqlExamples(page);
-            await dialog.getByTestId('sql-example-search').fill('NYC after dark');
+            await dialog.getByTestId('sql-example-category-all').click();
             await dialog.getByTestId('sql-example-nyc-taxi-after-dark').click();
             await dialog.getByTestId('run-sql-example').click();
             const stage = page.locator('.geo-stage');

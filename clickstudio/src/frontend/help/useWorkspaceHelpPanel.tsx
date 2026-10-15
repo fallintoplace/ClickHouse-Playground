@@ -11,7 +11,6 @@ import { safeStatementCount } from '../workspace/workspace-helpers';
 import { Icon } from '../ui/components/icons';
 import { cx } from '../ui/components/primitives';
 import {
-    exampleText,
     helpCategories,
     type HelpSectionDefinition,
     type CategoryFilter,
@@ -43,7 +42,6 @@ export function useWorkspaceHelpPanel(
         onRunExplain,
     } = props;
     const panelRef = useRef<HTMLElement>(null);
-    const searchRef = useRef<HTMLInputElement>(null);
     const tabRefs = useRef(new Map<HelpPanelSection, HTMLButtonElement>());
     const sectionRef = useRef(section);
     sectionRef.current = section;
@@ -73,14 +71,12 @@ export function useWorkspaceHelpPanel(
         id: defaultExample?.id ?? '',
         featured: Boolean(featuredExamples.length),
     };
-    const [search, setSearch] = useState('');
     const [category, setCategory] = useState<CategoryFilter>(
         featuredExamples.length ? 'featured' : 'all',
     );
     const [selectedId, setSelectedId] = useState(defaultExample?.id ?? '');
 
     const filteredExamples = useMemo(() => {
-        const term = search.trim().toLocaleLowerCase();
         const candidates = category === 'featured' ? featuredExamples : examples;
         return candidates.filter(example => {
             if (category === 'charts' && example.chart.kind === 'table') return false;
@@ -91,21 +87,9 @@ export function useWorkspaceHelpPanel(
                 example.category !== category
             )
                 return false;
-            if (!term) return true;
-            const localized = exampleText(example, copy);
-            return [
-                example.name,
-                localized.name,
-                example.dataset ?? '',
-                example.description,
-                localized.description,
-                example.sql,
-            ]
-                .join(' ')
-                .toLocaleLowerCase()
-                .includes(term);
+            return true;
         });
-    }, [category, copy, examples, featuredExamples, search]);
+    }, [category, examples, featuredExamples]);
     const selected =
         filteredExamples.find(example => example.id === selectedId) ?? filteredExamples[0];
     const selectedIsScript = selected ? (safeStatementCount(selected.sql) ?? 0) > 1 : false;
@@ -152,7 +136,7 @@ export function useWorkspaceHelpPanel(
         restoreFocus: false,
         initialFocus: panel => {
             const currentSection = sectionRef.current;
-            if (currentSection === 'examples') return searchRef.current;
+            if (currentSection === 'examples') return panel;
             if (currentSection === 'storage')
                 return panel.querySelector<HTMLElement>(
                     '.help-parts-table-picker select:not(:disabled)',
@@ -170,7 +154,6 @@ export function useWorkspaceHelpPanel(
 
     useEffect(() => {
         if (!open) return;
-        setSearch('');
         setCategory(openingDefaults.current.featured ? 'featured' : 'all');
         setSelectedId(openingDefaults.current.id);
         const previousOverflow = document.body.style.overflow;
@@ -240,13 +223,10 @@ export function useWorkspaceHelpPanel(
 
     return {
         panelRef,
-        searchRef,
         tabRefs,
         optionRefs,
         sections,
         explainActions,
-        search,
-        setSearch,
         category,
         setCategory,
         setSelectedId,

@@ -65,7 +65,7 @@ for (const theme of ['Dark', 'Light']) {
             await expect(next).toBeFocused();
         });
 
-        test(`${theme} keeps table fields and ${mode} search focus border-only`, async ({
+        test(`${theme} keeps table field focus border-only and opens ${mode} Help quietly`, async ({
             page,
         }, info) => {
             await page.route('**/api/connections/live/table-permissions', route =>
@@ -93,10 +93,8 @@ for (const theme of ['Dark', 'Light']) {
             await page.keyboard.press('Escape');
             await setWorkspaceMode(page, mode);
             const help = await openSqlExamples(page);
-            const search = help.getByTestId('sql-example-search');
-            await search.click();
-            await expectFieldFocus(search);
-            await expect(help.locator('.sql-example-search')).toHaveCSS('box-shadow', 'none');
+            await expect(help.getByRole('searchbox')).toHaveCount(0);
+            await expect(help.locator('button:focus, input:focus')).toHaveCount(0);
             await help.getByTestId('blank-sql').click();
             await expect(help).toBeHidden();
             await expect(page.locator('.cm-content')).toBeFocused();
@@ -229,7 +227,7 @@ test('Cloud dialog keeps typing focus across busy changes and restores its opene
     await expect(opener).toBeFocused();
 });
 
-test('A delayed run response keeps focus on the field the user chose', async ({ page }) => {
+test('A delayed run response keeps focus on the control the user chose', async ({ page }) => {
     let release: () => void = () => {};
     const responseGate = new Promise<void>(resolve => {
         release = resolve;
@@ -251,12 +249,12 @@ test('A delayed run response keeps focus on the field the user chose', async ({ 
     await runButton(page).click();
     await submitted;
     const help = await openSqlExamples(page);
-    const search = help.getByTestId('sql-example-search');
-    await search.fill('events');
+    const category = help.getByTestId('sql-example-category-all');
+    await category.click();
     release();
     await expect(runButton(page)).toBeEnabled();
-    await expect(search).toBeFocused();
-    await expect(search).toHaveValue('events');
+    await expect(category).toBeFocused();
+    await expect(category).toHaveAttribute('aria-pressed', 'true');
 });
 
 async function loadFocusHarness(page: Page) {

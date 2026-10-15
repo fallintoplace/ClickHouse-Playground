@@ -13,9 +13,6 @@ export function SqlExamplesHelp({
     availableCategories,
     category,
     setCategory,
-    searchRef,
-    search,
-    setSearch,
     cloudSchemaNotice,
     filteredExamples,
     optionRefs,
@@ -32,9 +29,6 @@ export function SqlExamplesHelp({
     availableCategories: CategoryFilter[];
     category: CategoryFilter;
     setCategory: import('react').Dispatch<import('react').SetStateAction<CategoryFilter>>;
-    searchRef: import('react').RefObject<HTMLInputElement | null>;
-    search: string;
-    setSearch: import('react').Dispatch<import('react').SetStateAction<string>>;
     cloudSchemaNotice: { message: string; error: boolean } | undefined;
     filteredExamples: SqlExample[];
     optionRefs: import('react').RefObject<Map<string, HTMLButtonElement>>;
@@ -72,22 +66,6 @@ export function SqlExamplesHelp({
                         </button>
                     ))}
                 </div>
-                <label className="sql-example-search">
-                    <Icon name="search" />
-                    <input
-                        ref={searchRef}
-                        data-testid="sql-example-search"
-                        type="search"
-                        aria-label={copy.searchExamples}
-                        placeholder={copy.searchExamples}
-                        value={search}
-                        onChange={event => {
-                            const value = event.target.value;
-                            setSearch(value);
-                            if (value.trim() && category === 'featured') setCategory('all');
-                        }}
-                    />
-                </label>
             </div>
             {cloudSchemaNotice && (
                 <div
