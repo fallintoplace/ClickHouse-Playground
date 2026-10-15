@@ -5,15 +5,20 @@ import {
     RANDOM_EXAMPLE_PROMPTS,
 } from '../../.workspace-build/src/frontend/assistant/proposals/random-example-prompts.js';
 
-test('Random examples cover twenty distinct topics with a complete SQL task', () => {
+test('Random examples offer twenty distinct business questions with runnable sample data', () => {
     assert.equal(RANDOM_EXAMPLE_PROMPTS.length, 20);
     assert.equal(new Set(RANDOM_EXAMPLE_PROMPTS).size, 20);
-    const topics = RANDOM_EXAMPLE_PROMPTS.map(prompt => {
-        assert.match(prompt, /Insert representative sample records, then /);
-        return prompt.match(/^Create a ClickHouse table for (.+?) with /)?.[1];
-    });
-    assert.equal(new Set(topics).size, 20);
-    assert.ok(topics.every(Boolean));
+    for (const prompt of RANDOM_EXAMPLE_PROMPTS) {
+        assert.match(
+            prompt,
+            /Include a small, realistic sample dataset so I can run the example\.$/,
+        );
+        assert.doesNotMatch(
+            prompt,
+            /\b(?:CREATE TABLE|INSERT INTO|SELECT|JOIN|GROUP BY|ASOF|windowFunnel|arrayJoin|argMax|quantile)\b/i,
+        );
+        assert.doesNotMatch(prompt, /^Create a ClickHouse table/);
+    }
 });
 
 for (const value of [0, 0.5, 0.9999999999999999]) {
