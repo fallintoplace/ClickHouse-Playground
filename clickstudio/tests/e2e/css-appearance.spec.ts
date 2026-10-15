@@ -8,6 +8,7 @@ import {
     runScript,
     trust,
     trustCurrentConnection,
+    openStatementResults,
 } from './helpers.js';
 import { test, expect } from '@playwright/test';
 import type { Script } from '../../src/shared/queries/execution/types.js';
@@ -32,6 +33,34 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const theme of ['Light', 'Dark']) {
+    test(`CSS preserves ${theme} rich statement result menus`, async ({ page }, info) => {
+        await trust(page);
+        await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+        await replaceSql(
+            page,
+            'SELECT trip_distance, fare_amount FROM trips WHERE trip_distance > 5; SELECT 2;',
+        );
+        await runScript(page);
+        const results = page.getByRole('region', { name: 'Query results', exact: true });
+        for (const mode of ['Standard', 'Experimental']) {
+            await setWorkspaceMode(page, mode);
+            for (const width of [1440, 360]) {
+                await page.setViewportSize({ width, height: 900 });
+                const menu = await openStatementResults(results);
+                await expect(menu.locator('.script-statement-notice')).toHaveText([
+                    '1 warning',
+                    '1 warning',
+                ]);
+                await page.keyboard.press('Home');
+                await expectReferenceStyles(page, info, `statement-menu-${mode}-${width}`, menu);
+                await menu.screenshot({
+                    path: info.outputPath(`statement-menu-${mode}-${width}.png`),
+                });
+                await page.keyboard.press('Escape');
+            }
+        }
+    });
+
     test(`CSS preserves ${theme} unsaved query version history`, async ({ page }, info) => {
         await trust(page);
         await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();

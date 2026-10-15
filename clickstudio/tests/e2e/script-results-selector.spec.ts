@@ -9,6 +9,166 @@ import {
 import { test, expect } from '@playwright/test';
 import type { Run, Script } from '../../src/shared/queries/execution/types.js';
 
+test('Rich statement rows show outcomes, warnings and bounded SQL in both modes', async ({
+    page,
+}, info) => {
+    await trust(page);
+    await replaceSql(page, 'SELECT 1');
+    const response = page.waitForResponse(
+        response =>
+            response.request().method() === 'POST' &&
+            new URL(response.url()).pathname === '/api/runs',
+    );
+    await runScript(page);
+    const base: Run = await (await response).json();
+    const results = page.getByRole('region', { name: 'Query results', exact: true });
+    await expect(results.getByRole('table')).toBeVisible();
+    const conditions = `${'trip_distance > 5 AND '.repeat(12)}fare_amount > 10`;
+    const sql = `SELECT trip_distance, fare_amount FROM trips WHERE ${conditions}`;
+    const outcomes: Run[] = [
+        {
+            ...base,
+            sql,
+            status: 'succeeded',
+            rowCount: 240,
+            columns: [
+                { name: 'trip_distance', type: 'Float64' },
+                { name: 'fare_amount', type: 'Float64' },
+            ],
+            warnings: ['First warning', 'Second warning'],
+        },
+        {
+            ...base,
+            sql: 'SELECT value FROM events WHERE false',
+            status: 'succeeded',
+            rowCount: 0,
+            columns: [{ name: 'value', type: 'UInt64' }],
+            warnings: [],
+        },
+        {
+            ...base,
+            sql: 'INSERT INTO events VALUES (1)',
+            status: 'succeeded',
+            rowCount: 0,
+            writtenRows: 1,
+            columns: [],
+            warnings: [],
+        },
+        {
+            ...base,
+            sql: 'CREATE TABLE events (value UInt64)',
+            status: 'succeeded',
+            rowCount: 0,
+            columns: [],
+            warnings: [],
+        },
+        {
+            ...base,
+            sql: 'SELECT value FROM events',
+            status: 'truncated',
+            rowCount: 100,
+            columns: [{ name: 'value', type: 'UInt64' }],
+            warnings: ['Output is truncated'],
+        },
+        {
+            ...base,
+            sql: 'SELECT invalid FROM events',
+            status: 'failed',
+            error: {
+                code: 'UNKNOWN_IDENTIFIER',
+                message: 'Unknown identifier invalid. '.repeat(40),
+            },
+            warnings: [],
+        },
+    ];
+    const entries: Run[] = outcomes.map((entry, index) => ({
+        ...entry,
+        id: `rich-result-${index}`,
+        queryId: `rich-query-${index}`,
+        resultState: 'unavailable',
+        elapsedMs: 131,
+    }));
+    const script: Script = {
+        id: 'rich-results-script',
+        owner: base.owner,
+        connectionId: base.connectionId,
+        sql: entries.map(run => run.sql).join('; '),
+        createdAt: base.createdAt,
+        status: 'partial',
+        stopOnError: false,
+        cancelled: false,
+        statements: entries.map(run => ({
+            sql: run.sql,
+            from: 0,
+            to: run.sql.length,
+            runId: run.id,
+            status: run.status,
+        })),
+    };
+    await page.route('**/api/scripts', route => route.fulfill({ status: 202, json: script }));
+    await page.route('**/api/scripts/rich-results-script', route =>
+        route.fulfill({ json: script }),
+    );
+    await page.route(/\/api\/runs\?/, route => route.fulfill({ json: entries }));
+    for (const run of entries)
+        await page.route(`**/api/runs/${run.id}`, route => route.fulfill({ json: run }));
+    await replaceSql(page, script.sql);
+    await runScript(page);
+    const menu = await openStatementResults(results);
+    const rows = menu.getByRole('menuitemradio');
+    await expect(rows).toHaveCount(6);
+    await expect(rows.nth(0).locator('small')).toHaveText('240 rows returned · 2 columns · 131 ms');
+    await expect(rows.nth(0).locator('.script-statement-notice')).toHaveText('2 warnings');
+    await expect(rows.nth(0)).toHaveAccessibleDescription(new RegExp(sql));
+    await expect(rows.nth(1).locator('small')).toHaveText('0 rows returned · 1 column · 131 ms');
+    await expect(rows.nth(1).locator('.script-statement-notice')).toHaveCount(0);
+    await expect(rows.nth(2).locator('small')).toHaveText(
+        'INSERT completed · 1 row written · 131 ms',
+    );
+    await expect(rows.nth(3).locator('small')).toHaveText('CREATE completed · 131 ms');
+    await expect(rows.nth(4).locator('.script-statement-notice')).toHaveText(
+        'Result truncated · 1 warning',
+    );
+    await expect(rows.nth(5).locator('small')).toContainText('UNKNOWN_IDENTIFIER:');
+    await expect(results.locator('.script-results-failure')).toHaveText('1 failed');
+    for (const mode of ['Standard', 'Experimental']) {
+        await page.keyboard.press('Escape');
+        await setWorkspaceMode(page, mode);
+        for (const theme of ['Light', 'Dark']) {
+            await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+            for (const width of [1280, 360]) {
+                await page.setViewportSize({ width, height: 900 });
+                await openStatementResults(results);
+                await page.keyboard.press('Home');
+                await expect(rows.nth(0)).toBeFocused();
+                await expect(rows.nth(0)).toHaveCSS('outline-width', '2px');
+                await expect(rows.nth(0).locator('.script-status')).toHaveCSS(
+                    'background-color',
+                    'rgba(0, 0, 0, 0)',
+                );
+                const bounds = (await menu.boundingBox())!;
+                expect(bounds.width).toBe(Math.min(420, width - 16));
+                expect(bounds.x).toBeGreaterThanOrEqual(0);
+                expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+                for (const content of [rows.nth(0).locator('code'), rows.nth(5).locator('small')]) {
+                    const dimensions = await content.evaluate(element => ({
+                        height: element.getBoundingClientRect().height,
+                        line: Number.parseFloat(getComputedStyle(element).lineHeight),
+                    }));
+                    expect(dimensions.height).toBeLessThanOrEqual(dimensions.line * 2 + 1);
+                }
+                expect(
+                    await menu.evaluate(element => element.scrollWidth <= element.clientWidth),
+                ).toBe(true);
+                await menu.screenshot({
+                    path: info.outputPath(`rich-menu-${mode}-${theme}-${width}.png`),
+                });
+                await page.keyboard.press('Escape');
+            }
+        }
+    }
+});
+
 test('Statement results use a compact header dropdown and switch without executing SQL', async ({
     page,
 }, testInfo) => {
@@ -180,7 +340,7 @@ test('A single query uses the same clickable dropdown through view and draft cha
             await expect(card.locator('.script-statement-index')).toHaveCSS(
                 'color',
                 await selected
-                    .locator('.script-status')
+                    .locator('.script-statement-index')
                     .evaluate(element => getComputedStyle(element).color),
             );
             await expect(card).toHaveAttribute('aria-expanded', 'true');
@@ -217,9 +377,7 @@ test('A single query uses the same clickable dropdown through view and draft cha
     expect(executions).toBe(0);
 });
 
-test('A single failed query shows the submitted SQL card and replaces it after a successful Run', async ({
-    page,
-}) => {
+test('A failed query keeps submitted SQL until a successful Run', async ({ page }) => {
     await trust(page);
     await replaceSql(page, 'SELECT 1');
     await runScript(page);
@@ -249,9 +407,7 @@ test('A single failed query shows the submitted SQL card and replaces it after a
     await expect(card).toHaveAttribute('title', 'SELECT 2');
 });
 
-test('A repeated query keeps its pending dropdown and enables the new result when it arrives', async ({
-    page,
-}) => {
+test('A repeated query enables its pending dropdown when the result arrives', async ({ page }) => {
     await trust(page);
     await replaceSql(page, 'SELECT 1');
     await runScript(page);
@@ -288,9 +444,7 @@ test('A repeated query keeps its pending dropdown and enables the new result whe
     await expect(card).toBeFocused();
 });
 
-test('Failures stay visible while browsing successful results and skipped statements stay disabled', async ({
-    page,
-}) => {
+test('Failures remain visible and skipped statements stay disabled', async ({ page }) => {
     await trust(page);
     await replaceSql(page, 'SELECT 1; SELECT fixture_error; SELECT 3;');
     await runScript(page);
@@ -311,9 +465,7 @@ test('Failures stay visible while browsing successful results and skipped statem
     await expect(results.getByTestId('query-failure')).toContainText('FIXTURE_ERROR');
 });
 
-test('Long statement previews and menus fit a narrow viewport and work with collapsed results', async ({
-    page,
-}) => {
+test('Long previews fit narrow viewports and work with collapsed results', async ({ page }) => {
     await trust(page);
     const alias = 'a_long_column_name_that_should_not_expand_the_results_header';
     await replaceSql(page, `SELECT 1 AS ${alias}; SELECT 2 AS ${alias}; SELECT 3 AS ${alias};`);

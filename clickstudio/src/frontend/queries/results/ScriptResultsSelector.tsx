@@ -1,10 +1,26 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
-import type { Run, Script } from '../../../shared/queries/execution/types';
+import type { Run } from '../../../shared/queries/execution/types';
 import { cx } from '../../ui/components/primitives';
 import { Icon } from '../../ui/components/icons';
-import { statementOutcome } from './statement-outcome';
+import {
+    statementDetails,
+    statementNotice,
+    statementStatusLabels,
+    type ResultStatement,
+} from './statement-details';
 
-type ResultStatement = Pick<Script['statements'][number], 'sql' | 'runId' | 'status' | 'error'>;
+const statusIcons = {
+    pending: 'history',
+    queued: 'history',
+    running: 'refresh',
+    succeeded: 'check',
+    truncated: 'warning',
+    failed: 'warning',
+    cancelled: 'stop',
+    timed_out: 'warning',
+    interrupted: 'warning',
+    skipped: 'stop',
+} as const;
 
 type StatementResultsProps = {
     statements: readonly ResultStatement[];
@@ -15,26 +31,20 @@ type StatementResultsProps = {
     errorSelected: boolean;
 };
 
-function statementDetails(statement: ResultStatement, run?: Run) {
-    const error = run?.error ?? statement.error;
-    if (error) return `${error.code}: ${error.message}`;
-    const status = run?.status ?? statement.status;
-    if (status === 'pending' || status === 'queued') return 'Waiting to run';
-    if (status === 'running') return 'Running';
-    if (run && ['succeeded', 'truncated'].includes(status))
-        return `${statementOutcome(run)} · ${Math.round(run.elapsedMs)} ms`;
-    return `${status.charAt(0).toUpperCase()}${status.slice(1).replace(/_/g, ' ')}`;
-}
 function StatementCardContent({
     statement,
     index,
     details,
     showHeading = false,
+    rich = false,
+    notice,
 }: {
     statement: ResultStatement;
     index: number;
     details: string;
     showHeading?: boolean;
+    rich?: boolean;
+    notice?: string;
 }) {
     return (
         <>
@@ -44,10 +54,22 @@ function StatementCardContent({
             <span className="script-statement-copy">
                 {showHeading && <strong>Statement {index + 1}</strong>}
                 <code>{statement.sql.replace(/\s+/g, ' ').trim()}</code>
-                <small>{details}</small>
+                <small
+                    className={cx(
+                        rich &&
+                            ['failed', 'timed_out', 'cancelled', 'interrupted'].includes(
+                                statement.status,
+                            ) &&
+                            'is-error',
+                    )}
+                >
+                    {details}
+                </small>
+                {notice && <span className="script-statement-notice">{notice}</span>}
             </span>
             <span className={cx('script-status', `status-${statement.status}`)}>
-                {statement.status}
+                {rich && <Icon name={statusIcons[statement.status]} />}
+                {rich ? statementStatusLabels[statement.status] : statement.status}
             </span>
         </>
     );
@@ -309,7 +331,8 @@ export function ScriptResultsSelector({
                 {statements.map((statement, index) => {
                     const active = index === selectedIndex;
                     const run = statement.runId ? byId.get(statement.runId) : undefined;
-                    const details = statementDetails(statement, run);
+                    const details = statementDetails(statement, run, true);
+                    const notice = statementNotice(statement, run);
                     return (
                         <button
                             key={index}
@@ -318,8 +341,11 @@ export function ScriptResultsSelector({
                             tabIndex={-1}
                             className={cx('script-statement', active && 'is-active')}
                             aria-label={`Statement ${index + 1}: ${statement.status}`}
+                            aria-description={[statement.sql, details, notice]
+                                .filter(Boolean)
+                                .join(' · ')}
                             aria-checked={active}
-                            title={`${statement.sql.replace(/\s+/g, ' ')} · ${details}`}
+                            title={[statement.sql, details, notice].filter(Boolean).join(' · ')}
                             disabled={!statement.runId && !statement.error}
                             onClick={() => {
                                 if (statement.runId) onSelectRun(statement.runId);
@@ -332,6 +358,8 @@ export function ScriptResultsSelector({
                                 statement={statement}
                                 index={index}
                                 details={details}
+                                notice={notice}
+                                rich
                             />
                         </button>
                     );

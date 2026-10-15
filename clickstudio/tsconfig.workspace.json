@@ -24,6 +24,7 @@
     "src/frontend/workspace/layout/workspace-layout.ts",
     "src/frontend/queries/editor/drafts/workspace-persistence.ts",
     "src/frontend/queries/results/statement-outcome.ts",
+    "src/frontend/queries/results/statement-details.ts",
     "src/frontend/workspace/layout/notifications/workspace-notification-policy.ts",
     "src/frontend/queries/editor/sql-error.ts",
     "src/frontend/queries/results/result-provenance.ts",

@@ -108,6 +108,7 @@
   .workspace-help-tab,
   .sql-example-category,
   .sql-example-option,
+  .script-results-menu .script-statement,
   .explain-plan-node > details > summary,
   .explain-plan-property > summary
 ):focus-visible {
