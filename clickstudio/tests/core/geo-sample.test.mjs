@@ -30,7 +30,7 @@ test('Server fixture queries return drawable points, routes, and zones with thei
     for (const [id, type, count] of [
         ['clickhouse-geo-cities', 'Point', 20],
         ['clickhouse-geo-flight-routes', 'LineString', 8],
-        ['nyc-taxi-after-dark', 'Polygon', 52],
+        ['nyc-taxi-after-dark', 'Polygon', 96],
     ]) {
         const result = await driver.execute(
             { sql: GEO_HELP_SQL[id], kind: 'query' },

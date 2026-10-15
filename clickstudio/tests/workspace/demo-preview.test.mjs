@@ -14,7 +14,7 @@ test('Offline Geography examples return matching drawable geometry instead of da
     for (const [id, type, count] of [
         ['clickhouse-geo-cities', 'Point', 20],
         ['clickhouse-geo-flight-routes', 'LineString', 8],
-        ['nyc-taxi-after-dark', 'Polygon', 52],
+        ['nyc-taxi-after-dark', 'Polygon', 96],
     ]) {
         const example = examples.find(candidate => candidate.id === id);
         assert.equal(example.chart.kind, 'geography');

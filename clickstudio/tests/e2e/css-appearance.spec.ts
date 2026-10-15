@@ -95,8 +95,9 @@ for (const theme of ['Light', 'Dark']) {
             await dialog.getByTestId('sql-example-nyc-taxi-after-dark').click();
             await dialog.getByTestId('run-sql-example').click();
             const stage = page.locator('.geo-stage');
-            await expect(stage.locator('.geo-feature.is-area')).toHaveCount(52);
-            await expect.poll(() => stage.locator('.geo-country').count()).toBeGreaterThan(100);
+            await expect(stage.locator('.geo-feature.is-area')).toHaveCount(96);
+            await expect(stage.locator('.geo-borough')).toHaveCount(5);
+            await expect(stage.locator('.geo-context-labels')).toContainText('Manhattan');
             const workspace = page.locator('.geo-workspace-frame');
             for (const width of [1440, 900]) {
                 await page.setViewportSize({ width, height: 1000 });

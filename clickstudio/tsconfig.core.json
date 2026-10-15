@@ -52,6 +52,7 @@
     "src/frontend/queries/inspection/plans/explain-indexes.ts",
     "src/frontend/queries/results/maps/geo.ts",
     "src/frontend/queries/results/maps/geo-projection.ts",
+    "src/frontend/queries/results/maps/geo-basemap.ts",
     "src/frontend/queries/editor/parser/native-ast.ts",
     "src/frontend/database/explorer/native-value-formatters.ts",
     "src/frontend/database/explorer/objects/object-explorer-model.ts",

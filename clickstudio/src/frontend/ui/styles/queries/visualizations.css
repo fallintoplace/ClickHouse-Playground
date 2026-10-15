@@ -2094,11 +2094,41 @@
     stroke-width: 0.7;
     vector-effect: non-scaling-stroke;
   }
-  .geo-country {
+  .geo-country,
+  .geo-borough {
     fill: var(--geo-land);
     stroke: var(--geo-border);
     stroke-width: 0.7;
     vector-effect: non-scaling-stroke;
+  }
+  .geo-context {
+    pointer-events: none;
+  }
+  .geo-context-boundaries {
+    fill: none;
+    stroke: var(--text-soft);
+    stroke-width: 0.8;
+  }
+  .geo-context-boundaries path {
+    vector-effect: non-scaling-stroke;
+  }
+  .geo-context-labels text {
+    fill: var(--text);
+    stroke: var(--canvas);
+    stroke-width: 3px;
+    stroke-linejoin: round;
+    paint-order: stroke;
+    font: 650 15px var(--font-sans);
+    text-anchor: middle;
+  }
+  .geo-context-labels .is-water {
+    fill: var(--muted);
+    font-size: 12px;
+    font-style: italic;
+  }
+  .geo-map-caption a {
+    color: inherit;
+    text-underline-offset: 2px;
   }
   .geo-feature {
     cursor: pointer;

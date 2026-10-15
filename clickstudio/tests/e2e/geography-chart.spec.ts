@@ -44,11 +44,34 @@ test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
 });
 
+for (const failure of ['unavailable', 'invalid'])
+    test(`NYC retains its returned cells with world context if the local basemap is ${failure}`, async ({
+        page,
+    }) => {
+        await page.route('**/geo/nyc-boroughs.geojson', route =>
+            route.fulfill({
+                status: failure === 'unavailable' ? 404 : 200,
+                contentType: 'application/json',
+                body: JSON.stringify({ type: 'FeatureCollection', features: [] }),
+            }),
+        );
+        await trust(page);
+        const dialog = await openSqlExamples(page);
+        await dialog.getByTestId('sql-example-category-all').click();
+        await dialog.getByTestId('sql-example-nyc-taxi-after-dark').click();
+        await dialog.getByTestId('run-sql-example').click();
+        const stage = page.locator('.geo-stage');
+        await expect(stage).toHaveAttribute('data-basemap', 'world');
+        await expect.poll(() => stage.locator('.geo-country').count()).toBeGreaterThan(100);
+        await expect(stage.locator('.geo-feature.is-area')).toHaveCount(96);
+        await expect(stage.locator('.geo-borough, .geo-context')).toHaveCount(0);
+    });
+
 for (const mode of ['Standard', 'Experimental']) {
     for (const [id, name, count] of [
         ['clickhouse-geo-cities', 'Native Point cities', 20],
         ['clickhouse-geo-flight-routes', 'Intercontinental flight paths', 8],
-        ['nyc-taxi-after-dark', 'NYC after dark', 52],
+        ['nyc-taxi-after-dark', 'NYC after dark', 96],
     ] as const)
         test(`${mode} ${id} opens Geography by default from SQL examples`, async ({
             page,
@@ -105,9 +128,10 @@ for (const mode of ['Standard', 'Experimental']) {
                     expect(box.height).toBeLessThan(235);
                     expect(box.visible).toBe(true);
                 }
-                await expect
-                    .poll(() => results.locator('.geo-country').count())
-                    .toBeGreaterThan(100);
+                await expect(results.locator('.geo-borough')).toHaveCount(5);
+                await expect(results.locator('.geo-context-labels')).toContainText('Manhattan');
+                await expect(results.locator('.geo-context-labels')).toContainText('Brooklyn');
+                await expect(results.locator('.geo-context-labels')).toContainText('East River');
                 await results.locator('.geo-stage').screenshot({
                     path: info.outputPath(`nyc-after-dark-${mode}.png`),
                 });
@@ -160,12 +184,12 @@ for (const mode of ['Standard', 'Experimental']) {
                 await results.getByRole('button', { name: 'Fit', exact: true }).click();
                 await expect.poll(origin).toEqual(initial);
                 await cell.click();
-                await expect(details).toContainText('Hudson Yards-Chelsea-Flatiron-Union Square');
+                await expect(details).toContainText('Midtown-Midtown South');
                 await expect(details).toContainText('avg_night_fare_usd');
                 await expect(details).toContainText('h3_cell');
-                await expect(details).toContainText('221494');
+                await expect(details).toContainText('52436');
                 await expect(details).toContainText('night_share_pct');
-                await expect(details).toContainText('34.4');
+                await expect(details).toContainText('31.9');
                 await map.click({ position: { x: 15, y: 15 } });
                 await expect(details).toContainText('Select a point, line, or region');
             }

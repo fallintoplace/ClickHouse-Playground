@@ -44,7 +44,7 @@ test('NYC pickup cells project their own neighborhoods instead of the rest of th
         assert.ok(bounds[1][1] - bounds[0][1] < 235);
         boxes.push(JSON.stringify(bounds));
     }
-    assert.equal(new Set(boxes).size, 52);
+    assert.equal(new Set(boxes).size, 96);
 });
 
 for (const exterior of [outer, reverse(outer)])

@@ -1,5 +1,4 @@
 import {
-    useEffect,
     useMemo,
     useRef,
     useState,
@@ -26,12 +25,13 @@ import { geoHueForValue } from './geo-color';
 import { geometryForProjection } from './geo-projection';
 import type { Column } from '../../../../shared/common/values';
 import type { Result } from '../../../../shared/queries/results/types';
-import { isRecord } from '../../../../shared/common/values';
 import { ScrollEdgeFrame } from '../../../ui/components/ScrollEdgeShadows';
 import type { ChartConfig } from '../../../../shared/queries/results/chart-settings';
 import type { Copy } from '../../../ui/copy';
 import type { prepareChartSelection } from '../charts/controls/chart-selection';
 import { GeoChartControls } from './GeoChartControls';
+import { useGeoBasemap } from './useGeoBasemap';
+import type { MapLabel } from './geo-basemap';
 
 const WIDTH = 960;
 const HEIGHT = 470;
@@ -43,40 +43,6 @@ const geometryObject = (
     properties: {},
     geometry: geometryForProjection(feature.geometry),
 });
-type CountryFeature = GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon, { name?: string }>;
-
-function isPosition(value: unknown): value is GeoJSON.Position {
-    return Array.isArray(value) && value.length >= 2 && value.every(Number.isFinite);
-}
-
-function isPositions(value: unknown): value is GeoJSON.Position[] {
-    return Array.isArray(value) && value.every(isPosition);
-}
-
-function isPolygonCoordinates(value: unknown): value is GeoJSON.Position[][] {
-    return Array.isArray(value) && value.every(isPositions);
-}
-
-function isMultiPolygonCoordinates(value: unknown): value is GeoJSON.Position[][][] {
-    return Array.isArray(value) && value.every(isPolygonCoordinates);
-}
-
-function isCountryFeature(value: unknown): value is CountryFeature {
-    if (
-        !isRecord(value) ||
-        value.type !== 'Feature' ||
-        !isRecord(value.properties) ||
-        !isRecord(value.geometry)
-    )
-        return false;
-    if (value.properties.name !== undefined && typeof value.properties.name !== 'string')
-        return false;
-    return (
-        (value.geometry.type === 'Polygon' && isPolygonCoordinates(value.geometry.coordinates)) ||
-        (value.geometry.type === 'MultiPolygon' &&
-            isMultiPolygonCoordinates(value.geometry.coordinates))
-    );
-}
 type PointLabelPlacement = {
     x: number;
     y: number;
@@ -146,6 +112,41 @@ function useMapViewport() {
     return { viewport, zoom, reset, onPointerDown, onPointerMove, finishDrag, onClickCapture };
 }
 
+function MapContext({
+    land,
+    labels,
+}: {
+    land: { name: string | undefined; d: string }[];
+    labels: (MapLabel & { x: number; y: number })[];
+}) {
+    return (
+        <g className="geo-context" aria-hidden="true">
+            <g className="geo-context-boundaries">
+                {land.map((area, index) => (
+                    <path key={area.name ?? index} d={area.d} />
+                ))}
+            </g>
+            <g className="geo-context-labels">
+                {labels.map(label => (
+                    <text
+                        key={label.name}
+                        className={label.water ? 'is-water' : undefined}
+                        x={label.x}
+                        y={label.y}
+                        transform={
+                            label.rotate
+                                ? `rotate(${label.rotate} ${label.x} ${label.y})`
+                                : undefined
+                        }
+                    >
+                        {label.name}
+                    </text>
+                ))}
+            </g>
+        </g>
+    );
+}
+
 function MapCanvas({
     prepared,
     columns,
@@ -159,22 +160,9 @@ function MapCanvas({
 }) {
     const [selectedIndex, setSelectedIndex] = useState<number>();
     const [hoveredIndex, setHoveredIndex] = useState<number>();
-    const [countryFeatures, setCountryFeatures] = useState<CountryFeature[]>([]);
+    const basemap = useGeoBasemap(prepared.features);
     const { viewport, zoom, reset, onPointerDown, onPointerMove, finishDrag, onClickCapture } =
         useMapViewport();
-    useEffect(() => {
-        const controller = new AbortController();
-        void fetch(`${import.meta.env.BASE_URL}geo/countries-50m.geojson`, {
-            signal: controller.signal,
-        })
-            .then(response => (response.ok ? response.json() : undefined))
-            .then((collection: unknown) => {
-                if (!isRecord(collection) || !Array.isArray(collection.features)) return;
-                setCountryFeatures(collection.features.filter(isCountryFeature));
-            })
-            .catch(() => undefined);
-        return () => controller.abort();
-    }, []);
     const collection = useMemo<
         ExtendedFeatureCollection<ExtendedFeature<GeoJSON.GeometryObject, Record<string, never>>>
     >(
@@ -194,10 +182,10 @@ function MapCanvas({
             collection,
         );
         const center = geoCentroid(collection);
-        if (!Number.isFinite(projection.scale()) || projection.scale() > 65_000)
+        if (!Number.isFinite(projection.scale()) || projection.scale() > basemap.config.maxScale)
             projection
                 .center(center)
-                .scale(65_000)
+                .scale(basemap.config.maxScale)
                 .translate([WIDTH / 2, HEIGHT / 2]);
         const path = geoPath(projection);
         return {
@@ -205,22 +193,22 @@ function MapCanvas({
             path,
             sphere: path({ type: 'Sphere' }),
             graticule: path(geoGraticule10()),
-            countries: countryFeatures.flatMap(country => {
-                const d = path(country);
-                return d
-                    ? [
-                          {
-                              name:
-                                  typeof country.properties.name === 'string'
-                                      ? country.properties.name
-                                      : undefined,
-                              d,
-                          },
-                      ]
+            land: basemap.features.flatMap(feature => {
+                const d = path(feature);
+                return d ? [{ name: feature.properties.name, d }] : [];
+            }),
+            labels: basemap.config.labels.flatMap(label => {
+                const point = projection(label.position);
+                return point &&
+                    point[0] >= 10 &&
+                    point[0] <= WIDTH - 10 &&
+                    point[1] >= 15 &&
+                    point[1] <= HEIGHT - 15
+                    ? [{ ...label, x: point[0], y: point[1] }]
                     : [];
             }),
         };
-    }, [collection, countryFeatures]);
+    }, [basemap, collection]);
     const measures = prepared.features.flatMap(feature =>
         feature.measure === null ? [] : [feature.measure],
     );
@@ -253,7 +241,7 @@ function MapCanvas({
     const selected = selectedIndex === undefined ? undefined : prepared.features[selectedIndex];
     return (
         <>
-            <div className="geo-stage">
+            <div className="geo-stage" data-basemap={basemap.config.id}>
                 <div className="geo-map-tools" role="group" aria-label="Map view controls">
                     <button type="button" onClick={() => zoom(1.35)} aria-label="Zoom in">
                         +
@@ -281,8 +269,14 @@ function MapCanvas({
                         transform={`translate(${viewport.x} ${viewport.y}) translate(${WIDTH / 2} ${HEIGHT / 2}) scale(${viewport.scale}) translate(${-WIDTH / 2} ${-HEIGHT / 2})`}
                     >
                         {map.sphere && <path className="geo-sphere" d={map.sphere} />}
-                        {map.countries.map((country, index) => (
-                            <path key={country.name ?? index} className="geo-country" d={country.d}>
+                        {map.land.map((country, index) => (
+                            <path
+                                key={country.name ?? index}
+                                className={
+                                    basemap.config.id === 'nyc' ? 'geo-borough' : 'geo-country'
+                                }
+                                d={country.d}
+                            >
                                 {country.name && <title>{country.name}</title>}
                             </path>
                         ))}
@@ -385,6 +379,9 @@ function MapCanvas({
                                 </path>
                             );
                         })}
+                        {basemap.config.id === 'nyc' && (
+                            <MapContext land={map.land} labels={map.labels} />
+                        )}
                     </g>
                 </svg>
                 <div className="geo-map-caption">
@@ -393,6 +390,15 @@ function MapCanvas({
                         {prepared.sampled
                             ? ` · ${formatCount(prepared.features.length)} rendered`
                             : ''}
+                        {basemap.config.id === 'nyc' && (
+                            <>
+                                {' '}
+                                ·{' '}
+                                <a href={basemap.config.source} target="_blank" rel="noreferrer">
+                                    {basemap.config.name}
+                                </a>
+                            </>
+                        )}
                     </span>
                     <span>
                         {prepared.invalidRows
@@ -483,10 +489,6 @@ function useMapLabelPlacements({
     hoveredIndex: number | undefined;
     map: {
         projection: GeoProjection;
-        path: ReturnType<typeof geoPath>;
-        sphere: string | null;
-        graticule: string | null;
-        countries: { name: string | undefined; d: string }[];
     };
     range: number;
     minimum: number;
