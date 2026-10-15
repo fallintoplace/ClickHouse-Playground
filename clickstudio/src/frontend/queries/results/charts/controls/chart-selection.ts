@@ -6,7 +6,7 @@ import {
 import type { CandlestickConfig } from '../../../../../shared/queries/results/chart-settings.js';
 import type { Result } from '../../../../../shared/queries/results/types.js';
 import type { Draft } from '../../../editor/drafts/workspace-state.js';
-import { hasValidCandle } from '../types/candlestick-data';
+import { hasValidCandle } from '../types/candlestick-data.js';
 
 export function prepareChartSelection(result: Result, chart: Draft['chart']) {
     const suggestion = recommendChart(result.columns, result.rows);
