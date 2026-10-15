@@ -24,6 +24,7 @@ import { AssistantChatHistory } from '../chat/AssistantChatHistory';
 import { ScrollEdgeFrame } from '../../ui/components/ScrollEdgeShadows';
 import { Button, cx, Spinner } from '../../ui/components/primitives';
 import { Icon } from '../../ui/components/icons';
+import { nextRandomExamplePrompt } from './random-example-prompts';
 import {
     AssistantAttachments,
     useAssistantAttachments,
@@ -89,13 +90,6 @@ function AssistantTurnAttachments({ turn }: { turn: AssistantChatTurn }) {
         </div>
     );
 }
-
-const generateTaskPrompts = [
-    'Create a ClickHouse table for movies with title, genre, release year, and rating. Insert representative sample records, then query average rating by genre.',
-    'Create a ClickHouse table for countries with country, region, population, and land area. Insert representative sample records, then query population density by region.',
-    'Create a ClickHouse table for sports results with sport, team, game date, points, and outcome. Insert representative sample records, then query win rate and average points by team.',
-    'Create a ClickHouse table for music streams with stream time, artist, track, and genre. Insert representative sample records, then query stream counts by artist and genre.',
-] as const;
 
 function sqlDiffRows(changes: readonly SqlDiffChange[]): SqlDiffRow[] {
     let oldLine = 1;
@@ -833,8 +827,8 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
                                     </span>
                                     <strong>SQL Assistant</strong>
                                     <p>
-                                        Explain or optimize a ClickHouse query, or generate a new
-                                        example.
+                                        Explain or optimize a ClickHouse query, or create a sample
+                                        query.
                                     </p>
                                     {!question.trim() && !hasAttachments && (
                                         <div
@@ -865,18 +859,9 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
                                             <Button
                                                 variant="secondary"
                                                 disabled={!canStartPrompt}
-                                                onClick={() =>
-                                                    ask(
-                                                        generateTaskPrompts[
-                                                            Math.floor(
-                                                                Math.random() *
-                                                                    generateTaskPrompts.length,
-                                                            )
-                                                        ],
-                                                    )
-                                                }
+                                                onClick={() => ask(nextRandomExamplePrompt())}
                                             >
-                                                Generate a random example
+                                                Create a sample query
                                             </Button>
                                         </div>
                                     )}

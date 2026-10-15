@@ -1,0 +1,64 @@
+import { expect, test } from '@playwright/test';
+import { RANDOM_EXAMPLE_PROMPTS } from '../../src/frontend/assistant/proposals/random-example-prompts.js';
+import { jsonRecord, trust } from './helpers.js';
+
+for (const mode of ['beginner', 'expert']) {
+    test(`${mode} random examples send all twenty topics across new chats before repeating`, async ({
+        page,
+    }) => {
+        await page.addInitScript(() => {
+            Math.random = () => 0;
+        });
+        const questions: unknown[] = [];
+        await page.route('**/api/assistant/sql', async route => {
+            const body = jsonRecord(route.request().postDataJSON());
+            questions.push(body.question);
+            await route.fulfill({
+                json: {
+                    id: `random-example-${questions.length}`,
+                    owner: 'local-owner',
+                    connectionId: String(body.connectionId),
+                    action: 'ask',
+                    createdAt: '2026-10-15T00:00:00.000Z',
+                    baseSql: String(body.sql),
+                    responseId: `random-response-${questions.length}`,
+                    model: 'fixture',
+                    promptVersion: 'test',
+                    contextSummary: [],
+                    decision: 'pending',
+                    sql: null,
+                    summary: 'Generated a topic example.',
+                    assumptions: [],
+                    tables: [],
+                    caveats: [],
+                    clarification: null,
+                    findings: [],
+                },
+            });
+        });
+        await trust(page, mode);
+        await page.getByTestId('open-ai').click();
+        const panel = page.getByRole('region', { name: 'Ask AI', exact: true });
+        const createExample = panel.getByRole('button', {
+            name: 'Create a sample query',
+            exact: true,
+        });
+
+        for (let index = 0; index < 21; index++) {
+            if (index > 0) {
+                await panel.getByRole('button', { name: 'New chat', exact: true }).click();
+            }
+            await createExample.click();
+            await expect(
+                panel.getByText('Generated a topic example.', { exact: true }),
+            ).toBeVisible();
+            await expect(panel.locator('.assistant-user-message p')).toHaveText(
+                String(questions[index]),
+            );
+        }
+
+        expect(questions).toHaveLength(21);
+        expect(new Set(questions.slice(0, 20))).toEqual(new Set(RANDOM_EXAMPLE_PROMPTS));
+        expect(questions[20]).not.toBe(questions[19]);
+    });
+}
