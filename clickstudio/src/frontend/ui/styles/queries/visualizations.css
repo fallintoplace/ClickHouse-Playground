@@ -504,6 +504,43 @@
     font-size: 9px;
     text-align: center;
   }
+  .is-explain-graph .pipeline-graph-toolbar {
+    justify-content: flex-end;
+    gap: 6px 12px;
+  }
+  .is-explain-graph .pipeline-graph-heading {
+    flex-wrap: wrap;
+    flex-basis: 280px;
+    gap: 3px 10px;
+    justify-content: flex-start;
+  }
+  .is-explain-graph .pipeline-graph-heading > small {
+    text-align: left;
+  }
+  .is-explain-graph .pipeline-graph-controls {
+    gap: 3px;
+  }
+  .is-explain-graph .pipeline-graph-controls button {
+    min-width: 26px;
+    min-height: 26px;
+    padding-inline: 6px;
+  }
+  .is-explain-graph .pipeline-graph-controls .pipeline-control-action {
+    gap: 4px;
+    padding-inline: 7px;
+  }
+  .is-explain-graph .pipeline-control-action svg {
+    width: 12px;
+    height: 12px;
+  }
+  .is-explain-graph .pipeline-graph-controls output {
+    min-width: 38px;
+    min-height: 26px;
+  }
+  .is-explain-graph .pipeline-graph-warning {
+    padding: 4px 7px;
+    line-height: 1.4;
+  }
   .pipeline-graph-scroll {
     position: relative;
     isolation: isolate;

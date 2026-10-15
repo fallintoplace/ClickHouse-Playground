@@ -37,6 +37,7 @@ import { ScrollEdgeFrame } from '../../../ui/components/ScrollEdgeShadows';
 type PipelineGraphProps = {
     pipeline: ProfilePipeline;
     heading?: string;
+    showHeading?: boolean;
     subheading?: string;
     graphKind?: PipelineGraphKind;
     onSelectNode?: (node: ProfilePipelineNode) => void;
@@ -118,6 +119,7 @@ function graphTruncationMessage(graphKind: PipelineGraphKind, copy: Copy['common
 export function PipelineGraph({
     pipeline,
     heading,
+    showHeading = true,
     subheading,
     graphKind = 'execution',
     onSelectNode,
@@ -254,7 +256,7 @@ export function PipelineGraph({
         graphKind !== 'explain-plan' ? (
             <div className="pipeline-graph-heading">
                 <div>
-                    <span className="eyebrow">{heading ?? title}</span>
+                    {showHeading && <span className="eyebrow">{heading ?? title}</span>}
                     <strong>
                         {(graphKind === 'index-analysis'
                             ? pipeline.nodes.filter(node => node.kind === 'filter').length
@@ -318,24 +320,19 @@ export function PipelineGraph({
     );
     return (
         <div
-            className={`pipeline-graph-card grid ${graphKind === 'sql-flow' ? 'gap-2 is-sql-flow-graph' : 'gap-3'} rounded-xl border p-3${runtime ? ' is-runtime-graph' : ''}`}
+            className={`pipeline-graph-card grid gap-2 rounded-xl border ${graphKind === 'sql-flow' ? 'p-3 is-sql-flow-graph' : 'p-2 is-explain-graph'}${runtime ? ' is-runtime-graph' : ''}`}
             role="group"
             aria-label={terminology.graph}
         >
-            {graphKind === 'sql-flow' ? (
-                <div className="pipeline-graph-toolbar">
-                    {graphHeading}
-                    {graphControls}
-                </div>
-            ) : (
-                graphHeading
-            )}
+            <div className="pipeline-graph-toolbar">
+                {graphHeading}
+                {graphControls}
+            </div>
             {pipeline.truncated && graphKind !== 'explain-plan' && (
                 <p className="pipeline-graph-warning" role="status">
                     {truncationMessage}
                 </p>
             )}
-            {graphKind !== 'sql-flow' && graphControls}
             {renderPipelineGraphViewport({
                 setGraphViewport,
                 viewportLabel,

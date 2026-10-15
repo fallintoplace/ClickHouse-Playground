@@ -469,8 +469,8 @@ function WorkspaceResultView({
             return pipelineResult ? (
                 <PipelineGraph
                     pipeline={pipelineResult}
+                    showHeading={false}
                     copy={copy.common}
-                    heading={copy.common.pipelineGraph}
                     subheading={copy.common.pipelineGraphDescription}
                 />
             ) : (

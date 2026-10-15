@@ -31,7 +31,7 @@ export function ExplainAnalyzeView({
                     pipeline={evidence.pipeline}
                     copy={copy}
                     graphKind="runtime"
-                    heading={copy.runtimeGraph}
+                    showHeading={false}
                     subheading={copy.runtimeGraphDescription}
                 />
             ) : (

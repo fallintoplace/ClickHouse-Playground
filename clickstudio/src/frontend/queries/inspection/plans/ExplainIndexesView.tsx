@@ -90,6 +90,7 @@ export function ExplainIndexesView({
             <PipelineGraph
                 pipeline={analysis.pipeline}
                 graphKind="index-analysis"
+                showHeading={false}
                 initialSelectedId={analysis.pipeline.nodes.find(node => node.kind === 'filter')?.id}
                 copy={copy}
                 renderSelection={node => (
