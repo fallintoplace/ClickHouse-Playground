@@ -56,7 +56,9 @@ test('Metadata stays lazy until Objects opens in Standard', async ({ page }) => 
     const { requests } = await harnessWorkspace(page);
     expect(
         requests.filter(body =>
-            ['functions', 'executable-functions', 'table-permissions'].includes(String(body.action)),
+            ['functions', 'executable-functions', 'table-permissions'].includes(
+                String(body.action),
+            ),
         ),
     ).toHaveLength(0);
 });
