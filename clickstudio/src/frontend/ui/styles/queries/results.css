@@ -40,12 +40,11 @@
     min-height: 32px;
     padding-inline: 12px;
     flex: none;
-    border-color: var(--red);
-    background: var(--red);
-    color: var(--page);
     font-size: 11px;
     font-weight: 700;
-    box-shadow: var(--shadow-inset);
+  }
+  .results-fix-with-ai svg {
+    color: var(--red);
   }
   .result-actions-dropdown {
     position: relative;
@@ -98,9 +97,6 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
-  }
-  .results-fix-with-ai:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--red) 90%, var(--text));
   }
   .results-mark {
     display: grid;

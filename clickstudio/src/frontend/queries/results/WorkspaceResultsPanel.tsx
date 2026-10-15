@@ -792,7 +792,7 @@ function renderResultsHeader({
                 )}
                 {showFailure && failureSql && (
                     <Button
-                        variant="danger"
+                        variant="secondary"
                         className="results-fix-with-ai"
                         onClick={actions.onFixWithAi}
                         disabled={assistantBusy || Boolean(busy)}
