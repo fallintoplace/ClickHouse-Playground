@@ -57,6 +57,7 @@ export type AssistantWorkflowProps = {
         images: readonly AssistantImageAttachment[],
         files: readonly AssistantTextFileAttachment[],
         question?: string,
+        sampleExample?: boolean,
     ) => void;
     onCancelRequest: () => void;
 };
@@ -731,12 +732,12 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
         return () => observer.disconnect();
     }, [question, questionInput]);
 
-    const ask = (prompt?: string) => {
+    const ask = (prompt?: string, sampleExample = false) => {
         if (prompt ? !canStartPrompt : !canSubmit) return;
         const images = imageAttachments;
         const files = textFileAttachments;
         clearAttachments();
-        void onAskAI(images, files, prompt);
+        void onAskAI(images, files, prompt, sampleExample);
     };
     const sendOnEnter = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
         if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -859,7 +860,7 @@ export function AssistantWorkflow(props: AssistantWorkflowProps) {
                                             <Button
                                                 variant="secondary"
                                                 disabled={!canStartPrompt}
-                                                onClick={() => ask(nextRandomExamplePrompt())}
+                                                onClick={() => ask(nextRandomExamplePrompt(), true)}
                                             >
                                                 Create a sample query
                                             </Button>

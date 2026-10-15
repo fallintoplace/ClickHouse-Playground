@@ -81,6 +81,48 @@ async function start(
     };
 }
 const owner = { id: 'local-owner', role: 'owner' } as const;
+test('Sample query setup rules stay internal on the local assistant endpoint', async t => {
+    const question = 'Report space launch success rates by rocket.';
+    let receivedInstructions = '';
+    const assistant: AssistantDriver = {
+        available: true,
+        model: 'fixture',
+        propose: async context => {
+            assert.equal(context.payload.question, question);
+            receivedInstructions = context.payload.instructions;
+            return {
+                content: {
+                    sql: null,
+                    summary: 'Example ready.',
+                    assumptions: [],
+                    tables: [],
+                    caveats: [],
+                    clarification: null,
+                    findings: [],
+                },
+                responseId: 'sample-query-context',
+            };
+        },
+    };
+    const app = await start(undefined, undefined, new DemoDriver(), assistant);
+    t.after(() => app.stop());
+    await app.call('/connections/demo/trust', { trusted: true, confirmation: 'demo' });
+    for (const sampleExample of [true, false, undefined, 'true']) {
+        const response = await app.call('/assistant/sql', {
+            connectionId: 'demo',
+            question,
+            sql: 'SELECT 1',
+            sampleExample,
+        });
+        assert.equal(response.status, 201);
+        assert.equal(
+            receivedInstructions.includes('small, realistic sample dataset'),
+            sampleExample === true,
+        );
+        assert.equal(receivedInstructions.includes('safe to rerun'), sampleExample === true);
+    }
+});
+
 test('Proposal decisions reject stored-only states and unknown values before lookup', async t => {
     const app = await start();
     t.after(() => app.stop());

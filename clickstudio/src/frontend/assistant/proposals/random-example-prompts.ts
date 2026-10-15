@@ -1,4 +1,4 @@
-const randomExampleQuestions = [
+export const RANDOM_EXAMPLE_PROMPTS = [
     'Recommend five movies for each viewer based on the genres they watch most. Exclude movies they have already watched, and only recommend titles with at least 100 ratings and an average score above 8.',
     "Which three countries in each region had the fastest population growth last year? Match annual population estimates to the country directory, exclude countries with fewer than one million residents, and show each country's share of its region's population.",
     'Build a sports league table from match results and the team directory, counting both home and away matches. Award three points for a win and one for a draw, break ties by goal difference, and include teams that have not played yet.',
@@ -20,12 +20,6 @@ const randomExampleQuestions = [
     'Calculate daily household electricity use and cost from cumulative meter readings and the tariff in effect at the time. Readings can arrive out of order, a meter can reset to zero, and a tariff can change during the day. Flag intervals spanning a reset, midnight, or a tariff change when the readings are insufficient to determine usage or cost, and keep daily totals with unknown contributions distinct from complete totals.',
     "Which grocery products are most often bought together? Show the three strongest companion products for each item and the percentage of that item's baskets containing each companion. Count a product only once per basket, even when several units were purchased, and never pair an item with itself.",
 ] as const;
-
-// Ask for outcomes and sample data while leaving schema design and SQL choices to the assistant.
-export const RANDOM_EXAMPLE_PROMPTS = randomExampleQuestions.map(
-    question =>
-        `${question} Include a small, realistic sample dataset so I can run the example. Make the example safe to rerun; adding more sample data each time is fine.`,
-);
 
 export function createRandomExamplePicker(random: () => number = Math.random) {
     let remaining: string[] = [];

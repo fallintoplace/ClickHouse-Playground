@@ -147,6 +147,7 @@ type AssistantRequestOptions = {
     images?: readonly AssistantImageAttachment[];
     files?: readonly AssistantTextFileAttachment[];
     question?: string;
+    sampleExample?: boolean;
 };
 
 function defaultAttachmentQuestion(options?: AssistantRequestOptions): string {
@@ -329,6 +330,7 @@ function createAssistantSqlRequestHandler(context: AssistantSqlRequestContext) {
                     serverVersion,
                     database,
                     action: repair ? 'repair' : 'ask',
+                    ...(options?.sampleExample && !repair ? { sampleExample: true } : {}),
                     repair,
                     runId: turn.runId,
                     includeRun: requestIncludesRun,

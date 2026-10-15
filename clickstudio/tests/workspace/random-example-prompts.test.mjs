@@ -5,18 +5,11 @@ import {
     RANDOM_EXAMPLE_PROMPTS,
 } from '../../.workspace-build/src/frontend/assistant/proposals/random-example-prompts.js';
 
-test('Random examples offer twenty distinct business questions with runnable sample data', () => {
+test('Random examples offer twenty distinct business questions without internal setup rules', () => {
     assert.equal(RANDOM_EXAMPLE_PROMPTS.length, 20);
     assert.equal(new Set(RANDOM_EXAMPLE_PROMPTS).size, 20);
     for (const prompt of RANDOM_EXAMPLE_PROMPTS) {
-        assert.match(
-            prompt,
-            /Include a small, realistic sample dataset so I can run the example\./,
-        );
-        assert.match(
-            prompt,
-            /Make the example safe to rerun; adding more sample data each time is fine\.$/,
-        );
+        assert.doesNotMatch(prompt, /sample dataset|safe to rerun|adding more sample data/i);
         assert.doesNotMatch(
             prompt,
             /\b(?:CREATE TABLE|INSERT INTO|SELECT|JOIN|GROUP BY|ASOF|windowFunnel|arrayJoin|argMax|quantile)\b/i,

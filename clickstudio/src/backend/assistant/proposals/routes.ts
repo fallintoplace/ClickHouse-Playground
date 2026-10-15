@@ -178,6 +178,7 @@ function registerAssistantSqlRoute(
                 database,
                 action,
                 question,
+                sampleExample: v.sampleExample === true && !repair,
                 conversation,
                 sql,
                 schema,

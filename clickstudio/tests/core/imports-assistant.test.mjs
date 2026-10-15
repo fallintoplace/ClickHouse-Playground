@@ -923,6 +923,21 @@ test('SQL-focused context allows sample data when the user requests examples', (
     assert.doesNotMatch(built.payload.instructions, /SELECT\/WITH only/i);
     assert.equal(built.payload.question, 'Create a geography table with sample city rows.');
 });
+test('Sample setup rules stay in internal instructions without changing the user question', () => {
+    const f = aiFixture();
+    const question = 'Report space launch success rates by rocket.';
+    for (const sampleExample of [true, false, undefined]) {
+        const built = buildContext({ ...f.input, question, sampleExample });
+        assert.equal(built.payload.question, question);
+        if (sampleExample) {
+            assert.match(built.payload.instructions, /Include a small, realistic sample dataset/);
+            assert.match(built.payload.instructions, /Make the example safe to rerun/);
+            assert.match(built.payload.instructions, /adding more sample data each time is fine/);
+        } else {
+            assert.doesNotMatch(built.payload.instructions, /sample dataset|safe to rerun/);
+        }
+    }
+});
 test('Assistant passes full requests through with consistent general instructions', () => {
     const f = aiFixture();
     const instructions = buildContext({ ...f.input, action: 'ask' }).payload.instructions;

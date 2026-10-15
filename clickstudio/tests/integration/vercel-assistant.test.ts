@@ -37,6 +37,46 @@ function assistantBody() {
     };
 }
 
+test('Sample query setup rules stay internal on the Vercel assistant endpoint', async t => {
+    const priorKey = process.env.OPENAI_API_KEY;
+    const priorFetch = globalThis.fetch;
+    process.env.OPENAI_API_KEY = 'test-key';
+    t.after(() => {
+        globalThis.fetch = priorFetch;
+        if (priorKey === undefined) delete process.env.OPENAI_API_KEY;
+        else process.env.OPENAI_API_KEY = priorKey;
+    });
+    const question = 'Report space launch success rates by rocket.';
+    let receivedInstructions = '';
+    globalThis.fetch = async (input, init) => {
+        if (String(input).endsWith('/responses/input_tokens'))
+            return Response.json({ object: 'response.input_tokens', input_tokens: 200 });
+        const payload = jsonRecord(jsonValue(String(init?.body)), 'OpenAI request');
+        receivedInstructions = stringValue(payload.instructions);
+        const messages = arrayValue(payload.input).map(item => jsonRecord(item));
+        const content = arrayValue(messages[0]?.content).map(item => jsonRecord(item));
+        const current = jsonRecord(jsonValue(stringValue(content[0]?.text)));
+        assert.equal(current.question, question);
+        return Response.json({
+            id: 'sample-query-context',
+            status: 'completed',
+            output_text: 'Example ready.',
+            output: [],
+        });
+    };
+    for (const sampleExample of [true, false, undefined, 'true']) {
+        const response = await handler.fetch(
+            request({ ...assistantBody(), question, sampleExample }, { 'x-real-ip': '192.0.2.97' }),
+        );
+        assert.equal(response.status, 201);
+        assert.equal(
+            receivedInstructions.includes('small, realistic sample dataset'),
+            sampleExample === true,
+        );
+        assert.equal(receivedInstructions.includes('safe to rerun'), sampleExample === true);
+    }
+});
+
 test('Vercel assistant answers without schema and marks it as unknown', async t => {
     const priorKey = process.env.OPENAI_API_KEY;
     const priorFetch = globalThis.fetch;

@@ -105,6 +105,7 @@ function prepareAssistantContext(body: Record<string, unknown>) {
         database,
         action,
         question,
+        sampleExample: body.sampleExample === true && !repair,
         conversation,
         sql,
         schema,

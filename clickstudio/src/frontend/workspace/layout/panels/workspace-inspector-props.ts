@@ -254,6 +254,7 @@ export function createInspectorProps({
             images?: readonly AssistantImageAttachment[],
             files?: readonly AssistantTextFileAttachment[],
             question?: string,
+            sampleExample?: boolean,
         ) =>
             void requestAssistantSql(
                 currentSchema,
@@ -265,6 +266,7 @@ export function createInspectorProps({
                           ...(images?.length ? { images } : {}),
                           ...(files?.length ? { files } : {}),
                           ...(question ? { question } : {}),
+                          ...(sampleExample ? { sampleExample } : {}),
                       }
                     : undefined,
             ),

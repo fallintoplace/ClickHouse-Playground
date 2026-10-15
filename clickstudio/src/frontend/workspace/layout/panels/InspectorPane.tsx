@@ -118,6 +118,7 @@ export type InspectorPaneProps = {
         images?: readonly AssistantImageAttachment[],
         files?: readonly AssistantTextFileAttachment[],
         question?: string,
+        sampleExample?: boolean,
     ) => void;
     onCancelAssistantRequest: () => void;
     expert?: boolean;
@@ -495,7 +496,7 @@ export function InspectorPane({
                         error={assistantError}
                         notice={assistantNotice}
                         trusted={trusted}
-                        onAskAI={(images, files, question) =>
+                        onAskAI={(images, files, question, sampleExample) =>
                             onAskAI(
                                 schema,
                                 assistantServerVersion,
@@ -503,6 +504,7 @@ export function InspectorPane({
                                 images,
                                 files,
                                 question,
+                                sampleExample,
                             )
                         }
                         onCancelRequest={onCancelAssistantRequest}
