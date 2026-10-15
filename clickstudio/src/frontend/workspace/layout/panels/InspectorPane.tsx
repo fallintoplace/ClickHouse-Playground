@@ -515,15 +515,17 @@ function InspectorSavedViews({
     return (
         <>
             {inspector === 'documents' && (
-                <section className="inspector-section">
+                <section className="inspector-section saved-queries-section">
                     <div className="schema-heading">
                         <span>{copy.queries.toUpperCase()}</span>
                         <Button
                             variant="ghost"
-                            className="toolbar-small"
+                            className="inspector-refresh-action"
+                            aria-label="Refresh saved queries"
+                            title="Refresh saved queries"
                             onClick={onRefreshDocuments}
                         >
-                            ↻ Refresh
+                            <Icon name="refresh" />
                         </Button>
                     </div>
                     <WorkspaceInlineNotice
@@ -539,17 +541,22 @@ function InspectorSavedViews({
                                   type="button"
                                   className="document-card"
                                   key={document.id}
+                                  title={document.name}
                                   onClick={() => onOpenDocument(document)}
                               >
-                                  <span className="file-type-icon small">SQL</span>
+                                  <span className="document-card-mark" aria-hidden="true">
+                                      SQL
+                                  </span>
                                   <span>
                                       <strong>{document.name}</strong>
                                       <small>
-                                          revision {document.revision} ·{' '}
+                                          Version {document.revision} ·{' '}
                                           {new Date(document.updatedAt).toLocaleDateString()}
                                       </small>
                                   </span>
-                                  <span className="history-open">↗</span>
+                                  <span className="history-open" aria-hidden="true">
+                                      ↗
+                                  </span>
                               </button>
                           ))
                         : !documentsError && (
@@ -606,11 +613,14 @@ function renderRevisionHistory({
                 </span>
                 <Button
                     variant="ghost"
-                    className="toolbar-small"
+                    className="inspector-refresh-action"
+                    aria-label={revisionLoading ? 'Refreshing versions' : 'Refresh versions'}
+                    title={revisionLoading ? 'Refreshing versions' : 'Refresh versions'}
+                    aria-busy={revisionLoading}
                     onClick={onRefreshRevisions}
                     disabled={revisionLoading || !revisionsDocumentId}
                 >
-                    {revisionLoading ? 'Loading…' : 'Refresh'}
+                    {revisionLoading ? <Spinner size={14} /> : <Icon name="refresh" />}
                 </Button>
             </div>
             <p className="revision-history-help">
@@ -653,13 +663,15 @@ function renderRevisionHistory({
                                     <Icon name="history" />
                                 </span>
                                 <span className="revision-item-copy">
-                                    <strong>
-                                        Version {revision.revision}
-                                        {revision.revision === currentRevision && <em>Current</em>}
-                                    </strong>
+                                    <strong>Version {revision.revision}</strong>
                                     <small>{new Date(revision.updatedAt).toLocaleString()}</small>
                                 </span>
-                                <span className="history-open">›</span>
+                                {revision.revision === currentRevision && (
+                                    <span className="revision-item-current">Current</span>
+                                )}
+                                <span className="history-open" aria-hidden="true">
+                                    ›
+                                </span>
                             </button>
                         ))}
                     </div>

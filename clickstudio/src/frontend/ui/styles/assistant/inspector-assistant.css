@@ -131,26 +131,41 @@
   .inspector-tabs.is-browser-tabs .inspector-more-trigger {
     display: flex;
     width: auto;
-    min-width: 56px;
+    min-width: 64px;
     height: 34px;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    padding: 0 9px;
-    border-color: transparent;
-    font-size: var(--font-size-tab-compact);
+    gap: 6px;
+    padding: 0 10px;
+    border-color: var(--line);
+    background: var(--panel);
+    color: var(--text-soft);
+    font-size: var(--font-size-tab);
     font-weight: var(--font-weight-medium);
+    letter-spacing: 0.01em;
   }
-  .inspector-more-trigger svg {
-    /* stylelint-disable-next-line declaration-no-important -- Preserve component icon and control dimensions above utility styles. */
-    width: 12px !important; /* stylelint-disable-next-line declaration-no-important -- Preserve component icon and control dimensions above utility styles. */
-    height: 12px !important;
+  .inspector-tabs.is-browser-tabs .inspector-more-trigger svg {
+    width: 12px;
+    height: 12px;
+    flex: none;
+    color: var(--muted);
+    transition: transform 0.16s ease;
   }
-  .inspector-tabs.is-browser-tabs .inspector-more-trigger:is(.is-active, [aria-expanded="true"]) {
-    border-color: var(--active-border);
-    background: var(--active-surface);
+  .inspector-tabs.is-browser-tabs .inspector-more-trigger.is-active {
+    border-color: color-mix(in srgb, var(--accent) 22%, var(--line));
+    background: color-mix(in srgb, var(--accent) 4%, var(--panel));
+    color: var(--text);
+  }
+  .inspector-tabs.is-browser-tabs .inspector-more-trigger.is-active svg {
     color: var(--accent);
-    box-shadow: var(--active-inset);
+  }
+  .inspector-tabs.is-browser-tabs .inspector-more-trigger:is(:hover, [aria-expanded="true"]) {
+    border-color: var(--line-bright);
+    background: var(--panel-hover);
+    color: var(--text);
+  }
+  .inspector-tabs.is-browser-tabs .inspector-more-trigger[aria-expanded="true"] svg {
+    transform: rotate(180deg);
   }
   .inspector-more-menu {
     position: absolute;
@@ -696,8 +711,7 @@
     color: var(--muted);
     font-size: 8px;
   }
-  .history-card,
-  .document-card {
+  .history-card {
     display: flex;
     width: 100%;
     align-items: center;
@@ -710,8 +724,7 @@
     cursor: pointer;
     transition: 0.18s ease;
   }
-  .history-card:hover,
-  .document-card:hover {
+  .history-card:hover {
     border-color: var(--line-bright);
     background: var(--panel-hover);
     transform: translateY(-1px);
@@ -740,8 +753,7 @@
     flex: 1;
     gap: 5px;
   }
-  .history-card-copy strong,
-  .document-card strong {
+  .history-card-copy strong {
     overflow: hidden;
     color: var(--text-soft);
     font-size: 10px;
@@ -749,8 +761,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .history-card-copy small,
-  .document-card small {
+  .history-card-copy small {
     overflow: hidden;
     color: var(--muted);
     font-size: 9px;
@@ -769,10 +780,44 @@
     display: grid;
     min-width: 0;
     flex: 1;
-    gap: 4px;
+    gap: 3px;
   }
+  .document-card strong {
+    overflow: hidden;
+    color: var(--text-soft);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .document-card small {
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 9px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.4;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .saved-queries-section,
+  .revision-history-section {
+    gap: 8px;
+  }
+  .saved-queries-section > .schema-heading,
   .revision-history-section > .schema-heading {
+    min-width: 0;
     margin: 0;
+  }
+  .inspector-refresh-action {
+    width: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    padding: 0;
+    border-radius: var(--radius-control);
+  }
+  .inspector-refresh-action:hover:not(:disabled) {
+    transform: none;
   }
   .revision-history-section > .schema-heading > span {
     min-width: 0;
@@ -786,7 +831,7 @@
     white-space: nowrap;
   }
   .revision-history-help {
-    margin: -3px 0 1px;
+    margin: -2px 0 2px;
     color: var(--muted);
     font-size: 10px;
     line-height: 1.45;
@@ -798,13 +843,15 @@
     overflow: auto;
     padding: 2px 2px 3px 0;
   }
+  .document-card,
   .revision-item {
     display: flex;
     width: 100%;
     min-width: 0;
+    min-height: 48px;
     align-items: center;
-    gap: 10px;
-    padding: 9px 10px;
+    gap: 9px;
+    padding: 8px 10px;
     border: 1px solid var(--line);
     border-radius: var(--radius-control);
     background: color-mix(in srgb, var(--panel-raised) 66%, transparent);
@@ -815,11 +862,16 @@
       border-color 0.16s ease,
       background-color 0.16s ease;
   }
-  .revision-item:hover,
-  .revision-item.is-selected {
-    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-    background: color-mix(in srgb, var(--accent) 6%, var(--panel-raised));
+  .document-card:hover,
+  .revision-item:hover {
+    border-color: var(--line-bright);
+    background: var(--panel-hover);
   }
+  .revision-item.is-selected {
+    border-color: color-mix(in srgb, var(--accent) 32%, var(--line));
+    background: color-mix(in srgb, var(--accent) 4%, var(--panel-raised));
+  }
+  .document-card-mark,
   .revision-item-mark {
     display: grid;
     width: 26px;
@@ -828,7 +880,15 @@
     place-items: center;
     border: 1px solid var(--line);
     border-radius: var(--radius-panel);
+    background: var(--page-raised);
     color: var(--muted);
+  }
+  .document-card-mark {
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
   }
   .revision-item-mark svg {
     width: 13px;
@@ -842,61 +902,67 @@
     display: grid;
     min-width: 0;
     flex: 1;
-    gap: 4px;
+    gap: 3px;
   }
   .revision-item-copy strong {
-    display: flex;
     min-width: 0;
-    align-items: center;
-    gap: 6px;
     color: var(--text-soft);
     font-size: 10px;
-    font-weight: 650;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
   }
   .revision-item-copy small {
     overflow: hidden;
     color: var(--muted);
     font-size: 9px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.4;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .revision-item-copy em {
-    margin-left: auto;
-    padding: 2px 6px;
+  .revision-item-current {
+    display: inline-flex;
+    min-height: 20px;
+    flex: none;
+    align-items: center;
+    padding: 2px 7px;
     border: 1px solid color-mix(in srgb, var(--green) 28%, var(--line));
     border-radius: var(--radius-label);
     background: color-mix(in srgb, var(--green) 8%, var(--panel-raised));
     color: var(--green);
     font-size: 8px;
-    font-style: normal;
     font-weight: 600;
-    text-transform: uppercase;
+    line-height: 1;
+    white-space: nowrap;
   }
   .revision-preview {
     display: grid;
     min-width: 0;
-    gap: 8px;
-    padding-top: 8px;
-    border-top: 1px solid var(--line);
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-panel);
+    background: var(--panel-raised);
   }
   .revision-preview-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+    min-height: 34px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--line);
     color: var(--muted);
     font-size: 9px;
     font-weight: 650;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.04em;
   }
   .revision-preview pre {
     max-height: min(34vh, 280px);
     margin: 0;
     overflow: auto;
-    padding: 11px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-panel);
-    background: var(--panel-raised);
+    padding: 10px;
+    background: var(--page-raised);
     color: var(--text-soft);
     font-family: var(--font-mono);
     font-size: 9px;
@@ -905,6 +971,8 @@
     white-space: pre;
   }
   .revision-unsaved-note {
+    padding: 8px 10px;
+    border-top: 1px solid var(--line);
     color: var(--amber);
     font-size: 9px;
     line-height: 1.5;

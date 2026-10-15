@@ -11,6 +11,7 @@ import {
 } from './helpers.js';
 import { test, expect } from '@playwright/test';
 import type { Script } from '../../src/shared/queries/execution/types.js';
+import type { QueryDocument } from '../../src/shared/queries/saved-queries/types.js';
 import {
     chooseExistingTable,
     mockWritableWorkspace,
@@ -31,6 +32,140 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const theme of ['Light', 'Dark']) {
+    test(`CSS preserves ${theme} saved queries and centered current versions`, async ({
+        page,
+    }, info) => {
+        const latest: QueryDocument = {
+            id: 'panel-query',
+            owner: 'local-owner',
+            connectionId: 'demo',
+            name: 'Country totals grouped by continent with a long saved query name',
+            sql: `-- Country totals\nSELECT ${'country_name, '.repeat(20)}total_area\nFROM countries;`,
+            revision: 1000,
+            createdAt: '2026-10-09T10:00:00Z',
+            updatedAt: '2026-10-10T10:00:00Z',
+            parameters: {},
+            chart: { kind: 'table', x: 0, ys: [], title: 'Query result' },
+            dependencies: [],
+            kind: 'query',
+        };
+        const previous = { ...latest, revision: 999, sql: 'SELECT 1 AS previous_version;' };
+        let documentReads = 0;
+        await page.route(
+            url => url.pathname === '/api/documents',
+            route => {
+                documentReads++;
+                return route.fulfill({
+                    json: [latest, { ...latest, id: 'daily-revenue', name: 'Daily revenue' }],
+                });
+            },
+        );
+        await page.route('**/api/documents/panel-query', route => route.fulfill({ json: latest }));
+        await page.route('**/api/documents/panel-query/revisions', route =>
+            route.fulfill({ json: [latest, previous] }),
+        );
+        await trust(page);
+        await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+        const inspector = page.locator('.inspector-pane');
+        const more = inspector.getByRole('button', {
+            name: 'More workspace panels',
+            exact: true,
+        });
+        await more.focus();
+        await page.keyboard.press('Enter');
+        await expect(more).toHaveAttribute('aria-expanded', 'true');
+        await expect(more.locator('svg')).toHaveCSS('transform', 'matrix(-1, 0, 0, -1, 0, 0)');
+        await expectReferenceStyles(page, info, 'more-menu-open', inspector);
+        await page.keyboard.press('Escape');
+        await expect(more).toBeFocused();
+        await expect(more).toHaveAttribute('aria-expanded', 'false');
+        await expect(more.locator('svg')).toHaveCSS('transform', 'none');
+        await expectReferenceStyles(page, info, 'more-button-focus', inspector);
+        const openPanel = async (name: string) => {
+            await more.click();
+            await page.getByRole('menuitem', { name, exact: true }).click();
+        };
+        await openPanel('Saved queries');
+        const refreshDocuments = inspector.getByRole('button', {
+            name: 'Refresh saved queries',
+            exact: true,
+        });
+        await expect(refreshDocuments).toHaveText('');
+        await expect(refreshDocuments.locator('svg')).toBeVisible();
+        const initialReads = documentReads;
+        await refreshDocuments.click();
+        await expect.poll(() => documentReads).toBeGreaterThan(initialReads);
+        for (const width of [1600, 900]) {
+            await page.setViewportSize({ width, height: 900 });
+            await expectReferenceStyles(page, info, `saved-queries-${width}`, inspector);
+        }
+        await inspector.locator('.document-card').first().click();
+        await expect(page.locator('.cm-content')).toContainText('Country totals');
+        await openPanel('Version history');
+        const current = inspector.getByRole('button', { name: /Version 1000/ });
+        await expect(current).toHaveAttribute('aria-pressed', 'true');
+        const refreshVersions = inspector.getByRole('button', {
+            name: 'Refresh versions',
+            exact: true,
+        });
+        await expect(refreshVersions).toHaveText('');
+        await expect(refreshVersions.locator('svg')).toBeVisible();
+        for (const width of [1600, 900]) {
+            await page.setViewportSize({ width, height: 900 });
+            const rowBounds = await current.boundingBox();
+            const badgeBounds = await current.locator('.revision-item-current').boundingBox();
+            expect(rowBounds).not.toBeNull();
+            expect(badgeBounds).not.toBeNull();
+            expect(
+                Math.abs(
+                    badgeBounds!.y +
+                        badgeBounds!.height / 2 -
+                        (rowBounds!.y + rowBounds!.height / 2),
+                ),
+            ).toBeLessThanOrEqual(1);
+            expect(
+                await inspector
+                    .locator('.revision-history-section')
+                    .evaluate(element => element.scrollWidth <= element.clientWidth),
+            ).toBe(true);
+            await expectReferenceStyles(page, info, `query-versions-${width}`, inspector);
+        }
+        await inspector.getByRole('button', { name: /Version 999/ }).click();
+        await expect(inspector.locator('.revision-preview pre')).toHaveText(previous.sql);
+        await expect(inspector.getByRole('button', { name: 'Restore', exact: true })).toBeEnabled();
+
+        let releaseRefresh = () => {};
+        const pendingRefresh = new Promise<void>(resolve => {
+            releaseRefresh = resolve;
+        });
+        await page.route('**/api/documents/panel-query/revisions', async route => {
+            await pendingRefresh;
+            await route.fulfill({ json: [latest, previous] });
+        });
+        try {
+            await refreshVersions.click();
+            const refreshing = inspector.getByRole('button', {
+                name: 'Refreshing versions',
+                exact: true,
+            });
+            await expect(refreshing).toBeDisabled();
+            await expect(refreshing).toHaveAttribute('aria-busy', 'true');
+            await expect(refreshing.locator('.loading-orbit')).toBeVisible();
+        } finally {
+            releaseRefresh();
+        }
+        await expect(refreshVersions).toBeEnabled();
+        await expect(current).toBeVisible();
+        await refreshVersions.focus();
+        await page.keyboard.press('Shift+Tab');
+        await page.keyboard.press('Tab');
+        await expect(refreshVersions).toBeFocused();
+        expect(await refreshVersions.evaluate(element => element.matches(':focus-visible'))).toBe(
+            true,
+        );
+        await expectReferenceStyles(page, info, 'query-versions-focus', inspector);
+    });
+
     test(`CSS preserves ${theme} Run details`, async ({ page }, info) => {
         const reason = 'Query-log profiling is not enabled for this connection.';
         await page.setViewportSize({ width: 1280, height: 800 });
