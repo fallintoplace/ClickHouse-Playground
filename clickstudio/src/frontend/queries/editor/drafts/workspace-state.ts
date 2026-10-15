@@ -61,7 +61,7 @@ export const newDraft = (name = `Query ${queryTimestamp(new Date())}`, sql = '')
     kind: 'query',
     dependencies: [],
 });
-export const MAX_TABS = 30;
+export const MAX_TABS = 100;
 export const MAX_CLOSED_TABS = 10;
 export function nextBlankQueryName(
     workspace: Pick<WorkspaceState, 'tabs' | 'closedTabs'>,

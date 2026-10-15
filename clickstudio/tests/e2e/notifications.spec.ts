@@ -338,18 +338,47 @@ test('A failed result read uses inline Retry and preserves the successful query 
     await expect(page.getByRole('table', { name: 'Retained query rows' })).toBeVisible();
 });
 
-test('The tab limit uses a brief warning and keeps all existing drafts', async ({ page }) => {
-    await trust(page);
-    for (let count = 1; count < 30; count++) await openBlankSql(page);
-    await page.clock.install();
-    await openBlankSql(page);
-    await expect(page.locator('.toast-warning')).toHaveText(
-        '!30 tabs open. Close one to create another.',
-    );
-    await expect(page.getByRole('tab')).toHaveCount(30);
-    await page.clock.runFor(5100);
-    await expect(page.locator('.toast')).toHaveCount(0);
-});
+for (const mode of ['Standard', 'Experimental'])
+    test(`The 100-tab limit preserves edits and recovery in ${mode} mode`, async ({ page }) => {
+        test.setTimeout(60000);
+        await trust(page, mode);
+        for (let count = 1; count < 100; count++) await openBlankSql(page);
+        const tabs = page.getByRole('tablist', { name: 'SQL documents', exact: true });
+        const documents = tabs.getByRole('tab');
+        await expect(documents).toHaveCount(100);
+        await expect(documents.last()).toHaveAttribute('aria-selected', 'true');
+        await expect(documents.last()).toBeInViewport();
+        await replaceSql(page, 'SELECT 100 AS last_tab_marker');
+        await documents.first().click();
+        await expect(documents.first()).toBeInViewport();
+        await replaceSql(page, 'SELECT 1 AS first_tab_marker');
+        await documents.last().click();
+        await expect(page.locator('.cm-content')).toContainText('SELECT 100 AS last_tab_marker');
+        await page.reload();
+        await expect(documents).toHaveCount(100);
+        await expect(documents.last()).toHaveAttribute('aria-selected', 'true');
+        await expect(documents.last()).toBeInViewport();
+        await expect(page.locator('.cm-content')).toContainText('SELECT 100 AS last_tab_marker');
+        await documents.first().click();
+        await expect(page.locator('.cm-content')).toContainText('SELECT 1 AS first_tab_marker');
+        await page.clock.install();
+        await openBlankSql(page);
+        await expect(page.locator('.toast-warning')).toHaveText(
+            '!100 tabs open. Close one to create another.',
+        );
+        await expect(documents).toHaveCount(100);
+        await expect(page.locator('.cm-content')).toContainText('SELECT 1 AS first_tab_marker');
+        await page.clock.runFor(5100);
+        await expect(page.locator('.toast')).toHaveCount(0);
+        await documents
+            .first()
+            .getByRole('button', { name: /^Close / })
+            .click();
+        await expect(documents).toHaveCount(99);
+        await openBlankSql(page);
+        await expect(documents).toHaveCount(100);
+        await expect(page.locator('.toast')).toHaveCount(0);
+    });
 
 test('A long query name wraps inside a narrow toast and leaves its action usable', async ({
     page,

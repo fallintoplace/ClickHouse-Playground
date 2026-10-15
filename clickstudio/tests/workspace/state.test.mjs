@@ -224,7 +224,7 @@ test('Restored checkpoints and both tab queues respect their documented limits',
         'key',
         read({
             ...workspace({ ...draft, checkpoints: points }),
-            tabs: Array.from({ length: 40 }, () => ({ ...draft, checkpoints: points })),
+            tabs: Array.from({ length: MAX_TABS + 10 }, () => ({ ...draft, checkpoints: points })),
             closedTabs: Array.from({ length: 20 }, () => draft),
         }),
     );
@@ -236,6 +236,34 @@ test('Restored checkpoints and both tab queues respect their documented limits',
         MAX_TABS + MAX_CLOSED_TABS,
     );
 });
+
+for (const count of [30, 31, 99, 100])
+    test(`Recovery keeps all ${count} open drafts and the last active tab`, () => {
+        const tabs = Array.from({ length: count }, (_, index) =>
+            newDraft(`Tab ${index + 1}.sql`, `SELECT ${index + 1} AS value`),
+        );
+        const state = recover('key', read({ ...workspace(...tabs), activeId: tabs.at(-1).id }));
+        assert.deepEqual(
+            state.tabs.map(({ id, name, sql }) => ({ id, name, sql })),
+            tabs.map(({ id, name, sql }) => ({ id, name, sql })),
+        );
+        assert.equal(state.activeId, tabs.at(-1).id);
+        assert.equal(state.recoveryWarning, undefined);
+    });
+
+for (const count of [101, 125])
+    test(`Recovery bounds ${count} open drafts to 100 without changing retained SQL`, () => {
+        const tabs = Array.from({ length: count }, (_, index) =>
+            newDraft(`Tab ${index + 1}.sql`, `SELECT ${index + 1} AS value`),
+        );
+        const state = recover('key', read({ ...workspace(...tabs), activeId: tabs.at(-1).id }));
+        assert.deepEqual(
+            state.tabs.map(({ id, sql }) => ({ id, sql })),
+            tabs.slice(0, 100).map(({ id, sql }) => ({ id, sql })),
+        );
+        assert.equal(state.activeId, tabs[0].id);
+        assert.match(state.recoveryWarning, /Some stored tabs could not be recovered/);
+    });
 
 test('Metric metadata is preserved and malformed arrays are made safe', () => {
     const metric = {
