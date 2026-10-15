@@ -47,10 +47,6 @@ export const sqlEditorTheme = (dark: boolean) =>
         },
         { dark },
     );
-export const keywordCompletions = [...new Set(CLICKHOUSE_KEYWORDS.split(' '))].map(label => ({
-    label,
-    type: 'keyword',
-}));
 export const clickhouseFunctions = [
     ['count', 'Aggregate count of rows'],
     ['sum', 'Aggregate numeric values'],

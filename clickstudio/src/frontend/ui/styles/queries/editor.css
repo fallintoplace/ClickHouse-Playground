@@ -721,10 +721,6 @@
     color: var(--text);
     box-shadow: var(--shadow-popover);
   }
-  .sql-editor .cm-tooltip-autocomplete ul li[aria-selected] {
-    background: color-mix(in srgb, var(--accent) 16%, var(--panel));
-    color: var(--text);
-  }
   .sql-editor .cm-server-error-line {
     /* stylelint-disable-next-line declaration-no-important -- Override CodeMirror runtime styles outside the component layer. */
     background: color-mix(in srgb, var(--red) 14%, transparent) !important;

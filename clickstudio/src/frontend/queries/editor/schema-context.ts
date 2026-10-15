@@ -5,7 +5,6 @@ import { identifierText, tableAlias, tableAliases } from './sql-editor-helpers.j
 export type SchemaIndex = {
     columns: Schema['columns'];
     columnsByTable: Map<string, Schema['columns']>;
-    tables: Schema['tables'];
     tablesByName: Map<string, SchemaTable>;
     tablesByFoldedName: Map<string, SchemaTable | null>;
 };
@@ -42,7 +41,6 @@ export function indexSchema(schema: Schema | undefined, database?: string): Sche
     return {
         columns,
         columnsByTable,
-        tables: schema?.tables ?? [],
         tablesByName,
         tablesByFoldedName,
     };
@@ -58,25 +56,6 @@ export function indexedTable(index: SchemaIndex, name: string): SchemaTable | un
 
 export function tableColumns(index: SchemaIndex, table: SchemaTable): Schema['columns'] {
     return index.columnsByTable.get(tableKey(table.database, table.name)) ?? [];
-}
-
-export function tablesInDatabase(index: SchemaIndex, database: string): Schema['tables'] {
-    const exact = index.tables.filter(table => table.database === database);
-    if (exact.length) return exact;
-    const folded = index.tables.filter(
-        table => table.database.toLowerCase() === database.toLowerCase(),
-    );
-    return new Set(folded.map(table => table.database)).size === 1 ? folded : [];
-}
-
-export function sqlCompletionProtected(scan: SqlScan, source: string, position: number): boolean {
-    return scan.protectedRanges.some(range => {
-        if (position >= range.from && position < range.to) return true;
-        if (position !== range.to || range.to !== source.length) return false;
-        const text = source.slice(range.from, range.to);
-        const lineComment = /^(?:--|\/\/|# |#!)/.test(text) && !text.endsWith('\n');
-        return lineComment || scan.error?.position === range.from;
-    });
 }
 
 export type SqlHoverTarget = {

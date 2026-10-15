@@ -1,6 +1,6 @@
 # SQL editing tools
 
-Use these tools to navigate SQL scripts, add query patterns, and complete names as you type.
+Use these tools to navigate SQL scripts, inspect schema information, and diagnose queries.
 
 ## Editor sessions
 
@@ -8,13 +8,7 @@ Switching query tabs or detaching and docking the editor preserves undo, redo, f
 
 SQL execution and editor hints share a lexer that recognizes comments, escaped quotes, heredocs, and statement boundaries. The statement outline updates when you edit the document.
 
-## ClickHouse snippets
-
-A snippet is an editable query template. Type `ch_` and open autocomplete with **Ctrl+Space**, then choose a template.
-
-The templates include hourly counts, top values, P50/P95/P99 percentiles, the latest value per key with `argMax`, conditional counts, and `EXPLAIN indexes = 1`. A percentile describes a value's position in a distribution; for example, P50 is the median.
-
-Press **Tab / Shift+Tab** to move between placeholder fields. When a placeholder appears more than once, changing one copy updates the linked copies. The editor's normal undo action also works with snippet insertion.
+## Formatting and saving
 
 Formatting creates a separate undo step. **Cmd+S / Ctrl+S** saves the active draft in both the workspace and detached editor.
 
@@ -24,13 +18,11 @@ Syntax issues appear as editor underlines and gutter markers. Hover a marker to 
 
 Run failures, including errors caught before submission, appear in Results with the submitted SQL. Editor highlights apply only while that SQL still matches the draft. Save and Restore warnings appear beside Save; click the warning to read its details. A successful retry clears only that operation's feedback.
 
-## Completion
+## Schema information
 
-Autocomplete suggests SQL keywords, ClickHouse functions, schema names and types, function descriptions, table aliases, and tables with database-qualified names.
+Hover a table or column name to see its schema information. Column hints include the type and any comment; table hints include the engine. Function calls show a short description when available.
 
-For example, typing `e.` offers columns from the table with alias `e`. Typing `database.` offers tables from that database.
-
-Suggestions exclude comments, strings, heredocs, and quoted identifier prefixes. Alias hints use the statement you are editing. Schema names that need quoting are inserted with quotes.
+Hover hints use table aliases from the statement you are editing and exclude string and comment text.
 
 ## Sample and live workflows
 
@@ -47,4 +39,4 @@ npm run typecheck
 npm run test:e2e -- tests/e2e/editor-tools.spec.ts
 ```
 
-The tests cover statement boundaries, snippet insertion, placeholder navigation, aliases, completion positions, large schemas, tab and detached editor sessions, undo, lexical exclusions, error locations, and keyword completion.
+The tests cover statement boundaries, aliases, schema hover, tab and detached editor sessions, undo, diagnostics, syntax highlighting, and the absence of autocomplete while typing or using shortcuts.

@@ -1,14 +1,13 @@
 import { StateField, Transaction, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { isolateHistory } from '@codemirror/commands';
-import { snippet, snippetCompletion } from '@codemirror/autocomplete';
-import { scanSql } from '../../../../shared/sql/lexer';
+import { snippet } from '@codemirror/autocomplete';
+import { scanSql } from '../../../../shared/sql/lexer.js';
 import {
     appendQuerySeparator,
-    CLICKHOUSE_SNIPPETS,
     statementOutline,
     type StatementOutline,
-} from '../sql-editor-helpers';
+} from '../sql-editor-helpers.js';
 
 // Cursor movement reuses the outline; only document edits invoke the boundary lexer.
 export const sqlStatementOutline = StateField.define<StatementOutline>({
@@ -22,15 +21,6 @@ export const sqlLexicalContext = StateField.define({
     update: (context, transaction) =>
         transaction.docChanged ? scanSql(transaction.newDoc.toString()) : context,
 });
-
-export const clickhouseSnippetCompletions = CLICKHOUSE_SNIPPETS.map(item =>
-    snippetCompletion(item.template, {
-        label: item.id,
-        displayLabel: item.label,
-        type: 'text',
-        detail: 'ClickHouse SQL template',
-    }),
-);
 
 export function appendSqlSnippet(view: EditorView, template: string): boolean {
     const outline = view.state.field(sqlStatementOutline);

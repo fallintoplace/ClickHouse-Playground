@@ -239,33 +239,13 @@ for (const parser of ['native', 'fallback'] as const) {
         await page.keyboard.press('ControlOrMeta+z');
         await expect.poll(async () => (await editorState(page)).sql).toBe(original);
     });
-    test(`${parser} completion excludes ClickHouse strings, identifiers, heredocs and comments`, async ({
-        page,
-    }) => {
+    test(`${parser} syntax highlighting includes ClickHouse window keywords`, async ({ page }) => {
         if (parser === 'fallback')
             await page.addInitScript(() => {
                 WebAssembly.instantiate = (): Promise<never> =>
                     Promise.reject(new Error('blocked'));
             });
         await trust(page);
-        for (const sql of [
-            '// SEL',
-            '# SEL',
-            '/* nested /* x */ SEL',
-            'SELECT $tag$SEL',
-            "SELECT 'escaped\\\' SEL",
-            'SELECT `escaped\\` SEL',
-            'SELECT ‘SEL',
-        ]) {
-            await replaceSql(page, sql);
-            await page.keyboard.press('Control+Space');
-            await page.waitForTimeout(200);
-            await expect(page.locator('.cm-tooltip-autocomplete')).toHaveCount(0);
-        }
-        await replaceSql(page, 'INS');
-        await page.keyboard.press('Control+Space');
-        await expect(page.getByRole('option', { name: 'INSERT', exact: true })).toBeVisible();
-        await page.keyboard.press('Escape');
         await replaceSql(page, 'SELECT count() OVER () FROM numbers(1)');
         await expect(page.locator('.cm-content span').filter({ hasText: /^OVER$/ })).toHaveCSS(
             'color',
@@ -432,9 +412,29 @@ test('active snippet fields still navigate and update together after switching t
     page,
 }) => {
     await trust(page);
-    await replaceSql(page, 'ch_time_series');
-    await page.keyboard.press('Control+Space');
-    await page.getByRole('option', { name: /Hourly time series/ }).click();
+    await replaceSql(page, '');
+    await page.locator('.cm-editor').evaluate(async root => {
+        const viewUrl = performance
+            .getEntriesByType('resource')
+            .find(entry => entry.name.includes('/@codemirror_view.js'))?.name;
+        if (!viewUrl) throw new Error('Editor module was not loaded');
+        const { EditorView }: typeof import('@codemirror/view') = await import(viewUrl);
+        const extensionsUrl = performance
+            .getEntriesByType('resource')
+            .find(entry => entry.name.includes('/codemirror-sql-extensions.ts'))?.name;
+        if (!extensionsUrl) throw new Error('Editor extensions module was not loaded');
+        const {
+            appendSqlSnippet,
+        }: typeof import('../../src/frontend/queries/editor/components/codemirror-sql-extensions.js') =
+            await import(extensionsUrl);
+        if (!(root instanceof HTMLElement)) throw new Error('Editor root is not an HTML element');
+        const editor = EditorView.findFromDOM(root);
+        if (!editor) throw new Error('Editor view is not attached to its root');
+        appendSqlSnippet(
+            editor,
+            'SELECT ${1:event_time} FROM ${2:events} WHERE ${1:event_time} > 0;${0}',
+        );
+    });
     await expect.poll(async () => (await editorState(page)).ranges.length).toBe(2);
     const firstId = await page.locator('[role="tab"][aria-selected="true"]').getAttribute('id');
     await openBlankSql(page);

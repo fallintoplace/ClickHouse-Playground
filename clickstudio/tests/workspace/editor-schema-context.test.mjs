@@ -4,8 +4,6 @@ import {
     indexSchema,
     indexedTable,
     tableColumns,
-    tablesInDatabase,
-    sqlCompletionProtected,
     sqlHoverTarget,
     schemaHoverInfo,
 } from '../../.workspace-build/src/frontend/queries/editor/schema-context.js';
@@ -48,7 +46,7 @@ test('schema indexing prefers the connection database and avoids ambiguous short
     assert.equal(indexedTable(index, 'other.first_table').engine, 'Log');
     assert.equal(indexedTable(indexSchema(schema), 'first_table'), undefined);
     assert.equal(tableColumns(index, indexedTable(index, 'demo.second_table')).length, 3);
-    assert.deepEqual(indexSchema(undefined).tables, []);
+    assert.equal(indexSchema(undefined).tablesByName.size, 0);
     assert.equal(indexedTable(indexSchema(undefined), 'unknown'), undefined);
 });
 
@@ -109,37 +107,6 @@ for (const engine of [
             assert.equal(sqlHoverTarget(engine.scan(sql), sql.indexOf('id')), undefined);
         });
     }
-    for (const sql of [
-        '-- SEL',
-        '// SEL',
-        '# SEL',
-        '#! SEL',
-        '/* SEL',
-        "SELECT 'SEL",
-        'SELECT "SEL',
-        'SELECT `SEL',
-        'SELECT $tag$SEL',
-        "SELECT 'escaped\\\' SEL",
-        'SELECT ‘SEL',
-    ]) {
-        test(`${engine.engine} completion is suppressed at EOF: ${sql}`, () => {
-            assert.equal(sqlCompletionProtected(engine.scan(sql), sql, sql.length), true);
-        });
-    }
-    for (const sql of [
-        "SELECT 'SEL'",
-        '/* SEL */',
-        'SELECT $tag$SEL$tag$',
-        '-- SEL\n',
-        'SELECT "SEL"',
-        'SELECT `SEL`',
-    ]) {
-        test(`${engine.engine} completion resumes after closed protected ranges: ${sql}`, () => {
-            const scan = engine.scan(sql);
-            assert.equal(sqlCompletionProtected(scan, sql, sql.lastIndexOf('SEL') + 2), true);
-            assert.equal(sqlCompletionProtected(scan, sql, sql.length), false);
-        });
-    }
     test(`${engine.engine} hover detects actual function calls and escaped quoted identifiers`, () => {
         assert.equal(sqlHoverTarget(engine.scan('SELECT count (id)'), 8).functionCall, true);
         assert.equal(
@@ -156,9 +123,8 @@ for (const engine of [
             'x`y',
         ]);
     });
-    test(`${engine.engine} protection and hover use UTF-16 positions`, () => {
+    test(`${engine.engine} hover uses UTF-16 positions`, () => {
         const sql = "SELECT 'é😀', b.id FROM demo.second_table b";
-        assert.equal(sqlCompletionProtected(engine.scan(sql), sql, sql.indexOf('😀') + 1), true);
         assert.deepEqual(sqlHoverTarget(engine.scan(sql), sql.indexOf('b.id')).parts, ['b', 'id']);
     });
 }
@@ -198,25 +164,4 @@ test('schema lookup preserves case-sensitive table, column and alias identities'
             schemaHoverInfo(index, sql, sqlHoverTarget(sqlLexer.scan(sql), sql.indexOf(token))),
             expected,
         );
-});
-
-test('database table hints prefer exact namespace and reject ambiguous casefold fallback', () => {
-    const index = indexSchema({
-        tables: [
-            { database: 'Demo', name: 'Upper', engine: 'Memory' },
-            { database: 'demo', name: 'Lower', engine: 'Memory' },
-        ],
-        columns: [],
-    });
-    assert.deepEqual(
-        tablesInDatabase(index, 'Demo').map(table => table.name),
-        ['Upper'],
-    );
-    assert.deepEqual(
-        tablesInDatabase(index, 'demo').map(table => table.name),
-        ['Lower'],
-    );
-    assert.deepEqual(tablesInDatabase(index, 'DEMO'), []);
-    assert.deepEqual(tablesInDatabase(index, 'missing'), []);
-    assert.equal(tablesInDatabase(indexSchema(schema), 'DEMO').length, 2);
 });

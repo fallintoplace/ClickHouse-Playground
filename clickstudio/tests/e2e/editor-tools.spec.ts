@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { runScript, trust, openStatementResults } from './helpers.js';
+import { runScript, trust, openStatementResults, openBlankSql } from './helpers.js';
 
 function readSql(page: Page) {
     return page.locator('.cm-content').evaluate(editor =>
@@ -33,19 +33,56 @@ test('statement navigation stays keyboard-accessible without executing SQL', asy
     expect(runs).toBe(0);
 });
 
-test('keyword completion is available outside strings and comments', async ({ page }) => {
-    await trust(page);
-    await replaceSql(page, 'SEL');
-    await page.keyboard.press('Control+Space');
-    await expect(page.getByRole('option', { name: 'SELECT', exact: true })).toBeVisible();
-    await page.keyboard.press('Escape');
-    await replaceSql(page, '-- SEL');
-    await page.keyboard.press('Control+Space');
-    await expect(page.locator('.cm-tooltip-autocomplete')).toHaveCount(0);
-    await replaceSql(page, "SELECT 'SEL");
-    await page.keyboard.press('Control+Space');
-    await expect(page.locator('.cm-tooltip-autocomplete')).toHaveCount(0);
-});
+for (const mode of ['Standard', 'Experimental']) {
+    for (const parser of ['native', 'fallback']) {
+        test(`${mode} ${parser} editor never shows autocomplete while typing or using shortcuts`, async ({
+            page,
+        }) => {
+            if (parser === 'fallback')
+                await page.addInitScript(() => {
+                    WebAssembly.instantiate = (): Promise<never> =>
+                        Promise.reject(new Error('WASM blocked in test'));
+                });
+            await trust(page, mode);
+            const suggestions = page.locator('.cm-tooltip-autocomplete');
+            for (const sql of [
+                'SEL',
+                'SELECT cou',
+                'SELECT e.',
+                'FROM analytics.ev',
+                'ch_time_series',
+            ]) {
+                await replaceSql(page, '');
+                await page.keyboard.type(sql);
+                // Wait beyond CodeMirror's typing debounce to catch delayed popups.
+                await page.waitForTimeout(200);
+                await expect(suggestions).toHaveCount(0);
+                for (const shortcut of ['Control+Space', 'Alt+i', 'Alt+Backquote']) {
+                    await page.keyboard.press(shortcut);
+                    await page.waitForTimeout(200);
+                    await expect(suggestions).toHaveCount(0);
+                }
+                await expect.poll(() => readSql(page)).toBe(sql);
+            }
+            await replaceSql(page, 'SEL');
+            await page.keyboard.press('Control+Space');
+            await page.keyboard.press('Enter');
+            await expect.poll(() => readSql(page)).toBe('SEL\n');
+            await page.keyboard.press('Tab');
+            await expect.poll(() => readSql(page)).toBe('SEL\n  ');
+
+            const tabs = page.getByRole('tablist', { name: 'SQL documents', exact: true });
+            const document = await tabs.getByRole('tab', { selected: true }).getAttribute('id');
+            await openBlankSql(page);
+            await tabs.locator(`[id="${document}"]`).click();
+            await page.locator('.cm-content').focus();
+            await page.keyboard.press('Control+Space');
+            await page.waitForTimeout(200);
+            await expect(suggestions).toHaveCount(0);
+            await expect.poll(() => readSql(page)).toBe('SEL\n  ');
+        });
+    }
+}
 
 for (const engine of ['native', 'fallback'] as const) {
     test(`${engine} lexer preserves Unicode heredocs through script execution`, async ({

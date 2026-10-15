@@ -378,7 +378,7 @@ async function hoverToken(page: Page, token: string) {
     await page.mouse.move(point.x, point.y);
 }
 
-test('Revoking trust removes loaded schema from editor completion and hover', async ({ page }) => {
+test('Revoking trust removes loaded schema from editor hover', async ({ page }) => {
     await mockLiveWorkspace(page, route => route.fulfill({ json: schema }));
     await expect(tableObject(page)).toBeVisible();
     await replaceSql(page, 'SELECT day FROM events');
@@ -386,10 +386,6 @@ test('Revoking trust removes loaded schema from editor completion and hover', as
     await expect(page.locator('.sql-hover')).toContainText('Date');
 
     await revokeAccess(page);
-    await replaceSql(page, 'SELECT * FROM ev');
-    await page.keyboard.press('Control+Space');
-    await expect(page.getByRole('option').filter({ hasText: 'events' })).toHaveCount(0);
-    await page.keyboard.press('Escape');
     await page.mouse.move(0, 0);
     await replaceSql(page, 'SELECT day FROM events');
     await hoverToken(page, 'day');

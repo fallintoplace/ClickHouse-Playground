@@ -29,13 +29,7 @@ import {
 } from '@codemirror/commands';
 import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import { bracketMatching, foldGutter, foldKeymap, syntaxHighlighting } from '@codemirror/language';
-import {
-    autocompletion,
-    nextSnippetField,
-    prevSnippetField,
-    type CompletionContext,
-    type CompletionResult,
-} from '@codemirror/autocomplete';
+import { nextSnippetField, prevSnippetField } from '@codemirror/autocomplete';
 import { sql } from '@codemirror/lang-sql';
 import { closeLintPanel, lintGutter, setDiagnostics, type Diagnostic } from '@codemirror/lint';
 import { lexicalDiagnostic } from './editor-diagnostics';
@@ -51,17 +45,10 @@ import {
     type NativeParseStatement,
     type NativeParserStatus,
 } from '../../../../shared/sql/parser';
-import { formatSql, hasSqlComments, quoteIdentifier } from '../../../../shared/sql/sql';
-import {
-    activeStatementIndex,
-    completionTarget,
-    matchingNames,
-    tableAliases as aliasesFor,
-    tableAlias,
-} from '../sql-editor-helpers';
+import { formatSql, hasSqlComments } from '../../../../shared/sql/sql';
+import { activeStatementIndex } from '../sql-editor-helpers';
 import {
     appendSqlSnippet,
-    clickhouseSnippetCompletions,
     sqlEditorTools,
     sqlStatementOutline,
     sqlLexicalContext,
@@ -69,20 +56,10 @@ import {
 import {
     clickhouse,
     clickhouseFunctions,
-    keywordCompletions,
     sqlEditorTheme,
     sqlHighlightStyle,
 } from './editor-language';
-import {
-    indexedTable,
-    indexSchema,
-    tableColumns,
-    tablesInDatabase,
-    sqlCompletionProtected,
-    sqlHoverTarget,
-    schemaHoverInfo,
-    type SchemaIndex,
-} from '../schema-context';
+import { indexSchema, sqlHoverTarget, schemaHoverInfo } from '../schema-context';
 import {
     captureSqlEditorSession,
     restoreSqlEditorState,
@@ -160,75 +137,6 @@ function decorationsForNativeResults(statements: readonly NativeParseStatement[]
     );
 }
 
-function completionSource(context: CompletionContext, index: SchemaIndex): CompletionResult | null {
-    const source = context.state.doc.toString();
-    if (sqlCompletionProtected(context.state.field(sqlLexicalContext), source, context.pos))
-        return null;
-    const line = context.state.doc.lineAt(context.pos);
-    const target = completionTarget(
-        context.state.sliceDoc(line.from, context.pos),
-        context.explicit,
-    );
-    if (!target) return null;
-    const { qualifier, prefix } = target;
-    const statements = context.state.field(sqlStatementOutline).statements;
-    const statement = statements[activeStatementIndex(statements, context.pos)];
-    const aliases = aliasesFor(statement?.sql ?? '');
-    const tableName = qualifier ? (tableAlias(aliases, qualifier) ?? qualifier) : undefined;
-    const table = tableName ? indexedTable(index, tableName) : undefined;
-    let candidates: typeof index.columns;
-
-    if (table) {
-        candidates = tableColumns(index, table);
-    } else if (qualifier) {
-        candidates = [];
-    } else {
-        candidates = index.columns;
-    }
-    const columns = matchingNames(candidates, column => column.name, prefix).map(column => ({
-        label: column.name,
-        apply: quoteIdentifier(column.name),
-        type: 'variable',
-        detail: `${column.type} · ${column.database}.${column.table}`,
-    }));
-    let tableCandidates: typeof index.tables;
-
-    if (qualifier) {
-        if (table) {
-            tableCandidates = [];
-        } else {
-            tableCandidates = tablesInDatabase(index, qualifier);
-        }
-    } else {
-        tableCandidates = index.tables;
-    }
-    const tables = matchingNames(
-        tableCandidates,
-        item => (qualifier ? item.name : `${item.database}.${item.name}`),
-        prefix,
-    ).map(item => ({
-        label: qualifier ? item.name : `${item.database}.${item.name}`,
-        apply: qualifier
-            ? quoteIdentifier(item.name)
-            : `${quoteIdentifier(item.database)}.${quoteIdentifier(item.name)}`,
-        type: 'class',
-        detail: item.engine,
-    }));
-    const functions = qualifier
-        ? []
-        : clickhouseFunctions.map(([label, detail]) => ({ label, type: 'function', detail }));
-    // Prefix-capped schema options must be recomputed as the user types, not cached with validFor.
-    return {
-        from: line.from + target.from,
-        options: [
-            ...functions,
-            ...(qualifier ? [] : keywordCompletions),
-            ...tables,
-            ...columns,
-            ...(qualifier ? [] : clickhouseSnippetCompletions),
-        ],
-    };
-}
 export interface EditorHandle {
     showDiagnostics: () => void;
     insert: (text: string) => void;
@@ -413,9 +321,6 @@ function useSqlEditorMount({
                     foldGutter(),
                     highlightSelectionMatches(),
                     syntaxHighlighting(sqlHighlightStyle),
-                    autocompletion({
-                        override: [context => completionSource(context, schemaIndexRef.current)],
-                    }),
                     hoverTooltip((view, pos) => {
                         const target = sqlHoverTarget(view.state.field(sqlLexicalContext), pos);
                         if (!target) return null;

@@ -174,6 +174,6 @@ For ClickHouse integration checks, start the local database first. Then run thes
 
 - [MCP connection guide](docs/MCP.md): connect an external client to the local server or a configured Cloud database.
 - [Setup and implementation guide](docs/CLICKSTUDIO.md): setup, settings, and details.
-- [SQL editing tools](docs/EDITOR-TOOLS.md): navigation, snippets, and autocomplete.
+- [SQL editing tools](docs/EDITOR-TOOLS.md): navigation, editor sessions, and diagnostics.
 - [ClickHouse exploration workflows](docs/native-explorers.md): objects, MergeTree activity, and query comparisons.
 - [Python executable UDFs](docs/PYTHON-UDFS.md): Experimental authoring, ZIP export, Cloud deployment, and SQL testing.

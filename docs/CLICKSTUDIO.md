@@ -80,7 +80,7 @@ NODE_ENV=production npm run start:production
 
 The editor keeps tabs and drafts separate for each connection. You can run the current statement, run selected SQL, or run a multi-statement script.
 
-It also supports named ClickHouse parameters, formatting, validation, query history, saved revisions, and saved run details. See [SQL editing tools](EDITOR-TOOLS.md) for navigation, snippets, and autocomplete.
+It also supports named ClickHouse parameters, formatting, validation, query history, saved revisions, and saved run details. See [SQL editing tools](EDITOR-TOOLS.md) for navigation, editor sessions, and diagnostics.
 
 ## Schema and object exploration
 
