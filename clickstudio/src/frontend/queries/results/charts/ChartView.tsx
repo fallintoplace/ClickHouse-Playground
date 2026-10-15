@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+import { GeoView } from '../maps/GeoView';
 import type { Result } from '../../../../shared/queries/results/types';
 import type { Draft } from '../../editor/drafts/workspace-state';
 import type { Copy } from '../../../ui/copy';
@@ -33,6 +35,10 @@ export function ChartView({
     const { width: plotViewportWidth, onViewport: onPlotViewport } =
         useChartPlotWidth<SVGSVGElement>(230);
     const chartCopy = copy.chart;
+    const selection = useMemo(
+        () => (result ? prepareChartSelection(result, chart) : undefined),
+        [result, chart],
+    );
     if (loading || !result)
         return (
             <div className="result-loading">
@@ -42,15 +48,31 @@ export function ChartView({
         );
     if (!result.columns.length) return <div className="chart-empty">{chartCopy.noColumns}</div>;
 
-    const selection = prepareChartSelection(result, chart);
+    if (!selection) return null;
+    const visibleChart =
+        chart.kind === 'geography' && !selection.geography
+            ? { ...chart, kind: 'table' as const }
+            : chart;
+    if (chart.kind === 'geography' && selection.geography)
+        return (
+            <GeoView
+                result={result}
+                chart={chart}
+                onChart={onChart}
+                selection={selection}
+                recommendation={selection.geography}
+                copy={chartCopy}
+                toolbarContainer={toolbarContainer}
+            />
+        );
     const { suggestion, numericIndexes } = selection;
     if (
-        chart.kind === 'candlestick' ||
-        (chart.kind === 'table' && suggestion.config.kind === 'candlestick')
+        visibleChart.kind === 'candlestick' ||
+        (visibleChart.kind === 'table' && suggestion.config.kind === 'candlestick')
     )
         return renderCandlestickChart({
             result,
-            chart,
+            chart: visibleChart,
             onChart,
             chartCopy,
             selection,
@@ -60,8 +82,9 @@ export function ChartView({
         return (
             <RowCountChart
                 result={result}
-                chart={chart}
+                chart={visibleChart}
                 suggestion={suggestion}
+                geography={selection.geography}
                 onChart={onChart}
                 toolbarContainer={toolbarContainer}
                 copy={chartCopy}
@@ -69,7 +92,7 @@ export function ChartView({
         );
     const model = prepareChartView({
         result,
-        chart,
+        chart: visibleChart,
         chartCopy,
         categoryViewportWidth,
         categoryViewportHeight,

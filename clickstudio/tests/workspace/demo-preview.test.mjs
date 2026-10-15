@@ -474,3 +474,36 @@ test('Browser query runs retain validated source ranges', async () => {
         assert.equal(invalid.sourceTo, undefined);
     }
 });
+
+test('Browser saved documents preserve Geography setup across revisions and chart types', async t => {
+    previewStorage(t);
+    const api = new BrowserWorkspaceApi();
+    const geography = {
+        source: { mode: 'coordinates', longitude: 0, latitude: 1 },
+        sourceColumnNames: ['longitude', 'latitude'],
+        label: 2,
+        measure: 3,
+        swapCoordinates: false,
+    };
+    const saved = await api.request('/documents', {
+        method: 'POST',
+        body: {
+            name: 'Places.sql',
+            sql: 'SELECT 1',
+            chart: { kind: 'geography', x: 0, ys: [], title: 'Places', geography },
+        },
+    });
+    assert.deepEqual(saved.chart.geography, geography);
+    const read = await api.request(`/documents/${saved.id}`);
+    assert.deepEqual(read.chart.geography, geography);
+    const switched = await api.request(`/documents/${saved.id}`, {
+        method: 'PUT',
+        body: { ...saved, baseRevision: saved.revision, chart: { ...saved.chart, kind: 'bar' } },
+    });
+    assert.deepEqual(switched.chart.geography, geography);
+    const revision = await api.request(`/documents/${saved.id}/revisions`);
+    assert.deepEqual(revision[0].chart.geography, geography);
+    assert.deepEqual(revision[1].chart.geography, geography);
+    const reopened = new BrowserWorkspaceApi();
+    assert.deepEqual((await reopened.request(`/documents/${saved.id}`)).chart.geography, geography);
+});

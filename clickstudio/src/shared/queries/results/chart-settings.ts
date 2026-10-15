@@ -1,4 +1,5 @@
 import type { ChartKind } from './chart-types.js';
+import type { GeographyConfig } from './geography-settings.js';
 
 export interface CandlestickConfig {
     open?: number;
@@ -18,4 +19,5 @@ export interface ChartConfig {
     ys: number[];
     title: string;
     candlestick?: CandlestickConfig;
+    geography?: GeographyConfig;
 }

@@ -246,7 +246,7 @@ export function useWorkspaceExecution({
         evidence,
     });
 
-    const runExample = (example: SqlExample, output: 'results' | 'chart' | 'map') => {
+    const runExample = (example: SqlExample, output: 'results' | 'chart' | 'geography') => {
         if (busy || executionInFlightRef.current) {
             setError(copy.common.runActionWait, { tone: 'warning', timeoutMs: 5000 });
             return true;
@@ -256,9 +256,10 @@ export function useWorkspaceExecution({
             return true;
         }
         const draft = createExampleDraft(example, copy.common);
+        if (output === 'geography') draft.chart = { ...draft.chart, kind: 'geography' };
         if (!openNewDraft(draft, true)) return true;
         void executeSqlForDraft(draft, draft.sql, {
-            view: output,
+            view: output === 'geography' ? 'chart' : output,
             expandResults: true,
             trackChartRun: true,
         });

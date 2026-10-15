@@ -1,4 +1,5 @@
 import { CHART_KINDS } from '../results/chart-types.js';
+import { isGeographyConfig } from '../results/geography-settings.js';
 import { isRecord, isStringArray } from '../../common/values.js';
 import type { MetricContract, QueryDocument } from './types.js';
 
@@ -26,6 +27,7 @@ function isChartConfig(value: unknown): boolean {
         (value.groupBy !== undefined && typeof value.groupBy !== 'number')
     )
         return false;
+    if (value.geography !== undefined && !isGeographyConfig(value.geography)) return false;
     if (value.candlestick === undefined) return true;
     if (!isRecord(value.candlestick)) return false;
     return Object.values(value.candlestick).every(item => typeof item === 'number');

@@ -7,6 +7,7 @@ import type { CandlestickConfig } from '../../../../../shared/queries/results/ch
 import type { Result } from '../../../../../shared/queries/results/types.js';
 import type { Draft } from '../../../editor/drafts/workspace-state.js';
 import { hasValidCandle } from '../types/candlestick-data.js';
+import { recommendValidGeo } from '../../maps/geo.js';
 
 export function prepareChartSelection(result: Result, chart: Draft['chart']) {
     const suggestion = recommendChart(result.columns, result.rows);
@@ -71,5 +72,6 @@ export function prepareChartSelection(result: Result, chart: Draft['chart']) {
         candleX,
         activeCandle,
         activeCandleValid,
+        geography: recommendValidGeo(result.columns, result.rows, chart.geography),
     };
 }

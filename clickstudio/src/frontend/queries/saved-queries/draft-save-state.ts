@@ -4,6 +4,7 @@ import type {
 } from '../../../shared/queries/results/chart-settings.js';
 import type { MetricContract, QueryDocument } from '../../../shared/queries/saved-queries/types.js';
 import { sameParameters } from '../history/query-parameter-comparison.js';
+import { copyGeographyConfig } from '../../../shared/queries/results/geography-settings.js';
 
 type EditableDocument = Pick<
     QueryDocument,
@@ -65,7 +66,9 @@ function sameChart(left: ChartConfig, right: ChartConfig): boolean {
         left.x === right.x &&
         left.groupBy === right.groupBy &&
         sameArray(left.ys, right.ys) &&
-        sameCandlestick(left.candlestick, right.candlestick)
+        sameCandlestick(left.candlestick, right.candlestick) &&
+        JSON.stringify(left.geography && copyGeographyConfig(left.geography)) ===
+            JSON.stringify(right.geography && copyGeographyConfig(right.geography))
     );
 }
 

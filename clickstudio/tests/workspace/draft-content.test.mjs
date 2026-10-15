@@ -137,3 +137,69 @@ test('Recovery narrows mixed arrays without losing valid draft metadata', () => 
     assert.equal(draft.checkpoints.length, 1);
     assert.equal(draft.checkpoints[0].sql, 'SELECT 2');
 });
+
+test('Geography mappings survive recovery and are copied independently of saved documents', () => {
+    const saved = savedDocument({
+        kind: 'geography',
+        geography: {
+            source: { mode: 'coordinates', longitude: 0, latitude: 1 },
+            sourceColumnNames: ['longitude', 'latitude'],
+            label: 2,
+            measure: 3,
+            swapCoordinates: false,
+        },
+    });
+    const original = structuredClone(saved);
+    const draft = draftFromDocument(saved);
+    const recovered = recoverDraft(JSON.parse(JSON.stringify(draft)));
+    assert.deepEqual(recovered.chart.geography, saved.chart.geography);
+    assert.equal(sameSavedContent(recovered, saved), true);
+    draft.chart.geography.source.longitude = 4;
+    draft.chart.geography.sourceColumnNames[0] = 'other_longitude';
+    draft.chart.geography.label = 5;
+    assert.deepEqual(saved, original);
+    assert.equal(sameSavedContent(draft, saved), false);
+});
+
+test('Geography comparisons ignore property order and notice every mapping change', () => {
+    const geography = {
+        source: { mode: 'geometry', column: 1 },
+        label: 2,
+        measure: 3,
+        swapCoordinates: true,
+    };
+    const saved = savedDocument({ kind: 'geography', geography });
+    const draft = draftFromDocument(saved);
+    draft.chart.geography = {
+        swapCoordinates: true,
+        measure: 3,
+        label: 2,
+        source: { column: 1, mode: 'geometry' },
+    };
+    assert.equal(sameSavedContent(draft, saved), true);
+    for (const patch of [
+        { source: { mode: 'geometry', column: 0 } },
+        { source: { mode: 'coordinates', longitude: 0, latitude: 1 } },
+        { label: undefined },
+        { measure: undefined },
+        { swapCoordinates: false },
+    ]) {
+        draft.chart.geography = { ...geography, ...patch };
+        assert.equal(sameSavedContent(draft, saved), false);
+    }
+    delete draft.chart.geography;
+    assert.equal(sameSavedContent(draft, saved), false);
+});
+
+test('Recovering invalid geography keeps the SQL and drops only invalid mappings', () => {
+    const draft = recoverDraft({
+        sql: 'SELECT location',
+        chart: {
+            kind: 'geography',
+            geography: { source: { mode: 'geometry', column: -1 }, swapCoordinates: false },
+        },
+    });
+    assert.equal(draft.sql, 'SELECT location');
+    assert.equal(draft.chart.kind, 'geography');
+    assert.equal(draft.chart.geography, undefined);
+});

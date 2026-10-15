@@ -1,4 +1,8 @@
 import type { Column, Json, Row } from '../../../../shared/common/values.js';
+import type {
+    GeographyConfig,
+    GeoSource,
+} from '../../../../shared/queries/results/geography-settings.js';
 import {
     baseType,
     chartNumber,
@@ -24,14 +28,7 @@ export type GeoGeometry =
     | { type: 'MultiLineString'; coordinates: GeoPosition[][] }
     | { type: 'Polygon'; coordinates: GeoPosition[][] }
     | { type: 'MultiPolygon'; coordinates: GeoPosition[][][] };
-export type GeoSource =
-    | { mode: 'geometry'; column: number }
-    | { mode: 'coordinates'; longitude: number; latitude: number };
-export interface GeoRecommendation {
-    source: GeoSource;
-    label?: number;
-    measure?: number;
-    swapCoordinates: boolean;
+export interface GeoRecommendation extends GeographyConfig {
     reason: string;
 }
 export interface GeoFeature {
@@ -124,7 +121,7 @@ export function nativeGeoColumns(columns: Column[]): number[] {
     return columns.flatMap((column, index) => (nativeGeoType(column.type) ? [index] : []));
 }
 
-function coordinatePair(columns: Column[]): { longitude: number; latitude: number } | undefined {
+export function coordinatePairs(columns: Column[]): { longitude: number; latitude: number }[] {
     const longitude = columns.flatMap((column, index) =>
         numericType(column.type) && coordinateToken(column.name, 'longitude') !== undefined
             ? [{ index, prefix: coordinateToken(column.name, 'longitude')! }]
@@ -135,13 +132,17 @@ function coordinatePair(columns: Column[]): { longitude: number; latitude: numbe
             ? [{ index, prefix: coordinateToken(column.name, 'latitude')! }]
             : [],
     );
+    const matched = longitude.flatMap(lon =>
+        latitude
+            .filter(lat => lat.prefix === lon.prefix && lat.index !== lon.index)
+            .map(lat => ({ longitude: lon.index, latitude: lat.index })),
+    );
+    if (matched.length) return matched;
     for (const lon of longitude) {
-        const matching = latitude.find(lat => lat.prefix === lon.prefix);
-        if (matching) return { longitude: lon.index, latitude: matching.index };
+        const lat = latitude.find(candidate => candidate.index !== lon.index);
+        if (lat) return [{ longitude: lon.index, latitude: lat.index }];
     }
-    return longitude.length && latitude.length
-        ? { longitude: longitude[0]!.index, latitude: latitude[0]!.index }
-        : undefined;
+    return [];
 }
 
 function inferredLabel(columns: Column[], excluded: Set<number>): number | undefined {
@@ -180,7 +181,7 @@ export function recommendGeo(columns: Column[]): GeoRecommendation | undefined {
             reason: `Native ClickHouse ${nativeGeoType(columns[geometry]!.type)} column`,
         };
     }
-    const coordinates = coordinatePair(columns);
+    const coordinates = coordinatePairs(columns)[0];
     if (!coordinates) return undefined;
     const excluded = new Set([coordinates.longitude, coordinates.latitude]);
     return {
@@ -329,6 +330,101 @@ function coordinateGeometry(
     return { type: 'Point', coordinates: [longitude, latitude] };
 }
 
+export function geographyForColumns(
+    columns: Column[],
+    config: GeographyConfig | undefined,
+): GeoRecommendation | undefined {
+    if (!config) return undefined;
+    const source = config.source;
+    const sourceColumnNames = geographySourceNames(columns, source);
+    // Column positions alone cannot distinguish coordinates from a later age/count result.
+    if (
+        config.sourceColumnNames &&
+        !config.sourceColumnNames.every((name, index) => name === sourceColumnNames[index])
+    )
+        return undefined;
+    const geometryType =
+        source.mode === 'geometry' ? nativeGeoType(columns[source.column]?.type ?? '') : undefined;
+    if (source.mode === 'geometry' && !geometryType) return undefined;
+    if (
+        source.mode === 'coordinates' &&
+        (source.longitude === source.latitude ||
+            !numericType(columns[source.longitude]?.type ?? '') ||
+            !numericType(columns[source.latitude]?.type ?? '') ||
+            (!config.sourceColumnNames &&
+                !coordinatePairs(columns).some(
+                    pair =>
+                        pair.longitude === source.longitude && pair.latitude === source.latitude,
+                )))
+    )
+        return undefined;
+    const measure = config.measure;
+    return {
+        ...config,
+        sourceColumnNames,
+        label: config.label !== undefined && columns[config.label] ? config.label : undefined,
+        measure:
+            measure !== undefined &&
+            numericType(columns[measure]?.type ?? '') &&
+            (source.mode !== 'coordinates' ||
+                (measure !== source.longitude && measure !== source.latitude))
+                ? measure
+                : undefined,
+        reason: geometryType
+            ? `Native ClickHouse ${geometryType} column`
+            : 'Longitude and latitude columns',
+    };
+}
+
+export function geographySourceNames(columns: Column[], source: GeoSource): string[] {
+    const indexes =
+        source.mode === 'geometry' ? [source.column] : [source.longitude, source.latitude];
+    return indexes.map(index => columns[index]?.name ?? '');
+}
+
+function rowGeometry(row: Row, columns: Column[], config: GeographyConfig) {
+    return config.source.mode === 'geometry'
+        ? normalizeGeoGeometry(
+              row[config.source.column],
+              columns[config.source.column]?.type ?? '',
+              config.swapCoordinates,
+          )
+        : coordinateGeometry(row, config.source);
+}
+
+/** Use the renderer's validation and stop as soon as a retained row can be drawn. */
+export function recommendValidGeo(
+    columns: Column[],
+    rows: Row[],
+    configured?: GeographyConfig,
+): GeoRecommendation | undefined {
+    if (!rows.length) return undefined;
+    const saved = geographyForColumns(columns, configured);
+    if (saved && rows.some(row => rowGeometry(row, columns, saved))) return saved;
+    const sources: GeoSource[] = [
+        ...nativeGeoColumns(columns).map(column => ({ mode: 'geometry' as const, column })),
+        ...coordinatePairs(columns).map(pair => ({ mode: 'coordinates' as const, ...pair })),
+    ];
+    for (const source of sources) {
+        const excluded = new Set(
+            source.mode === 'geometry' ? [source.column] : [source.longitude, source.latitude],
+        );
+        const candidate: GeoRecommendation = {
+            source,
+            sourceColumnNames: geographySourceNames(columns, source),
+            label: inferredLabel(columns, excluded),
+            measure: inferredMeasure(columns, excluded),
+            swapCoordinates: source.mode === 'geometry' && /h3/i.test(columns[source.column]!.name),
+            reason:
+                source.mode === 'geometry'
+                    ? `Native ClickHouse ${nativeGeoType(columns[source.column]!.type)} column`
+                    : 'Longitude and latitude columns',
+        };
+        if (rows.some(row => rowGeometry(row, columns, candidate))) return candidate;
+    }
+    return undefined;
+}
+
 function evenlySample<T>(values: T[], maximum: number): T[] {
     if (values.length <= maximum) return values;
     if (maximum <= 0) return [];
@@ -348,14 +444,7 @@ export function prepareGeoFeatures(
     const valid: GeoFeature[] = [];
     for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
         const row = rows[rowIndex]!;
-        const geometry =
-            config.source.mode === 'geometry'
-                ? normalizeGeoGeometry(
-                      row[config.source.column],
-                      columns[config.source.column]?.type ?? '',
-                      config.swapCoordinates,
-                  )
-                : coordinateGeometry(row, config.source);
+        const geometry = rowGeometry(row, columns, config);
         if (!geometry) continue;
         valid.push({
             geometry,

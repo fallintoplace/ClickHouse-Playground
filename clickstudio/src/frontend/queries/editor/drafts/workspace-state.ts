@@ -1,4 +1,8 @@
 import { CHART_KINDS } from '../../../../shared/queries/results/chart-types.js';
+import {
+    copyGeographyConfig,
+    isGeographyConfig,
+} from '../../../../shared/queries/results/geography-settings.js';
 import { MAX_SQL_CHARS } from '../../../../shared/queries/execution/limits.js';
 import type { ChartConfig } from '../../../../shared/queries/results/chart-settings.js';
 import type { QueryDocument } from '../../../../shared/queries/saved-queries/types.js';
@@ -91,6 +95,9 @@ export function draftFromDocument(document: QueryDocument): Draft {
         chart: {
             ...document.chart,
             ys: [...document.chart.ys],
+            ...(document.chart.geography
+                ? { geography: copyGeographyConfig(document.chart.geography) }
+                : {}),
             ...(document.chart.candlestick
                 ? { candlestick: { ...document.chart.candlestick } }
                 : {}),
@@ -184,6 +191,9 @@ export function recoverDraft(value: unknown): Draft | undefined {
             ys: array(chart.ys).filter(chartIndex),
             title: text(chart.title, 'Query result'),
             ...(candlestick ? { candlestick } : {}),
+            ...(isGeographyConfig(chart.geography)
+                ? { geography: copyGeographyConfig(chart.geography) }
+                : {}),
         },
         runIds: [...new Set(strings(value.runIds).filter(v => id(v)))],
         activeRunId: id(value.activeRunId),

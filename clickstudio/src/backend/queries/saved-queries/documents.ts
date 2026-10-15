@@ -2,6 +2,10 @@ import { CHART_KINDS } from '../../../shared/queries/results/chart-types.js';
 import { MAX_SQL_CHARS } from '../../../shared/queries/execution/limits.js';
 import { randomUUID, randomBytes } from 'node:crypto';
 import type { ChartConfig } from '../../../shared/queries/results/chart-settings.js';
+import {
+    copyGeographyConfig,
+    isGeographyConfig,
+} from '../../../shared/queries/results/geography-settings.js';
 import type {
     Comment,
     MetricContract,
@@ -559,6 +563,13 @@ function parseChart(value: unknown): ChartConfig {
         'Invalid chart series',
     );
     const groupBy = v.groupBy === undefined ? undefined : integer(v.groupBy, 'groupBy', 0, 499);
+    const geography = v.geography;
+    requireThat(
+        geography === undefined || isGeographyConfig(geography),
+        400,
+        'CHART_CONFIG',
+        'Invalid geography settings',
+    );
     let candlestick: ChartConfig['candlestick'];
     if (kind === 'candlestick') {
         const fields = record(v.candlestick, 'candlestick fields');
@@ -603,6 +614,7 @@ function parseChart(value: unknown): ChartConfig {
         ys: v.ys.map(y => integer(y, 'y', 0, 499)),
         title: text(v.title, 'chart title', 200, true),
         ...(candlestick ? { candlestick } : {}),
+        ...(geography === undefined ? {} : { geography: copyGeographyConfig(geography) }),
     };
 }
 function parseMetric(value: unknown): MetricContract {

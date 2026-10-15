@@ -1,6 +1,5 @@
 import type { ApiError } from '../../shared/common/errors';
 import type { Run } from '../../shared/queries/execution/types';
-import { recommendGeo } from '../queries/results/maps/geo';
 import type { NativeParseSnapshot } from '../../shared/sql/parser';
 import { selectedStatement, splitSql } from '../../shared/sql/sql';
 import { message, RequestError } from '../api/client';
@@ -81,17 +80,13 @@ export function resultsViews(
     if (run?.kind === 'plan') return ['results', 'plan', 'sqlmap'];
     if (run?.kind === 'pipeline') return ['results', 'pipeline', 'sqlmap'];
     if (run?.kind === 'analyze') return ['results', 'runtime', 'sqlmap'];
-    const tabs: ResultsView[] = ['results', 'chart', 'sqlmap', 'insights'];
-    if (run?.kind === 'query' && recommendGeo(run.columns)) tabs.splice(2, 0, 'map');
-    return tabs;
+    return ['results', 'chart', 'sqlmap', 'insights'];
 }
 
 export function resultsViewTitle(view: ResultsView, copy: Copy['common']): string {
     switch (view) {
         case 'sqlmap':
             return copy.sqlStructure;
-        case 'map':
-            return copy.map;
         case 'indexes':
             return copy.explain;
         case 'plan':
@@ -107,7 +102,7 @@ export function resultsViewTitle(view: ResultsView, copy: Copy['common']): strin
 
 export function resultPanelAriaLabel(view: ResultsView, copy: Copy['common']): string {
     if (view === 'sqlmap') return copy.sqlStructure;
-    return ['map', 'plan', 'pipeline', 'indexes', 'runtime'].includes(view)
+    return ['plan', 'pipeline', 'indexes', 'runtime'].includes(view)
         ? resultsViewTitle(view, copy)
         : copy.queryResults;
 }
@@ -118,8 +113,6 @@ export function resultsTabLabel(view: ResultsView, copy: Copy['common']): string
             return copy.table;
         case 'chart':
             return copy.chart;
-        case 'map':
-            return copy.map;
         case 'sqlmap':
             return copy.sqlMap;
         case 'indexes':
@@ -141,8 +134,6 @@ export function resultsViewHelpHint(view: ResultsView, copy: Copy['common']): st
             return copy.resultsTableHelpDescription;
         case 'chart':
             return copy.resultsChartHelpDescription;
-        case 'map':
-            return copy.resultsMapHelpDescription;
         case 'insights':
             return copy.resultsInsightsHelpDescription;
         case 'sqlmap':

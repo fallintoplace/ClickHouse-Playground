@@ -100,7 +100,16 @@ test('Persisted legacy documents can run while ownership and chart validation re
 test('All supported chart kinds survive saving and reading a document', async t => {
     const f = await ready();
     t.after(() => f.runs.close());
-    for (const kind of ['table', 'number', 'line', 'bar', 'scatter', 'heatmap', 'candlestick']) {
+    for (const kind of [
+        'table',
+        'number',
+        'line',
+        'bar',
+        'scatter',
+        'heatmap',
+        'candlestick',
+        'geography',
+    ]) {
         const document = f.a.save(owner, {
             name: `${kind}.sql`,
             connectionId: 'local',
@@ -378,4 +387,71 @@ test('Invalid second imported document leaves the workspace unchanged', async ()
         }),
     );
     assert.deepEqual(f.a.list(owner), before);
+});
+
+test('Geography settings survive saves, revision reads and switching chart types', async () => {
+    const f = await ready();
+    for (const source of [
+        { mode: 'geometry', column: 1 },
+        { mode: 'coordinates', longitude: 0, latitude: 1 },
+    ]) {
+        const geography = {
+            source,
+            sourceColumnNames:
+                source.mode === 'geometry' ? ['location'] : ['longitude', 'latitude'],
+            label: 2,
+            measure: 3,
+            swapCoordinates: true,
+        };
+        const saved = f.a.save(owner, {
+            name: 'geography.sql',
+            connectionId: 'local',
+            sql: 'SELECT 1',
+            chart: { kind: 'geography', x: 0, ys: [], title: 'Places', geography },
+        });
+        assert.equal(isQueryDocument(saved), true);
+        assert.deepEqual(saved.chart.geography, geography);
+        assert.notEqual(saved.chart.geography.source, source);
+        assert.notEqual(saved.chart.geography.sourceColumnNames, geography.sourceColumnNames);
+        assert.deepEqual(f.a.get(owner, saved.id, saved.revision).chart.geography, geography);
+        const switched = f.a.save(
+            owner,
+            { ...saved, baseRevision: saved.revision, chart: { ...saved.chart, kind: 'bar' } },
+            saved.id,
+        );
+        assert.deepEqual(switched.chart.geography, geography);
+    }
+});
+
+test('Invalid geography settings cannot enter saved documents', async () => {
+    const f = await ready();
+    const source = { mode: 'coordinates', longitude: 0, latitude: 1 };
+    const valid = { source, swapCoordinates: false };
+    const invalid = [
+        null,
+        {},
+        { ...valid, swapCoordinates: 'false' },
+        ...[null, [], ['lon'], ['lon', 1], ['lon', 'lat', 'extra']].map(sourceColumnNames => ({
+            ...valid,
+            sourceColumnNames,
+        })),
+        ...[-1, 0.5, 500, NaN, Infinity].flatMap(index => [
+            { ...valid, source: { mode: 'geometry', column: index } },
+            { ...valid, label: index },
+            { ...valid, measure: index },
+        ]),
+        { ...valid, source: { ...source, latitude: 0 } },
+        { ...valid, source: { mode: 'other', column: 0 } },
+    ];
+    for (const geography of invalid)
+        assert.throws(
+            () =>
+                f.a.save(owner, {
+                    name: 'invalid.sql',
+                    connectionId: 'local',
+                    sql: 'SELECT 1',
+                    chart: { kind: 'geography', x: 0, ys: [], title: 'Places', geography },
+                }),
+            { code: 'CHART_CONFIG' },
+        );
 });

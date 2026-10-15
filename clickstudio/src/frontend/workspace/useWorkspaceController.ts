@@ -734,7 +734,7 @@ function useWorkspaceSnapshotState({
     useEffect(() => {
         if (
             !run ||
-            !['chart', 'map', 'indexes', 'plan', 'pipeline', 'runtime'].includes(view) ||
+            !['chart', 'indexes', 'plan', 'pipeline', 'runtime'].includes(view) ||
             !terminal(run) ||
             run.resultState !== 'reopenable' ||
             snapshot?.runId === run.id

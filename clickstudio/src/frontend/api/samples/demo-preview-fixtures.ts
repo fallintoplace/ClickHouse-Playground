@@ -6,6 +6,10 @@ import { type Run } from '../../../shared/queries/execution/types.js';
 import { type Schema, type SchemaColumn } from '../../../shared/database/schema/types.js';
 import { DEMO_EXPLAIN_ANALYZE } from '../../../shared/samples/database.js';
 import { CHART_KINDS } from '../../../shared/queries/results/chart-types.js';
+import {
+    copyGeographyConfig,
+    isGeographyConfig,
+} from '../../../shared/queries/results/geography-settings.js';
 import { DEMO_PREVIEW_STARTERS, demoIndexAnalysis } from './demo-preview-data.js';
 import { isRecord } from '../../../shared/common/values.js';
 
@@ -671,6 +675,9 @@ export function resultFor(run: Run): Result {
 
 export function chartConfig(value: unknown): QueryDocument['chart'] {
     const chart = record(value);
+    const geography = isGeographyConfig(chart.geography)
+        ? { geography: copyGeographyConfig(chart.geography) }
+        : {};
     const chartIndex = (index: unknown): index is number =>
         typeof index === 'number' && Number.isSafeInteger(index) && index >= 0 && index <= 499;
     if (
@@ -683,6 +690,7 @@ export function chartConfig(value: unknown): QueryDocument['chart'] {
         const candle = record(chart.candlestick);
         return {
             kind: 'candlestick',
+            ...geography,
             x: chart.x,
             ys: chart.ys.filter(chartIndex),
             title: chart.title,
@@ -711,6 +719,7 @@ export function chartConfig(value: unknown): QueryDocument['chart'] {
     )
         return {
             kind,
+            ...geography,
             x: chart.x,
             ...(chartIndex(chart.groupBy) ? { groupBy: chart.groupBy } : {}),
             ys: chart.ys.filter(chartIndex),

@@ -1,3 +1,5 @@
+import { ChartTypeSelect } from '../controls/ChartTypeSelect';
+import type { GeoRecommendation } from '../../maps/geo';
 import type { RefCallback } from 'react';
 import type { recommendChart } from '../../../../../shared/queries/results/results';
 import {
@@ -31,6 +33,7 @@ export function RowCountChart({
     result,
     chart,
     suggestion,
+    geography,
     onChart,
     toolbarContainer,
     copy,
@@ -38,6 +41,7 @@ export function RowCountChart({
     result: Result;
     chart: Draft['chart'];
     suggestion: ReturnType<typeof recommendChart>;
+    geography?: GeoRecommendation;
     onChart: (chart: Draft['chart']) => void;
     toolbarContainer?: HTMLElement | null;
     copy: Copy['chart'];
@@ -227,6 +231,7 @@ export function RowCountChart({
                     <div ref={ref} className="chart-workspace animate-enter">
                         <RowCountChartToolbar
                             result={result}
+                            geography={geography}
                             chart={chart}
                             copy={copy}
                             xIndex={xIndex}
@@ -278,6 +283,7 @@ export function RowCountChart({
 
 function RowCountChartToolbar({
     result,
+    geography,
     chart,
     copy,
     xIndex,
@@ -290,6 +296,7 @@ function RowCountChartToolbar({
     toolbarContainer,
 }: {
     result: Result;
+    geography?: GeoRecommendation;
     chart: Draft['chart'];
     copy: Copy['chart'];
     xIndex: number;
@@ -303,6 +310,19 @@ function RowCountChartToolbar({
 }) {
     return (
         <ChartToolbar portalTarget={toolbarContainer}>
+            {geography && (
+                <div className="chart-control-field">
+                    <ChartTypeSelect
+                        kind={timeAxis ? 'line' : 'bar'}
+                        chart={chart}
+                        result={result}
+                        selection={{ numericIndexes: [], canChooseCandlestick: false, geography }}
+                        copy={copy}
+                        onChart={onChart}
+                        onChange={kind => onChart({ ...chart, kind })}
+                    />
+                </div>
+            )}
             <div className="chart-control-field">
                 <SelectControl
                     className="chart-select"

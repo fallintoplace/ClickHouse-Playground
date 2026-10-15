@@ -55,7 +55,6 @@ export const copy = {
             'Choose whether to download the active SQL draft or rows from its latest result.',
         resultsTableHelpDescription: 'Inspect the rows and values returned by your query.',
         resultsChartHelpDescription: 'See trends and comparisons in your query results as a chart.',
-        resultsMapHelpDescription: 'See location data from your query results on a map.',
         resultsInsightsHelpDescription:
             'Review a quick summary of your results and ideas for what to explore next.',
         closePanel: 'Close',
@@ -65,7 +64,6 @@ export const copy = {
         results: 'Results',
         table: 'Table',
         chart: 'Chart',
-        map: 'Map',
         insights: 'Insights',
         newSql: 'New SQL',
         restore: 'Restore',
@@ -532,6 +530,7 @@ export const copy = {
         scatterType: 'Scatter',
         heatmapType: 'Heatmap',
         candlestickType: 'Candlestick',
+        geographyType: 'Geography',
         priceLabel: 'Price',
         openLabel: 'Open',
         highLabel: 'High',

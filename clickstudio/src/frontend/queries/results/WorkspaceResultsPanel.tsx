@@ -11,7 +11,7 @@ import type { Draft } from '../editor/drafts/workspace-state';
 import type { FailedQueryError } from '../../workspace/workspace-helpers';
 import type { WorkspacePanelController } from '../../workspace/layout/panels/useWorkspacePanels';
 import type { WorkspaceViewState } from '../../workspace/layout/useWorkspaceViewState';
-import { ChartView, GeoView, InsightsView, ResultGrid } from './ResultViews';
+import { ChartView, InsightsView, ResultGrid } from './ResultViews';
 import {
     ExplainAnalyzeView,
     RuntimeSummaryCards,
@@ -503,14 +503,6 @@ function WorkspaceResultView({
                 retainedSnapshot,
                 active,
             });
-        case 'map':
-            if (!run || rowsUnavailable) return null;
-            return (
-                <GeoView
-                    result={retainedSnapshot}
-                    loading={!retainedSnapshot && run.resultState === 'reopenable'}
-                />
-            );
         case 'insights':
             if (!run) return null;
             return (

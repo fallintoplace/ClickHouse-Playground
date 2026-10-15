@@ -6,19 +6,16 @@ import type { Draft } from '../../../editor/drafts/workspace-state';
 import type { Copy } from '../../../../ui/copy';
 import { SelectControl } from '../../../../ui/components/SelectControl';
 import { ChartPopover, ChartToolbar } from '../ChartToolbar';
-import {
-    chartKindIsAvailable,
-    chartKindOptions,
-    chartText,
-    chartTypeLabel,
-    seriesColor,
-} from '../chart-helpers';
+import { ChartTypeSelect } from './ChartTypeSelect';
+import type { GeoRecommendation } from '../../maps/geo';
+import { chartText, seriesColor } from '../chart-helpers';
 
 export function renderChartControls({
     chartKind,
     result,
     chartCopy,
     canChooseCandlestick,
+    geography,
     onChart,
     chart,
     candleX,
@@ -35,6 +32,7 @@ export function renderChartControls({
     result: Result;
     chartCopy: Copy['chart'];
     canChooseCandlestick: boolean;
+    geography: GeoRecommendation | undefined;
     onChart: (chart: Draft['chart']) => void;
     chart: Draft['chart'];
     candleX: number;
@@ -50,28 +48,15 @@ export function renderChartControls({
     return (
         <ChartToolbar portalTarget={toolbarContainer}>
             <div className="chart-control-field">
-                <SelectControl
-                    className="chart-select"
-                    compactMenu
-                    label={chartCopy.type}
-                    menuHeading={chartCopy.type}
-                    value={chartKind}
-                    hideDisabledOptions
+                <ChartTypeSelect
+                    kind={chartKind}
+                    chart={chart}
+                    result={result}
+                    selection={{ numericIndexes, canChooseCandlestick, geography }}
+                    copy={chartCopy}
+                    onChart={onChart}
                     onChange={value => {
-                        const option = chartKindOptions.find(
-                            candidate => candidate.value === value,
-                        );
-                        if (
-                            !option ||
-                            !chartKindIsAvailable(
-                                option.value,
-                                result,
-                                numericIndexes,
-                                canChooseCandlestick,
-                            )
-                        )
-                            return;
-                        if (option.value === 'candlestick') {
+                        if (value === 'candlestick') {
                             onChart({
                                 ...chart,
                                 kind: 'candlestick',
@@ -82,7 +67,7 @@ export function renderChartControls({
                             return;
                         }
                         const nextGroupBy =
-                            option.value === 'heatmap'
+                            value === 'heatmap'
                                 ? (groupByIndex ??
                                   result.columns.findIndex(
                                       (_column, index) => index !== xIndex && index !== yIndex,
@@ -90,27 +75,14 @@ export function renderChartControls({
                                 : undefined;
                         onChart({
                             ...chart,
-                            kind: option.value,
+                            kind: value,
                             groupBy:
                                 nextGroupBy !== undefined && nextGroupBy >= 0
                                     ? nextGroupBy
                                     : undefined,
-                            ys:
-                                option.value === 'line' || option.value === 'bar'
-                                    ? measureIndexes
-                                    : [yIndex],
+                            ys: value === 'line' || value === 'bar' ? measureIndexes : [yIndex],
                         });
                     }}
-                    options={chartKindOptions.map(option => ({
-                        value: option.value,
-                        label: chartTypeLabel(option.value, chartCopy),
-                        disabled: !chartKindIsAvailable(
-                            option.value,
-                            result,
-                            numericIndexes,
-                            canChooseCandlestick,
-                        ),
-                    }))}
                 />
             </div>
             {chartKind !== 'number' && (

@@ -14,12 +14,10 @@ import {
     type ExtendedFeatureCollection,
 } from 'd3';
 import type { GeoProjection } from 'd3';
-import { displayValue, numericType } from '../../../../shared/queries/results/results';
+import { displayValue } from '../../../../shared/queries/results/results';
 import {
-    nativeGeoColumns,
-    nativeGeoType,
     prepareGeoFeatures,
-    recommendGeo,
+    geographyForColumns,
     type GeoFeature,
     type GeoRecommendation,
 } from './geo';
@@ -28,11 +26,13 @@ import type { Column } from '../../../../shared/common/values';
 import type { Result } from '../../../../shared/queries/results/types';
 import { isRecord } from '../../../../shared/common/values';
 import { ScrollEdgeFrame } from '../../../ui/components/ScrollEdgeShadows';
-import { Spinner } from '../../../ui/components/primitives';
+import type { ChartConfig } from '../../../../shared/queries/results/chart-settings';
+import type { Copy } from '../../../ui/copy';
+import type { prepareChartSelection } from '../charts/controls/chart-selection';
+import { GeoChartControls } from './GeoChartControls';
 
 const WIDTH = 960;
 const HEIGHT = 470;
-const EMPTY_COLUMNS: Column[] = [];
 const formatCount = (value: number) => new Intl.NumberFormat('en').format(value);
 const geometryObject = (
     feature: GeoFeature,
@@ -552,212 +552,47 @@ function useMapLabelPlacements({
     }, [hoveredIndex, map, minimum, prepared.features, range, selectedIndex]);
 }
 
-export function GeoView({ result, loading }: { result?: Result; loading: boolean }) {
-    const columns = result?.columns ?? EMPTY_COLUMNS;
-    const recommendation = useMemo(() => recommendGeo(columns), [columns]);
-    const geometryColumns = useMemo(() => nativeGeoColumns(columns), [columns]);
-    const numericColumns = useMemo(
-        () => columns.flatMap((column, index) => (numericType(column.type) ? [index] : [])),
-        [columns],
+export function GeoView({
+    result,
+    chart,
+    onChart,
+    selection,
+    recommendation,
+    copy,
+    toolbarContainer,
+}: {
+    result: Result;
+    chart: ChartConfig;
+    onChart: (chart: ChartConfig) => void;
+    selection: ReturnType<typeof prepareChartSelection>;
+    recommendation: GeoRecommendation;
+    copy: Copy['chart'];
+    toolbarContainer?: HTMLElement | null;
+}) {
+    const columns = result.columns;
+    const config = useMemo(
+        () => geographyForColumns(columns, chart.geography) ?? recommendation,
+        [columns, chart.geography, recommendation],
     );
-    const [source, setSource] = useState('');
-    const [longitude, setLongitude] = useState(-1);
-    const [latitude, setLatitude] = useState(-1);
-    const [label, setLabel] = useState(-1);
-    const [measure, setMeasure] = useState(-1);
-    const [swapCoordinates, setSwapCoordinates] = useState(false);
-
-    useEffect(() => {
-        if (!recommendation) return;
-        if (recommendation.source.mode === 'geometry')
-            setSource(`geometry:${recommendation.source.column}`);
-        else {
-            setSource('coordinates');
-            setLongitude(recommendation.source.longitude);
-            setLatitude(recommendation.source.latitude);
-        }
-        setLabel(recommendation.label ?? -1);
-        setMeasure(recommendation.measure ?? -1);
-        setSwapCoordinates(recommendation.swapCoordinates);
-    }, [recommendation]);
-
-    const config = useMemo<GeoRecommendation | undefined>(() => {
-        if (!source) return recommendation;
-        const optional = {
-            label: label >= 0 ? label : undefined,
-            measure: measure >= 0 ? measure : undefined,
-        };
-        if (source === 'coordinates') {
-            if (longitude < 0 || latitude < 0 || longitude === latitude) return undefined;
-            return {
-                source: { mode: 'coordinates', longitude, latitude },
-                ...optional,
-                swapCoordinates: false,
-                reason: 'Selected longitude and latitude columns',
-            };
-        }
-        const geometry = Number(source.slice('geometry:'.length));
-        if (!Number.isSafeInteger(geometry) || !nativeGeoType(columns[geometry]?.type ?? ''))
-            return undefined;
-        return {
-            source: { mode: 'geometry', column: geometry },
-            ...optional,
-            swapCoordinates,
-            reason: `Native ClickHouse ${nativeGeoType(columns[geometry]!.type)} column`,
-        };
-    }, [columns, label, latitude, longitude, measure, recommendation, source, swapCoordinates]);
     const prepared = useMemo(
-        () =>
-            result && config ? prepareGeoFeatures(result.rows, result.columns, config) : undefined,
-        [config, result],
-    );
-
-    if (loading || !result)
-        return (
-            <div className="result-loading">
-                <Spinner />
-                <span>Preparing spatial result…</span>
-            </div>
-        );
-    if (!recommendation || !config)
-        return (
-            <div className="chart-empty">
-                Return a native ClickHouse geometry column or named longitude/latitude columns to
-                open Map.
-            </div>
-        );
-    const coordinateModeAvailable = numericColumns.length >= 2;
-    const measureOptions = numericColumns.filter(
-        index =>
-            config.source.mode !== 'coordinates' ||
-            (index !== config.source.longitude && index !== config.source.latitude),
+        () => prepareGeoFeatures(result.rows, columns, config),
+        [config, result.rows, columns],
     );
     return (
         <ScrollEdgeFrame<HTMLDivElement> className="geo-workspace-frame">
             {ref => (
                 <div ref={ref} className="geo-workspace animate-enter">
-                    <div className="geo-title-row">
-                        <div>
-                            <span className="eyebrow">CLICKHOUSE GEO</span>
-                            <h3>Spatial explorer</h3>
-                            <p>
-                                {config.reason}. Geometry is rendered from the bounded retained
-                                result, without extra SQL or external map services.
-                            </p>
-                        </div>
-                        <div className="chart-controls geo-controls">
-                            <label>
-                                Source
-                                <select
-                                    value={source}
-                                    onChange={event => {
-                                        const next = event.target.value;
-                                        setSource(next);
-                                        if (next.startsWith('geometry:')) {
-                                            const index = Number(next.slice('geometry:'.length));
-                                            setSwapCoordinates(
-                                                /h3/i.test(columns[index]?.name ?? ''),
-                                            );
-                                        }
-                                    }}
-                                >
-                                    {geometryColumns.map(index => (
-                                        <option key={index} value={`geometry:${index}`}>
-                                            {columns[index]?.name} ·{' '}
-                                            {nativeGeoType(columns[index]?.type ?? '')}
-                                        </option>
-                                    ))}
-                                    {coordinateModeAvailable && (
-                                        <option value="coordinates">Longitude / latitude</option>
-                                    )}
-                                </select>
-                            </label>
-                            {source === 'coordinates' && (
-                                <>
-                                    <label>
-                                        Longitude
-                                        <select
-                                            value={longitude}
-                                            onChange={event =>
-                                                setLongitude(Number(event.target.value))
-                                            }
-                                        >
-                                            {numericColumns.map(index => (
-                                                <option
-                                                    key={index}
-                                                    value={index}
-                                                    disabled={index === latitude}
-                                                >
-                                                    {columns[index]?.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </label>
-                                    <label>
-                                        Latitude
-                                        <select
-                                            value={latitude}
-                                            onChange={event =>
-                                                setLatitude(Number(event.target.value))
-                                            }
-                                        >
-                                            {numericColumns.map(index => (
-                                                <option
-                                                    key={index}
-                                                    value={index}
-                                                    disabled={index === longitude}
-                                                >
-                                                    {columns[index]?.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </label>
-                                </>
-                            )}
-                            <label>
-                                Label
-                                <select
-                                    value={label}
-                                    onChange={event => setLabel(Number(event.target.value))}
-                                >
-                                    <option value={-1}>Row number</option>
-                                    {columns.map((column, index) => (
-                                        <option key={index} value={index}>
-                                            {column.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                            <label>
-                                Measure
-                                <select
-                                    value={measure}
-                                    onChange={event => setMeasure(Number(event.target.value))}
-                                >
-                                    <option value={-1}>None</option>
-                                    {measureOptions.map(index => (
-                                        <option key={index} value={index}>
-                                            {columns[index]?.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                            {source.startsWith('geometry:') && (
-                                <label className="geo-swap">
-                                    <span>Coordinate order</span>
-                                    <button
-                                        type="button"
-                                        aria-pressed={swapCoordinates}
-                                        onClick={() => setSwapCoordinates(value => !value)}
-                                    >
-                                        {swapCoordinates ? 'Y / X' : 'X / Y'}
-                                    </button>
-                                </label>
-                            )}
-                        </div>
-                    </div>
-                    {!prepared?.features.length ? (
-                        <div className="chart-empty">
+                    <GeoChartControls
+                        result={result}
+                        chart={chart}
+                        config={config}
+                        selection={selection}
+                        copy={copy}
+                        onChart={onChart}
+                        toolbarContainer={toolbarContainer}
+                    />
+                    {!prepared.features.length ? (
+                        <div className="chart-empty" role="status">
                             No returned rows contain valid longitude/latitude geometry for this
                             selection.
                         </div>

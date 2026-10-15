@@ -125,11 +125,12 @@ export function prepareChartView({
     plotViewportWidth?: number;
     selection: ReturnType<typeof prepareChartSelection>;
 }) {
-    const { suggestion, numericIndexes, inferredCandle, canChooseCandlestick, candleX } = selection;
+    const { suggestion, numericIndexes, inferredCandle, canChooseCandlestick, geography, candleX } =
+        selection;
     let chartKind: 'number' | 'line' | 'bar' | 'scatter' | 'heatmap' | 'candlestick';
 
-    if (chart.kind === 'table') {
-        if (suggestion.config.kind === 'table') {
+    if (chart.kind === 'table' || chart.kind === 'geography') {
+        if (suggestion.config.kind === 'table' || suggestion.config.kind === 'geography') {
             chartKind = 'bar';
         } else {
             chartKind = suggestion.config.kind;
@@ -287,6 +288,7 @@ export function prepareChartView({
         result,
         chartCopy,
         canChooseCandlestick,
+        geography,
         chart,
         candleX,
         inferredCandle,

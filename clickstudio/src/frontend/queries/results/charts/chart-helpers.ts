@@ -3,6 +3,7 @@ import type { ChartKind } from '../../../../shared/queries/results/chart-types.j
 import type { Result } from '../../../../shared/queries/results/types.js';
 import type { Draft } from '../../editor/drafts/workspace-state.js';
 import type { Copy } from '../../../ui/copy.js';
+import { temporalType } from '../../../../shared/queries/results/results.js';
 
 export const chartKindOptions = CHART_KINDS.filter(kind => kind !== 'table').map(value => ({
     value,
@@ -13,14 +14,22 @@ export function chartKindIsAvailable(
     result: Pick<Result, 'columns' | 'rows'>,
     numericIndexes: number[],
     canChooseCandlestick: boolean,
+    canChooseGeography = false,
 ) {
     switch (kind) {
         case 'number':
             return result.rows.length === 1 && numericIndexes.length > 0;
 
         case 'line':
+            return (
+                numericIndexes.length > 0 ||
+                result.columns.some(column => temporalType(column.type))
+            );
         case 'bar':
-            return numericIndexes.length > 0;
+            return (
+                numericIndexes.length > 0 ||
+                result.columns.some(column => !temporalType(column.type))
+            );
 
         case 'scatter':
             return numericIndexes.length >= 2;
@@ -30,6 +39,8 @@ export function chartKindIsAvailable(
 
         case 'candlestick':
             return canChooseCandlestick;
+        case 'geography':
+            return canChooseGeography;
     }
 }
 
@@ -67,6 +78,7 @@ export function chartTypeLabel(kind: Draft['chart']['kind'], copy: Copy['chart']
         scatter: copy.scatterType,
         heatmap: copy.heatmapType,
         candlestick: copy.candlestickType,
+        geography: copy.geographyType,
         table: copy.queryResult,
     }[kind];
 }

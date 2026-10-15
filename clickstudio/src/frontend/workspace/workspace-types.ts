@@ -23,7 +23,6 @@ export type Inspector = (typeof INSPECTORS)[number];
 export const RESULTS_VIEWS = [
     'results',
     'chart',
-    'map',
     'insights',
     'sqlmap',
     'indexes',

@@ -73,11 +73,11 @@ export function GeoHelpPreview({
                         className="sql-example-action"
                         data-testid="run-geo-example"
                         onClick={() => {
-                            if (onRunExample(GEO_HELP_EXAMPLE, 'map')) onClose(false);
+                            if (onRunExample(GEO_HELP_EXAMPLE, 'geography')) onClose(false);
                         }}
                     >
                         <Icon name="play" />
-                        Run map
+                        Run geography
                     </Button>
                 </div>
             </div>
