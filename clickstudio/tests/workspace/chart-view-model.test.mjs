@@ -354,9 +354,9 @@ test('Positive and negative measures share the same zero baseline', () => {
         view.chartYTicks.map(tick => tick.value),
         [10, 0, -10],
     );
-    assert.equal(view.svg.zeroY, 115);
-    assert.equal(view.svg.y(-10), 190);
-    assert.equal(view.svg.y(10), 40);
+    assert.equal(view.svg.zeroY, view.svg.plotMiddle);
+    assert.equal(view.svg.y(-10), view.svg.plotBottom);
+    assert.equal(view.svg.y(10), view.svg.plotTop);
 });
 
 test('NULL and invalid measures keep their gaps without contributing to the value range', () => {
@@ -391,7 +391,8 @@ for (const rows of [[], [[0, 0]], [[0, null]]]) {
                 rows,
             ),
         );
-        assert.equal(view.svg.zeroY, 190);
+        assert.equal(view.svg.zeroY, view.svg.plotBottom);
+        assert.equal(view.svg.y(0), view.svg.plotBottom);
         assert.ok(view.chartYTicks.every(tick => Number.isFinite(tick.position)));
         assert.ok(Number.isFinite(view.svg.x(0)));
         assert.ok(Number.isFinite(view.svg.y(0)));
@@ -433,8 +434,8 @@ test('A zero-only scatter plot centers its point and collapses duplicate ticks',
         },
     );
     assert.equal(view.svg.scatterX(0), 406);
-    assert.equal(view.svg.scatterY(0), 115);
-    assert.deepEqual(view.chartYTicks, [{ value: 0, position: 115 }]);
+    assert.equal(view.svg.scatterY(0), view.svg.plotMiddle);
+    assert.deepEqual(view.chartYTicks, [{ value: 0, position: view.svg.plotMiddle }]);
     assert.deepEqual(view.svg.chartXTicks, [{ label: '0', position: 406 }]);
 });
 
