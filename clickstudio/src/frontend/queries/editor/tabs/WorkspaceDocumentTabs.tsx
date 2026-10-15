@@ -68,6 +68,7 @@ export function WorkspaceDocumentTabs({
             className={cx(
                 'document-tabs',
                 tabScrollState.overflow && 'has-tab-overflow',
+                tabScrollState.canScrollRight && 'can-scroll-right',
                 compactSingleTab && 'is-compact-single',
             )}
         >

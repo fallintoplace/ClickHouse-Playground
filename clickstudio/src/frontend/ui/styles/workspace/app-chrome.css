@@ -735,7 +735,7 @@
     padding-left: 5px;
     background: color-mix(in srgb, var(--page-raised) 94%, transparent);
   }
-  .document-tabs.has-tab-overflow .document-tab-actions {
+  .document-tabs.can-scroll-right .document-tab-actions {
     box-shadow: -14px 0 18px color-mix(in srgb, var(--page-raised) 94%, transparent);
   }
   .document-tabs-scroll-button {

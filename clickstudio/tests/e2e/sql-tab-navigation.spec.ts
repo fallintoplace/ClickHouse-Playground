@@ -1,9 +1,88 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { openBlankSql, trust } from './helpers.js';
 import { expectReferenceStyles } from './style-reference.js';
 
+async function expectActiveTabFullyVisible(page: Page) {
+    const tabList = page.getByRole('tablist', { name: 'SQL documents', exact: true });
+    await expect
+        .poll(() =>
+            tabList.evaluate(node => {
+                const active = node.querySelector('[role="tab"][aria-selected="true"]');
+                const close = active?.querySelector('button');
+                if (!active || !close) throw new Error('Active SQL tab or close button not found');
+                const bounds = node.getBoundingClientRect();
+                const tabBounds = active.getBoundingClientRect();
+                const closeBounds = close.getBoundingClientRect();
+                return Math.max(
+                    bounds.left - tabBounds.left,
+                    tabBounds.right - bounds.right,
+                    bounds.left - closeBounds.left,
+                    closeBounds.right - bounds.right,
+                );
+            }),
+        )
+        .toBeLessThanOrEqual(1);
+}
+
 for (const mode of ['Standard', 'Experimental']) {
     for (const reducedMotion of ['reduce', 'no-preference'] as const) {
+        test(`${mode} fully reveals new SQL tabs with ${reducedMotion} motion`, async ({
+            page,
+        }, info) => {
+            await page.emulateMedia({ reducedMotion });
+            await page.setViewportSize({ width: 900, height: 800 });
+            await trust(page, mode);
+
+            const tabList = page.getByRole('tablist', { name: 'SQL documents', exact: true });
+            const scrollRight = page.getByTestId('scroll-sql-tabs-right');
+            const actions = page.locator('.document-tab-actions');
+            await expect(scrollRight).toHaveCount(0);
+
+            // Check the first overflow before opening another tab can correct its scroll position.
+            for (let index = 0; index < 12; index++) {
+                await openBlankSql(page);
+                await expectActiveTabFullyVisible(page);
+                if (await scrollRight.count()) break;
+            }
+            await expect(scrollRight).toBeDisabled();
+            await expectActiveTabFullyVisible(page);
+
+            await openBlankSql(page);
+            await expectActiveTabFullyVisible(page);
+            await expect(scrollRight).toBeDisabled();
+
+            const tabCount = await tabList.getByRole('tab').count();
+            await page.getByTestId('new-sql').click({ clickCount: 3 });
+            await expect(tabList.getByRole('tab')).toHaveCount(tabCount + 3);
+            await expectActiveTabFullyVisible(page);
+            await expect(scrollRight).toBeDisabled();
+
+            for (const theme of ['Dark', 'Light']) {
+                await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
+                await expect(actions).toHaveCSS('box-shadow', 'none');
+                await expectReferenceStyles(page, info, `new-tab-${theme.toLowerCase()}`, tabList);
+                await page.getByTestId('scroll-sql-tabs-left').click();
+                await expect(scrollRight).toBeEnabled();
+                await expect(actions).not.toHaveCSS('box-shadow', 'none');
+                await expect(tabList.getByRole('tab').last()).toHaveAttribute(
+                    'aria-selected',
+                    'true',
+                );
+                await openBlankSql(page);
+                await expectActiveTabFullyVisible(page);
+                await expect(scrollRight).toBeDisabled();
+            }
+
+            await page.setViewportSize({ width: 760, height: 800 });
+            await expectActiveTabFullyVisible(page);
+            await tabList
+                .getByRole('tab', { selected: true })
+                .getByRole('button', { name: /^Close / })
+                .click();
+            await expectActiveTabFullyVisible(page);
+            await expect(scrollRight).toBeDisabled();
+        });
+
         test(`${mode} points toward the hidden active SQL tab with ${reducedMotion} motion`, async ({
             page,
         }, info) => {

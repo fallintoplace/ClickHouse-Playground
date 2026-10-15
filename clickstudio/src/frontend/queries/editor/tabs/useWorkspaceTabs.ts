@@ -129,9 +129,10 @@ export function useWorkspaceTabs(
     }, [tabLayoutKey, updateTabScrollState]);
 
     useEffect(() => {
+        // Overflow arrows change the available width after the initial reveal.
         const frame = window.requestAnimationFrame(revealActiveTab);
         return () => window.cancelAnimationFrame(frame);
-    }, [active.id, active.name, revealActiveTab]);
+    }, [active.id, active.name, tabScrollState.overflow, revealActiveTab]);
 
     const beginTabRename = (draft: WorkspaceState['tabs'][number]) => {
         cancelTabRenameOnBlur.current = false;
