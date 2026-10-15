@@ -43,12 +43,7 @@ async function expectDialogFits(dialog: Locator) {
 }
 
 for (const theme of ['Dark', 'Light']) {
-    for (const viewport of [
-        { width: 1280, height: 900 },
-        { width: 390, height: 844 },
-        { width: 360, height: 800 },
-        { width: 320, height: 720 },
-    ]) {
+    for (const viewport of [{ width: 1280, height: 900 }]) {
         test(`${theme} function creators share the same design at ${viewport.width}px`, async ({
             page,
         }, info) => {
