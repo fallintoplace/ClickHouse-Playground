@@ -25,7 +25,7 @@ import {
     connectPreviewCloud,
     mockCloudEndpoint,
 } from './cloud-import-helpers.js';
-import { expectReferenceStyles } from './style-reference.js';
+import { expectReferenceStyles, expectVerticallyCentered } from './style-reference.js';
 
 test.beforeEach(async ({ page }) => {
     test.setTimeout(90000);
@@ -239,22 +239,14 @@ for (const theme of ['Light', 'Dark']) {
         await expect(refreshVersions.locator('svg')).toBeVisible();
         for (const width of [1600, 900]) {
             await page.setViewportSize({ width, height: 900 });
-            const rowBounds = await current.boundingBox();
-            const badgeBounds = await current.locator('.revision-item-current').boundingBox();
-            expect(rowBounds).not.toBeNull();
-            expect(badgeBounds).not.toBeNull();
-            expect(
-                Math.abs(
-                    badgeBounds!.y +
-                        badgeBounds!.height / 2 -
-                        (rowBounds!.y + rowBounds!.height / 2),
-                ),
-            ).toBeLessThanOrEqual(1);
-            expect(
-                await inspector
-                    .locator('.revision-history-section')
-                    .evaluate(element => element.scrollWidth <= element.clientWidth),
-            ).toBe(true);
+            await expectVerticallyCentered(current, '.revision-item-current');
+            await expect
+                .poll(() =>
+                    inspector
+                        .locator('.revision-history-section')
+                        .evaluate(element => element.scrollWidth <= element.clientWidth),
+                )
+                .toBe(true);
             await expectReferenceStyles(page, info, `query-versions-${width}`, inspector);
         }
         await inspector.getByRole('button', { name: /Version 999/ }).click();
@@ -337,13 +329,10 @@ for (const theme of ['Light', 'Dark']) {
         ]);
         for (const width of [1600, 900]) {
             await page.setViewportSize({ width, height: 900 });
-            const summary = await inspector.locator('.run-detail-hero').boundingBox();
-            const status = await inspector.locator('.run-detail-status').boundingBox();
-            expect(summary).not.toBeNull();
-            expect(status).not.toBeNull();
-            expect(
-                Math.abs(status!.y + status!.height / 2 - (summary!.y + summary!.height / 2)),
-            ).toBeLessThanOrEqual(1);
+            await expectVerticallyCentered(
+                inspector.locator('.run-detail-hero'),
+                '.run-detail-status',
+            );
             await expectReferenceStyles(page, info, `run-details-${width}`, inspector);
             if (width === 1600)
                 await inspector.locator('.run-details-section').screenshot({

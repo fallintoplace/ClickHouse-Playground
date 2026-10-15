@@ -4,6 +4,12 @@ import { workspacePath } from './helpers.js';
 import { fileURLToPath } from 'node:url';
 import { jsonRecord } from '../helpers/type-guards.js';
 
+const refreshedSqlFunction = {
+    name: 'current_sql',
+    parameters: ['value'],
+    createQuery: 'CREATE FUNCTION current_sql AS (value) -> value;',
+};
+
 async function mountMetadata(page: Page) {
     await page.evaluate(() => {
         const container = document.createElement('div');
@@ -18,6 +24,7 @@ async function mountMetadata(page: Page) {
 async function harnessWorkspace(page: Page) {
     return functionsWorkspace(page, {
         path: workspacePath('Standard'),
+        existing: true,
         openObjects: false,
         executableFunctions: [{ name: 'python_double', createQuery: '' }],
         tablePermissions: { create: true, dropDatabase: true },
@@ -49,38 +56,46 @@ test('Metadata stays lazy until Objects opens in Standard', async ({ page }) => 
     const { requests } = await harnessWorkspace(page);
     expect(
         requests.filter(body =>
-            ['executable-functions', 'table-permissions'].includes(String(body.action)),
+            ['functions', 'executable-functions', 'table-permissions'].includes(String(body.action)),
         ),
     ).toHaveLength(0);
 });
 
-test('StrictMode coalesces database checks and clears both metadata caches when trust is revoked', async ({
+test('StrictMode coalesces metadata requests and clears all catalogs when trust is revoked', async ({
     page,
 }) => {
     const { state, requests } = await harnessWorkspace(page);
     await mountMetadata(page);
     const names = page.getByLabel('Cached Python UDFs');
+    const sqlNames = page.getByLabel('Cached SQL UDFs');
+    await expect(sqlNames).toHaveText(state.functions.map(fn => fn.name).join(','));
     await expect(names).toHaveText('python_double');
     await expect(page.getByLabel('First database actions')).toHaveText('allowed');
     await expect(page.getByLabel('Second database actions')).toHaveText('allowed');
     expect(requests.filter(body => body.action === 'table-permissions')).toHaveLength(1);
     expect(requests.filter(body => body.action === 'executable-functions')).toHaveLength(1);
+    expect(requests.filter(body => body.action === 'functions')).toHaveLength(1);
     await page.getByRole('button', { name: 'Toggle metadata trust' }).click();
     await expect(names).toBeEmpty();
+    await expect(sqlNames).toBeEmpty();
     await expect(page.getByLabel('First database actions')).toHaveText('denied');
     state.executableFunctions = [{ name: 'current_python', createQuery: '' }];
+    state.functions = [refreshedSqlFunction];
     await page.getByRole('button', { name: 'Toggle metadata trust' }).click();
     await expect(names).toHaveText('current_python');
+    await expect(sqlNames).toHaveText('current_sql');
     await expect(page.getByLabel('First database actions')).toHaveText('allowed');
     expect(requests.filter(body => body.action === 'table-permissions')).toHaveLength(2);
     expect(requests.filter(body => body.action === 'executable-functions')).toHaveLength(2);
+    expect(requests.filter(body => body.action === 'functions')).toHaveLength(2);
 });
 
-for (const field of ['host', 'database', 'username', 'testedAt']) {
-    test(`Metadata ignores delayed Python and permission responses after ${field} changes`, async ({
+for (const field of ['host', 'database', 'username', 'testedAt', 'refresh']) {
+    test(`Metadata ignores superseded catalog and permission responses after ${field}`, async ({
         page,
     }) => {
         const { state } = await harnessWorkspace(page);
+        let sqlRequests = 0;
         let pythonRequests = 0;
         let permissionRequests = 0;
         let release = () => {};
@@ -89,6 +104,21 @@ for (const field of ['host', 'database', 'username', 'testedAt']) {
         });
         await page.route('**/api/cloud', async route => {
             const body = jsonRecord(route.request().postDataJSON());
+            if (body.action === 'functions') {
+                sqlRequests++;
+                if (sqlRequests > 1) return route.fallback();
+                const functions = structuredClone(state.functions);
+                await pending;
+                return route.fulfill({
+                    json: {
+                        functions,
+                        canCreate: true,
+                        canDrop: true,
+                        createReason: '',
+                        dropReason: '',
+                    },
+                });
+            }
             if (body.action === 'executable-functions') {
                 pythonRequests++;
                 if (pythonRequests > 1) return route.fallback();
@@ -106,12 +136,17 @@ for (const field of ['host', 'database', 'username', 'testedAt']) {
             return route.fallback();
         });
         const names = page.getByLabel('Cached Python UDFs');
+        const sqlNames = page.getByLabel('Cached SQL UDFs');
         try {
             await mountMetadata(page);
+            await expect.poll(() => sqlRequests).toBe(1);
             await expect.poll(() => pythonRequests).toBe(1);
             await expect.poll(() => permissionRequests).toBe(1);
             state.executableFunctions = [{ name: 'current_python', createQuery: '' }];
-            await page.getByRole('button', { name: `Change metadata ${field}` }).click();
+            state.functions = [refreshedSqlFunction];
+            const action = field === 'refresh' ? 'Refresh metadata' : `Change metadata ${field}`;
+            await page.getByRole('button', { name: action, exact: true }).click();
+            await expect(sqlNames).toHaveText('current_sql');
             await expect(names).toHaveText('current_python');
             await expect(page.getByLabel('First database actions')).toHaveText('denied');
         } finally {
@@ -120,6 +155,8 @@ for (const field of ['host', 'database', 'username', 'testedAt']) {
         }
         await expect(names).toHaveText('current_python');
         await expect(page.getByLabel('First database actions')).toHaveText('denied');
+        await expect(sqlNames).toHaveText('current_sql');
+        expect(sqlRequests).toBe(2);
         expect(pythonRequests).toBe(2);
         expect(permissionRequests).toBe(2);
     });
@@ -262,5 +299,61 @@ for (const mode of ['Standard', 'Experimental']) {
         ).toBeVisible();
         expect(executableCount()).toBe(executableRequests);
         expect(permissionCount()).toBe(databaseRequests);
+    });
+}
+
+for (const deniedStatus of [401, 403]) {
+    test(`Catalog refreshes retain transient data but evict it after HTTP ${deniedStatus}`, async ({
+        page,
+    }) => {
+        const { state } = await harnessWorkspace(page);
+        await mountMetadata(page);
+        for (const name of ['SQL', 'Python']) {
+            await expect(page.getByLabel(`${name} catalog availability`)).toHaveText('available');
+            await expect(page.getByLabel(`Cached ${name} UDFs`)).not.toBeEmpty();
+        }
+        let failureStatus = 0;
+        await page.route('**/api/cloud', route => {
+            const { action } = jsonRecord(route.request().postDataJSON());
+            if (!failureStatus || !['functions', 'executable-functions'].includes(String(action)))
+                return route.fallback();
+            return route.fulfill({
+                status: failureStatus,
+                json: {
+                    error: {
+                        code: 'CATALOG_REFRESH',
+                        message: `Catalog refresh failed: ${failureStatus}`,
+                    },
+                },
+            });
+        });
+        for (const [index, status] of [502, deniedStatus, 502].entries()) {
+            failureStatus = status;
+            await page.getByRole('button', { name: 'Refresh metadata', exact: true }).click();
+            for (const name of ['SQL', 'Python']) {
+                const error = `Catalog refresh failed: ${status}`;
+                await expect(page.getByLabel(`${name} catalog error`, { exact: true })).toHaveText(
+                    error,
+                );
+                await expect(page.getByLabel(`${name} catalog refresh error`)).toHaveText(error);
+                await expect(page.getByLabel(`${name} catalog status`)).toHaveText('idle');
+                await expect(page.getByLabel(`${name} catalog availability`)).toHaveText(
+                    index === 0 ? 'available' : 'unavailable',
+                );
+                const names = page.getByLabel(`Cached ${name} UDFs`);
+                if (index === 0) await expect(names).not.toBeEmpty();
+                else await expect(names).toBeEmpty();
+            }
+        }
+        failureStatus = 0;
+        state.functions = [];
+        state.executableFunctions = [];
+        await page.getByRole('button', { name: 'Refresh metadata', exact: true }).click();
+        for (const name of ['SQL', 'Python']) {
+            await expect(page.getByLabel(`${name} catalog availability`)).toHaveText('available');
+            await expect(page.getByLabel(`Cached ${name} UDFs`)).toBeEmpty();
+            await expect(page.getByLabel(`${name} catalog error`, { exact: true })).toBeEmpty();
+            await expect(page.getByLabel(`${name} catalog refresh error`)).toBeEmpty();
+        }
     });
 }

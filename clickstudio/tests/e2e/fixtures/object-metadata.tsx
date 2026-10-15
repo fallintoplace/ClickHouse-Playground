@@ -1,6 +1,7 @@
-import { StrictMode, useState } from 'react';
+import { Fragment, StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { getClickHouseCloudConnection } from '../../../src/frontend/database/connections/cloud-connection';
+import { useSqlFunctionCatalog } from '../../../src/frontend/database/functions/useSqlFunctionCatalog';
 import { usePythonFunctionCatalog } from '../../../src/frontend/database/functions/usePythonFunctionCatalog';
 import {
     useTablePermissionCatalog,
@@ -30,22 +31,44 @@ function Harness() {
     });
     const [trusted, setTrusted] = useState(true);
     const [visible, setVisible] = useState(true);
+    const sql = useSqlFunctionCatalog(connection, trusted, visible);
     const python = usePythonFunctionCatalog(connection, trusted, visible);
     const permissions = useTablePermissionCatalog(connection, trusted);
+    const catalogs = [
+        {
+            ...sql,
+            name: 'SQL',
+            functions: sql.catalog?.functions ?? [],
+            available: sql.catalog !== undefined,
+        },
+        { ...python, name: 'Python' },
+    ];
     return (
         <>
-            <output aria-label="Cached Python UDFs">
-                {python.functions.map(fn => fn.name).join(',')}
-            </output>
-            <output aria-label="Python catalog status">
-                {python.loading ? 'loading' : 'idle'}
-            </output>
+            {catalogs.map(catalog => (
+                <Fragment key={catalog.name}>
+                    <output aria-label={`Cached ${catalog.name} UDFs`}>
+                        {catalog.functions.map(fn => fn.name).join(',')}
+                    </output>
+                    <output aria-label={`${catalog.name} catalog status`}>
+                        {catalog.loading ? 'loading' : 'idle'}
+                    </output>
+                    <output aria-label={`${catalog.name} catalog availability`}>
+                        {catalog.available ? 'available' : 'unavailable'}
+                    </output>
+                    <output aria-label={`${catalog.name} catalog error`}>{catalog.error}</output>
+                    <output aria-label={`${catalog.name} catalog refresh error`}>
+                        {catalog.refreshError}
+                    </output>
+                </Fragment>
+            ))}
             {visible && <PermissionConsumer catalog={permissions} name="First" />}
             {visible && <PermissionConsumer catalog={permissions} name="Second" />}
             <button onClick={() => setVisible(value => !value)}>Toggle metadata visibility</button>
             <button onClick={() => setTrusted(value => !value)}>Toggle metadata trust</button>
             <button
                 onClick={() => {
+                    sql.refresh();
                     python.refresh();
                     permissions.refresh();
                 }}

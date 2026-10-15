@@ -112,6 +112,29 @@ async function visibleStyles(page: Page, target: Page | Locator) {
     });
 }
 
+export async function expectVerticallyCentered(parent: Locator, childSelector: string) {
+    await expect(parent.locator(childSelector)).toBeVisible();
+    await expect
+        .poll(
+            () =>
+                parent.evaluate((element, selector) => {
+                    const child = element.querySelector(selector);
+                    if (!child) return Infinity;
+                    // Read both rectangles in one task, not across resize frames.
+                    const parentBounds = element.getBoundingClientRect();
+                    const childBounds = child.getBoundingClientRect();
+                    if (!parentBounds.height || !childBounds.height) return Infinity;
+                    return Math.abs(
+                        childBounds.y +
+                            childBounds.height / 2 -
+                            (parentBounds.y + parentBounds.height / 2),
+                    );
+                }, childSelector),
+            { message: `${childSelector} stays vertically centered in its parent` },
+        )
+        .toBeLessThanOrEqual(1);
+}
+
 export async function expectReferenceStyles(
     page: Page,
     info: TestInfo,
