@@ -1,7 +1,6 @@
 import { chooseImportOption } from './import-helpers.js';
 import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
-import { chooseChartOption } from './chart-control-helpers.js';
 import { GEO_HELP_CITIES } from '../../src/frontend/help/previews/geo-help-examples.js';
 import { openBlankSql, openSqlExamples, openWorkspacePanel, replaceSql } from './helpers.js';
 import { jsonRecord } from '../helpers/type-guards.js';
@@ -798,10 +797,8 @@ test('Geo SQL example runs native Point values and renders twenty cities', async
         timeout: 30_000,
     });
     const results = page.getByRole('region', { name: 'Query results', exact: true });
-    await chooseChartOption(
-        page,
-        results.getByRole('combobox', { name: 'Type', exact: true }),
-        'geography',
+    await expect(results.getByRole('combobox', { name: 'Type', exact: true })).toContainText(
+        'Geography',
     );
     await expect(page.locator('.geo-map')).toBeVisible({ timeout: 30_000 });
     await expect(page.locator('.geo-feature.geo-point')).toHaveCount(20);

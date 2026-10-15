@@ -213,7 +213,15 @@ export function SqlExamplesHelp({
                                     className="sql-example-action"
                                     data-testid="run-sql-example"
                                     onClick={() => {
-                                        if (onRunExample(selected, 'results')) onClose(false);
+                                        if (
+                                            onRunExample(
+                                                selected,
+                                                selected.chart.kind === 'geography'
+                                                    ? 'chart'
+                                                    : 'results',
+                                            )
+                                        )
+                                            onClose(false);
                                     }}
                                 >
                                     <Icon name="play" />

@@ -4,6 +4,43 @@ import {
     BrowserWorkspaceApi,
     SavedQueryUnavailableError,
 } from '../../.workspace-build/src/frontend/api/browser-workspace-api.js';
+import { sqlExamplesFor } from '../../.workspace-build/src/frontend/help/examples/sql-examples.js';
+import { prepareChartSelection } from '../../.workspace-build/src/frontend/queries/results/charts/controls/chart-selection.js';
+import { prepareGeoFeatures } from '../../.workspace-build/src/frontend/queries/results/maps/geo.js';
+
+test('Offline Geography examples return matching drawable geometry instead of daily activity', async () => {
+    const api = new BrowserWorkspaceApi();
+    const examples = sqlExamplesFor({ id: 'demo', dataSource: 'fixture' });
+    for (const [id, type, count] of [
+        ['clickhouse-geo-cities', 'Point', 20],
+        ['clickhouse-geo-flight-routes', 'LineString', 8],
+        ['clickhouse-geo-delivery-zones', 'Polygon', 4],
+    ]) {
+        const example = examples.find(candidate => candidate.id === id);
+        assert.equal(example.chart.kind, 'geography');
+        const run = await api.request('/runs', {
+            method: 'POST',
+            body: { connectionId: 'demo', sql: example.sql },
+        });
+        const result = await api.request(`/runs/${run.id}/result?count=100`);
+        assert.equal(run.rowCount, count, id);
+        assert.equal(result.rows.length, count, id);
+        assert.equal(result.columns[1].type, type, id);
+        const selection = prepareChartSelection(result, example.chart);
+        assert.ok(selection.geography, id);
+        const prepared = prepareGeoFeatures(result.rows, result.columns, selection.geography);
+        assert.equal(prepared.totalFeatures, count, id);
+        assert.equal(prepared.invalidRows, 0, id);
+        assert.ok(
+            prepared.features.every(feature => feature.geometry.type === type),
+            id,
+        );
+        assert.ok(
+            prepared.features.every(feature => feature.label && feature.measure > 0),
+            id,
+        );
+    }
+});
 
 test('Browser saved-query reads distinguish missing records from valid and trashed documents', async () => {
     const api = new BrowserWorkspaceApi();

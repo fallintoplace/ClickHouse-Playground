@@ -5,6 +5,7 @@ import {
     categoryLabel,
     chartLabel,
     exampleText,
+    helpCategories,
     helpSections,
 } from '../../.workspace-build/src/frontend/help/workspace-help-model.js';
 
@@ -51,7 +52,6 @@ test('example category labels use English and custom labels', () => {
         ['operations', 'Operations'],
         ['engineering', 'Engineering'],
         ['markets', 'Markets'],
-        ['cities', 'Cities'],
         ['openSource', 'Open source'],
         ['internet', 'Internet'],
         ['datasets', 'Datasets'],
@@ -60,13 +60,13 @@ test('example category labels use English and custom labels', () => {
         ['aggregation', copy.exampleAggregation],
         ['timeSeries', copy.exampleTimeSeries],
         ['charts', copy.exampleCharts],
-        ['clickhouse', copy.exampleClickHouse],
         ['schema', copy.exampleSchema],
     ];
 
     for (const [category, expected] of labels) {
         assert.equal(categoryLabel(category, copy), expected, category);
     }
+    assert.deepEqual(labels.map(([category]) => category).sort(), [...helpCategories].sort());
 });
 
 test('chart labels cover every chart kind and unknown kinds', () => {
@@ -78,6 +78,7 @@ test('chart labels cover every chart kind and unknown kinds', () => {
         ['scatter', copy.exampleChartScatter],
         ['heatmap', copy.exampleChartHeatmap],
         ['candlestick', copy.exampleChartCandlestick],
+        ['geography', copy.exampleChartGeography],
         ['unknown', copy.chart],
     ];
 
@@ -113,7 +114,7 @@ test('schema examples use table copy while other examples preserve their text', 
                 id: 'clickhouse-server-version',
                 name: 'Server version',
                 description: 'Read the version',
-                category: 'clickhouse',
+                category: 'basics',
             },
             copy,
         ),

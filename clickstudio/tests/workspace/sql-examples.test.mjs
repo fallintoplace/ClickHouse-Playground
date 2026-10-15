@@ -5,6 +5,10 @@ import {
     validatePlaygroundQuery,
 } from '../../.workspace-build/src/frontend/database/connections/playground-client.js';
 import { sqlExamplesFor } from '../../.workspace-build/src/frontend/help/examples/sql-examples.js';
+import { helpCategories } from '../../.workspace-build/src/frontend/help/workspace-help-model.js';
+import { isGeographyConfig } from '../../.workspace-build/src/shared/queries/results/geography-settings.js';
+import { prepareChartSelection } from '../../.workspace-build/src/frontend/queries/results/charts/controls/chart-selection.js';
+import { prepareGeoFeatures } from '../../.workspace-build/src/frontend/queries/results/maps/geo.js';
 
 test('SQL example catalogs match the selected Playground or fixture source', () => {
     const playground = sqlExamplesFor({ id: 'playground', dataSource: 'clickhouse' });
@@ -56,7 +60,7 @@ test('Playground examples use ClickHouse-owned datasets with chart-ready result 
         assert.ok(chart.groupBy !== undefined && !chart.ys.includes(chart.groupBy));
         assert.ok(!chart.ys.includes(chart.x));
     }
-    assert.match(byId.get('nyc-taxi-fare-distance')?.sql ?? '', /LIMIT 240\s*$/);
+    assert.match(byId.get('nyc-taxi-fare-distance')?.sql ?? '', /LIMIT 60\s*$/);
     assert.match(byId.get('stock-jnj-history')?.description ?? '', /historical/i);
 });
 
@@ -207,7 +211,7 @@ test('Stack Overflow examples match the Playground tag format and stay chart fri
     assert.deepEqual(popularTags.chart.ys, [1]);
 });
 
-test('Business, Observability, and Operations each offer five bounded chart examples', () => {
+test('Business, Observability, and Operations retain their bounded workflow charts', () => {
     const examples = sqlExamplesFor({ id: 'playground', dataSource: 'clickhouse' });
     const cases = [
         ['amazon-monthly-review-volume', 'business', 'amazon.amazon_reviews', 'line', 24, 3],
@@ -226,7 +230,7 @@ test('Business, Observability, and Operations each offer five bounded chart exam
 
     for (const category of ['business', 'observability', 'operations']) {
         const categoryExamples = examples.filter(example => example.category === category);
-        assert.equal(categoryExamples.length, 5, category);
+        assert.ok(categoryExamples.length >= 5, category);
         assert.ok(categoryExamples.every(example => example.chart.kind !== 'table'));
     }
 
@@ -306,6 +310,99 @@ test('Flight delay examples exclude unfinished flights while disruption rates in
     const heatmap = examples.find(example => example.id === 'ontime-weekly-delay-heatmap');
     assert.match(heatmap.sql, /CRSDepTime >= 0/);
     assert.match(heatmap.sql, /CRSDepTime < 2400/);
+});
+
+test('Retired ClickHouse and Cities categories rehome every example into an available category', () => {
+    const playground = sqlExamplesFor({ id: 'playground', dataSource: 'clickhouse' });
+    const fixtures = sqlExamplesFor({ id: 'demo', dataSource: 'fixture' });
+    const generic = sqlExamplesFor({ id: 'production', dataSource: 'clickhouse' });
+    const cases = [
+        [playground, 'github-pr-contributors', 'openSource'],
+        [playground, 'github-rolling-activity', 'openSource'],
+        [playground, 'nyc-taxi-weekly-rhythm', 'operations'],
+        [playground, 'nyc-taxi-fare-distance', 'operations'],
+        [playground, 'nyc-taxi-fare-quantiles', 'operations'],
+        [playground, 'clickhouse-geo-cities', 'operations'],
+        [playground, 'clickhouse-geo-flight-routes', 'operations'],
+        [playground, 'clickhouse-geo-delivery-zones', 'operations'],
+        [fixtures, 'preview-starter-latency-anomaly', 'timeSeries'],
+        [fixtures, 'preview-starter-latest-event', 'basics'],
+        [fixtures, 'preview-starter-top-pages-country', 'aggregation'],
+        [fixtures, 'preview-starter-distinct-estimates', 'aggregation'],
+        [fixtures, 'preview-starter-channel-conversion', 'aggregation'],
+    ];
+    assert.ok(!helpCategories.includes('clickhouse'));
+    assert.ok(!helpCategories.includes('cities'));
+    for (const [catalog, id, category] of cases) {
+        assert.equal(catalog.find(example => example.id === id)?.category, category, id);
+    }
+    for (const catalog of [playground, fixtures, generic]) {
+        assert.ok(catalog.every(example => helpCategories.includes(example.category)));
+        assert.equal(new Set(catalog.map(example => example.id)).size, catalog.length);
+    }
+});
+
+test('Native geometry examples open Geography charts with explicit labels and measures', () => {
+    for (const connection of [
+        { id: 'playground', dataSource: 'clickhouse' },
+        { id: 'production', dataSource: 'clickhouse' },
+    ]) {
+        const examples = sqlExamplesFor(connection);
+        for (const [id, geometryName] of [
+            ['clickhouse-geo-cities', 'location'],
+            ['clickhouse-geo-flight-routes', 'path'],
+            ['clickhouse-geo-delivery-zones', 'coverage'],
+        ]) {
+            const example = examples.find(candidate => candidate.id === id);
+            assert.ok(example, id);
+            assert.equal(example.chart.kind, 'geography');
+            assert.ok(isGeographyConfig(example.chart.geography), id);
+            assert.deepEqual(example.chart.geography.source, { mode: 'geometry', column: 1 });
+            assert.deepEqual(example.chart.geography.sourceColumnNames, [geometryName]);
+            assert.equal(example.chart.geography.label, 0);
+            assert.equal(example.chart.geography.measure, 2);
+            assert.equal(example.chart.geography.swapCoordinates, false);
+            assert.doesNotThrow(() => validatePlaygroundQuery(example.sql), id);
+        }
+    }
+});
+
+test('GitHub trend examples use complete periods and warm up the rolling average before display', () => {
+    const examples = sqlExamplesFor({ id: 'playground', dataSource: 'clickhouse' });
+    const contributors = examples.find(example => example.id === 'github-pr-contributors');
+    assert.match(contributors.sql, /uniqExact\(actor_login\)/);
+    assert.match(contributors.sql, /created_at >= latest_month - INTERVAL 24 MONTH/);
+    assert.match(contributors.sql, /created_at < latest_month/);
+    assert.match(contributors.sql, /actor_login != ''/);
+    assert.match(contributors.sql, /LIMIT 24\s*$/);
+
+    const rolling = examples.find(example => example.id === 'github-rolling-activity');
+    assert.match(rolling.sql, /created_at >= latest_day - INTERVAL 66 DAY/);
+    assert.match(rolling.sql, /created_at < latest_day/);
+    assert.match(rolling.sql, /ORDER BY day WITH FILL/);
+    assert.match(rolling.sql, /ROWS BETWEEN 6 PRECEDING AND CURRENT ROW/);
+    assert.match(rolling.sql, /FROM smoothed\s+WHERE day >= latest_day - INTERVAL 60 DAY/);
+    assert.match(rolling.sql, /LIMIT 60\s*$/);
+    for (const example of [contributors, rolling]) {
+        assert.doesNotMatch(example.sql, /\b(?:now|today)\s*\(/i);
+        assert.doesNotThrow(() => validatePlaygroundQuery(example.sql));
+    }
+});
+
+test('Taxi heatmaps use 42 four-hour buckets and the scatter excludes extreme values', () => {
+    const examples = sqlExamplesFor({ id: 'playground', dataSource: 'clickhouse' });
+    for (const id of ['nyc-taxi-weekly-rhythm', 'nyc-taxi-fare-quantiles']) {
+        const example = examples.find(candidate => candidate.id === id);
+        assert.match(example.sql, /intDiv\(toHour\(pickup_datetime\), 4\) \* 4 AS hour/);
+        assert.match(example.sql, /LIMIT 42\s*$/);
+        assert.equal(example.chart.x, 1);
+        assert.equal(example.chart.groupBy, 0);
+        assert.deepEqual(example.chart.ys, [2]);
+    }
+    const scatter = examples.find(example => example.id === 'nyc-taxi-fare-distance');
+    assert.match(scatter.sql, /trip_distance BETWEEN 0.1 AND 30/);
+    assert.match(scatter.sql, /fare_amount BETWEEN 1 AND 200/);
+    assert.match(scatter.sql, /ORDER BY trip_id\s+LIMIT 60\s*$/);
 });
 
 test('Featured Playground examples lead with enterprise workflows', () => {
@@ -509,6 +606,21 @@ test('Schema examples use wrapped column types, exclude identifier dimensions, a
     assert.doesNotMatch(category.sql, /user_id/);
     assert.match(geo.sql, /SELECT `location` AS location/);
     assert.match(geo.sql, /LIMIT 100$/);
+    assert.equal(geo.category, 'operations');
+    assert.equal(geo.chart.kind, 'geography');
+    assert.ok(isGeographyConfig(geo.chart.geography));
+    assert.deepEqual(geo.chart.geography.source, { mode: 'geometry', column: 0 });
+    assert.ok(examples.every(example => helpCategories.includes(example.category)));
+    const result = {
+        columns: [{ name: 'location', type: 'Point' }],
+        rows: [[[13.405, 52.52]]],
+    };
+    const selection = prepareChartSelection(result, geo.chart);
+    assert.ok(selection.geography);
+    assert.equal(
+        prepareGeoFeatures(result.rows, result.columns, selection.geography).totalFeatures,
+        1,
+    );
     assert.deepEqual(
         [time, category, geo].map(example => example.featuredOrder),
         [1, 2, 3],
@@ -618,6 +730,28 @@ test('Coordinate examples bound geographic values and take dimensions from the s
     assert.match(geo.sql, /`lat` BETWEEN -90 AND 90/);
     assert.match(geo.sql, /`lng` BETWEEN -180 AND 180/);
     assert.match(geo.sql, /LIMIT 500$/);
+    assert.equal(geo.category, 'operations');
+    assert.equal(geo.chart.kind, 'geography');
+    assert.ok(isGeographyConfig(geo.chart.geography));
+    assert.deepEqual(geo.chart.geography.source, {
+        mode: 'coordinates',
+        longitude: 0,
+        latitude: 1,
+    });
+    assert.ok(examples.every(example => helpCategories.includes(example.category)));
+    const result = {
+        columns: [
+            { name: 'longitude', type: 'Float64' },
+            { name: 'latitude', type: 'Nullable(Float64)' },
+        ],
+        rows: [[13.405, 52.52]],
+    };
+    const selection = prepareChartSelection(result, geo.chart);
+    assert.ok(selection.geography);
+    assert.equal(
+        prepareGeoFeatures(result.rows, result.columns, selection.geography).totalFeatures,
+        1,
+    );
     assert.deepEqual(
         examples
             .filter(example => example.category === 'aggregation')

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Result } from '../../src/shared/queries/results/types.js';
 import { chooseChartOption } from './chart-control-helpers.js';
-import { runButton, trust } from './helpers.js';
+import { openSqlExamples, runButton, trust } from './helpers.js';
 
 type SnapshotData = Pick<Result, 'columns' | 'rows'>;
 const cities: SnapshotData = {
@@ -45,6 +45,35 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const mode of ['Standard', 'Experimental']) {
+    for (const [id, name, count] of [
+        ['clickhouse-geo-cities', 'Native Point cities', 20],
+        ['clickhouse-geo-flight-routes', 'Intercontinental flight paths', 8],
+        ['clickhouse-geo-delivery-zones', 'Colorful delivery zones', 4],
+    ] as const)
+        test(`${mode} ${id} opens Geography by default from SQL examples`, async ({ page }) => {
+            await trust(page, mode);
+            const dialog = await openSqlExamples(page);
+            await expect(
+                dialog.getByRole('button', { name: 'ClickHouse', exact: true }),
+            ).toHaveCount(0);
+            await expect(dialog.getByRole('button', { name: 'Cities', exact: true })).toHaveCount(
+                0,
+            );
+            await dialog.getByTestId('sql-example-search').fill(name);
+            await dialog.getByTestId(`sql-example-${id}`).click();
+            await expect(dialog.locator('.sql-example-preview')).toContainText('Geography');
+            await dialog.getByTestId('run-sql-example').click();
+            const results = page.getByRole('region', { name: 'Query results', exact: true });
+            await expect(
+                results.getByRole('combobox', { name: 'Type', exact: true }),
+            ).toContainText('Geography');
+            await expect(results.locator('.geo-map')).toBeVisible();
+            await expect(results.locator('.geo-feature')).toHaveCount(count);
+            await expect(results.locator('.geo-map-caption')).toContainText(
+                `${count} valid features`,
+            );
+        });
+
     test(`${mode} Geography reuses the chart toolbar and preserves setup without running SQL`, async ({
         page,
     }, info) => {

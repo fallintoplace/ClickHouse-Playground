@@ -34,11 +34,9 @@ export const helpCategories: CategoryFilter[] = [
     'operations',
     'engineering',
     'markets',
-    'cities',
     'openSource',
     'internet',
     'datasets',
-    'clickhouse',
     'writeOperations',
     'charts',
     'basics',
@@ -55,7 +53,6 @@ export function categoryLabel(category: CategoryFilter, copy: Copy['common']) {
     if (category === 'operations') return 'Operations';
     if (category === 'engineering') return 'Engineering';
     if (category === 'markets') return 'Markets';
-    if (category === 'cities') return 'Cities';
     if (category === 'openSource') return 'Open source';
     if (category === 'internet') return 'Internet';
     if (category === 'datasets') return 'Datasets';
@@ -64,7 +61,6 @@ export function categoryLabel(category: CategoryFilter, copy: Copy['common']) {
     if (category === 'aggregation') return copy.exampleAggregation;
     if (category === 'timeSeries') return copy.exampleTimeSeries;
     if (category === 'charts') return copy.exampleCharts;
-    if (category === 'clickhouse') return copy.exampleClickHouse;
     return copy.exampleSchema;
 }
 
@@ -84,6 +80,8 @@ export function chartLabel(example: SqlExample, copy: Copy['common']) {
             return copy.exampleChartHeatmap;
         case 'candlestick':
             return copy.exampleChartCandlestick;
+        case 'geography':
+            return copy.exampleChartGeography;
         default:
             return copy.chart;
     }

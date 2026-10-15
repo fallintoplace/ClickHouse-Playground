@@ -18,6 +18,7 @@ import {
 import { demoFlamegraph, demoReplication, demoWorkload } from '../../../shared/samples/activity.js';
 import type { WorkloadWindow } from '../../../shared/database/explorer/activity/workload.js';
 import { DEMO_EXPLAIN_ANALYZE, demoMergeTreePartRows } from '../../../shared/samples/database.js';
+import { geoSampleResult } from '../../../shared/samples/geography.js';
 import { AppError } from '../../system/requests/errors.js';
 import type { CreateTableColumn } from '../tables/create-table.js';
 import { NO_TABLE_PERMISSIONS } from '../../../shared/database/tables/permissions.js';
@@ -304,6 +305,13 @@ export class DemoDriver {
                 columns: [{ name: 'explain', type: 'String' }],
                 rows: demoIndexAnalysis.map(line => [line]),
                 truncated: false,
+            };
+        const geo = geoSampleResult(run.sql);
+        if (geo)
+            return {
+                ...geo,
+                truncated: false,
+                warnings: ['DEMO FIXTURE: this does not evaluate the supplied SQL.'],
             };
         return {
             columns: [

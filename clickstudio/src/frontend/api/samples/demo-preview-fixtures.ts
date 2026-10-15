@@ -12,6 +12,7 @@ import {
 } from '../../../shared/queries/results/geography-settings.js';
 import { DEMO_PREVIEW_STARTERS, demoIndexAnalysis } from './demo-preview-data.js';
 import { isRecord } from '../../../shared/common/values.js';
+import { geoSampleResult } from '../../../shared/samples/geography.js';
 
 export const owner = 'preview-user';
 export const previewStorageKey = 'clickstudio:vercel-preview-database:v1';
@@ -626,6 +627,8 @@ const demoStarterIdBySql = new Map(
 );
 
 function previewRowsFor(sql: string): PreviewRows {
+    const geo = geoSampleResult(sql);
+    if (geo) return geo;
     const starterId = demoStarterIdBySql.get(normalizePreviewSql(sql));
     return starterId ? (demoResultRows[starterId] ?? dailyRows()) : dailyRows();
 }

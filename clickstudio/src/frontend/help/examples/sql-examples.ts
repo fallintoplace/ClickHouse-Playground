@@ -12,7 +12,6 @@ export type SqlExampleCategory =
     | 'basics'
     | 'aggregation'
     | 'timeSeries'
-    | 'clickhouse'
     | 'writeOperations'
     | 'schema'
     | 'business'
@@ -20,7 +19,6 @@ export type SqlExampleCategory =
     | 'operations'
     | 'engineering'
     | 'markets'
-    | 'cities'
     | 'openSource'
     | 'internet'
     | 'datasets';
@@ -510,19 +508,27 @@ LIMIT 10`,
     {
         id: 'github-pr-contributors',
         name: 'PR contributors by month',
-        category: 'clickhouse',
-        description: 'Count distinct contributors to ClickHouse pull request activity.',
+        category: 'openSource',
+        description:
+            'Count distinct participants in ClickHouse pull request events over 24 complete months.',
         dataset: 'GitHub',
-        sql: `SELECT
+        sql: `WITH (
+    SELECT toStartOfMonth(max(created_at))
+    FROM github.events
+    WHERE repo_name = 'ClickHouse/ClickHouse'
+) AS latest_month
+SELECT
     toStartOfMonth(created_at) AS month,
-    uniq(actor_login) AS contributors
+    uniqExact(actor_login) AS contributors
 FROM github.events
 WHERE repo_name = 'ClickHouse/ClickHouse'
     AND event_type = 'PullRequestEvent'
-    AND created_at >= now() - INTERVAL 24 MONTH
+    AND created_at >= latest_month - INTERVAL 24 MONTH
+    AND created_at < latest_month
     AND actor_login != ''
 GROUP BY month
-ORDER BY month`,
+ORDER BY month
+LIMIT 24`,
         chart: { kind: 'line', x: 0, ys: [1], title: 'Monthly PR contributors' },
     },
     {
@@ -579,17 +585,18 @@ ORDER BY day`,
     {
         id: 'nyc-taxi-weekly-rhythm',
         name: 'Taxi trips by weekday and hour',
-        category: 'cities',
+        category: 'operations',
         dataset: 'NYC Taxi',
         featuredOrder: 6,
-        description: 'Find rush-hour patterns across the week in a 168-cell heatmap.',
+        description: 'Compare taxi demand by weekday and four-hour window in a 42-cell heatmap.',
         sql: `SELECT
     toDayOfWeek(pickup_datetime) AS weekday,
-    toHour(pickup_datetime) AS hour,
+    intDiv(toHour(pickup_datetime), 4) * 4 AS hour,
     count() AS trips
 FROM nyc_taxi.trips_small
 GROUP BY weekday, hour
-ORDER BY weekday, hour`,
+ORDER BY weekday, hour
+LIMIT 42`,
         chart: {
             kind: 'heatmap',
             x: 1,
@@ -601,17 +608,19 @@ ORDER BY weekday, hour`,
     {
         id: 'nyc-taxi-fare-distance',
         name: 'Fare vs. trip distance',
-        category: 'cities',
+        category: 'operations',
         dataset: 'NYC Taxi',
         featuredOrder: 7,
-        description: 'Explore how trip distance relates to the metered fare.',
+        description:
+            'Compare distance and metered fare across 60 sample trips without extreme values.',
         sql: `SELECT
     trip_distance,
     fare_amount
 FROM nyc_taxi.trips_small
-WHERE trip_distance > 0 AND fare_amount > 0
+WHERE trip_distance BETWEEN 0.1 AND 30
+    AND fare_amount BETWEEN 1 AND 200
 ORDER BY trip_id
-LIMIT 240`,
+LIMIT 60`,
         chart: { kind: 'scatter', x: 0, ys: [1], title: 'Fare by trip distance' },
     },
     {
@@ -812,50 +821,67 @@ LIMIT 600`,
     {
         id: 'nyc-taxi-fare-quantiles',
         name: 'Taxi fare percentiles by hour',
-        category: 'clickhouse',
+        category: 'operations',
         dataset: 'NYC Taxi',
-        description: 'Compare median and 95th-percentile fares by weekday and pickup hour.',
+        description:
+            'View median fares by weekday and four-hour window in 42 cells; p95 is also available.',
         sql: `SELECT
     toDayOfWeek(pickup_datetime) AS weekday,
-    toHour(pickup_datetime) AS hour,
-    quantile(0.50)(fare_amount) AS median_fare,
-    quantile(0.95)(fare_amount) AS p95_fare
+    intDiv(toHour(pickup_datetime), 4) * 4 AS hour,
+    round(quantileTDigest(0.50)(fare_amount), 2) AS median_fare,
+    round(quantileTDigest(0.95)(fare_amount), 2) AS p95_fare
 FROM nyc_taxi.trips_small
 WHERE trip_distance > 0
     AND fare_amount > 0
     AND fare_amount < 200
 GROUP BY weekday, hour
-ORDER BY weekday, hour`,
+ORDER BY weekday, hour
+LIMIT 42`,
         chart: {
             kind: 'heatmap',
             x: 1,
             groupBy: 0,
             ys: [2],
-            title: 'Taxi fare percentiles by hour',
+            title: 'Median taxi fares by weekday and hour',
         },
     },
     {
         id: 'github-rolling-activity',
         name: 'GitHub activity with a rolling average',
-        category: 'clickhouse',
+        category: 'openSource',
         dataset: 'GitHub',
         featuredOrder: 8,
-        description: 'Smooth daily ClickHouse repository activity with a seven-day window.',
-        sql: `WITH daily AS (
+        description:
+            'Compare 60 complete days of ClickHouse activity with a seven-day average, including quiet days.',
+        sql: `WITH (
+    SELECT max(created_at)
+    FROM github.events
+    WHERE repo_name = 'ClickHouse/ClickHouse'
+) AS latest_timestamp,
+toDate(assumeNotNull(latest_timestamp)) AS latest_day,
+daily AS (
     SELECT
         toDate(created_at) AS day,
         count() AS events
     FROM github.events
     WHERE repo_name = 'ClickHouse/ClickHouse'
-        AND created_at >= now() - INTERVAL 90 DAY
+        AND created_at >= latest_day - INTERVAL 66 DAY
+        AND created_at < latest_day
     GROUP BY day
+    ORDER BY day WITH FILL
+        FROM latest_day - INTERVAL 66 DAY TO latest_day STEP INTERVAL 1 DAY
+), smoothed AS (
+    SELECT
+        day,
+        events,
+        round(avg(events) OVER (ORDER BY day ROWS BETWEEN 6 PRECEDING AND CURRENT ROW), 1) AS seven_day_average
+    FROM daily
 )
-SELECT
-    day,
-    events,
-    round(avg(events) OVER (ORDER BY day ROWS BETWEEN 6 PRECEDING AND CURRENT ROW), 1) AS seven_day_average
-FROM daily
-ORDER BY day`,
+SELECT day, events, seven_day_average
+FROM smoothed
+WHERE day >= latest_day - INTERVAL 60 DAY
+ORDER BY day
+LIMIT 60`,
         chart: {
             kind: 'line',
             x: 0,
@@ -904,19 +930,19 @@ const demoStarterDetails: Record<string, Pick<SqlExample, 'description' | 'categ
     },
     'preview-starter-latency-anomaly': {
         description: 'Compare p95 latency with a rolling baseline and alert threshold.',
-        category: 'clickhouse',
+        category: 'timeSeries',
     },
     'preview-starter-latest-event': {
         description: 'Use argMax to find each user’s most recent event and page.',
-        category: 'clickhouse',
+        category: 'basics',
     },
     'preview-starter-top-pages-country': {
         description: 'Use LIMIT BY to find the top three pages in each country.',
-        category: 'clickhouse',
+        category: 'aggregation',
     },
     'preview-starter-distinct-estimates': {
         description: 'Compare an exact visitor count with a fast approximate count.',
-        category: 'clickhouse',
+        category: 'aggregation',
     },
     'preview-starter-monthly-revenue': {
         description:
@@ -925,7 +951,7 @@ const demoStarterDetails: Record<string, Pick<SqlExample, 'description' | 'categ
     },
     'preview-starter-channel-conversion': {
         description: 'Use countIf to calculate conversions and conversion rate for each channel.',
-        category: 'clickhouse',
+        category: 'aggregation',
     },
     'preview-starter-signup-cohorts': {
         description:
@@ -1309,10 +1335,20 @@ function geoExample(
             name,
             description: `Plot stored latitude and longitude values from ${table.database}.${table.name}${sampled ? ' using a ClickHouse sample of about 100,000 rows' : ''}.`,
             dataset: `${table.database}.${table.name}`,
-            category: 'cities',
+            category: 'operations',
             featuredOrder: 3,
             sql: `SELECT\n    ${lon} AS longitude,\n    ${lat} AS latitude\nFROM ${source}\nWHERE ${lat} BETWEEN -90 AND 90\n    AND ${lon} BETWEEN -180 AND 180\nLIMIT 500`,
-            chart: { kind: 'scatter', x: 0, ys: [1], title: name },
+            chart: {
+                kind: 'geography',
+                x: 0,
+                ys: [],
+                title: name,
+                geography: {
+                    source: { mode: 'coordinates', longitude: 0, latitude: 1 },
+                    sourceColumnNames: ['longitude', 'latitude'],
+                    swapCoordinates: false,
+                },
+            },
         };
     }
 
@@ -1329,10 +1365,20 @@ function geoExample(
         name,
         description: `Read native geographic values from ${table.database}.${table.name}${sampled ? ' using a ClickHouse sample of about 100,000 rows' : ''}.`,
         dataset: `${table.database}.${table.name}`,
-        category: 'cities',
+        category: 'operations',
         featuredOrder: 3,
         sql: `SELECT ${field} AS location\nFROM ${source}\nWHERE ${field} IS NOT NULL\nLIMIT 100`,
-        chart: { kind: 'table', x: 0, ys: [], title: name },
+        chart: {
+            kind: 'geography',
+            x: 0,
+            ys: [],
+            title: name,
+            geography: {
+                source: { mode: 'geometry', column: 0 },
+                sourceColumnNames: ['location'],
+                swapCoordinates: false,
+            },
+        },
     };
 }
 
