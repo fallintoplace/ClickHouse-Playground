@@ -1,3 +1,5 @@
+import { booleanValue, countValue, stringValue } from './row-values.js';
+
 export const WORKLOAD_WINDOWS = [15, 60, 360, 1440] as const;
 export type WorkloadWindow = (typeof WORKLOAD_WINDOWS)[number];
 export function isWorkloadWindow(value: unknown): value is WorkloadWindow {
@@ -47,20 +49,20 @@ export interface WorkloadSnapshot {
 
 type Row = Record<string, unknown>;
 
-const stringValue = (value: unknown, fallback = '') =>
-    value === undefined || value === null ? fallback : String(value);
-const countValue = (value: unknown) => {
-    const count = Number(value);
-    return Number.isFinite(count) && count > 0
-        ? Math.min(Number.MAX_SAFE_INTEGER, Math.floor(count))
-        : 0;
-};
 const numberValue = (value: unknown) => {
     const number = Number(value);
     return Number.isFinite(number) && number >= 0 ? number : 0;
 };
 const boundedText = (value: unknown, max: number) =>
     stringValue(value).replace(/\s+/g, ' ').trim().slice(0, max);
+
+function workloadQuerySource(source: QueryLogSource) {
+    return `FROM system.${source}
+    WHERE event_time >= now() - toIntervalMinute({minutes:UInt16})
+        AND user = {username:String} AND is_initial_query = 1
+        AND query_id NOT LIKE 'clickstudio-inspect-%'
+        AND type IN ('QueryFinish', 'ExceptionWhileProcessing', 'ExceptionBeforeStart')`;
+}
 
 export function workloadFamiliesQuery(source: QueryLogSource) {
     return `SELECT toString(normalized_query_hash) AS hash, normalizeQuery(any(query)) AS query,
@@ -70,11 +72,7 @@ export function workloadFamiliesQuery(source: QueryLogSource) {
         toString(sum(read_bytes)) AS read_bytes, toString(max(memory_usage)) AS peak_memory,
         countIf(type IN ('ExceptionWhileProcessing', 'ExceptionBeforeStart')) AS errors,
         toString(max(event_time)) AS last_seen
-    FROM system.${source}
-    WHERE event_time >= now() - toIntervalMinute({minutes:UInt16})
-        AND user = {username:String} AND is_initial_query = 1
-        AND query_id NOT LIKE 'clickstudio-inspect-%'
-        AND type IN ('QueryFinish', 'ExceptionWhileProcessing', 'ExceptionBeforeStart')
+    ${workloadQuerySource(source)}
     GROUP BY normalized_query_hash
     ORDER BY sum(query_duration_ms) DESC, executions DESC
     LIMIT 101`;
@@ -85,11 +83,7 @@ export function workloadPointsQuery(source: QueryLogSource) {
         toString(event_time) AS at, query_duration_ms AS duration_ms,
         toString(memory_usage) AS memory, toString(read_rows) AS read_rows,
         toString(read_bytes) AS read_bytes, type != 'QueryFinish' AS failed
-    FROM system.${source}
-    WHERE event_time >= now() - toIntervalMinute({minutes:UInt16})
-        AND user = {username:String} AND is_initial_query = 1
-        AND query_id NOT LIKE 'clickstudio-inspect-%'
-        AND type IN ('QueryFinish', 'ExceptionWhileProcessing', 'ExceptionBeforeStart')
+    ${workloadQuerySource(source)}
     ORDER BY event_time DESC
     LIMIT 501`;
 }
@@ -128,11 +122,7 @@ export function parseWorkloadSnapshot(
             memory: stringValue(row.memory, '0'),
             readRows: stringValue(row.read_rows, '0'),
             readBytes: stringValue(row.read_bytes, '0'),
-            failed:
-                row.failed === true ||
-                row.failed === 1 ||
-                row.failed === '1' ||
-                row.failed === 'true',
+            failed: booleanValue(row.failed),
         }))
         .filter(point => point.hash.length > 0 && point.queryId.length > 0);
     return {

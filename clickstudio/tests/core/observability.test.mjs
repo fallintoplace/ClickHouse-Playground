@@ -229,3 +229,90 @@ test('replication parsing normalizes flags, rejects incomplete identities, and r
         'local-node',
     );
 });
+
+test('observability counts share coercion without rounding workload durations', () => {
+    const cases = [
+        [undefined, 0, 0],
+        [null, 0, 0],
+        ['', 0, 0],
+        ['  ', 0, 0],
+        ['invalid', 0, 0],
+        [NaN, 0, 0],
+        [Infinity, 0, 0],
+        [-Infinity, 0, 0],
+        [-3, 0, 0],
+        [-0, 0, -0],
+        [false, 0, 0],
+        [true, 1, 1],
+        [0.5, 0, 0.5],
+        ['4.75', 4, 4.75],
+        ['18446744073709551615', Number.MAX_SAFE_INTEGER, Number('18446744073709551615')],
+    ];
+    for (const [value, count, duration] of cases) {
+        const workload = parseWorkloadSnapshot(
+            'local',
+            60,
+            'query_log',
+            [{ hash: 'q', executions: value, errors: value, p50_ms: value }],
+            [{ hash: 'q', query_id: 'q', duration_ms: value }],
+        );
+        const replication = parseReplicationSnapshot(
+            'local',
+            { replicas: true, queue: true },
+            [{ database: 'db', table: 't', queue_size: value }],
+            [{ database: 'db', table: 't', type: 'GET_PART', entries: value }],
+        );
+        assert.equal(workload.families[0].executions, count);
+        assert.equal(workload.families[0].errors, count);
+        assert.equal(workload.families[0].p50Ms, duration);
+        assert.equal(workload.points[0].durationMs, duration);
+        assert.equal(replication.replicas[0].queueSize, count);
+        assert.equal(replication.queue[0].entries, count);
+    }
+});
+
+test('observability flags accept only the existing true encodings', () => {
+    for (const value of [true, 1, '1', 'true', false, 0, '0', 'false', 'TRUE', ' true ', null]) {
+        const expected = [true, 1, '1', 'true'].includes(value);
+        const workload = parseWorkloadSnapshot(
+            'local',
+            15,
+            'query_log',
+            [],
+            [{ hash: 'q', query_id: 'q', failed: value }],
+        );
+        const replication = parseReplicationSnapshot(
+            'local',
+            { replicas: true, queue: false },
+            [{ database: 'db', table: 't', is_leader: value, is_session_expired: value }],
+            [],
+        );
+        assert.equal(workload.points[0].failed, expected);
+        assert.equal(replication.replicas[0].leader, expected);
+        assert.equal(replication.replicas[0].sessionExpired, expected);
+    }
+});
+
+test('observability text keeps nullish defaults and lossless string counters distinct', () => {
+    for (const value of [undefined, null, '', 0, false, '18446744073709551615']) {
+        const workload = parseWorkloadSnapshot(
+            'local',
+            15,
+            'query_log',
+            [{ hash: 'q', read_rows: value, last_seen: value }],
+            [{ hash: 'q', query_id: 'q', memory: value }],
+        );
+        const replication = parseReplicationSnapshot(
+            'local',
+            { replicas: true, queue: false },
+            [{ database: 'db', table: 't', replica_name: value }],
+            [],
+        );
+        const text = value === undefined || value === null ? '' : String(value);
+        const counter = value === undefined || value === null ? '0' : String(value);
+        assert.equal(workload.families[0].readRows, counter);
+        assert.equal(workload.points[0].memory, counter);
+        assert.equal(workload.families[0].lastSeen, text);
+        assert.equal(replication.replicas[0].replicaName, text);
+    }
+});

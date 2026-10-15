@@ -1,3 +1,5 @@
+import { booleanValue, countValue, stringValue } from './row-values.js';
+
 export interface ReplicationCapabilities {
     replicas: boolean;
     queue: boolean;
@@ -42,17 +44,6 @@ export interface ReplicationSnapshot {
 
 type Row = Record<string, unknown>;
 
-const stringValue = (value: unknown, fallback = '') =>
-    value === undefined || value === null ? fallback : String(value);
-const numericValue = (value: unknown) => {
-    const number = Number(value);
-    return Number.isFinite(number) && number > 0
-        ? Math.min(Number.MAX_SAFE_INTEGER, Math.floor(number))
-        : 0;
-};
-const booleanValue = (value: unknown) =>
-    value === true || value === 1 || value === '1' || value === 'true';
-
 export function replicationReplicasQuery() {
     return `SELECT database, table, replica_name, is_leader, is_readonly, is_session_expired,
         absolute_delay, queue_size, inserts_in_queue, merges_in_queue, future_parts,
@@ -87,13 +78,13 @@ export function parseReplicationSnapshot(
             leader: booleanValue(row.is_leader),
             readonly: booleanValue(row.is_readonly),
             sessionExpired: booleanValue(row.is_session_expired),
-            absoluteDelay: numericValue(row.absolute_delay),
-            queueSize: numericValue(row.queue_size),
-            insertsInQueue: numericValue(row.inserts_in_queue),
-            mergesInQueue: numericValue(row.merges_in_queue),
-            futureParts: numericValue(row.future_parts),
-            totalReplicas: numericValue(row.total_replicas),
-            activeReplicas: numericValue(row.active_replicas),
+            absoluteDelay: countValue(row.absolute_delay),
+            queueSize: countValue(row.queue_size),
+            insertsInQueue: countValue(row.inserts_in_queue),
+            mergesInQueue: countValue(row.merges_in_queue),
+            futureParts: countValue(row.future_parts),
+            totalReplicas: countValue(row.total_replicas),
+            activeReplicas: countValue(row.active_replicas),
         }))
         .filter(replica => replica.database.length > 0 && replica.table.length > 0);
     const queue = queueRows
@@ -102,12 +93,12 @@ export function parseReplicationSnapshot(
             database: stringValue(row.database),
             table: stringValue(row.table),
             type: stringValue(row.type),
-            entries: numericValue(row.entries),
+            entries: countValue(row.entries),
             oldestAt: stringValue(row.oldest_at),
-            maxTries: numericValue(row.max_tries),
-            errors: numericValue(row.errors),
-            postponed: numericValue(row.postponed),
-            executing: numericValue(row.executing),
+            maxTries: countValue(row.max_tries),
+            errors: countValue(row.errors),
+            postponed: countValue(row.postponed),
+            executing: countValue(row.executing),
         }))
         .filter(
             group => group.database.length > 0 && group.table.length > 0 && group.type.length > 0,
