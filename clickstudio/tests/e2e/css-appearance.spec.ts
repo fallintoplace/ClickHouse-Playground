@@ -42,7 +42,7 @@ for (const theme of ['Light', 'Dark']) {
         await trigger.click();
         const menu = page.getByRole('menu', { name: 'Result actions', exact: true });
         await expectReferenceStyles(page, info, 'materialized-view-menu', menu);
-        await menu.getByRole('menuitem', { name: 'Create materialized view…' }).click();
+        await menu.getByRole('menuitem', { name: 'Create materialized view' }).click();
         const dialog = page.getByRole('dialog', { name: 'Create materialized view', exact: true });
         await dialog.getByRole('textbox', { name: 'View name' }).fill('daily_totals_mv');
         for (const width of [1280, 900]) {

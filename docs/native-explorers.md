@@ -8,7 +8,7 @@ Open **Objects → View dependencies** to inspect materialized views in the conn
 
 Select a graph node to see its target, refresh schedule, latest successful refresh, duration, next refresh, and available refresh measurements. Searching focuses the graph on matching objects and their direct neighbors.
 
-In **Experimental**, run a SELECT and choose **Result actions (⋯) → Create materialized view…** in the results header. Enter a view name, choose an existing target table, then select **Open SQL**. The new query tab contains incremental materialized-view SQL and keeps the selected statement's parameter values. Review and run it with your connection's existing permissions.
+In **Experimental**, run a SELECT and choose **Result actions (⋯) → Create materialized view** in the results header. Enter a view name, choose an existing target table, then select **Open SQL**. The new query tab contains incremental materialized-view SQL and keeps the selected statement's parameter values. Review and run it with your connection's existing permissions.
 
 Incremental views process new inserts. This workflow does not backfill existing rows.
 

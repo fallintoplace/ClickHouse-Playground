@@ -110,7 +110,7 @@ export function ResultActions({
                         }}
                     >
                         <Icon name="plus" />
-                        Create materialized view…
+                        Create materialized view
                     </button>
                 </div>
             )}

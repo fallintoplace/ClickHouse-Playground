@@ -39,7 +39,7 @@ for (const theme of ['Light', 'Dark']) {
         const trigger = page.getByRole('button', { name: 'Result actions', exact: true });
         await trigger.focus();
         await page.keyboard.press('ArrowDown');
-        const action = page.getByRole('menuitem', { name: 'Create materialized view…' });
+        const action = page.getByRole('menuitem', { name: 'Create materialized view' });
         await expect(action).toBeFocused();
         await page.keyboard.press('Escape');
         await expect(trigger).toBeFocused();
@@ -84,7 +84,7 @@ test('Materialized view creation uses the selected script statement', async ({ p
     const menu = await openStatementResults(page);
     await menu.getByRole('menuitemradio').nth(1).click();
     await page.getByRole('button', { name: 'Result actions', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Create materialized view…' }).click();
+    await page.getByRole('menuitem', { name: 'Create materialized view' }).click();
     const dialog = page.getByRole('dialog', { name: 'Create materialized view', exact: true });
     await dialog.getByRole('textbox', { name: 'View name' }).fill('second_mv');
     await dialog.getByRole('button', { name: 'Open SQL', exact: true }).click();
@@ -106,7 +106,7 @@ test('Materialized view actions are Experimental only and dismiss without changi
     await page.locator('.results-row-summary').click();
     await expect(page.getByRole('menu', { name: 'Result actions' })).toHaveCount(0);
     await trigger.click();
-    await page.getByRole('menuitem', { name: 'Create materialized view…' }).click();
+    await page.getByRole('menuitem', { name: 'Create materialized view' }).click();
     await page.keyboard.press('Escape');
     await expect(
         page.getByRole('dialog', { name: 'Create materialized view', exact: true }),
@@ -129,7 +129,7 @@ test('Materialized view creation explains when no target tables are available', 
     await replaceSql(page, 'SELECT 1 AS value;');
     await runButton(page).click();
     await page.getByRole('button', { name: 'Result actions', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Create materialized view…' }).click();
+    await page.getByRole('menuitem', { name: 'Create materialized view' }).click();
     const dialog = page.getByRole('dialog', { name: 'Create materialized view', exact: true });
     await dialog.getByRole('textbox', { name: 'View name' }).fill('empty_target_mv');
     await expect(dialog.getByText('Create a target table first.')).toBeVisible();
