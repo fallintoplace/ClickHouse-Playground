@@ -712,7 +712,12 @@
     color: var(--muted);
     font-size: var(--font-size-tab);
     cursor: pointer;
-    transition: 0.18s ease;
+    /* Keep flex changes immediate so tab reveal uses the final widths. */
+    transition:
+      color 0.18s ease,
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease;
   }
   .document-tab:not(.is-active):has(+ .document-tab:not(.is-active))::after {
     position: absolute;

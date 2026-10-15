@@ -51,6 +51,15 @@ for (const mode of ['Standard', 'Experimental']) {
             await expectActiveTabFullyVisible(page);
             await expect(scrollRight).toBeDisabled();
 
+            const activeTab = tabList.getByRole('tab', { selected: true });
+            await activeTab.locator('.document-tab-name').dblclick();
+            const rename = activeTab.getByRole('textbox');
+            const longName = 'A long SQL document name that expands when inactive.sql';
+            await rename.fill(longName);
+            await rename.press('Enter');
+            await expect(activeTab).toHaveAttribute('aria-label', longName);
+            await expectActiveTabFullyVisible(page);
+
             const tabCount = await tabList.getByRole('tab').count();
             await page.getByTestId('new-sql').click({ clickCount: 3 });
             await expect(tabList.getByRole('tab')).toHaveCount(tabCount + 3);
