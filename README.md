@@ -45,9 +45,9 @@ Choose **Import** and select a CSV, JSON, NDJSON, or JSONL file (up to 2 MB and 
 
 ## Explore ClickStudio
 
-![ClickStudio workspace with an SQL editor, query results, and AI panel](docs/images/clickstudio-workspace.png)
+![ClickStudio workspace with an SQL editor, service latency chart, and Objects panel](docs/images/clickstudio-workspace-latency.png)
 
-*Write queries, review results, and ask the AI assistant in one workspace.*
+*Write queries, explore database objects, and chart results in one workspace.*
 
 Start with the sample workspace, then choose a live data source when you are ready:
 
@@ -108,7 +108,7 @@ Open the **AI** tab and follow the prompts to load the schema. The server reads 
 
 Open **What gets sent and saved?** in the AI panel to review the information used for a request. It can include your message, chat history, SQL, table and column names, and recent query results. Review each SQL suggestion before applying or running it.
 
-![AI panel in the workspace](docs/images/reviewer-ai-panel.png)
+![SQL Assistant panel with query explanation, optimization, and example prompts](docs/images/clickstudio-sql-assistant.png)
 
 *Set an OpenAI key and connect to a data source to use the AI panel.*
 
