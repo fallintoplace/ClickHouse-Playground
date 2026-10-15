@@ -72,9 +72,11 @@ for (const theme of ['Light', 'Dark']) {
             const stage = page.locator('.geo-stage');
             await expect(stage.locator('.geo-feature.is-area')).toHaveCount(4);
             await expect.poll(() => stage.locator('.geo-country').count()).toBeGreaterThan(100);
+            const workspace = page.locator('.geo-workspace-frame');
             for (const width of [1440, 900]) {
                 await page.setViewportSize({ width, height: 1000 });
-                await expectReferenceStyles(page, info, `geography-${width}`, stage);
+                await expectReferenceStyles(page, info, `geography-${width}`, workspace);
+                await workspace.screenshot({ path: info.outputPath(`geography-${width}.png`) });
             }
         });
 

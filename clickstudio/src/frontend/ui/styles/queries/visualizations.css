@@ -2013,7 +2013,6 @@
     flex: 1;
     flex-direction: column;
     overflow: auto;
-    padding: 17px 18px;
   }
   .geo-title-row {
     display: flex;
@@ -2059,7 +2058,6 @@
     display: grid;
     min-height: 300px;
     grid-template-rows: minmax(0, 1fr) auto;
-    margin-top: 13px;
     overflow: hidden;
     border: 1px solid var(--line);
     border-radius: var(--radius-panel);
