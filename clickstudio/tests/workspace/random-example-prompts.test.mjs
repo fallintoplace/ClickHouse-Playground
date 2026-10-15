@@ -11,7 +11,11 @@ test('Random examples offer twenty distinct business questions with runnable sam
     for (const prompt of RANDOM_EXAMPLE_PROMPTS) {
         assert.match(
             prompt,
-            /Include a small, realistic sample dataset so I can run the example\.$/,
+            /Include a small, realistic sample dataset so I can run the example\./,
+        );
+        assert.match(
+            prompt,
+            /Make the example safe to rerun; adding more sample data each time is fine\.$/,
         );
         assert.doesNotMatch(
             prompt,

@@ -23,7 +23,8 @@ const randomExampleQuestions = [
 
 // Ask for outcomes and sample data while leaving schema design and SQL choices to the assistant.
 export const RANDOM_EXAMPLE_PROMPTS = randomExampleQuestions.map(
-    question => `${question} Include a small, realistic sample dataset so I can run the example.`,
+    question =>
+        `${question} Include a small, realistic sample dataset so I can run the example. Make the example safe to rerun; adding more sample data each time is fine.`,
 );
 
 export function createRandomExamplePicker(random: () => number = Math.random) {
