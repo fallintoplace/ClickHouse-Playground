@@ -402,7 +402,7 @@
   }
   .result-column-list {
     display: grid;
-    max-height: min(52dvh, 420px);
+    max-height: min(165px, 52dvh);
     gap: 2px;
     overflow: auto;
     padding-top: 6px;
