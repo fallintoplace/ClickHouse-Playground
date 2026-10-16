@@ -8,7 +8,7 @@ import {
 } from 'react';
 
 type Point = { left: number; top: number };
-type DockTarget = 'search' | 'page';
+type DockTarget = 'search' | 'page' | 'columns';
 
 function clampPosition(panel: HTMLElement, point: Point): Point {
     const view = panel.ownerDocument.defaultView!;
@@ -31,18 +31,20 @@ export function useResultControlsDock() {
     const panel = useRef<HTMLDivElement>(null);
     const search = useRef<HTMLInputElement>(null);
     const page = useRef<HTMLInputElement>(null);
+    const columns = useRef<HTMLInputElement>(null);
     const invoker = useRef<HTMLButtonElement | null>(null);
-    const target = useRef<DockTarget>('search');
     const moved = useRef<Point | undefined>(undefined);
     const drag = useRef<{ x: number; y: number; start: Point } | undefined>(undefined);
     const [open, setOpen] = useState(false);
     const [pinned, setPinned] = useState(false);
+    const [target, setTarget] = useState<DockTarget>('search');
 
     const close = useCallback((restoreFocus = false) => {
         const element = panel.current;
         if (element?.matches(':popover-open')) element.hidePopover();
         setOpen(false);
         setPinned(false);
+        setTarget('search');
         moved.current = undefined;
         if (restoreFocus) invoker.current?.focus({ preventScroll: true });
     }, []);
@@ -114,16 +116,17 @@ export function useResultControlsDock() {
     }, [pinned, close, reposition]);
 
     const show = (nextTarget: DockTarget, button: HTMLButtonElement) => {
-        if (panel.current?.matches(':popover-open') && target.current === nextTarget) {
+        if (panel.current?.matches(':popover-open') && target === nextTarget) {
             close(true);
             return;
         }
         invoker.current = button;
-        target.current = nextTarget;
+        setTarget(nextTarget);
         panel.current?.showPopover();
         setOpen(true);
         reposition();
-        (nextTarget === 'search' ? search : page).current?.focus({ preventScroll: true });
+        if (nextTarget !== 'columns')
+            (nextTarget === 'search' ? search : page).current?.focus({ preventScroll: true });
     };
 
     const move = (point: Point) => {
@@ -162,6 +165,8 @@ export function useResultControlsDock() {
         panel,
         search,
         page,
+        columns,
+        target,
         open,
         pinned,
         show,

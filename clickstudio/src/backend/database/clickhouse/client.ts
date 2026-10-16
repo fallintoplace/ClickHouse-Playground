@@ -696,11 +696,6 @@ export class ClickHouseDriver implements QueryDriver, ImportDriver, CreateTableD
             return {
                 ...result,
                 serverVersion: this.manifests.get(run.connectionId)?.serverVersion,
-                warnings: result.truncated
-                    ? [
-                          'Output stopped at the application row/byte cap. This is a retained prefix, not the full answer.',
-                      ]
-                    : [],
             };
         } catch (error) {
             if (signal.aborted) throw signal.reason;

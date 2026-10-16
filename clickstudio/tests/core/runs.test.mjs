@@ -268,6 +268,7 @@ test('Output row caps are explicit', () => {
     );
     assert.equal(r.rows.length, 1);
     assert.equal(r.truncated, true);
+    assert.equal(r.truncationReason, 'rows');
 });
 test('Output byte caps use UTF-8 bytes', () => {
     const limit = Buffer.byteLength(JSON.stringify(columns)) + 7;
@@ -277,6 +278,19 @@ test('Output byte caps use UTF-8 bytes', () => {
     );
     assert.equal(r.rows.length, 0);
     assert.equal(r.truncated, true);
+    assert.equal(r.truncationReason, 'bytes');
+});
+test('Run warnings explain the exact retained row cap', async () => {
+    const f = fixture();
+    const r = f.runs.submit(owner, f.request({ limits: { ...DEFAULT_LIMITS, rows: 1 } }));
+    const completed = await f.runs.wait(owner, r.id);
+    assert.equal(completed.status, 'truncated');
+    assert.ok(
+        completed.warnings.includes(
+            'Output stopped at the 1-row retention limit. The retained result is incomplete.',
+        ),
+    );
+    assert.equal(f.runs.result(owner, r.id).truncationReason, 'rows');
 });
 test('Malformed row shapes are rejected', () =>
     assert.throws(

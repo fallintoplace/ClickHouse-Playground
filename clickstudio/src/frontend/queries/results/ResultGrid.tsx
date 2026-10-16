@@ -1,13 +1,19 @@
 import { DEFAULT_RESULT_PAGE_ROWS } from '../../../shared/queries/execution/limits';
-import { useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { displayValue, filterRows } from '../../../shared/queries/results/results';
+import {
+    displayValue,
+    filterRows,
+    previewResultCell,
+} from '../../../shared/queries/results/results';
 import type { ResultPage } from '../../../shared/queries/results/types';
 import type { Run } from '../../../shared/queries/execution/types';
 import { NativeTable } from '../../ui/components/NativeTable';
 import { ScrollEdgeFrame } from '../../ui/components/ScrollEdgeShadows';
 import { cx, Spinner } from '../../ui/components/primitives';
+import { Icon } from '../../ui/components/icons';
 import { ResultTableControls } from './ResultTableControls';
+import { CellInspector, type InspectedCell } from './CellInspector';
 import { terminal } from '../execution/status';
 import { statementOutcome } from './statement-outcome';
 import { resultTypeGroup, type ResultTypeGroup } from './result-type-group';
@@ -16,13 +22,26 @@ function ResultColumnHeader({
     name,
     type,
     group,
+    index,
+    pinned,
+    left,
 }: {
     name: string;
     type: string;
     group: ResultTypeGroup;
+    index: number;
+    pinned: boolean;
+    left?: number;
 }) {
     return (
-        <th scope="col" data-type-group={group} data-overflow-title={`${name}\n${type}`}>
+        <th
+            scope="col"
+            data-column-index={index}
+            data-type-group={group}
+            data-pinned-column={pinned || undefined}
+            style={pinned ? { left: `${left ?? 48}px` } : undefined}
+            data-overflow-title={`${name}\n${type}`}
+        >
             <div className="result-column-heading">
                 <span data-overflow-text>{name}</span>
                 <small className="result-type-badge" data-overflow-text data-type-group={group}>
@@ -31,6 +50,29 @@ function ResultColumnHeader({
             </div>
         </th>
     );
+}
+
+function byteLimitLabel(bytes: number): string {
+    let divisor = 1;
+    let unit = 'bytes';
+    if (bytes >= 1_000_000) {
+        divisor = 1_000_000;
+        unit = 'MB';
+    } else if (bytes >= 1_000) {
+        divisor = 1_000;
+        unit = 'KB';
+    }
+    const value = bytes / divisor;
+    return `${Number(value.toFixed(value >= 10 ? 0 : 1)).toLocaleString()} ${unit}`;
+}
+
+function truncationMessage(page: ResultPage, run: Run): string {
+    const retainedRows = `${page.totalRows.toLocaleString()} retained ${page.totalRows === 1 ? 'row' : 'rows'}`;
+    if (page.truncationReason === 'rows')
+        return `Showing ${retainedRows}. The ${run.limits.rows.toLocaleString()}-row retention limit was reached; more rows may exist.`;
+    if (page.truncationReason === 'bytes')
+        return `Showing ${retainedRows}. The ${byteLimitLabel(run.limits.bytes)} result-size limit was reached; the full result is not available here.`;
+    return `Showing ${retainedRows}. An output retention limit was reached, so the full result is not available here.`;
 }
 
 function emptyRetainedRowsMessage(page: ResultPage): string {
@@ -49,6 +91,56 @@ function emptyRetainedRowsMessage(page: ResultPage): string {
 
 function renderInContainer(content: ReactNode, container?: HTMLElement | null) {
     return container ? createPortal(content, container) : content;
+}
+
+function usePinnedColumnOffsets(
+    page: ResultPage | undefined,
+    orderedColumnKey: string,
+    pinnedColumns: Set<number>,
+) {
+    const tableViewport = useRef<HTMLDivElement>(null);
+    const [pinnedOffsets, setPinnedOffsets] = useState<Record<number, number>>({});
+    const columns = page?.columns;
+
+    useLayoutEffect(() => {
+        const table = tableViewport.current?.querySelector<HTMLTableElement>('.data-table');
+        if (!table || !columns) return;
+        const orderedColumnIndices = orderedColumnKey
+            ? orderedColumnKey.split(',').map(Number)
+            : [];
+        const measure = () => {
+            let left = 48;
+            const next: Record<number, number> = {};
+            for (const index of orderedColumnIndices) {
+                if (!pinnedColumns.has(index)) continue;
+                next[index] = left;
+                const header = table.querySelector<HTMLElement>(`[data-column-index="${index}"]`);
+                left += header?.getBoundingClientRect().width ?? 128;
+            }
+            setPinnedOffsets(previous => {
+                const previousKeys = Object.keys(previous);
+                const nextKeys = Object.keys(next);
+                if (
+                    previousKeys.length === nextKeys.length &&
+                    nextKeys.every(key => previous[Number(key)] === next[Number(key)])
+                )
+                    return previous;
+                return next;
+            });
+        };
+        measure();
+        const observer =
+            typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(measure);
+        for (const header of table.querySelectorAll<HTMLElement>('th[data-column-index]'))
+            observer?.observe(header);
+        table.ownerDocument.defaultView?.addEventListener('resize', measure);
+        return () => {
+            observer?.disconnect();
+            table.ownerDocument.defaultView?.removeEventListener('resize', measure);
+        };
+    }, [columns, orderedColumnKey, pinnedColumns]);
+
+    return { tableViewport, pinnedOffsets };
 }
 
 export function ResultGrid({
@@ -75,11 +167,49 @@ export function ResultGrid({
     previousRunLabel?: string;
 }) {
     const [filter, setFilter] = useState('');
+    const [columnSearch, setColumnSearch] = useState('');
+    const [hiddenColumns, setHiddenColumns] = useState<Set<number>>(() => new Set());
+    const [pinnedColumns, setPinnedColumns] = useState<Set<number>>(() => new Set());
+    const [inspectedCell, setInspectedCell] = useState<InspectedCell | null>(null);
     const [retainedPage, setRetainedPage] = useState(page);
     if (page && page !== retainedPage) setRetainedPage(page);
     const loadedPage = page;
     const pageLoading = loading || !loadedPage;
     page = loadedPage ?? retainedPage;
+    const orderedColumnIndices = page
+        ? page.columns
+              .map((_, index) => index)
+              .filter(index => pinnedColumns.has(index))
+              .concat(
+                  page.columns.map((_, index) => index).filter(index => !pinnedColumns.has(index)),
+              )
+              .filter(index => !hiddenColumns.has(index))
+        : [];
+    const orderedColumnKey = orderedColumnIndices.join(',');
+    const { tableViewport, pinnedOffsets } = usePinnedColumnOffsets(
+        page,
+        orderedColumnKey,
+        pinnedColumns,
+    );
+
+    const toggleHiddenColumn = (index: number) =>
+        setHiddenColumns(previous => {
+            const next = new Set(previous);
+            if (next.has(index)) next.delete(index);
+            else next.add(index);
+            return next;
+        });
+    const togglePinnedColumn = (index: number) =>
+        setPinnedColumns(previous => {
+            const next = new Set(previous);
+            if (next.has(index)) next.delete(index);
+            else next.add(index);
+            return next;
+        });
+    const restoreColumns = () => {
+        setHiddenColumns(new Set());
+        setPinnedColumns(new Set());
+    };
     if (run.resultState === 'unavailable') return null;
     if (run.resultState !== 'reopenable')
         return (
@@ -112,9 +242,11 @@ export function ResultGrid({
                 <p>No result set was returned.</p>
             </div>
         );
-    const searchableRows = page.rows.map(row =>
-        row.map(value => displayValue(value).toLocaleLowerCase()).join('\u0001'),
-    );
+    const searchableRows = filter
+        ? page.rows.map(row =>
+              row.map(value => displayValue(value).toLocaleLowerCase()).join('\u0001'),
+          )
+        : undefined;
     const matchingRows = new Set(filterRows(page.rows, filter, searchableRows));
     const visibleRows = page.rows.flatMap((row, index) =>
         matchingRows.has(row) ? [{ row, index }] : [],
@@ -125,6 +257,12 @@ export function ResultGrid({
         ? `${(page.offset + 1).toLocaleString()}–${(page.offset + page.rows.length).toLocaleString()}`
         : '0';
     const retainedRange = `${rowRange} of ${page.totalRows.toLocaleString()} retained rows`;
+    const emptyRowsMessage = emptyRetainedRowsMessage(page);
+    let noRowsText: string | undefined;
+    if (page.rows.length === 0) noRowsText = emptyRowsMessage;
+    else if (orderedColumnIndices.length === 0)
+        noRowsText = 'All columns are hidden. Open Manage columns to show them.';
+    else if (visibleRows.length === 0) noRowsText = 'No rows match on this page.';
     const rowCount = `${page.totalRows.toLocaleString()} ${page.totalRows === 1 ? 'row' : 'rows'}`;
     const rowCountLabel = (
         <span
@@ -151,10 +289,17 @@ export function ResultGrid({
                 retainedRange={retainedRange}
                 loading={pageLoading}
                 onPage={onPage}
+                columns={page.columns}
+                hiddenColumns={hiddenColumns}
+                pinnedColumns={pinnedColumns}
+                columnSearch={columnSearch}
+                onColumnSearch={setColumnSearch}
+                onToggleColumn={toggleHiddenColumn}
+                onTogglePinned={togglePinnedColumn}
+                onRestoreColumns={restoreColumns}
             />
         </div>
     );
-    const emptyRowsMessage = emptyRetainedRowsMessage(page);
     return (
         <div
             className={cx(
@@ -165,6 +310,12 @@ export function ResultGrid({
             inert={obscured || undefined}
         >
             {renderInContainer(toolbar, toolbarContainer)}
+            {page.completeness === 'truncated' && (
+                <div className="result-retention-notice" role="status">
+                    <Icon name="warning" />
+                    <span>{truncationMessage(page, run)}</span>
+                </div>
+            )}
             {pageLoading ? (
                 <div className="result-loading" role="status">
                     <Spinner />
@@ -174,7 +325,10 @@ export function ResultGrid({
                 <ScrollEdgeFrame<HTMLDivElement> className="data-table-scroll-frame">
                     {(ref, edges) => (
                         <div
-                            ref={ref}
+                            ref={element => {
+                                ref(element);
+                                tableViewport.current = element;
+                            }}
                             className="data-table-scroll"
                             role="region"
                             aria-label={
@@ -190,14 +344,21 @@ export function ResultGrid({
                                         <th className="row-number" scope="col">
                                             #
                                         </th>
-                                        {page.columns.map((column, index) => (
-                                            <ResultColumnHeader
-                                                key={`${column.name}-${index}`}
-                                                name={column.name}
-                                                type={column.type}
-                                                group={columnGroups[index] ?? 'other'}
-                                            />
-                                        ))}
+                                        {orderedColumnIndices.map(index => {
+                                            const column = page.columns[index]!;
+                                            const pinned = pinnedColumns.has(index);
+                                            return (
+                                                <ResultColumnHeader
+                                                    key={index}
+                                                    name={column.name}
+                                                    type={column.type}
+                                                    group={columnGroups[index] ?? 'other'}
+                                                    index={index}
+                                                    pinned={pinned}
+                                                    left={pinnedOffsets[index]}
+                                                />
+                                            );
+                                        })}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -211,32 +372,66 @@ export function ResultGrid({
                                             <td className="row-number">
                                                 {page.offset + rowIndex + 1}
                                             </td>
-                                            {row.map((value, index) => (
-                                                <td
-                                                    key={index}
-                                                    data-overflow-title={displayValue(value)}
-                                                    data-type-group={columnGroups[index] ?? 'other'}
-                                                    className={value === null ? 'cell-null' : ''}
-                                                >
-                                                    {displayValue(value)}
-                                                </td>
-                                            ))}
+                                            {orderedColumnIndices.map(columnIndex => {
+                                                const value = row[columnIndex];
+                                                const column = page.columns[columnIndex]!;
+                                                const preview = previewResultCell(value);
+                                                const pinned = pinnedColumns.has(columnIndex);
+                                                const rowNumber = page.offset + rowIndex + 1;
+                                                return (
+                                                    <td
+                                                        key={columnIndex}
+                                                        data-column-index={columnIndex}
+                                                        data-pinned-column={pinned || undefined}
+                                                        style={
+                                                            pinned
+                                                                ? {
+                                                                      left: `${pinnedOffsets[columnIndex] ?? 48}px`,
+                                                                  }
+                                                                : undefined
+                                                        }
+                                                        data-type-group={
+                                                            columnGroups[columnIndex] ?? 'other'
+                                                        }
+                                                        className={
+                                                            value === null ? 'cell-null' : ''
+                                                        }
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            className="result-cell-trigger"
+                                                            data-overflow-title={preview}
+                                                            aria-label={`Inspect ${column.name}, column ${columnIndex + 1}, row ${rowNumber}: ${preview}`}
+                                                            onClick={() =>
+                                                                setInspectedCell({
+                                                                    columnName: column.name,
+                                                                    columnType: column.type,
+                                                                    columnIndex,
+                                                                    rowNumber,
+                                                                    value,
+                                                                })
+                                                            }
+                                                        >
+                                                            {preview}
+                                                        </button>
+                                                    </td>
+                                                );
+                                            })}
                                         </tr>
                                     ))}
                                 </tbody>
                             </NativeTable>
-                            {page.rows.length === 0 ? (
+                            {noRowsText && (
                                 <div className="no-rows" role="status">
-                                    {emptyRowsMessage}
+                                    {noRowsText}
                                 </div>
-                            ) : (
-                                visibleRows.length === 0 && (
-                                    <div className="no-rows">No rows match on this page.</div>
-                                )
                             )}
                         </div>
                     )}
                 </ScrollEdgeFrame>
+            )}
+            {inspectedCell && (
+                <CellInspector cell={inspectedCell} onClose={() => setInspectedCell(null)} />
             )}
         </div>
     );

@@ -1,7 +1,8 @@
-import { useId, useState, type RefObject } from 'react';
+import { useEffect, useId, useState, type RefObject } from 'react';
 import { Button, cx } from '../../ui/components/primitives';
 import { Icon } from '../../ui/components/icons';
 import { useResultControlsDock } from './useResultControlsDock';
+import type { Column } from '../../../shared/common/values';
 
 function ResultPagination({
     pageIndex,
@@ -106,6 +107,14 @@ export function ResultTableControls({
     retainedRange,
     loading,
     onPage,
+    columns,
+    hiddenColumns,
+    pinnedColumns,
+    columnSearch,
+    onColumnSearch,
+    onToggleColumn,
+    onTogglePinned,
+    onRestoreColumns,
 }: {
     filter: string;
     onFilter: (filter: string) => void;
@@ -116,9 +125,33 @@ export function ResultTableControls({
     retainedRange: string;
     loading: boolean;
     onPage: (page: number) => void;
+    columns: Column[];
+    hiddenColumns: Set<number>;
+    pinnedColumns: Set<number>;
+    columnSearch: string;
+    onColumnSearch: (search: string) => void;
+    onToggleColumn: (index: number) => void;
+    onTogglePinned: (index: number) => void;
+    onRestoreColumns: () => void;
 }) {
     const id = useId();
     const dock = useResultControlsDock();
+    useEffect(() => {
+        if (dock.open && dock.target === 'columns')
+            dock.columns.current?.focus({ preventScroll: true });
+    }, [dock.columns, dock.open, dock.target]);
+    const visibleColumnCount = columns.length - hiddenColumns.size;
+    const panelName = dock.target === 'columns' ? 'columns' : 'search and pages';
+    const duplicateCounts = new Map<string, number>();
+    for (const column of columns)
+        duplicateCounts.set(column.name, (duplicateCounts.get(column.name) ?? 0) + 1);
+    const matchingColumns = columns.flatMap((column, index) =>
+        `${column.name}\n${column.type}`
+            .toLocaleLowerCase()
+            .includes(columnSearch.toLocaleLowerCase())
+            ? [{ column, index }]
+            : [],
+    );
     return (
         <div className="result-table-controls" ref={dock.anchor}>
             <button
@@ -126,7 +159,7 @@ export function ResultTableControls({
                 className={cx('result-search-toggle', filter && 'is-active')}
                 aria-label="Search rows"
                 aria-description={filter ? `Search active: ${filter}` : undefined}
-                aria-expanded={dock.open}
+                aria-expanded={dock.open && dock.target === 'search'}
                 aria-haspopup="dialog"
                 aria-controls={id}
                 title={filter ? `Search active: ${filter}` : 'Search this page'}
@@ -142,11 +175,29 @@ export function ResultTableControls({
                     aria-label={`Pages: Page ${pageIndex + 1} of ${pageCount}`}
                     aria-haspopup="dialog"
                     aria-controls={id}
-                    aria-expanded={dock.open}
+                    aria-expanded={dock.open && dock.target === 'page'}
                     title={`Page ${pageIndex + 1} of ${pageCount}`}
                     onClick={event => dock.show('page', event.currentTarget)}
                 >
                     {pageIndex + 1}/{pageCount} <Icon name="chevron" />
+                </button>
+            )}
+            {columns.length > 0 && (
+                <button
+                    type="button"
+                    className={cx('result-columns-toggle', hiddenColumns.size > 0 && 'is-active')}
+                    aria-label={`Columns: ${visibleColumnCount} of ${columns.length} shown`}
+                    aria-haspopup="dialog"
+                    aria-controls={id}
+                    aria-expanded={dock.open && dock.target === 'columns'}
+                    title="Search, hide, and pin columns"
+                    onClick={event => dock.show('columns', event.currentTarget)}
+                >
+                    <Icon name="column" />
+                    <span>Columns</span>
+                    <small>
+                        {visibleColumnCount}/{columns.length}
+                    </small>
                 </button>
             )}
             <div
@@ -155,18 +206,18 @@ export function ResultTableControls({
                 className="result-controls-panel"
                 popover="manual"
                 role="dialog"
-                aria-label="Search & pages"
+                aria-label={dock.target === 'columns' ? 'Manage columns' : 'Search & pages'}
                 aria-busy={loading || undefined}
                 data-pinned={dock.pinned || undefined}
             >
                 <div className="result-controls-heading">
-                    <strong>Search & pages</strong>
+                    <strong>{dock.target === 'columns' ? 'Columns' : 'Search & pages'}</strong>
                     {dock.pinned && (
                         <Button
                             variant="ghost"
                             className="result-controls-move"
-                            aria-label="Move search and pages"
-                            title="Drag to move. Use arrow keys to move; Shift moves faster."
+                            aria-label={`Move ${panelName}`}
+                            title={`Drag to move ${panelName}. Use arrow keys to move; Shift moves faster.`}
                             {...dock.moveHandle}
                         >
                             <Icon name="move" />
@@ -174,7 +225,7 @@ export function ResultTableControls({
                     )}
                     <Button
                         variant="ghost"
-                        aria-label="Keep search and pages open"
+                        aria-label={`Keep ${panelName} open`}
                         aria-pressed={dock.pinned}
                         title={dock.pinned ? 'Unpin' : 'Keep open'}
                         onClick={dock.togglePin}
@@ -183,60 +234,134 @@ export function ResultTableControls({
                     </Button>
                     <Button
                         variant="ghost"
-                        aria-label="Close search and pages"
+                        aria-label={`Close ${panelName}`}
                         title="Close"
                         onClick={() => dock.close(true)}
                     >
                         <Icon name="close" />
                     </Button>
                 </div>
-                <label className="result-search-label" htmlFor={`${id}-search`}>
-                    Search this page
-                </label>
-                <div className="result-filter-field">
-                    <Icon name="search" className="result-filter-icon" />
-                    <input
-                        ref={dock.search}
-                        id={`${id}-search`}
-                        className="result-filter"
-                        type="search"
-                        placeholder="Find a value…"
-                        value={filter}
-                        onChange={event => onFilter(event.target.value)}
-                    />
-                </div>
-                <div className="result-search-summary">
-                    <span className="result-match-count" role="status" aria-live="polite">
-                        {loading
-                            ? 'Loading this page…'
-                            : `${matchingCount.toLocaleString()} of ${pageRows.toLocaleString()} rows on this page`}
-                    </span>
-                    {filter && (
-                        <Button
-                            variant="ghost"
-                            aria-label="Clear row filter"
-                            onClick={() => {
-                                onFilter('');
-                                dock.search.current?.focus();
-                            }}
+                {dock.target === 'columns' ? (
+                    <div className="result-columns-panel">
+                        <label className="result-search-label" htmlFor={`${id}-columns`}>
+                            Search by name or type
+                        </label>
+                        <div className="result-filter-field">
+                            <Icon name="search" className="result-filter-icon" />
+                            <input
+                                ref={dock.columns}
+                                id={`${id}-columns`}
+                                className="result-filter"
+                                type="search"
+                                placeholder="Find a column…"
+                                value={columnSearch}
+                                onChange={event => onColumnSearch(event.target.value)}
+                            />
+                        </div>
+                        <div className="result-search-summary">
+                            <span>
+                                {visibleColumnCount} of {columns.length} columns shown
+                            </span>
+                            <Button variant="ghost" onClick={onRestoreColumns}>
+                                Restore defaults
+                            </Button>
+                        </div>
+                        <div
+                            className="result-column-list"
+                            role="group"
+                            aria-label="Result columns"
                         >
-                            Clear
-                        </Button>
-                    )}
-                </div>
-                {pageCount > 1 && (
-                    <div className="result-controls-pages">
-                        <ResultPagination
-                            pageIndex={pageIndex}
-                            pageCount={pageCount}
-                            loading={loading}
-                            onPage={onPage}
-                            pageInput={dock.page}
-                        />
-                        <span className="result-retained-range">
-                            {loading ? 'Loading retained rows…' : retainedRange}
-                        </span>
+                            {matchingColumns.length ? (
+                                matchingColumns.map(({ column, index }) => {
+                                    const duplicate = (duplicateCounts.get(column.name) ?? 0) > 1;
+                                    const label = duplicate
+                                        ? `${column.name} · column ${index + 1}`
+                                        : column.name;
+                                    return (
+                                        <div className="result-column-option" key={index}>
+                                            <label>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={!hiddenColumns.has(index)}
+                                                    aria-label={`${hiddenColumns.has(index) ? 'Show' : 'Hide'} ${label}`}
+                                                    onChange={() => onToggleColumn(index)}
+                                                />
+                                                <span title={column.name}>{label}</span>
+                                                <small title={column.type}>{column.type}</small>
+                                            </label>
+                                            <button
+                                                type="button"
+                                                className="result-column-pin"
+                                                aria-label={`${pinnedColumns.has(index) ? 'Unpin' : 'Pin'} ${label} ${pinnedColumns.has(index) ? 'from' : 'to'} the left`}
+                                                aria-pressed={pinnedColumns.has(index)}
+                                                title={
+                                                    pinnedColumns.has(index)
+                                                        ? 'Unpin from left'
+                                                        : 'Pin to left'
+                                                }
+                                                onClick={() => onTogglePinned(index)}
+                                            >
+                                                <Icon name="pin" />
+                                            </button>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <p className="result-column-empty">No matching columns.</p>
+                            )}
+                        </div>
                     </div>
+                ) : (
+                    <>
+                        <label className="result-search-label" htmlFor={`${id}-search`}>
+                            Search this page
+                        </label>
+                        <div className="result-filter-field">
+                            <Icon name="search" className="result-filter-icon" />
+                            <input
+                                ref={dock.search}
+                                id={`${id}-search`}
+                                className="result-filter"
+                                type="search"
+                                placeholder="Find a value…"
+                                value={filter}
+                                onChange={event => onFilter(event.target.value)}
+                            />
+                        </div>
+                        <div className="result-search-summary">
+                            <span className="result-match-count" role="status" aria-live="polite">
+                                {loading
+                                    ? 'Loading this page…'
+                                    : `${matchingCount.toLocaleString()} of ${pageRows.toLocaleString()} rows on this page`}
+                            </span>
+                            {filter && (
+                                <Button
+                                    variant="ghost"
+                                    aria-label="Clear row filter"
+                                    onClick={() => {
+                                        onFilter('');
+                                        dock.search.current?.focus();
+                                    }}
+                                >
+                                    Clear
+                                </Button>
+                            )}
+                        </div>
+                        {pageCount > 1 && (
+                            <div className="result-controls-pages">
+                                <ResultPagination
+                                    pageIndex={pageIndex}
+                                    pageCount={pageCount}
+                                    loading={loading}
+                                    onPage={onPage}
+                                    pageInput={dock.page}
+                                />
+                                <span className="result-retained-range">
+                                    {loading ? 'Loading retained rows…' : retainedRange}
+                                </span>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         </div>

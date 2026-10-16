@@ -19,6 +19,53 @@ export function displayValue(value: Json | undefined): string {
     if (value === null || value === undefined) return 'NULL';
     return typeof value === 'object' ? JSON.stringify(value) : String(value);
 }
+
+const RESULT_CELL_PREVIEW_LENGTH = 180;
+
+function truncatePreview(value: string, maxLength: number): string {
+    if (value.length <= maxLength) return value;
+    let preview = value.slice(0, Math.max(0, maxLength - 1));
+    const finalCodeUnit = preview.charCodeAt(preview.length - 1);
+    if (finalCodeUnit >= 0xd800 && finalCodeUnit <= 0xdbff) preview = preview.slice(0, -1);
+    return `${preview}…`;
+}
+
+function nestedValuePreview(value: Json, depth: number): string {
+    if (value === null) return 'NULL';
+    if (typeof value === 'string') return JSON.stringify(truncatePreview(value, 48));
+    if (typeof value !== 'object') return String(value);
+    if (depth >= 2) return Array.isArray(value) ? `Array(${value.length})` : 'Object';
+    if (Array.isArray(value)) {
+        const items = value.slice(0, 3).map(item => nestedValuePreview(item, depth + 1));
+        if (value.length > items.length) items.push('…');
+        return `[${items.join(', ')}]`;
+    }
+
+    const entries: string[] = [];
+    let hasMore = false;
+    for (const key in value) {
+        if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+        if (entries.length === 3) {
+            hasMore = true;
+            break;
+        }
+        const previewKey = truncatePreview(key, 32);
+        entries.push(
+            `${JSON.stringify(previewKey)}: ${nestedValuePreview(value[key]!, depth + 1)}`,
+        );
+    }
+    if (hasMore) entries.push('…');
+    return `{${entries.join(', ')}}`;
+}
+
+/** A bounded table label. The retained value stays unchanged for inspection and export. */
+export function previewResultCell(value: Json | undefined): string {
+    if (value === null || value === undefined) return 'NULL';
+    if (typeof value === 'string') return truncatePreview(value, RESULT_CELL_PREVIEW_LENGTH);
+    if (typeof value !== 'object') return String(value);
+    return truncatePreview(nestedValuePreview(value, 0), RESULT_CELL_PREVIEW_LENGTH);
+}
+
 export function baseType(type: string): string {
     while (/^(Nullable|LowCardinality)\(/.test(type)) type = type.slice(type.indexOf('(') + 1, -1);
     return type;

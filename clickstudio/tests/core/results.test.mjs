@@ -3,7 +3,28 @@ import test from 'node:test';
 import {
     heatmapCellKey,
     prepareHeatmap,
+    previewResultCell,
 } from '../../.core-build/src/shared/queries/results/results.js';
+
+test('Result cell previews are bounded while full strings remain available elsewhere', () => {
+    const value = '😀'.repeat(200);
+    const preview = previewResultCell(value);
+    assert.ok(preview.length <= 180);
+    assert.ok(preview.endsWith('…'));
+    assert.equal(preview.slice(0, -1).length % 2, 0);
+});
+
+test('Result cell previews summarize nested values without walking every child', () => {
+    assert.equal(
+        previewResultCell({
+            first: 'value',
+            second: [1, 2, { hidden: 'value' }],
+            third: null,
+            extra: true,
+        }),
+        '{"first": "value", "second": [1, 2, Object], "third": NULL, …}',
+    );
+});
 
 test('Heatmap sums duplicate X/Y cells from retained rows', () => {
     const prepared = prepareHeatmap(

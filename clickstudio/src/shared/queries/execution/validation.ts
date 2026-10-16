@@ -120,6 +120,9 @@ export function isResult(value: unknown): value is Result {
         Array.isArray(value.rows) &&
         value.rows.every(row => Array.isArray(row) && row.every(isJson)) &&
         RESULT_COMPLETENESS.some(completeness => completeness === value.completeness) &&
+        (value.truncationReason === undefined ||
+            value.truncationReason === 'rows' ||
+            value.truncationReason === 'bytes') &&
         typeof value.createdAt === 'string'
     );
 }

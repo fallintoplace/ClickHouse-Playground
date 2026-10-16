@@ -68,6 +68,7 @@ test('Cloud result caps retain the row prefix and flag an extra row', async () =
     assert.equal(output.rows.length, CLOUD_QUERY_LIMITS.rows);
     assert.equal(output.rows.at(-1)?.[0], String(CLOUD_QUERY_LIMITS.rows));
     assert.equal(output.truncated, true);
+    assert.equal(output.truncationReason, 'rows');
 });
 test('Cloud results at the byte cap are complete until another row arrives', async () => {
     const firstRow = '["1","one"]\n',
@@ -84,6 +85,7 @@ test('Cloud results at the byte cap are complete until another row arrives', asy
     assert.equal(complete.truncated, false);
     assert.equal(complete.rows.length, 1);
     assert.equal(bounded.truncated, true);
+    assert.equal(bounded.truncationReason, 'bytes');
     assert.deepEqual(bounded.rows, [['1', 'one']]);
 });
 test('Streaming closes the source after observing an extra row', async () => {
@@ -98,6 +100,7 @@ test('Streaming closes the source after observing an extra row', async () => {
     }
     const output = await collectCompactStream(source(), { ...DEFAULT_LIMITS, rows: 1 });
     assert.equal(output.truncated, true);
+    assert.equal(output.truncationReason, 'rows');
     assert.equal(output.rows.length, 1);
     assert.equal(closed, true);
 });
@@ -107,6 +110,7 @@ test('Oversized unterminated rows are bounded before JSON.parse', async () => {
         { ...DEFAULT_LIMITS, bytes: 200 },
     );
     assert.equal(output.truncated, true);
+    assert.equal(output.truncationReason, 'bytes');
     assert.equal(output.rows.length, 0);
 });
 test('Invalid names/types headers are rejected', async () => {

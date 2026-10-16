@@ -1,8 +1,8 @@
 import { test, expect, type Page, type Download } from '@playwright/test';
-import type { Result } from '../../src/shared/queries/results/types.js';
+import type { Result, ResultPage } from '../../src/shared/queries/results/types.js';
 import { PLAYGROUND_CONNECTION } from '../../src/shared/database/connections/playground.js';
 import type { CloudConnectionTest } from '../../src/frontend/database/connections/cloud-connection.js';
-import { trust } from './helpers.js';
+import { setWorkspaceMode, trust } from './helpers.js';
 import { arrayValue, decodeValue, jsonRecord, stringValue } from '../helpers/type-guards.js';
 import { isResult } from '../../src/frontend/queries/execution/execution-validation.js';
 import { cloudSchema } from '../helpers/cloud-fixtures.js';
@@ -39,7 +39,12 @@ function countRuns(page: Page) {
     });
     return () => count;
 }
-async function resultPage(page: Page, transform: (result: Result) => Result) {
+async function resultPage(
+    page: Page,
+    transform: (
+        result: Result,
+    ) => Partial<Result> & Partial<Pick<ResultPage, 'offset' | 'totalRows' | 'nextOffset'>>,
+) {
     await page.route(
         url => url.pathname.endsWith('/result'),
         async route => {
@@ -86,6 +91,119 @@ test('Duplicate result-column names keep their values in the correct positions',
     await expect(cells.nth(2)).toHaveText('9007199254740993');
     expect(runs()).toBe(1);
 });
+
+for (const mode of ['Standard', 'Experimental']) {
+    test(`${mode} manages duplicate columns without rerunning the query`, async ({ page }) => {
+        const runs = countRuns(page);
+        await resultPage(page, result => ({
+            ...result,
+            columns: [
+                { name: 'same', type: 'String' },
+                { name: 'same', type: 'UInt64' },
+                { name: 'payload', type: 'String' },
+            ],
+            rows: [['text', '9007199254740993', 'large payload']],
+        }));
+        await trust(page, mode);
+        await setWorkspaceMode(page, mode);
+
+        const results = await run(page);
+        const table = results.getByRole('table', { name: 'Retained query rows' });
+        await results.getByRole('button', { name: 'Columns: 3 of 3 shown' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Manage columns' });
+        const search = dialog.getByRole('searchbox', { name: 'Search by name or type' });
+        await expect(search).toBeFocused();
+        await search.fill('UInt64');
+        await dialog.getByRole('checkbox', { name: 'Hide same · column 2' }).click();
+        await expect(table.locator('thead th[data-type-group]')).toHaveCount(2);
+        await expect(dialog.getByText('2 of 3 columns shown')).toBeVisible();
+
+        await dialog.getByRole('button', { name: 'Restore defaults' }).click();
+        await search.fill('');
+        await dialog.getByRole('button', { name: 'Pin payload to the left' }).click();
+        await expect(table.locator('thead th[data-pinned-column]')).toHaveCount(1);
+        await expect(table.locator('tbody td[data-column-index="2"]')).toHaveAttribute(
+            'data-pinned-column',
+        );
+        expect(runs()).toBe(1);
+
+        const nextRun = page.waitForRequest(request => {
+            const url = new URL(request.url());
+            return request.method() === 'POST' && url.pathname === '/api/runs';
+        });
+        await Promise.all([nextRun, page.getByTestId('run-button').click()]);
+        await expect.poll(runs).toBe(2);
+        await expect(table.locator('thead th[data-type-group]')).toHaveCount(3);
+        await expect(table.locator('thead th[data-pinned-column]')).toHaveCount(0);
+    });
+
+    test(`${mode} inspects and downloads the full value behind a bounded preview`, async ({
+        page,
+    }) => {
+        const fullValue = `${'large-😀-value '.repeat(300)}end`;
+        await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+        await resultPage(page, result => ({
+            ...result,
+            columns: [
+                { name: 'payload', type: 'String' },
+                { name: 'structure', type: 'JSON' },
+            ],
+            rows: [[fullValue, { nested: [1, 2, { detail: 'kept' }] }]],
+        }));
+        await trust(page, mode);
+        await setWorkspaceMode(page, mode);
+
+        const results = await run(page);
+        const table = results.getByRole('table', { name: 'Retained query rows' });
+        const payload = table.locator('tbody button').nth(0);
+        const preview = (await payload.textContent()) ?? '';
+        expect(preview.length).toBeLessThanOrEqual(180);
+        expect(preview).not.toContain('end');
+        await payload.click();
+
+        const dialog = page.getByRole('dialog', { name: 'payload' });
+        await expect(dialog.locator('.result-cell-inspector-value')).toHaveText(fullValue);
+        await dialog.getByRole('button', { name: 'Copy value' }).click();
+        await expect(dialog.getByRole('status')).toHaveText('Copied full value.');
+        expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(fullValue);
+        const [download] = await Promise.all([
+            page.waitForEvent('download'),
+            dialog.getByRole('button', { name: 'Download full value' }).click(),
+        ]);
+        expect(download.suggestedFilename()).toBe('payload-column-1-row-1.txt');
+        expect(await downloadedText(download)).toBe(fullValue);
+        await dialog.getByRole('button', { name: 'Close cell inspector' }).click();
+
+        await table.locator('tbody button').nth(1).click();
+        const objectDialog = page.getByRole('dialog', { name: 'structure' });
+        await expect(objectDialog.locator('.result-cell-inspector-value')).toContainText(
+            '"detail": "kept"',
+        );
+    });
+
+    test(`${mode} explains why a retained result is incomplete`, async ({ page }) => {
+        await resultPage(page, result => ({
+            ...result,
+            columns: [{ name: 'value', type: 'String' }],
+            rows: [['retained']],
+            completeness: 'truncated',
+            truncationReason: 'bytes',
+            offset: 0,
+            totalRows: 1,
+            nextOffset: null,
+        }));
+        await trust(page, mode);
+        await setWorkspaceMode(page, mode);
+
+        const results = await run(page);
+        await expect(results.locator('.result-retention-notice')).toContainText(
+            '1 retained row. The 2 MB result-size limit was reached',
+        );
+        await expect(results.locator('.result-retention-notice')).toContainText(
+            'the full result is not available here',
+        );
+    });
+}
 
 test('Result export downloads the complete retained CSV from the server', async ({ page }) => {
     const runs = countRuns(page);

@@ -1,6 +1,7 @@
 import { StringDecoder } from 'node:string_decoder';
 import { isJson, isStringArray, type Column, type Row } from '../../../shared/common/values.js';
 import type { Limits } from '../../../shared/queries/execution/settings.js';
+import type { ResultTruncationReason } from '../../../shared/queries/results/types.js';
 import { AppError, requireThat } from '../../system/requests/errors.js';
 import type { DriverResult } from '../../queries/execution/runs.js';
 
@@ -18,7 +19,8 @@ export async function collectCompactStream(
         names: string[] = [],
         columns: Column[] = [];
     let bytes = 0,
-        truncated = false;
+        truncated = false,
+        truncationReason: ResultTruncationReason | undefined;
     const rows: Row[] = [];
     const consume = (line: string) => {
         if (!line.trim()) return;
@@ -31,10 +33,12 @@ export async function collectCompactStream(
                     'Result metadata exceeds the configured byte limit',
                 );
             truncated = true;
+            truncationReason = 'bytes';
             return;
         }
         if (stage >= 2 && rows.length >= limits.rows) {
             truncated = true;
+            truncationReason = 'rows';
             return;
         }
         let data: unknown;
@@ -107,6 +111,7 @@ export async function collectCompactStream(
                 'Result metadata exceeds the configured byte limit',
             );
             truncated = true;
+            truncationReason = 'bytes';
             break;
         }
     }
@@ -120,5 +125,12 @@ export async function collectCompactStream(
         'RESULT_INCOMPLETE',
         'The server did not return a complete result header',
     );
-    return { columns, rows, bytes, truncated, bounded: { rows: limits.rows, bytes: limits.bytes } };
+    return {
+        columns,
+        rows,
+        bytes,
+        truncated,
+        ...(truncationReason ? { truncationReason } : {}),
+        bounded: { rows: limits.rows, bytes: limits.bytes },
+    };
 }

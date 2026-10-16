@@ -16,7 +16,11 @@ import type {
     RunRequest,
     Script,
 } from '../../../shared/queries/execution/types.js';
-import type { Result, ResultPage } from '../../../shared/queries/results/types.js';
+import type {
+    Result,
+    ResultPage,
+    ResultTruncationReason,
+} from '../../../shared/queries/results/types.js';
 import { isRecord } from '../../../shared/common/values.js';
 import { isStoredQueryDocument } from '../saved-queries/stored-document.js';
 import { isResult, isRun, isScript } from '../../../shared/queries/execution/validation.js';
@@ -30,6 +34,7 @@ export interface DriverResult {
     columns: Column[];
     rows: Row[];
     truncated: boolean;
+    truncationReason?: ResultTruncationReason;
     bytes?: number;
     bounded?: {
         rows: number;
@@ -52,6 +57,21 @@ interface Receipt {
     resourceId: string;
     kind: 'run' | 'script';
 }
+
+function formatByteLimit(bytes: number): string {
+    let divisor = 1;
+    let unit = 'bytes';
+    if (bytes >= 1_000_000) {
+        divisor = 1_000_000;
+        unit = 'MB';
+    } else if (bytes >= 1_000) {
+        divisor = 1_000;
+        unit = 'KB';
+    }
+    const value = bytes / divisor;
+    return `${Number(value.toFixed(value >= 10 ? 0 : 1)).toLocaleString()} ${unit}`;
+}
+
 type StoredRun = Omit<Run, 'resultState'> & {
     resultState: Run['resultState'] | 'expired';
     resultExpiresAt?: string;
@@ -583,16 +603,24 @@ export class RunService {
             run.status = bounded.truncated ? 'truncated' : 'succeeded';
             run.warnings.push(...(output.warnings ?? []));
             run.serverVersion = output.serverVersion ?? run.serverVersion;
-            if (bounded.truncated)
+            if (bounded.truncated) {
+                let stopReason = 'a configured row or byte retention limit';
+                if (bounded.truncationReason === 'rows')
+                    stopReason = `the ${run.limits.rows.toLocaleString()}-row retention limit`;
+                else if (bounded.truncationReason === 'bytes')
+                    stopReason = `the ${formatByteLimit(run.limits.bytes)} result-size limit`;
                 run.warnings.push(
-                    'Output is truncated; charts and local filters describe only the retained rows.',
+                    `Output stopped at ${stopReason}. The retained result is incomplete.`,
+                    'Charts and local filters describe only the retained rows.',
                 );
+            }
             const result: Result = {
                 runId: id,
                 queryId: run.queryId,
                 columns: bounded.columns,
                 rows: bounded.rows,
                 completeness: bounded.truncated ? 'truncated' : 'complete',
+                ...(bounded.truncationReason ? { truncationReason: bounded.truncationReason } : {}),
                 createdAt: new Date().toISOString(),
             };
             this.store.put('results', id, result);
@@ -774,6 +802,7 @@ export function boundResult(output: DriverResult, limit: Limits) {
             rows: output.rows,
             bytes: output.bytes,
             truncated: output.truncated,
+            ...(output.truncationReason ? { truncationReason: output.truncationReason } : {}),
         };
     }
     requireThat(
@@ -784,7 +813,8 @@ export function boundResult(output: DriverResult, limit: Limits) {
     );
     const rows: Row[] = [];
     let bytes = Buffer.byteLength(JSON.stringify(output.columns)),
-        truncated = output.truncated;
+        truncated = output.truncated,
+        truncationReason = output.truncationReason;
     requireThat(
         bytes <= limit.bytes,
         413,
@@ -799,12 +829,24 @@ export function boundResult(output: DriverResult, limit: Limits) {
             'The server returned an invalid row shape',
         );
         const size = Buffer.byteLength(JSON.stringify(row));
-        if (rows.length >= limit.rows || bytes + size > limit.bytes) {
+        if (bytes + size > limit.bytes) {
             truncated = true;
+            truncationReason ??= 'bytes';
+            break;
+        }
+        if (rows.length >= limit.rows) {
+            truncated = true;
+            truncationReason ??= 'rows';
             break;
         }
         rows.push(row);
         bytes += size;
     }
-    return { columns: output.columns, rows, bytes, truncated };
+    return {
+        columns: output.columns,
+        rows,
+        bytes,
+        truncated,
+        ...(truncationReason ? { truncationReason } : {}),
+    };
 }
