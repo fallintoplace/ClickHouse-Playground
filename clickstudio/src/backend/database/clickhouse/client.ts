@@ -689,8 +689,8 @@ export class ClickHouseDriver implements QueryDriver, ImportDriver, CreateTableD
                     max_memory_usage: String(run.limits.memory),
                     max_threads: run.limits.threads,
                     max_result_rows: maxResultRows,
-                    // The stream collector enforces retained and detached-cell byte limits.
-                    max_result_bytes: '0',
+                    // ClickHouse caps this at 50 MB; the stream collector enforces app limits.
+                    max_result_bytes: '50000000',
                     result_overflow_mode: 'throw',
                     max_rows_to_read: '100000000',
                     max_bytes_to_read: '5000000000',
