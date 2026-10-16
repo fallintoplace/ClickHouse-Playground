@@ -5,7 +5,8 @@ import { loadConfig } from '../../src/backend/system/config.js';
 import { CLOUD_SESSION_COOKIE } from '../../src/backend/database/connections/cloud-sessions.js';
 import { MemoryStore } from '../../src/backend/system/store.js';
 import { DemoDriver } from '../../src/backend/database/clickhouse/sample-client.js';
-import { isRecord, jsonRecord, serverPort } from '../helpers/type-guards.js';
+import cloudApi from '../../src/backend/database/connections/cloud-api.js';
+import { isRecord, jsonRecord, responseErrorCode, serverPort } from '../helpers/type-guards.js';
 
 const credentials = {
     host: 'service.region.provider.clickhouse.cloud:8443',
@@ -32,9 +33,9 @@ function isCloudCredentials(value: unknown): value is typeof credentials {
     );
 }
 
-async function start() {
+async function start(cloudApiOverride?: CloudApiStub) {
     const cloudCalls: CloudCall[] = [];
-    const cloudApi = {
+    const defaultCloudApi = {
         fetch: async (request: Request) => {
             const contentType = request.headers.get('content-type') ?? '';
             if (contentType.startsWith('multipart/form-data')) {
@@ -88,6 +89,7 @@ async function start() {
             return Response.json({ action, credentials: requestCredentials });
         },
     };
+    const cloudApi = cloudApiOverride ?? defaultCloudApi;
     const config = loadConfig({ DEMO_MODE: 'true' });
     const service = createApp(config, {
         store: new MemoryStore(),
@@ -156,6 +158,100 @@ test('Local Cloud database deletion updates the saved session only after a succe
     const session = jsonRecord(restored.session);
     assert.equal(jsonRecord(session.profile).database, 'default');
     assert.equal(jsonRecord(session.tested).database, 'default');
+});
+
+test('Local Cloud full-result downloads stream CSV from a same-origin form', async t => {
+    let releaseCsv: () => void = () => {};
+    let receivedSql: unknown;
+    let receivedParameters: unknown;
+    let receivedAction: unknown;
+    const csvGate = new Promise<void>(resolve => {
+        releaseCsv = resolve;
+    });
+    const cloudApi = {
+        fetch: async (request: Request) => {
+            const payload = jsonRecord(await request.json(), 'Cloud request body');
+            receivedAction = payload.action;
+            if (payload.action === 'test') return Response.json(tested);
+            if (payload.action === 'full-export') {
+                receivedSql = payload.sql;
+                receivedParameters = payload.parameters;
+                let sentHeader = false;
+                const stream = new ReadableStream<Uint8Array>({
+                    async pull(controller) {
+                        if (!sentHeader) {
+                            sentHeader = true;
+                            controller.enqueue(new TextEncoder().encode('day,events\n'));
+                            await csvGate;
+                            controller.enqueue(new TextEncoder().encode('2026-01-01,10\n'));
+                            controller.close();
+                        }
+                    },
+                });
+                return new Response(stream, {
+                    headers: {
+                        'Content-Type': 'text/csv; charset=utf-8',
+                        'Content-Disposition': 'attachment; filename="full.csv"',
+                    },
+                });
+            }
+            return Response.json({ error: { code: 'UNEXPECTED_ACTION', message: 'Unexpected.' } });
+        },
+    };
+    const app = await start(cloudApi);
+    t.after(() => app.stop());
+    const connected = await app.call('/cloud/session', { credentials });
+    const cookie = cookieFrom(connected)!;
+    const downloadPromise = fetch(`${app.origin}/api/cloud`, {
+        method: 'POST',
+        headers: {
+            cookie,
+            origin: app.origin,
+            'content-type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+            action: 'full-export',
+            sql: 'SELECT {value:UInt64}',
+            parameters: JSON.stringify({ value: '42' }),
+        }),
+    });
+    const earlyResponse = await Promise.race([
+        downloadPromise.then(response => response),
+        new Promise<undefined>(resolve => setTimeout(() => resolve(undefined), 1000)),
+    ]);
+    releaseCsv();
+    assert.ok(earlyResponse, 'the download response should start before the CSV is complete');
+    assert.equal(earlyResponse.status, 200, await earlyResponse.clone().text());
+    assert.equal(receivedAction, 'full-export', await earlyResponse.clone().text());
+    assert.equal(
+        earlyResponse.headers.get('content-disposition'),
+        'attachment; filename="full.csv"',
+    );
+    assert.equal(receivedSql, 'SELECT {value:UInt64}');
+    assert.deepEqual(receivedParameters, { value: '42' });
+    const csv = await earlyResponse.text();
+    assert.equal(csv, 'day,events\n2026-01-01,10\n');
+});
+
+test('Cloud full-result form rejects non-read queries before connecting', async () => {
+    const origin = 'https://clickstudio.example';
+    const response = await cloudApi.fetch(
+        new Request(`${origin}/api/cloud`, {
+            method: 'POST',
+            headers: {
+                origin,
+                'content-type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                action: 'full-export',
+                sql: 'DROP TABLE events',
+                parameters: '{}',
+                credentials: JSON.stringify(credentials),
+            }),
+        }),
+    );
+    assert.equal(response.status, 403);
+    assert.equal(await responseErrorCode(response), 'READ_ONLY_SQL');
 });
 
 test('Local Cloud connection restores after refresh without returning its password', async t => {

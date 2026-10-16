@@ -1143,8 +1143,14 @@ function createWorkspaceControllerModel({
         outputVisible,
         visibleResultsView,
     } = executionView;
-    const { loadProfile, loadPipeline, loadFlamegraph, exportCurrentQuery, exportCurrentCsv } =
-        resultActions;
+    const {
+        loadProfile,
+        loadPipeline,
+        loadFlamegraph,
+        exportCurrentQuery,
+        exportCurrentCsv,
+        downloadFullResultCsv,
+    } = resultActions;
 
     return {
         tabs,
@@ -1232,6 +1238,7 @@ function createWorkspaceControllerModel({
         exportOpen,
         exportCurrentQuery,
         exportCurrentCsv,
+        downloadFullResultCsv,
         restoreRevisionConfirmation,
         setRestoreRevisionConfirmation,
         openHelp,

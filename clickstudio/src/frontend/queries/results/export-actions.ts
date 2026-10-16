@@ -1,6 +1,9 @@
 import { exportCsv } from '../../../shared/queries/results/results';
 import { api, apiResponses, download, isFrontendDemoPreview, message } from '../../api/client';
-import { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../database/connections/cloud-connection';
+import {
+    CLICKHOUSE_CLOUD_CONNECTION_ID,
+    downloadClickHouseCloudCsv,
+} from '../../database/connections/cloud-connection';
 import type { Draft } from '../editor/drafts/workspace-state';
 import type { useRunEvidence } from '../execution/useRunEvidence';
 import type { useWorkspaceNotifications } from '../../workspace/layout/notifications/useWorkspaceNotifications';
@@ -38,6 +41,23 @@ export function createQueryExportActions({
         }
     };
 
+    const downloadFullResultCsv = () => {
+        if (!run) return;
+        try {
+            if (run.connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID) {
+                downloadClickHouseCloudCsv(run.sql, run.parameters);
+                return;
+            }
+            const link = document.createElement('a');
+            link.href = `/api/runs/${encodeURIComponent(run.id)}/full-export`;
+            link.click();
+        } catch (caught) {
+            setError('Couldn’t start the full result download. Try again.', {
+                detail: message(caught),
+            });
+        }
+    };
+
     const exportCurrentQuery = () => {
         const baseName = active.name
             .trim()
@@ -47,5 +67,5 @@ export function createQueryExportActions({
         download(`${baseName || 'query'}.sql`, active.sql, 'application/sql;charset=utf-8');
     };
 
-    return { exportCurrentQuery, exportCurrentCsv };
+    return { exportCurrentQuery, exportCurrentCsv, downloadFullResultCsv };
 }

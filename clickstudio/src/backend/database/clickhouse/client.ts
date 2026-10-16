@@ -726,6 +726,34 @@ export class ClickHouseDriver implements QueryDriver, ImportDriver, CreateTableD
             if (timer) clearInterval(timer);
         }
     }
+    async exportFullCsv(run: Run, signal: AbortSignal): Promise<AsyncIterable<Buffer | string>> {
+        const statement = splitSql(run.sql)[0]!.sql;
+        const sql = sqlForRunKind(statement, run.kind);
+        try {
+            const response = await this.client(run.connectionId).exec({
+                query: `${sql}\nFORMAT CSVWithNames`,
+                query_id: run.queryId,
+                query_params: run.parameters,
+                abort_signal: signal,
+                clickhouse_settings: {
+                    readonly: '1',
+                    max_execution_time: run.limits.seconds,
+                    max_memory_usage: String(run.limits.memory),
+                    max_threads: run.limits.threads,
+                    max_result_rows: '0',
+                    max_result_bytes: '0',
+                    result_overflow_mode: 'throw',
+                    max_rows_to_read: '100000000',
+                    max_bytes_to_read: '5000000000',
+                    log_comment: JSON.stringify({ ...run.tags, export: 'full-result-csv' }),
+                },
+            });
+            return response.stream;
+        } catch (error) {
+            if (signal.aborted) throw signal.reason;
+            throw this.safeError(error);
+        }
+    }
     async cancel(run: Run) {
         try {
             await this.client(run.connectionId).command({

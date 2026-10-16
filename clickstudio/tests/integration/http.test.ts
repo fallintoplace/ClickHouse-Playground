@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
+import { Readable } from 'node:stream';
 import { randomUUID } from 'node:crypto';
 import { createApp } from '../../src/backend/app/app.js';
 import { loadConfig } from '../../src/backend/system/config.js';
@@ -20,6 +21,7 @@ import type {
 } from '../../src/shared/database/reference/types.js';
 import { isQueryDocument } from '../../src/shared/queries/saved-queries/validation.js';
 import type { ReferenceCategory } from '../../src/shared/database/reference/reference.js';
+import type { Run } from '../../src/shared/queries/execution/types.js';
 import { isRun } from '../../src/frontend/queries/execution/execution-validation.js';
 import * as apiResponses from '../../src/frontend/api/response-guards.js';
 import {
@@ -81,6 +83,62 @@ async function start(
     };
 }
 const owner = { id: 'local-owner', role: 'owner' } as const;
+
+class FullExportDemoDriver extends DemoDriver {
+    exportedRun?: Run;
+    override connection(principal: Parameters<DemoDriver['connection']>[0], id: string) {
+        return { ...super.connection(principal, id), dataSource: 'clickhouse' as const };
+    }
+    async exportFullCsv(run: Run, _signal: AbortSignal): Promise<AsyncIterable<Buffer | string>> {
+        this.exportedRun = run;
+        return Readable.from(['day,value\r\n', '2026-01-01,42\r\n']);
+    }
+}
+
+test('Full result export reruns the saved query as a streamed CSV download', async t => {
+    const driver = new FullExportDemoDriver();
+    const app = await start(undefined, undefined, driver);
+    t.after(() => app.stop());
+    await app.call('/connections/demo/trust', { trusted: true, confirmation: 'demo' });
+    const submitted = await app.call('/runs', {
+        clientRequestId: randomUUID(),
+        connectionId: 'demo',
+        sql: 'SELECT {value:UInt64}',
+        parameters: { value: '42' },
+    });
+    assert.equal(submitted.status, 202);
+    const run = jsonRecord(await submitted.json(), 'Run response');
+    const runId = stringValue(run.id, 'Run id');
+    await app.runs.wait(owner, runId);
+
+    const response = await app.call(`/runs/${encodeURIComponent(runId)}/full-export`);
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-disposition') ?? '', /\.csv/);
+    assert.equal(await response.text(), 'day,value\r\n2026-01-01,42\r\n');
+    assert.equal(driver.exportedRun?.sql, 'SELECT {value:UInt64}');
+    assert.deepEqual(driver.exportedRun?.parameters, { value: '42' });
+    assert.notEqual(driver.exportedRun?.queryId, run.queryId);
+});
+
+test('Full result export stays unavailable for fixture rows', async t => {
+    const app = await start();
+    t.after(() => app.stop());
+    await app.call('/connections/demo/trust', { trusted: true, confirmation: 'demo' });
+    const submitted = await app.call('/runs', {
+        clientRequestId: randomUUID(),
+        connectionId: 'demo',
+        sql: 'SELECT 1',
+    });
+    assert.equal(submitted.status, 202);
+    const run = jsonRecord(await submitted.json(), 'Run response');
+    const runId = stringValue(run.id, 'Run id');
+    await app.runs.wait(owner, runId);
+
+    const response = await app.call(`/runs/${encodeURIComponent(runId)}/full-export`);
+    assert.equal(response.status, 409);
+    assert.equal(await responseErrorCode(response), 'FULL_EXPORT_UNAVAILABLE');
+});
+
 test('Sample query setup rules stay internal on the local assistant endpoint', async t => {
     const question = 'Report space launch success rates by rocket.';
     let receivedInstructions = '';

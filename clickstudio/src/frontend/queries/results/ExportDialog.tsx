@@ -6,16 +6,20 @@ export function ExportDialog({
     open,
     queryAvailable,
     rowsAvailable,
+    fullResultAvailable,
     onClose,
     onExportQuery,
     onExportRows,
+    onDownloadFullResult,
 }: {
     open: boolean;
     queryAvailable: boolean;
     rowsAvailable: boolean;
+    fullResultAvailable: boolean;
     onClose: () => void;
     onExportQuery: () => void;
     onExportRows: () => void;
+    onDownloadFullResult: () => void;
 }) {
     const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -71,16 +75,31 @@ export function ExportDialog({
                 </button>
                 <button
                     type="button"
-                    data-footer-help="Download rows from the latest query result."
+                    data-footer-help="Download the rows retained from the latest query result."
                     disabled={!rowsAvailable}
                     onClick={onExportRows}
                     className="export-option transfer-dialog-option"
                 >
                     <Icon name="table" className="mt-0.5 shrink-0 text-[var(--accent)]" />
                     <span className="grid gap-1">
-                        <strong className="text-sm">Export rows (.csv)</strong>
+                        <strong className="text-sm">Export retained rows (.csv)</strong>
                         <small className="text-xs text-[var(--muted)]">
                             Download rows from the latest query result.
+                        </small>
+                    </span>
+                </button>
+                <button
+                    type="button"
+                    data-footer-help="Rerun the query and download its full result."
+                    disabled={!fullResultAvailable}
+                    onClick={onDownloadFullResult}
+                    className="export-option transfer-dialog-option"
+                >
+                    <Icon name="refresh" className="mt-0.5 shrink-0 text-[var(--accent)]" />
+                    <span className="grid gap-1">
+                        <strong className="text-sm">Download full result (.csv)</strong>
+                        <small className="text-xs text-[var(--muted)]">
+                            Reruns the query and downloads all rows.
                         </small>
                     </span>
                 </button>

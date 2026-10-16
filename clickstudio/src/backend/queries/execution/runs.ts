@@ -49,6 +49,7 @@ export interface QueryDriver {
         signal: AbortSignal,
         progress: (value: Progress) => void,
     ): Promise<DriverResult>;
+    exportFullCsv?(run: Run, signal: AbortSignal): Promise<AsyncIterable<Buffer | string>>;
     cancel(run: Run): Promise<void>;
 }
 interface Receipt {

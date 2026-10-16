@@ -391,7 +391,7 @@ test('Static production preview loads the native parser and exports retained sam
     const exportDialog = page.getByRole('dialog', { name: 'Export' });
     const [download] = await Promise.all([
         page.waitForEvent('download'),
-        exportDialog.getByRole('button', { name: /Export rows/ }).click(),
+        exportDialog.getByRole('button', { name: /Export retained rows/ }).click(),
     ]);
     const csv = await readFile(await download.path(), 'utf8');
     expect(csv.split('\r\n')[0]).toContain('day');

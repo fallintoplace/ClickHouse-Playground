@@ -118,7 +118,8 @@ test('Standard exposes assignment actions and can run a query without opening AI
     await exportButton.click();
     const exportDialog = page.getByRole('dialog', { name: 'Export' });
     await expect(exportDialog.getByRole('button', { name: /Export query/ })).toBeEnabled();
-    await expect(exportDialog.getByRole('button', { name: /Export rows/ })).toBeDisabled();
+    await expect(exportDialog.getByRole('button', { name: /Export retained rows/ })).toBeDisabled();
+    await expect(exportDialog.getByRole('button', { name: /Download full result/ })).toBeDisabled();
     await exportDialog.getByRole('button', { name: 'Close export options' }).click();
     await expect(page.locator('.editor-control-rail')).toHaveCount(0);
     await expect(
@@ -146,7 +147,7 @@ test('Standard exposes assignment actions and can run a query without opening AI
         page.waitForEvent('download'),
         page
             .getByRole('dialog', { name: 'Export' })
-            .getByRole('button', { name: /Export rows/ })
+            .getByRole('button', { name: /Export retained rows/ })
             .click(),
     ]);
     expect(download.suggestedFilename()).toMatch(/\.csv$/);

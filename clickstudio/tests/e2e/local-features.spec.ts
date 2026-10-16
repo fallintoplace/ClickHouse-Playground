@@ -215,7 +215,7 @@ test('Result export downloads the complete retained CSV from the server', async 
     await expect(exportDialog).toBeVisible();
     const [download] = await Promise.all([
         page.waitForEvent('download'),
-        exportDialog.getByRole('button', { name: /Export rows \(\.csv\)/ }).click(),
+        exportDialog.getByRole('button', { name: /Export retained rows \(\.csv\)/ }).click(),
     ]);
     const csv = await downloadedText(download);
     expect(csv.split('\r\n')).toHaveLength(8);
@@ -230,6 +230,8 @@ test('Local Cloud connection restores after refresh and exports retained rows fr
     const cloudActions: string[] = [];
     const cloudSessionMethods: string[] = [];
     const serverExportRequests: string[] = [];
+    let runSql: string | undefined;
+    let fullExportSql: string | undefined;
     let savedCloudSession: {
         profile: { host: string; database: string; username: string };
         tested: CloudConnectionTest;
@@ -268,6 +270,21 @@ test('Local Cloud connection restores after refresh and exports retained rows fr
         await route.fulfill({ status: 204 });
     });
     await page.route('**/api/cloud', async route => {
+        const requestHeaders = route.request().headers();
+        if (requestHeaders['content-type']?.startsWith('application/x-www-form-urlencoded')) {
+            const form = new URLSearchParams(route.request().postData() ?? '');
+            cloudActions.push(form.get('action') ?? '');
+            fullExportSql = form.get('sql') ?? undefined;
+            await route.fulfill({
+                status: 200,
+                headers: {
+                    'Content-Type': 'text/csv; charset=utf-8',
+                    'Content-Disposition': 'attachment; filename="clickstudio-full-result.csv"',
+                },
+                body: 'day,events\n2026-01-01,10\n2026-01-02,20\n',
+            });
+            return;
+        }
         const body = jsonRecord(route.request().postDataJSON(), 'Cloud request body');
         cloudActions.push(typeof body.action === 'string' ? body.action : '');
         if (body.action === 'test') {
@@ -279,6 +296,7 @@ test('Local Cloud connection restores after refresh and exports retained rows fr
             return;
         }
         if (body.action === 'run') {
+            runSql = typeof body.sql === 'string' ? body.sql : undefined;
             await route.fulfill({
                 json: {
                     queryId:
@@ -310,7 +328,10 @@ test('Local Cloud connection restores after refresh and exports retained rows fr
     });
     page.on('request', request => {
         const url = new URL(request.url());
-        if (url.pathname.startsWith('/api/runs/') && url.pathname.endsWith('/export'))
+        if (
+            url.pathname.startsWith('/api/runs/') &&
+            (url.pathname.endsWith('/export') || url.pathname.endsWith('/full-export'))
+        )
             serverExportRequests.push(url.pathname);
     });
 
@@ -336,11 +357,20 @@ test('Local Cloud connection restores after refresh and exports retained rows fr
     const exportDialog = page.getByRole('dialog', { name: 'Export', exact: true });
     const [download] = await Promise.all([
         page.waitForEvent('download'),
-        exportDialog.getByRole('button', { name: /Export rows \(\.csv\)/ }).click(),
+        exportDialog.getByRole('button', { name: /Export retained rows \(\.csv\)/ }).click(),
     ]);
     const csv = await downloadedText(download);
     expect(csv.split('\r\n')[0]).toBe('day,events');
     expect(csv).toContain('2026-01-02,20');
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    const [fullDownload] = await Promise.all([
+        page.waitForEvent('download'),
+        exportDialog.getByRole('button', { name: /Download full result \(\.csv\)/ }).click(),
+    ]);
+    expect(fullDownload.suggestedFilename()).toBe('clickstudio-full-result.csv');
+    expect(await downloadedText(fullDownload)).toContain('2026-01-02,20');
+    expect(fullExportSql?.replace(/\r\n/g, '\n')).toBe(runSql?.replace(/\r\n/g, '\n'));
+    expect(cloudActions).toContain('full-export');
     expect(cloudActions).toContain('run');
     expect(serverExportRequests).toEqual([]);
 

@@ -23,6 +23,7 @@ export const CLOUD_ACTIONS = {
     tableParts: 'table-parts',
     tablePermissions: 'table-permissions',
     run: 'run',
+    fullExport: 'full-export',
     workload: 'workload',
     replication: 'replication',
     createTable: 'create-table',
@@ -68,6 +69,7 @@ type CloudRequestPayloads = {
     [CLOUD_ACTIONS.tableParts]: { database: string; table: string };
     [CLOUD_ACTIONS.tablePermissions]: { database: string; table?: string };
     [CLOUD_ACTIONS.run]: QueryInput & { sessionId?: string; queryId?: string };
+    [CLOUD_ACTIONS.fullExport]: QueryInput;
     [CLOUD_ACTIONS.workload]: { minutes: WorkloadWindow; source: QueryLogSource };
     [CLOUD_ACTIONS.replication]: object;
     [CLOUD_ACTIONS.createTable]: {

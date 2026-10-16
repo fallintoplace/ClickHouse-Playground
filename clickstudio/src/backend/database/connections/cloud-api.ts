@@ -31,6 +31,7 @@ import {
     MAX_CLOUD_IMPORT_REQUEST_BYTES,
 } from '../../../shared/database/connections/cloud-policy.js';
 import { createClient } from '@clickhouse/client';
+import { Readable } from 'node:stream';
 import { randomUUID } from 'node:crypto';
 import { AppError } from '../../system/requests/errors.js';
 import { fail, json } from '../../system/requests/responses.js';
@@ -1758,6 +1759,107 @@ async function handleCloudRun(
     );
 }
 
+function webByteStream(
+    source: AsyncIterable<Buffer | string>,
+): globalThis.ReadableStream<Uint8Array> {
+    const iterator = source[Symbol.asyncIterator]();
+    const encoder = new TextEncoder();
+    return new globalThis.ReadableStream<Uint8Array>({
+        async pull(controller) {
+            try {
+                const chunk = await iterator.next();
+                if (chunk.done) {
+                    controller.close();
+                    return;
+                }
+                controller.enqueue(
+                    typeof chunk.value === 'string'
+                        ? encoder.encode(chunk.value)
+                        : Uint8Array.from(chunk.value),
+                );
+            } catch (error) {
+                controller.error(error);
+            }
+        },
+        async cancel() {
+            await iterator.return?.();
+        },
+    });
+}
+
+async function handleCloudFullExport(
+    body: Record<string, unknown>,
+    credentials: CloudCredentials,
+    url: string,
+    requestSignal: AbortSignal,
+): Promise<Response> {
+    if (typeof body.sql !== 'string') return fail('SQL_REQUIRED', 'Enter SQL to run.');
+    const statement = body.sql.trim();
+    if (!statement || statement.length > MAX_SQL_CHARS)
+        return fail('SQL_REQUIRED', 'Enter one SQL statement to download.');
+    const statements = splitSql(statement);
+    if (statements.length !== 1)
+        return fail('SINGLE_STATEMENT', 'Download one SQL statement at a time.');
+    if (!isReadQuery(statement))
+        return fail('READ_ONLY_SQL', 'Only read-only SQL can be downloaded.', 403);
+    if (hasTopLevelOutputFormat(statement))
+        return fail('READ_ONLY_SQL', EXPLORATION_FORMAT_ERROR, 403);
+
+    const parameters = queryParameters(body.parameters);
+    const queryId = `clickstudio-run-${randomUUID()}`;
+    const client = makeClient(credentials, url);
+    const controller = new AbortController();
+    const abortFromRequest = () => controller.abort(requestSignal.reason);
+    const timeout = setTimeout(
+        () => controller.abort(new Error('The CSV download exceeded its time limit.')),
+        CLOUD_QUERY_TIMEOUT_MS,
+    );
+    requestSignal.addEventListener('abort', abortFromRequest, { once: true });
+    if (requestSignal.aborted) abortFromRequest();
+
+    let response: Awaited<ReturnType<typeof client.exec>>;
+    try {
+        response = await client.exec({
+            query: `${statements[0]!.sql}\nFORMAT CSVWithNames`,
+            query_id: queryId,
+            query_params: parameters,
+            abort_signal: controller.signal,
+            clickhouse_settings: clickhouseRunSettings,
+        });
+    } catch (error) {
+        clearTimeout(timeout);
+        requestSignal.removeEventListener('abort', abortFromRequest);
+        await client.close();
+        throw error;
+    }
+
+    let completed = false;
+    const csv = Readable.from(
+        (async function* () {
+            try {
+                for await (const chunk of response.stream) yield chunk;
+                completed = true;
+            } finally {
+                if (!completed) {
+                    controller.abort(new Error('The CSV download was closed.'));
+                    void cancelCloudQuery(credentials, url, queryId).catch(() => undefined);
+                }
+                clearTimeout(timeout);
+                requestSignal.removeEventListener('abort', abortFromRequest);
+                await client.close();
+            }
+        })(),
+    );
+    return new Response(webByteStream(csv), {
+        headers: {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': 'attachment; filename="clickstudio-full-result.csv"',
+            'Cache-Control': 'no-store',
+            'X-Accel-Buffering': 'no',
+        },
+    });
+}
+
 async function handleCloudWorkload(
     body: Record<string, unknown>,
     credentials: CloudCredentials,
@@ -1800,10 +1902,37 @@ async function handleCloudImportStatus(
     );
 }
 
+function parseCloudRequestBody(rawBody: string, contentType: string): unknown | Response {
+    if (contentType === 'application/x-www-form-urlencoded') {
+        try {
+            const form = new URLSearchParams(rawBody);
+            if (form.get('action') !== CLOUD_ACTIONS.fullExport)
+                return fail(
+                    'CONTENT_TYPE',
+                    'Use the export dialog to download a full result.',
+                    415,
+                );
+            return {
+                action: form.get('action'),
+                sql: form.get('sql'),
+                parameters: JSON.parse(form.get('parameters') ?? '{}') as unknown,
+                credentials: JSON.parse(form.get('credentials') ?? 'null') as unknown,
+            };
+        } catch {
+            return fail('REQUEST_BODY', 'The download request is not valid.');
+        }
+    }
+    try {
+        return JSON.parse(rawBody) as unknown;
+    } catch {
+        return fail('REQUEST_BODY', 'The request body is not valid JSON.');
+    }
+}
+
 async function post(request: Request): Promise<Response> {
     const contentType = request.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
     if (contentType === 'multipart/form-data') return await postCloudImport(request);
-    if (contentType !== 'application/json')
+    if (contentType !== 'application/json' && contentType !== 'application/x-www-form-urlencoded')
         return fail('CONTENT_TYPE', 'Send the ClickHouse request as JSON.', 415);
     if (!isSameOrigin(request))
         return fail(
@@ -1811,6 +1940,11 @@ async function post(request: Request): Promise<Response> {
             'This endpoint accepts requests from the ClickStudio site only.',
             403,
         );
+    if (
+        contentType === 'application/x-www-form-urlencoded' &&
+        request.headers.get('origin') !== new URL(request.url).origin
+    )
+        return fail('ORIGIN', 'Full result downloads must start from this site.', 403);
 
     let rawBody: string;
     try {
@@ -1820,12 +1954,8 @@ async function post(request: Request): Promise<Response> {
     }
     if (Buffer.byteLength(rawBody) > 220_000)
         return fail('REQUEST_SIZE', 'The Cloud request is larger than 220 KB.', 413);
-    let body: unknown;
-    try {
-        body = JSON.parse(rawBody) as unknown;
-    } catch {
-        return fail('REQUEST_BODY', 'The request body is not valid JSON.');
-    }
+    const body = parseCloudRequestBody(rawBody, contentType);
+    if (body instanceof Response) return body;
     if (!isRecord(body)) return fail('REQUEST_BODY', 'The request body must be a JSON object.');
     const validated = validateCredentials(body.credentials);
     if (validated instanceof Response) return validated;
@@ -1891,6 +2021,8 @@ async function post(request: Request): Promise<Response> {
             }
             case CLOUD_ACTIONS.run:
                 return await handleCloudRun(body, credentials, url);
+            case CLOUD_ACTIONS.fullExport:
+                return await handleCloudFullExport(body, credentials, url, request.signal);
             case CLOUD_ACTIONS.workload:
                 return await handleCloudWorkload(body, credentials, url);
             case CLOUD_ACTIONS.replication:

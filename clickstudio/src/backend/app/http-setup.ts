@@ -78,7 +78,13 @@ export function configureHttp(
         if (req.path.startsWith('/api')) {
             res.setHeader('Cache-Control', 'no-store');
             if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
-                if (req.get('x-clickstudio-intent') !== '1') {
+                const sameOriginCloudForm =
+                    req.method === 'POST' &&
+                    req.path === '/api/cloud' &&
+                    req.get('content-type')?.split(';')[0]?.trim().toLowerCase() ===
+                        'application/x-www-form-urlencoded' &&
+                    req.get('origin') === `${req.protocol}://${req.get('host') ?? ''}`;
+                if (req.get('x-clickstudio-intent') !== '1' && !sameOriginCloudForm) {
                     res.status(403).json({
                         error: {
                             code: 'REQUEST_INTENT',

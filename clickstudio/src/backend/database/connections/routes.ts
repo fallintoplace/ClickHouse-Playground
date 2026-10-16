@@ -1,7 +1,7 @@
 import { CLOUD_ACTIONS } from '../../../shared/database/connections/cloud-requests.js';
-import type express from 'express';
-import { type Express, type Request, type Response } from 'express';
+import express, { type Express, type Request, type Response } from 'express';
 import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import type cloudApi from './cloud-api.js';
 import type { Principal } from '../../../shared/common/identity.js';
 import type { RunService } from '../../queries/execution/runs.js';
@@ -40,6 +40,24 @@ function requestBody(request: Request): ReadableStream<Uint8Array> {
     });
 }
 
+async function* responseChunks(stream: globalThis.ReadableStream<Uint8Array>) {
+    const reader = stream.getReader();
+    let complete = false;
+    try {
+        while (true) {
+            const chunk = await reader.read();
+            if (chunk.done) {
+                complete = true;
+                return;
+            }
+            yield chunk.value;
+        }
+    } finally {
+        if (complete) reader.releaseLock();
+        else await reader.cancel().catch(() => undefined);
+    }
+}
+
 export function registerCloudApi(
     app: Express,
     config: Config,
@@ -56,7 +74,12 @@ export function registerCloudApi(
     };
     const forward = async (response: globalThis.Response, res: Response) => {
         response.headers.forEach((value, name) => res.setHeader(name, value));
-        res.status(response.status).send(Buffer.from(await response.arrayBuffer()));
+        res.status(response.status);
+        if (response.body && response.headers.get('content-type')?.startsWith('text/csv')) {
+            await pipeline(Readable.from(responseChunks(response.body)), res);
+            return;
+        }
+        res.send(Buffer.from(await response.arrayBuffer()));
     };
     const sameOrigin = (req: Request) => {
         const origin = req.get('origin');
@@ -160,14 +183,65 @@ export function registerCloudApi(
         res.clearCookie(CLOUD_SESSION_COOKIE, cloudSessionCookieOptions(config));
         res.status(204).end();
     });
+    app.use('/api/cloud', express.urlencoded({ extended: false, limit: '220kb' }));
     app.post('/api/cloud', async (req, res, next) => {
+        let removeCloseListener = () => {};
         try {
             const url = cloudUrl(req);
             const headers = cloudHeaders(req);
             const contentType = req.get('content-type') ?? '';
             const credentials = cloudSessions.credentials(req.get('cookie'));
             let request: globalThis.Request;
-            if (contentType.toLowerCase().startsWith('multipart/form-data') && credentials) {
+            if (contentType.toLowerCase().startsWith('application/x-www-form-urlencoded')) {
+                if (
+                    !sameOrigin(req) ||
+                    req.get('origin') !== `${req.protocol}://${req.get('host') ?? ''}`
+                ) {
+                    res.status(403).json({
+                        error: {
+                            code: 'ORIGIN',
+                            message: 'Full result downloads must start from this site.',
+                        },
+                    });
+                    return;
+                }
+                const form = isRecord(req.body) ? req.body : {};
+                if (form.action !== CLOUD_ACTIONS.fullExport) {
+                    res.status(415).json({
+                        error: {
+                            code: 'CONTENT_TYPE',
+                            message: 'Use the export dialog to download a full result.',
+                        },
+                    });
+                    return;
+                }
+                const formJson = (value: unknown) => {
+                    if (typeof value !== 'string') return undefined;
+                    try {
+                        return JSON.parse(value) as unknown;
+                    } catch {
+                        return null;
+                    }
+                };
+                const controller = new AbortController();
+                const abortDownload = () => {
+                    if (!res.writableEnded) controller.abort(new Error('The download was closed.'));
+                };
+                res.once('close', abortDownload);
+                removeCloseListener = () => res.off('close', abortDownload);
+                headers.set('content-type', 'application/json');
+                request = new globalThis.Request(url, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                        action: form.action,
+                        sql: form.sql,
+                        parameters: formJson(form.parameters),
+                        credentials: credentials ?? formJson(form.credentials),
+                    }),
+                    signal: controller.signal,
+                });
+            } else if (contentType.toLowerCase().startsWith('multipart/form-data') && credentials) {
                 const incomingHeaders = cloudHeaders(req);
                 incomingHeaders.set('content-type', contentType);
                 const incomingInit: RequestInit & { duplex?: 'half' } = {
@@ -179,7 +253,11 @@ export function registerCloudApi(
                 const incoming = new globalThis.Request(url, incomingInit);
                 const form = await incoming.formData();
                 form.set('credentials', JSON.stringify(credentials));
-                request = new globalThis.Request(url, { method: req.method, headers, body: form });
+                request = new globalThis.Request(url, {
+                    method: req.method,
+                    headers,
+                    body: form,
+                });
             } else if (contentType.toLowerCase().startsWith('multipart/form-data')) {
                 headers.set('content-type', contentType);
                 const incomingInit: RequestInit & { duplex?: 'half' } = {
@@ -224,6 +302,8 @@ export function registerCloudApi(
             await forward(response, res);
         } catch (error) {
             next(error);
+        } finally {
+            removeCloseListener();
         }
     });
 }

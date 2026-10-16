@@ -459,6 +459,30 @@ export function getClickHouseCloudConnection() {
     return activeCloud?.connection;
 }
 
+export function downloadClickHouseCloudCsv(sql: string, parameters: Record<string, string>) {
+    const cloud = requireCloudConnection('Reconnect to ClickHouse Cloud before downloading rows.');
+    const form = document.createElement('form');
+    form.method = 'post';
+    form.action = '/api/cloud';
+    form.hidden = true;
+    const values: Record<string, string> = {
+        action: 'full-export',
+        sql,
+        parameters: JSON.stringify(parameters),
+    };
+    if (cloud.credentials) values.credentials = JSON.stringify(cloud.credentials);
+    for (const [name, value] of Object.entries(values)) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        form.append(input);
+    }
+    document.body.append(form);
+    HTMLFormElement.prototype.submit.call(form);
+    form.remove();
+}
+
 export async function disconnectClickHouseCloud() {
     if (activeCloud?.localSession) await localCloudSession('DELETE', isNull);
     activeCloud = undefined;

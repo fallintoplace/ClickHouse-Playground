@@ -1,4 +1,7 @@
 import { DEFAULT_RESULT_PAGE_ROWS } from '../../../shared/queries/execution/limits.js';
+import { randomUUID } from 'node:crypto';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import type express from 'express';
 import type { Principal } from '../../../shared/common/identity.js';
 import type { RunService } from './runs.js';
@@ -105,6 +108,56 @@ export function registerRunRoutes({
         res.attachment(`${run.queryId}.${req.query.format === 'csv' ? 'csv' : 'json'}`);
         if (req.query.format === 'csv') res.type('text/csv').send(exportCsv(result));
         else res.json({ format: 'clickstudio-evidence', version: 1, run, result });
+    });
+    app.get('/api/runs/:id/full-export', async (req, res, next) => {
+        const p = principal(res),
+            run = runs.get(p, id(req));
+        requireThat(
+            run.kind === 'query' &&
+                run.dataSource === 'clickhouse' &&
+                (run.status === 'succeeded' || run.status === 'truncated'),
+            409,
+            'FULL_EXPORT_UNAVAILABLE',
+            'Run a completed ClickHouse query before downloading its full result.',
+        );
+        requireThat(
+            authorized(p, run.connectionId),
+            403,
+            'WORKSPACE_UNTRUSTED',
+            'Trust this connection before rerunning SQL.',
+        );
+        requireThat(
+            driver.exportFullCsv,
+            409,
+            'FULL_EXPORT_UNAVAILABLE',
+            'Full result downloads are unavailable for this connection.',
+        );
+
+        const exportRun = { ...run, queryId: `clickstudio-export-${randomUUID()}` };
+        const controller = new AbortController();
+        const abortExport = () => {
+            if (res.writableEnded) return;
+            controller.abort(new Error('The CSV download was closed.'));
+            void driver.cancel(exportRun).catch(() => undefined);
+        };
+        res.once('close', abortExport);
+        try {
+            const stream = await driver.exportFullCsv(exportRun, controller.signal);
+            if (controller.signal.aborted) return;
+            res.attachment(`${run.queryId}-full.csv`);
+            res.type('text/csv');
+            res.setHeader('Cache-Control', 'no-store');
+            res.setHeader('X-Accel-Buffering', 'no');
+            await pipeline(Readable.from(stream), res);
+        } catch (error) {
+            if (controller.signal.aborted || res.headersSent) {
+                res.end();
+                return;
+            }
+            next(error);
+        } finally {
+            res.off('close', abortExport);
+        }
     });
     app.post('/api/runs/:id/cancel', async (req, res) =>
         res.json(await runs.cancel(principal(res), id(req))),

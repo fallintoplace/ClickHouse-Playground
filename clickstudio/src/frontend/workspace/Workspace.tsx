@@ -26,6 +26,7 @@ import {
     inspectorRailNavigation,
 } from './layout/panels/inspector-navigation';
 import { PLAYGROUND_CONNECTION_ID } from '../database/connections/playground-client';
+import { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../database/connections/cloud-connection';
 import { closeDraft, newDraft, type Draft } from '../queries/editor/drafts/workspace-state';
 
 import { WorkspaceToast } from './layout/notifications/WorkspaceToast';
@@ -627,6 +628,7 @@ function renderWorkspaceOverlays({
         setExportOpen,
         exportCurrentQuery,
         exportCurrentCsv,
+        downloadFullResultCsv,
         restoreRevisionConfirmation,
         setRestoreRevisionConfirmation,
         restoreDocumentRevision,
@@ -694,6 +696,14 @@ function renderWorkspaceOverlays({
                 open={exportOpen}
                 queryAvailable={Boolean(active.sql.trim())}
                 rowsAvailable={run?.resultState === 'reopenable'}
+                fullResultAvailable={Boolean(
+                    run &&
+                    run.kind === 'query' &&
+                    (run.status === 'succeeded' || run.status === 'truncated') &&
+                    run.dataSource === 'clickhouse' &&
+                    (!demoMode || run.connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID) &&
+                    (run.connectionId !== PLAYGROUND_CONNECTION_ID || !demoMode),
+                )}
                 onClose={() => setExportOpen(false)}
                 onExportQuery={() => {
                     setExportOpen(false);
@@ -702,6 +712,10 @@ function renderWorkspaceOverlays({
                 onExportRows={() => {
                     setExportOpen(false);
                     void exportCurrentCsv();
+                }}
+                onDownloadFullResult={() => {
+                    setExportOpen(false);
+                    downloadFullResultCsv();
                 }}
             />
             <RestoreRevisionDialog
