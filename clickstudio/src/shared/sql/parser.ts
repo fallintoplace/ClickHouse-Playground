@@ -163,6 +163,53 @@ export function utf8ByteOffsetToUtf16Index(value: string, byteOffset: number): n
     return Math.min(index, value.length);
 }
 
+function utf8CharacterByteLength(character: string): number {
+    const codePoint = character.codePointAt(0)!;
+    if (codePoint < 0x80) return 1;
+    if (codePoint < 0x800) return 2;
+    if (codePoint < 0x10000) return 3;
+    return 4;
+}
+
+function utf8ByteOffsetsToUtf16Indices(value: string, byteOffsets: readonly number[]) {
+    const indices = new Array<number>(byteOffsets.length);
+    const orderedOffsets = byteOffsets
+        .map((byteOffset, index) => ({
+            byteOffset: Number.isFinite(byteOffset) && byteOffset > 0 ? byteOffset : 0,
+            index,
+        }))
+        .sort((left, right) => left.byteOffset - right.byteOffset);
+    let nextOffset = 0,
+        bytes = 0,
+        index = 0;
+
+    for (const character of value) {
+        const nextBytes = bytes + utf8CharacterByteLength(character);
+        while (
+            nextOffset < orderedOffsets.length &&
+            orderedOffsets[nextOffset]!.byteOffset < nextBytes
+        ) {
+            indices[orderedOffsets[nextOffset]!.index] = index;
+            nextOffset++;
+        }
+        bytes = nextBytes;
+        index += character.length;
+        while (
+            nextOffset < orderedOffsets.length &&
+            orderedOffsets[nextOffset]!.byteOffset === bytes
+        ) {
+            indices[orderedOffsets[nextOffset]!.index] = index;
+            nextOffset++;
+        }
+    }
+
+    while (nextOffset < orderedOffsets.length) {
+        indices[orderedOffsets[nextOffset]!.index] = index;
+        nextOffset++;
+    }
+    return { indices, byteLength: bytes };
+}
+
 export function sourcePositionFromUtf8ByteOffset(
     value: string,
     byteOffset: number,
@@ -273,12 +320,19 @@ export function nativeHighlightRanges(
     statementFrom: number,
     highlights: readonly NativeHighlight[] = [],
 ): NativeHighlightRange[] {
-    const byteLength = encoder.encode(sql).length;
-    return highlights.flatMap(highlight => {
-        if (highlight.begin < 0 || highlight.end <= highlight.begin || highlight.end > byteLength)
-            return [];
-        const from = statementFrom + utf8ByteOffsetToUtf16Index(sql, highlight.begin);
-        const to = statementFrom + utf8ByteOffsetToUtf16Index(sql, highlight.end);
+    const validHighlights = highlights.filter(
+        highlight => !(highlight.begin < 0 || highlight.end <= highlight.begin),
+    );
+    if (!validHighlights.length) return [];
+
+    const { indices, byteLength } = utf8ByteOffsetsToUtf16Indices(
+        sql,
+        validHighlights.flatMap(highlight => [highlight.begin, highlight.end]),
+    );
+    return validHighlights.flatMap((highlight, highlightIndex) => {
+        if (highlight.end > byteLength) return [];
+        const from = statementFrom + (indices[highlightIndex * 2] ?? 0);
+        const to = statementFrom + (indices[highlightIndex * 2 + 1] ?? 0);
         return to > from ? [{ from, to, type: highlight.type }] : [];
     });
 }

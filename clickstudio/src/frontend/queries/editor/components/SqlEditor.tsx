@@ -114,20 +114,17 @@ const nativeDecorationClasses: Partial<Record<NativeHighlightType, string>> = {
 
 function decorationsForNativeResults(statements: readonly NativeParseStatement[]): DecorationSet {
     const ranges = statements
-        .flatMap(statement =>
-            nativeHighlightRanges(statement.sql, statement.from, statement.result.highlights),
-        )
-        .flatMap(range =>
-            nativeDecorationClasses[range.type]
-                ? [
-                      {
-                          from: range.from,
-                          to: range.to,
-                          className: nativeDecorationClasses[range.type]!,
-                      },
-                  ]
-                : [],
-        )
+        .flatMap(statement => {
+            const highlights =
+                statement.result.highlights?.filter(
+                    highlight => nativeDecorationClasses[highlight.type] !== undefined,
+                ) ?? [];
+            return nativeHighlightRanges(statement.sql, statement.from, highlights).map(range => ({
+                from: range.from,
+                to: range.to,
+                className: nativeDecorationClasses[range.type]!,
+            }));
+        })
         .sort((left, right) => left.from - right.from || left.to - right.to);
     return Decoration.set(
         ranges.map(range =>

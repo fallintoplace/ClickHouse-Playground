@@ -143,6 +143,33 @@ test('native semantic highlights map UTF-8 ranges to statement-relative UTF-16 p
     );
 });
 
+test('native highlights preserve every UTF-8 byte range across Unicode boundaries', () => {
+    const sql = 'aé你🙂'.repeat(12) + 'aé';
+    const byteLength = bytes(sql);
+    const highlights = [];
+
+    for (let begin = 0; begin < byteLength; begin++) {
+        for (let end = begin + 1; end <= byteLength; end++) {
+            highlights.push({ begin, end, type: 'function' });
+        }
+    }
+    highlights.push(
+        { begin: 0, end: byteLength + 1, type: 'function' },
+        { begin: byteLength + 1, end: byteLength + 2, type: 'function' },
+        { begin: -1, end: 1, type: 'function' },
+    );
+    assert.equal(highlights.length, 7629);
+
+    const expected = highlights.flatMap(highlight => {
+        if (highlight.begin < 0 || highlight.end <= highlight.begin || highlight.end > byteLength)
+            return [];
+        const from = 19 + utf8ByteOffsetToUtf16Index(sql, highlight.begin);
+        const to = 19 + utf8ByteOffsetToUtf16Index(sql, highlight.end);
+        return to > from ? [{ from, to, type: highlight.type }] : [];
+    });
+    assert.deepEqual(nativeHighlightRanges(sql, 19, highlights), expected);
+});
+
 test('native diagnostics show a bounded expected-token hint', () => {
     const expected = [
         'FROM',

@@ -20,6 +20,12 @@ import {
 import { test, expect, type Page } from '@playwright/test';
 import { chooseChartOption } from './chart-control-helpers.js';
 import { DEFAULT_LIMITS } from '../../src/shared/queries/execution/settings.js';
+import { readFileSync } from 'node:fs';
+
+const summerShopSql = readFileSync(
+    new URL('./fixtures/summer-shop-traffic.sql', import.meta.url),
+    'utf8',
+);
 
 declare global {
     interface Window {
@@ -29,6 +35,8 @@ declare global {
         __resolveDelayedNativeParse: () => void;
         __pendingParserFormat?: number;
         __failParserWorker: () => void;
+        __maxFrameGapMs?: number;
+        __resetFrameGapMeasurement: () => void;
     }
 }
 
@@ -128,6 +136,23 @@ function parserWorkerStub(initialStatus: 'ready' | 'unavailable', initialResult:
             },
         });
         window.__failParserWorker = () => window.__testParserWorker.dispatchEvent(new ErrorEvent('error', { message: 'Temporary parser failure' }));
+    })();`;
+}
+
+function frameGapProbe() {
+    return `(() => {
+        let previousFrame = performance.now();
+        window.__maxFrameGapMs = 0;
+        window.__resetFrameGapMeasurement = () => {
+            previousFrame = performance.now();
+            window.__maxFrameGapMs = 0;
+        };
+        const sampleFrame = (now) => {
+            window.__maxFrameGapMs = Math.max(window.__maxFrameGapMs || 0, now - previousFrame);
+            previousFrame = now;
+            requestAnimationFrame(sampleFrame);
+        };
+        requestAnimationFrame(sampleFrame);
     })();`;
 }
 
@@ -1689,6 +1714,75 @@ test('Native parser can be retried after a temporary worker failure', async ({ p
         .poll(() => page.evaluate(() => Number(window.__parserParseCount ?? 0)))
         .toBeGreaterThan(0);
 });
+
+for (const parserMode of ['native', 'unavailable'] as const) {
+    test(`Opening the summer shop SQL stays responsive with the ${parserMode} parser`, async ({
+        page,
+    }) => {
+        await page.addInitScript(frameGapProbe());
+        if (parserMode === 'unavailable') await page.addInitScript(parserWorkerStub('unavailable'));
+        await page.goto('/');
+
+        const editor = page.locator('.cm-content');
+        await expect(editor).toBeVisible();
+        await page.getByRole('button', { name: 'Import', exact: true }).click();
+        const dialog = page.getByRole('dialog', { name: 'Import data', exact: true });
+        await dialog.getByRole('button', { name: /Open SQL file/ }).click();
+        await dialog.getByLabel('Choose a SQL query file').setInputFiles({
+            name: 'summer-shop-traffic.sql',
+            mimeType: 'application/sql',
+            buffer: Buffer.from(summerShopSql),
+        });
+        const openStartedAt = await page.evaluate(() => {
+            window.__resetFrameGapMeasurement();
+            return performance.now();
+        });
+        await dialog.getByRole('button', { name: 'Open query', exact: true }).click();
+        await expect(dialog).toBeHidden();
+        await expect(editor).toContainText('ClickStudio demo: summer shop traffic.');
+        const openingMetrics = await page.evaluate(
+            startedAt => ({
+                durationMs: performance.now() - startedAt,
+                maxFrameGapMs: window.__maxFrameGapMs ?? 0,
+            }),
+            openStartedAt,
+        );
+
+        await page.evaluate(() => window.__resetFrameGapMeasurement());
+        const parserWaitStartedAt = await page.evaluate(() => performance.now());
+        const nativeFunctions = page.locator('.cm-native-function');
+        if (parserMode === 'native') {
+            await expect(nativeFunctions.first()).toBeVisible({ timeout: 15_000 });
+            await expect.poll(() => nativeFunctions.count()).toBeGreaterThan(10);
+        } else {
+            await page.waitForTimeout(350);
+            expect(await page.evaluate(() => Number(window.__parserParseCount ?? 0))).toBe(0);
+            await expect(nativeFunctions).toHaveCount(0);
+        }
+        await page.evaluate(
+            () =>
+                new Promise<void>(resolve => {
+                    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+                }),
+        );
+        const parserMetrics = await page.evaluate(
+            startedAt => ({
+                durationMs: performance.now() - startedAt,
+                maxFrameGapMs: window.__maxFrameGapMs ?? 0,
+            }),
+            parserWaitStartedAt,
+        );
+
+        expect(openingMetrics.maxFrameGapMs, 'frame gap while opening SQL').toBeLessThan(500);
+        expect(
+            parserMetrics.maxFrameGapMs,
+            'frame gap after the 250 ms parse debounce',
+        ).toBeLessThan(500);
+        console.log(
+            `summer shop ${parserMode}: open ${openingMetrics.durationMs.toFixed(1)} ms / ${openingMetrics.maxFrameGapMs.toFixed(1)} ms max frame gap; parse ${parserMetrics.durationMs.toFixed(1)} ms / ${parserMetrics.maxFrameGapMs.toFixed(1)} ms max frame gap`,
+        );
+    });
+}
 
 test('Experimental parser inspector shows native AST, UTF-8 semantic highlights, and expected tokens', async ({
     page,
