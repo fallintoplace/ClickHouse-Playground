@@ -55,6 +55,11 @@ import {
 import { AppError, requireThat } from '../../system/requests/errors.js';
 import { collectCompactStream } from './result-stream.js';
 import type { QueryDriver } from '../../queries/execution/runs.js';
+import type { LargeCellContext } from '../../queries/execution/large-cells.js';
+import {
+    MAX_LARGE_CELL_BYTES_PER_RESULT,
+    MAX_LARGE_CELL_ROW_BYTES,
+} from '../../../shared/queries/results/large-cells.js';
 import type { ImportDriver } from '../imports/imports.js';
 import {
     createTableSql,
@@ -634,7 +639,12 @@ export class ClickHouseDriver implements QueryDriver, ImportDriver, CreateTableD
               }
             : undefined;
     }
-    async execute(run: Run, signal: AbortSignal, progress: (p: Progress) => void) {
+    async execute(
+        run: Run,
+        signal: AbortSignal,
+        progress: (p: Progress) => void,
+        largeCells?: LargeCellContext,
+    ) {
         let timer: ReturnType<typeof setInterval> | undefined,
             polling = false;
         const statement = splitSql(run.sql)[0]!.sql;
@@ -683,7 +693,12 @@ export class ClickHouseDriver implements QueryDriver, ImportDriver, CreateTableD
                     max_memory_usage: String(run.limits.memory),
                     max_threads: run.limits.threads,
                     max_result_rows: maxResultRows,
-                    max_result_bytes: '50000000',
+                    // The stream collector needs room for retained rows, detached cells, and one bounded row.
+                    max_result_bytes: String(
+                        run.limits.bytes +
+                            MAX_LARGE_CELL_BYTES_PER_RESULT +
+                            MAX_LARGE_CELL_ROW_BYTES,
+                    ),
                     result_overflow_mode: 'throw',
                     max_rows_to_read: '100000000',
                     max_bytes_to_read: '5000000000',
@@ -692,7 +707,7 @@ export class ClickHouseDriver implements QueryDriver, ImportDriver, CreateTableD
                     log_comment: JSON.stringify(run.tags),
                 },
             });
-            const result = await collectCompactStream(response.stream, run.limits);
+            const result = await collectCompactStream(response.stream, run.limits, largeCells);
             if (result.truncated) void this.cancel(run).catch(() => undefined);
             return {
                 ...result,

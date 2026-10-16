@@ -1,6 +1,6 @@
 import {
+    chartCategoryLabel,
     chartNumber,
-    displayValue,
     MAX_CHART_RENDER_POINTS,
     MAX_CHART_SERIES,
     numericType,
@@ -162,7 +162,7 @@ export function prepareChartView({
         columnIndex,
         color: seriesColor(seriesIndex),
         points: chartRows.map((row, index) => ({
-            label: displayValue(row[xIndex]),
+            label: chartCategoryLabel(row[xIndex], result.largeCellToken),
             value: chartNumber(row[columnIndex]),
             index,
         })),
@@ -216,10 +216,25 @@ export function prepareChartView({
     const collator = new Intl.Collator('en', { numeric: true, sensitivity: 'base' });
     const heatmap =
         chartKind === 'heatmap' && groupByIndex !== undefined
-            ? prepareHeatmap(result.rows, xIndex, groupByIndex, yIndex)
+            ? prepareHeatmap(
+                  result.rows,
+                  xIndex,
+                  groupByIndex,
+                  yIndex,
+                  undefined,
+                  result.largeCellToken,
+              )
             : undefined;
-    const heatmapXLabels = [...(heatmap?.xLabels ?? [])].sort(collator.compare);
-    const heatmapYLabels = [...(heatmap?.yLabels ?? [])].sort(collator.compare);
+    const sortedHeatmapX = (heatmap?.xLabels ?? [])
+        .map((label, index) => ({ label, key: heatmap?.xKeys[index] ?? label }))
+        .sort((left, right) => collator.compare(left.label, right.label));
+    const sortedHeatmapY = (heatmap?.yLabels ?? [])
+        .map((label, index) => ({ label, key: heatmap?.yKeys[index] ?? label }))
+        .sort((left, right) => collator.compare(left.label, right.label));
+    const heatmapXLabels = sortedHeatmapX.map(category => category.label);
+    const heatmapXKeys = sortedHeatmapX.map(category => category.key);
+    const heatmapYLabels = sortedHeatmapY.map(category => category.label);
+    const heatmapYKeys = sortedHeatmapY.map(category => category.key);
     const heatmapMaximum = heatmap?.maximum ?? 0;
     const heatmapTooLarge = heatmap?.tooLarge ?? false;
     const compactNumber = new Intl.NumberFormat('en', {
@@ -309,7 +324,9 @@ export function prepareChartView({
         heatmapTooLarge,
         heatmap,
         heatmapXLabels,
+        heatmapXKeys,
         heatmapYLabels,
+        heatmapYKeys,
         heatmapMaximum,
         compactNumber: tickNumber,
         values,

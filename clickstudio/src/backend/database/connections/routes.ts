@@ -14,6 +14,7 @@ import { cloudSessionCookieOptions } from './cookies.js';
 import { body, principal, id, boolean } from '../../system/requests/request-accessors.js';
 import type { Driver } from '../../app/types.js';
 import { isRecord } from '../../../shared/common/values.js';
+import { cloudCellOwnerKey, type LargeCellStore } from '../../queries/execution/large-cells.js';
 
 function requestBody(request: Request): ReadableStream<Uint8Array> {
     const reader = Readable.toWeb(request).getReader();
@@ -63,6 +64,7 @@ export function registerCloudApi(
     config: Config,
     cloudSessions: CloudConnectionSessions,
     cloudApiClient: Pick<typeof cloudApi, 'fetch'>,
+    largeCells?: LargeCellStore,
 ) {
     const cloudUrl = (req: Request) =>
         new URL('/api/cloud', `${req.protocol}://${req.get('host') ?? '127.0.0.1'}`);
@@ -85,6 +87,34 @@ export function registerCloudApi(
         const origin = req.get('origin');
         return !origin || origin === `${req.protocol}://${req.get('host') ?? ''}`;
     };
+    app.get('/api/cloud/cells/:queryId/:cellId', (req, res) => {
+        if (!sameOrigin(req)) {
+            res.status(403).json({
+                error: {
+                    code: 'ORIGIN',
+                    message: 'Large cell downloads must start from this site.',
+                },
+            });
+            return;
+        }
+        const credentials = cloudSessions.credentials(req.get('cookie'));
+        requireThat(
+            credentials,
+            401,
+            'CLOUD_DISCONNECTED',
+            'Reconnect to ClickHouse Cloud before downloading this value.',
+        );
+        const cell = largeCells?.get(
+            cloudCellOwnerKey(credentials),
+            req.params.queryId!,
+            req.params.cellId!,
+        );
+        requireThat(cell, 404, 'CELL_VALUE_UNAVAILABLE', 'This large cell value is unavailable.');
+        res.setHeader('Cache-Control', 'no-store');
+        res.attachment(cell.fileName);
+        res.setHeader('Content-Type', cell.mimeType);
+        res.send(cell.value);
+    });
     app.get('/api/cloud/session', (req, res) => {
         res.setHeader('Cache-Control', 'no-store');
         const snapshot = cloudSessions.snapshot(req.get('cookie'));
@@ -291,7 +321,7 @@ export function registerCloudApi(
                         : { duplex: 'half' as const }),
                 });
             }
-            const response = await cloudApiClient.fetch(request);
+            const response = await cloudApiClient.fetch(request, { largeCells });
             if (
                 response.ok &&
                 contentType.toLowerCase().startsWith('application/json') &&

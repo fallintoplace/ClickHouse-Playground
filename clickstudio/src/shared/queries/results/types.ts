@@ -6,6 +6,7 @@ export type ResultTruncationReason = 'rows' | 'bytes';
 export interface Result {
     runId: string;
     queryId: string;
+    largeCellToken?: string;
     columns: Column[];
     rows: Row[];
     completeness: ResultCompleteness;

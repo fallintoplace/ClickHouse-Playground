@@ -1,4 +1,5 @@
 import { exportCsv } from '../../../shared/queries/results/results';
+import { isRecord } from '../../../shared/common/values';
 import { api, apiResponses, download, isFrontendDemoPreview, message } from '../../api/client';
 import {
     CLICKHOUSE_CLOUD_CONNECTION_ID,
@@ -7,6 +8,7 @@ import {
 import type { Draft } from '../editor/drafts/workspace-state';
 import type { useRunEvidence } from '../execution/useRunEvidence';
 import type { useWorkspaceNotifications } from '../../workspace/layout/notifications/useWorkspaceNotifications';
+import { hydrateLargeCells, largeCellUrl } from './large-cell-actions';
 
 export function createQueryExportActions({
     setError,
@@ -22,20 +24,43 @@ export function createQueryExportActions({
         if (!run) return;
         try {
             if (isFrontendDemoPreview || run.connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID) {
-                const full =
+                let full =
                     snapshot?.runId === run.id
                         ? snapshot
                         : await api(
                               `/runs/${encodeURIComponent(run.id)}/snapshot`,
                               apiResponses.isResultResponse,
                           );
+                if (run.connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID)
+                    full = await hydrateLargeCells(full, cellId =>
+                        largeCellUrl(run.id, run.queryId, true, cellId),
+                    );
                 download(`${run.queryId}.csv`, exportCsv(full), 'text/csv;charset=utf-8');
                 return;
             }
+            const response = await fetch(
+                `/api/runs/${encodeURIComponent(run.id)}/export?format=csv`,
+                {
+                    credentials: 'same-origin',
+                    headers: { 'X-ClickStudio-Intent': '1' },
+                },
+            );
+            if (!response.ok) {
+                const content: unknown = await response.json().catch(() => null);
+                const error =
+                    isRecord(content) &&
+                    isRecord(content.error) &&
+                    typeof content.error.message === 'string'
+                        ? content.error.message
+                        : `The server returned HTTP ${response.status}.`;
+                throw new Error(error);
+            }
+            const objectUrl = URL.createObjectURL(await response.blob());
             const link = document.createElement('a');
-            link.href = `/api/runs/${encodeURIComponent(run.id)}/export?format=csv`;
+            link.href = objectUrl;
             link.download = `${run.queryId}.csv`;
             link.click();
+            window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
         } catch (caught) {
             setError('Couldn’t prepare the CSV export. Try again.', { detail: message(caught) });
         }

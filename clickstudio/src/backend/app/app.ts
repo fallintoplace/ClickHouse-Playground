@@ -35,6 +35,7 @@ import { registerMonitorRoutes } from '../queries/monitoring/routes.js';
 import { assistantConnectionAuthorized } from '../assistant/context/authorization.js';
 import { createSecretGuards } from '../system/requests/secrets.js';
 import { registerPythonFunctionRoutes } from '../database/functions/python-function-routes.js';
+import { LargeCellStore } from '../queries/execution/large-cells.js';
 
 export function createApp(
     config: Config,
@@ -51,8 +52,16 @@ export function createApp(
         store = overrides.store ?? new FileStore(config.dataDir),
         driver: Driver =
             overrides.driver ?? (config.demo ? new DemoDriver() : new ClickHouseDriver(config));
-    const runs = new RunService(store, driver, (p, c) => driver.connection(p, c)),
-        artifacts = new ArtifactService(store, runs, (p, c) => driver.connection(p, c));
+    const largeCells = new LargeCellStore(store);
+    largeCells.sweepExpiredCloudCells();
+    largeCells.trimToCapacity();
+    const largeCellExpirySweep = setInterval(
+        () => largeCells.sweepExpiredCloudCells(),
+        60 * 60 * 1000,
+    );
+    largeCellExpirySweep.unref();
+    const runs = new RunService(store, driver, (p, c) => driver.connection(p, c), { largeCells }),
+        artifacts = new ArtifactService(store, runs, (p, c) => driver.connection(p, c), largeCells);
     for (const profile of config.profiles)
         if (profile.publicPlayground)
             runs.trust({ id: 'local-owner', role: 'owner' }, profile.id, true);
@@ -82,7 +91,7 @@ export function createApp(
     const { secretFree, safeExport } = createSecretGuards(config);
     configureHttp(app, config, runs, artifacts, sessions, cloudSessions, parserWasm);
     const closeMcp = registerMcpRoutes(app, { config, driver, runs, safeExport });
-    registerCloudApi(app, config, cloudSessions, overrides.cloudApi ?? cloudApi);
+    registerCloudApi(app, config, cloudSessions, overrides.cloudApi ?? cloudApi, largeCells);
     registerConnectionRoutes({ app, driver, runs, authorized });
     registerPythonFunctionRoutes({
         app,
@@ -97,7 +106,17 @@ export function createApp(
     registerDocumentationRoutes({ authorized, driver, app });
     registerTableRoutes({ app, tableCreation, tableDeletion, driver, authorized });
     registerDatabaseRoutes({ app, databaseDeletion, driver, runs });
-    registerRunRoutes({ app, runs, store, sessions, safeExport, authorized, driver, config });
+    registerRunRoutes({
+        app,
+        runs,
+        store,
+        sessions,
+        safeExport,
+        authorized,
+        driver,
+        config,
+        largeCells,
+    });
     registerDocumentRoutes({ app, driver, artifacts, safeExport });
     registerAssistantRoutes({
         app,
@@ -161,6 +180,7 @@ export function createApp(
         monitors,
         driver,
         close: async () => {
+            clearInterval(largeCellExpirySweep);
             await closeMcp();
             await runs.close();
             await driver.close();

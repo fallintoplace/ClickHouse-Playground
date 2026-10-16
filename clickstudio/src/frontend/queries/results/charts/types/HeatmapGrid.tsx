@@ -16,7 +16,9 @@ export function HeatmapGrid({
     groupByIndex,
     xIndex,
     heatmapXLabels,
+    heatmapXKeys,
     heatmapYLabels,
+    heatmapYKeys,
     heatmap,
     heatmapMaximum,
     compactNumber,
@@ -27,7 +29,9 @@ export function HeatmapGrid({
     groupByIndex: number;
     xIndex: number;
     heatmapXLabels: string[];
+    heatmapXKeys: string[];
     heatmapYLabels: string[];
+    heatmapYKeys: string[];
     heatmap: HeatmapPreparation;
     heatmapMaximum: number;
     compactNumber: Intl.NumberFormat;
@@ -59,11 +63,11 @@ export function HeatmapGrid({
                                     {result.columns[groupByIndex]?.name} /{' '}
                                     {result.columns[xIndex]?.name}
                                 </th>
-                                {heatmapXLabels.map(label => (
+                                {heatmapXLabels.map((label, index) => (
                                     <th
                                         className="heatmap-axis-label"
                                         scope="col"
-                                        key={`x-${label}`}
+                                        key={`x-${heatmapXKeys[index]}`}
                                         data-overflow-title={label}
                                     >
                                         {label}
@@ -72,8 +76,8 @@ export function HeatmapGrid({
                             </tr>
                         </thead>
                         <tbody>
-                            {heatmapYLabels.map(yLabel => (
-                                <tr key={`y-${yLabel}`}>
+                            {heatmapYLabels.map((yLabel, yIndex) => (
+                                <tr key={`y-${heatmapYKeys[yIndex]}`}>
                                     <th
                                         className="heatmap-axis-label heatmap-row-label"
                                         scope="row"
@@ -81,8 +85,11 @@ export function HeatmapGrid({
                                     >
                                         {yLabel}
                                     </th>
-                                    {heatmapXLabels.map(xLabel => {
-                                        const key = heatmapCellKey(xLabel, yLabel);
+                                    {heatmapXLabels.map((xLabel, xIndex) => {
+                                        const key = heatmapCellKey(
+                                            heatmapXKeys[xIndex]!,
+                                            heatmapYKeys[yIndex]!,
+                                        );
                                         const value = heatmap.cells.get(key);
                                         const hasRow = heatmap.present.has(key);
                                         const missing = !hasRow;
@@ -107,7 +114,7 @@ export function HeatmapGrid({
                                         return (
                                             <td
                                                 className="heatmap-cell"
-                                                key={`${yLabel}-${xLabel}`}
+                                                key={`${heatmapYKeys[yIndex]}-${heatmapXKeys[xIndex]}`}
                                                 title={`${result.columns[groupByIndex]?.name}: ${yLabel} · ${result.columns[xIndex]?.name}: ${xLabel} · ${result.columns[yIndex]?.name}: ${cellDescription}`}
                                                 aria-label={`${yLabel}, ${xLabel}: ${cellDescription}`}
                                                 style={{

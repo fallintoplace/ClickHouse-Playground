@@ -29,6 +29,7 @@ import { AppError, asError, requireThat } from '../../system/requests/errors.js'
 import { canWrite, mustOwn } from '../../system/login/permissions.js';
 import { guardRun } from './guards.js';
 import { audit, hash, type Store } from '../../system/store.js';
+import { LargeCellStore, type LargeCellContext } from './large-cells.js';
 import { limits, runRequest } from '../../system/requests/validation.js';
 export interface DriverResult {
     columns: Column[];
@@ -48,6 +49,7 @@ export interface QueryDriver {
         run: Run,
         signal: AbortSignal,
         progress: (value: Progress) => void,
+        largeCells?: LargeCellContext,
     ): Promise<DriverResult>;
     exportFullCsv?(run: Run, signal: AbortSignal): Promise<AsyncIterable<Buffer | string>>;
     cancel(run: Run): Promise<void>;
@@ -130,14 +132,17 @@ export class RunService {
     private readonly queue: string[] = [];
     private active = 0;
     private closed = false;
+    private readonly largeCells: LargeCellStore;
     constructor(
         public readonly store: Store,
         private readonly driver: QueryDriver,
         private readonly connection: (principal: Principal, id: string) => Connection,
         private readonly options: {
             concurrency?: number;
+            largeCells?: LargeCellStore;
         } = {},
     ) {
+        this.largeCells = options.largeCells ?? new LargeCellStore(store);
         for (const result of store.list('results', isStoredResult)) {
             if (!('expiresAt' in result)) continue;
             delete result.expiresAt;
@@ -156,6 +161,7 @@ export class RunService {
             const run: Run = { ...stored, resultState };
             if (legacy || resultState !== stored.resultState) store.put('runs', run.id, run);
             if (!terminal(run)) {
+                this.largeCells.deleteRun(run.owner, run.queryId);
                 run.status = 'interrupted';
                 run.finishedAt = new Date().toISOString();
                 run.resultState = 'unavailable';
@@ -503,6 +509,7 @@ export class RunService {
         );
         this.store.delete('results', id);
         this.store.delete('runs', id);
+        this.largeCells.deleteRun(run.owner, run.queryId);
         audit(this.store, principal, 'run.delete', id);
     }
     private warning(id: string, message: string) {
@@ -556,7 +563,10 @@ export class RunService {
         this.controllers.set(id, controller);
         let timeout: ReturnType<typeof setTimeout> | undefined;
         let removeAbort = () => {};
+        let releaseLargeCellRun = () => {};
+        let driverExecutionOwnsLargeCellLease = false;
         const start = performance.now();
+        const largeCellToken = randomUUID();
         try {
             // Trust is rechecked when queued work actually starts, not just when it is submitted.
             requireThat(
@@ -587,15 +597,26 @@ export class RunService {
                 controller.signal.addEventListener('abort', onAbort, { once: true });
                 removeAbort = () => controller.signal.removeEventListener('abort', onAbort);
             });
-            const output = await Promise.race([
-                this.driver.execute(run, controller.signal, progress => {
+            releaseLargeCellRun = this.largeCells.protectRun(principal.id, run.queryId);
+            const execution = this.driver.execute(
+                run,
+                controller.signal,
+                progress => {
                     if (controller.signal.aborted || run.status !== 'running') return;
                     run.progress = progress;
                     run.elapsedMs = performance.now() - start;
                     this.emit(run, 'progress', { persist: false });
-                }),
-                aborted,
-            ]);
+                },
+                {
+                    store: this.largeCells,
+                    ownerKey: principal.id,
+                    runId: run.queryId,
+                    referenceToken: largeCellToken,
+                },
+            );
+            driverExecutionOwnsLargeCellLease = true;
+            void execution.then(releaseLargeCellRun, releaseLargeCellRun);
+            const output = await Promise.race([execution, aborted]);
             if (controller.signal.aborted) throw controller.signal.reason;
             const bounded = boundResult(output, run.limits);
             run.columns = bounded.columns;
@@ -618,6 +639,7 @@ export class RunService {
             const result: Result = {
                 runId: id,
                 queryId: run.queryId,
+                largeCellToken,
                 columns: bounded.columns,
                 rows: bounded.rows,
                 completeness: bounded.truncated ? 'truncated' : 'complete',
@@ -627,6 +649,7 @@ export class RunService {
             this.store.put('results', id, result);
             run.resultState = 'reopenable';
         } catch (error) {
+            this.largeCells.deleteRun(principal.id, run.queryId);
             const e = asError(error);
             run.error = e;
             run.resultState = 'unavailable';
@@ -647,6 +670,7 @@ export class RunService {
         } finally {
             if (timeout) clearTimeout(timeout);
             removeAbort();
+            if (!driverExecutionOwnsLargeCellLease) releaseLargeCellRun();
             this.controllers.delete(id);
             run.elapsedMs = Math.round(performance.now() - start);
             run.finishedAt = new Date().toISOString();

@@ -537,6 +537,7 @@ export class BrowserWorkspaceApi {
                 const result: Result = {
                     runId: id,
                     queryId: response.queryId,
+                    largeCellToken: response.largeCellToken,
                     columns: response.columns,
                     rows: response.rows,
                     completeness: response.truncated ? 'truncated' : 'complete',
@@ -780,6 +781,7 @@ export class BrowserWorkspaceApi {
         const result: Result = {
             runId: run.id,
             queryId: response.queryId,
+            largeCellToken: response.largeCellToken,
             columns: response.columns,
             rows: response.rows,
             completeness: response.truncated ? 'truncated' : 'complete',

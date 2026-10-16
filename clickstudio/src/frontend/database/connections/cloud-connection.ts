@@ -61,6 +61,7 @@ export type { CloudCredentials } from '../../../shared/database/connections/clou
 export type SavedCloudConnectionProfile = Pick<CloudCredentials, 'host' | 'database' | 'username'>;
 export type CloudQueryResult = {
     queryId: string;
+    largeCellToken?: string;
     columns: Column[];
     rows: Row[];
     elapsedMs: number;
@@ -238,6 +239,7 @@ function isCloudQueryResult(value: unknown): value is CloudQueryResult {
     return (
         isRecord(value) &&
         typeof value.queryId === 'string' &&
+        (value.largeCellToken === undefined || typeof value.largeCellToken === 'string') &&
         Array.isArray(value.columns) &&
         value.columns.every(
             column =>

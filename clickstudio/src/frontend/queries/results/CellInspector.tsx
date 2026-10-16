@@ -4,6 +4,8 @@ import { download } from '../../api/client';
 import { useDialogFocus } from '../../ui/focus/useDialogFocus';
 import { Icon } from '../../ui/components/icons';
 import { Button } from '../../ui/components/primitives';
+import { isLargeCellReference } from '../../../shared/queries/results/large-cells';
+import { downloadLargeCell, fetchLargeCellText } from './large-cell-actions';
 
 export interface InspectedCell {
     columnName: string;
@@ -11,10 +13,13 @@ export interface InspectedCell {
     columnIndex: number;
     rowNumber: number;
     value: Json | undefined;
+    largeCellToken?: string;
+    largeCellUrl?: string;
 }
 
-function cellText(value: Json | undefined): string {
+function cellText(value: Json | undefined, largeCellToken?: string): string {
     if (value === undefined) return 'null';
+    if (isLargeCellReference(value, largeCellToken)) return value.preview;
     if (typeof value === 'string') return value;
     return JSON.stringify(value, null, 2);
 }
@@ -33,15 +38,39 @@ export function CellInspector({ cell, onClose }: { cell: InspectedCell; onClose:
     const dialog = useRef<HTMLDialogElement>(null);
     const closeButton = useRef<HTMLButtonElement>(null);
     const [copyMessage, setCopyMessage] = useState('');
-    const value = cellText(cell.value);
+    const value = cellText(cell.value, cell.largeCellToken);
+    const largeCell = isLargeCellReference(cell.value, cell.largeCellToken)
+        ? cell.value
+        : undefined;
     const isString = typeof cell.value === 'string';
     const copyValue = async () => {
         try {
-            await navigator.clipboard.writeText(value);
+            const fullValue = largeCell ? await fetchLargeCellText(cell.largeCellUrl ?? '') : value;
+            await navigator.clipboard.writeText(fullValue);
             setCopyMessage('Copied full value.');
         } catch {
-            setCopyMessage('Copy is unavailable in this browser.');
+            setCopyMessage('Couldn’t copy this value.');
         }
+    };
+    const downloadValue = async () => {
+        if (largeCell) {
+            if (!cell.largeCellUrl) {
+                setCopyMessage('This large cell value is unavailable.');
+                return;
+            }
+            try {
+                await downloadLargeCell(cell.largeCellUrl);
+                setCopyMessage('Downloaded full value.');
+            } catch {
+                setCopyMessage('Couldn’t download this value.');
+            }
+            return;
+        }
+        download(
+            downloadName(cell.columnName, cell.columnIndex, cell.rowNumber, isString),
+            value,
+            isString ? 'text/plain;charset=utf-8' : 'application/json;charset=utf-8',
+        );
     };
 
     useEffect(() => {
@@ -79,6 +108,8 @@ export function CellInspector({ cell, onClose }: { cell: InspectedCell; onClose:
                         className="transfer-dialog-description"
                     >
                         Column {cell.columnIndex + 1} · Row {cell.rowNumber} · {cell.columnType}
+                        {largeCell &&
+                            ` · Large value · ${(largeCell.bytes / 1_000_000).toFixed(1)} MB`}
                     </p>
                 </div>
                 <button
@@ -96,28 +127,15 @@ export function CellInspector({ cell, onClose }: { cell: InspectedCell; onClose:
                     <Icon name="copy" />
                     Copy value
                 </Button>
-                <Button
-                    variant="secondary"
-                    onClick={() =>
-                        download(
-                            downloadName(
-                                cell.columnName,
-                                cell.columnIndex,
-                                cell.rowNumber,
-                                isString,
-                            ),
-                            value,
-                            isString
-                                ? 'text/plain;charset=utf-8'
-                                : 'application/json;charset=utf-8',
-                        )
-                    }
-                >
+                <Button variant="secondary" onClick={downloadValue}>
                     <Icon name="exportFile" />
                     Download full value
                 </Button>
             </div>
-            <pre className="result-cell-inspector-value" aria-label="Full retained cell value">
+            <pre
+                className="result-cell-inspector-value"
+                aria-label={largeCell ? 'Cell value preview' : 'Full retained cell value'}
+            >
                 {value}
             </pre>
             <span className="result-cell-inspector-status" role="status" aria-live="polite">

@@ -38,6 +38,11 @@ import { AppError } from '../../system/requests/errors.js';
 import { fail, json } from '../../system/requests/responses.js';
 import { cloudResultStreamQuery } from '../clickhouse/query-format.js';
 import { collectCompactStream } from '../clickhouse/result-stream.js';
+import {
+    CLOUD_LARGE_CELL_TTL_MS,
+    cloudCellOwnerKey,
+    type LargeCellStore,
+} from '../../queries/execution/large-cells.js';
 import { parseInput } from '../imports/imports.js';
 import { ImportMappingError, mapImportRows } from '../../../shared/database/imports/mapping.js';
 import type { Capability } from '../../../shared/database/connections/types.js';
@@ -734,6 +739,7 @@ async function runSql(
     sessionId?: string,
     requestedQueryId?: string,
     parameters: Record<string, string> = {},
+    largeCells?: LargeCellStore,
 ) {
     const statement = sql.trim();
     if (!statement || statement.length > MAX_SQL_CHARS)
@@ -748,6 +754,9 @@ async function runSql(
 
     const client = makeClient(credentials, url, sessionId);
     const queryId = requestedQueryId ?? `clickstudio-run-${randomUUID()}`;
+    const largeCellToken = randomUUID();
+    const releaseLargeCellRun =
+        largeCells?.protectRun(cloudCellOwnerKey(credentials), queryId) ?? (() => {});
     const startedAt = performance.now();
     try {
         if (!isReadQuery(statement)) {
@@ -761,6 +770,7 @@ async function runSql(
             const writtenRows = safeRowCount(result.summary?.written_rows);
             return {
                 queryId: result.query_id || queryId,
+                largeCellToken,
                 columns: [] as Column[],
                 rows: [] as Row[],
                 elapsedMs: performance.now() - startedAt,
@@ -777,23 +787,43 @@ async function runSql(
             abort_signal: AbortSignal.timeout(CLOUD_QUERY_TIMEOUT_MS),
             clickhouse_settings: clickhouseRunSettings,
         });
-        const bounded = await collectCompactStream(result.stream, {
-            rows: CLOUD_QUERY_LIMITS.rows,
-            bytes: CLOUD_QUERY_LIMITS.bytes,
-        });
+        const bounded = await collectCompactStream(
+            result.stream,
+            {
+                rows: CLOUD_QUERY_LIMITS.rows,
+                bytes: CLOUD_QUERY_LIMITS.bytes,
+            },
+            largeCells
+                ? {
+                      store: largeCells,
+                      ownerKey: cloudCellOwnerKey(credentials),
+                      runId: queryId,
+                      referenceToken: largeCellToken,
+                      expiresAt: Date.now() + CLOUD_LARGE_CELL_TTL_MS,
+                  }
+                : undefined,
+        );
         if (bounded.truncated)
             void cancelCloudQuery(credentials, url, queryId).catch(() => undefined);
         const serverBytes = Number(result.summary?.read_bytes);
         return {
             queryId: result.query_id || queryId,
+            largeCellToken,
             columns: bounded.columns,
             rows: bounded.rows,
             elapsedMs: performance.now() - startedAt,
             bytes: Number.isFinite(serverBytes) ? serverBytes : bounded.bytes,
             truncated: bounded.truncated,
         };
+    } catch (error) {
+        largeCells?.deleteRun(cloudCellOwnerKey(credentials), queryId);
+        throw error;
     } finally {
-        await client.close();
+        try {
+            await client.close();
+        } finally {
+            releaseLargeCellRun();
+        }
     }
 }
 
@@ -1599,10 +1629,13 @@ async function handleCloudCancel(
     body: Record<string, unknown>,
     credentials: CloudCredentials,
     url: string,
+    largeCells?: LargeCellStore,
 ): Promise<Response> {
     if (!validRunQueryId(body.queryId))
         return fail('RUN_QUERY_ID', 'The running query id is invalid.');
-    return json(await cancelCloudQuery(credentials, url, body.queryId));
+    const result = await cancelCloudQuery(credentials, url, body.queryId);
+    if (result.cancelled) largeCells?.deleteRun(cloudCellOwnerKey(credentials), body.queryId);
+    return json(result);
 }
 
 async function handleCloudProfile(
@@ -1737,6 +1770,7 @@ async function handleCloudRun(
     body: Record<string, unknown>,
     credentials: CloudCredentials,
     url: string,
+    largeCells?: LargeCellStore,
 ): Promise<Response> {
     if (typeof body.sql !== 'string') return fail('SQL_REQUIRED', 'Enter SQL to run.');
     const sessionId = body.sessionId;
@@ -1756,6 +1790,7 @@ async function handleCloudRun(
             sessionId,
             body.queryId as string | undefined,
             queryParameters(body.parameters),
+            largeCells,
         ),
     );
 }
@@ -1934,7 +1969,11 @@ function parseCloudRequestBody(rawBody: string, contentType: string): unknown | 
     }
 }
 
-async function post(request: Request): Promise<Response> {
+export interface CloudApiRuntime {
+    largeCells?: LargeCellStore;
+}
+
+async function post(request: Request, runtime?: CloudApiRuntime): Promise<Response> {
     const contentType = request.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
     if (contentType === 'multipart/form-data') return await postCloudImport(request);
     if (contentType !== 'application/json' && contentType !== 'application/x-www-form-urlencoded')
@@ -1993,7 +2032,7 @@ async function post(request: Request): Promise<Response> {
             case CLOUD_ACTIONS.progress:
                 return await handleCloudProgress(body, credentials, url);
             case CLOUD_ACTIONS.cancel:
-                return await handleCloudCancel(body, credentials, url);
+                return await handleCloudCancel(body, credentials, url, runtime?.largeCells);
             case CLOUD_ACTIONS.profile:
                 return await handleCloudProfile(body, credentials, url);
             case CLOUD_ACTIONS.pipeline:
@@ -2025,7 +2064,7 @@ async function post(request: Request): Promise<Response> {
                 }
             }
             case CLOUD_ACTIONS.run:
-                return await handleCloudRun(body, credentials, url);
+                return await handleCloudRun(body, credentials, url, runtime?.largeCells);
             case CLOUD_ACTIONS.fullExport:
                 return await handleCloudFullExport(body, credentials, url, request.signal);
             case CLOUD_ACTIONS.workload:
@@ -2049,7 +2088,7 @@ async function post(request: Request): Promise<Response> {
 }
 
 export default {
-    async fetch(request: Request): Promise<Response> {
-        return await post(request);
+    async fetch(request: Request, runtime?: CloudApiRuntime): Promise<Response> {
+        return await post(request, runtime);
     },
 };

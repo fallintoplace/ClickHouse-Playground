@@ -8,6 +8,8 @@ import {
 } from '../../../shared/queries/results/results';
 import type { ResultPage } from '../../../shared/queries/results/types';
 import type { Run } from '../../../shared/queries/execution/types';
+import { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../../shared/database/connections/cloud-policy';
+import { isLargeCellReference } from '../../../shared/queries/results/large-cells';
 import { NativeTable } from '../../ui/components/NativeTable';
 import { ScrollEdgeFrame } from '../../ui/components/ScrollEdgeShadows';
 import { cx, Spinner } from '../../ui/components/primitives';
@@ -16,6 +18,7 @@ import { CellInspector, type InspectedCell } from './CellInspector';
 import { terminal } from '../execution/status';
 import { statementOutcome } from './statement-outcome';
 import { resultTypeGroup, type ResultTypeGroup } from './result-type-group';
+import { largeCellUrl } from './large-cell-actions';
 
 function ResultColumnHeader({
     name,
@@ -220,10 +223,14 @@ export function ResultGrid({
         );
     const searchableRows = filter
         ? page.rows.map(row =>
-              row.map(value => displayValue(value).toLocaleLowerCase()).join('\u0001'),
+              row
+                  .map(value => displayValue(value, page.largeCellToken).toLocaleLowerCase())
+                  .join('\u0001'),
           )
         : undefined;
-    const matchingRows = new Set(filterRows(page.rows, filter, searchableRows));
+    const matchingRows = new Set(
+        filterRows(page.rows, filter, searchableRows, page.largeCellToken),
+    );
     const visibleRows = page.rows.flatMap((row, index) =>
         matchingRows.has(row) ? [{ row, index }] : [],
     );
@@ -344,8 +351,17 @@ export function ResultGrid({
                                             </td>
                                             {orderedColumnIndices.map(columnIndex => {
                                                 const value = row[columnIndex];
+                                                const largeCell = isLargeCellReference(
+                                                    value,
+                                                    page.largeCellToken,
+                                                )
+                                                    ? value
+                                                    : undefined;
                                                 const column = page.columns[columnIndex]!;
-                                                const preview = previewResultCell(value);
+                                                const preview = previewResultCell(
+                                                    value,
+                                                    page.largeCellToken,
+                                                );
                                                 const pinned = pinnedColumns.has(columnIndex);
                                                 const rowNumber = page.offset + rowIndex + 1;
                                                 return (
@@ -369,9 +385,13 @@ export function ResultGrid({
                                                     >
                                                         <button
                                                             type="button"
-                                                            className="result-cell-trigger"
-                                                            data-overflow-title={preview}
-                                                            aria-label={`Inspect ${column.name}, column ${columnIndex + 1}, row ${rowNumber}: ${preview}`}
+                                                            className={`result-cell-trigger${largeCell ? ' result-cell-trigger-large' : ''}`}
+                                                            data-overflow-title={
+                                                                largeCell
+                                                                    ? `${preview}\n${(largeCell.bytes / 1_000_000).toFixed(1)} MB`
+                                                                    : preview
+                                                            }
+                                                            aria-label={`Inspect ${column.name}, column ${columnIndex + 1}, row ${rowNumber}${largeCell ? `, large value ${(largeCell.bytes / 1_000_000).toFixed(1)} MB` : ''}: ${preview}`}
                                                             onClick={() =>
                                                                 setInspectedCell({
                                                                     columnName: column.name,
@@ -379,10 +399,39 @@ export function ResultGrid({
                                                                     columnIndex,
                                                                     rowNumber,
                                                                     value,
+                                                                    largeCellToken:
+                                                                        page.largeCellToken,
+                                                                    ...(largeCell
+                                                                        ? {
+                                                                              largeCellUrl:
+                                                                                  largeCellUrl(
+                                                                                      run.id,
+                                                                                      page.queryId,
+                                                                                      run.connectionId ===
+                                                                                          CLICKHOUSE_CLOUD_CONNECTION_ID,
+                                                                                      largeCell.id,
+                                                                                  ),
+                                                                          }
+                                                                        : {}),
                                                                 })
                                                             }
                                                         >
-                                                            {preview}
+                                                            {largeCell ? (
+                                                                <>
+                                                                    <span className="result-cell-preview">
+                                                                        {preview}
+                                                                    </span>
+                                                                    <small className="result-cell-size">
+                                                                        {(
+                                                                            largeCell.bytes /
+                                                                            1_000_000
+                                                                        ).toFixed(1)}{' '}
+                                                                        MB
+                                                                    </small>
+                                                                </>
+                                                            ) : (
+                                                                preview
+                                                            )}
                                                         </button>
                                                     </td>
                                                 );

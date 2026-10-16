@@ -15,6 +15,8 @@ import { type Config } from '../../system/config.js';
 import { recordRun } from '../../system/telemetry.js';
 import type { Driver } from '../../app/types.js';
 import { principal, id, number, body, boolean } from '../../system/requests/request-accessors.js';
+import { isLargeCellReference } from '../../../shared/queries/results/large-cells.js';
+import { LargeCellStore } from './large-cells.js';
 
 export function registerRunRoutes({
     app,
@@ -25,6 +27,7 @@ export function registerRunRoutes({
     authorized,
     driver,
     config,
+    largeCells,
 }: {
     app: ReturnType<typeof express>;
     runs: RunService;
@@ -34,6 +37,7 @@ export function registerRunRoutes({
     authorized: (p: Principal, c: string) => boolean;
     driver: Driver;
     config: Config;
+    largeCells: LargeCellStore;
 }) {
     app.get('/api/runs', (req, res) =>
         res.json(
@@ -100,14 +104,39 @@ export function registerRunRoutes({
         ),
     );
     app.get('/api/runs/:id/snapshot', (req, res) => res.json(runs.result(principal(res), id(req))));
+    app.get('/api/runs/:id/cells/:cellId', (req, res) => {
+        const run = runs.get(principal(res), id(req));
+        const cell = largeCells.get(run.owner, run.queryId, req.params.cellId!);
+        requireThat(cell, 404, 'CELL_VALUE_UNAVAILABLE', 'This large cell value is unavailable.');
+        res.setHeader('Cache-Control', 'no-store');
+        res.attachment(cell.fileName);
+        res.setHeader('Content-Type', cell.mimeType);
+        res.send(cell.value);
+    });
     app.get('/api/runs/:id/export', (req, res) => {
         const p = principal(res),
             run = runs.get(p, id(req)),
             result = runs.result(p, run.id);
-        safeExport({ run, result });
+        const exportedResult = {
+            ...result,
+            rows: result.rows.map(row =>
+                row.map(value => {
+                    if (!isLargeCellReference(value, result.largeCellToken)) return value;
+                    const cell = largeCells.get(run.owner, run.queryId, value.id);
+                    requireThat(
+                        cell,
+                        409,
+                        'CELL_VALUE_UNAVAILABLE',
+                        'A large cell value in this result is unavailable.',
+                    );
+                    return largeCells.jsonValue(cell);
+                }),
+            ),
+        };
+        safeExport({ run, result: exportedResult });
         res.attachment(`${run.queryId}.${req.query.format === 'csv' ? 'csv' : 'json'}`);
-        if (req.query.format === 'csv') res.type('text/csv').send(exportCsv(result));
-        else res.json({ format: 'clickstudio-evidence', version: 1, run, result });
+        if (req.query.format === 'csv') res.type('text/csv').send(exportCsv(exportedResult));
+        else res.json({ format: 'clickstudio-evidence', version: 1, run, result: exportedResult });
     });
     app.get('/api/runs/:id/full-export', async (req, res, next) => {
         const p = principal(res),

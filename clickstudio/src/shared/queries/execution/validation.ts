@@ -115,6 +115,7 @@ export function isResult(value: unknown): value is Result {
         isRecord(value) &&
         typeof value.runId === 'string' &&
         typeof value.queryId === 'string' &&
+        (value.largeCellToken === undefined || typeof value.largeCellToken === 'string') &&
         Array.isArray(value.columns) &&
         value.columns.every(isColumn) &&
         Array.isArray(value.rows) &&

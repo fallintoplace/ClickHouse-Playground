@@ -38,6 +38,8 @@ import { QueryFailureNotice } from './QueryFailureNotice';
 import { resultsTabLabel, resultsViewHelpHint } from '../../workspace/workspace-helpers';
 import { WorkspaceInlineNotice } from '../../workspace/layout/notifications/WorkspaceInlineNotice';
 import type { WorkspaceFeedback } from '../../workspace/layout/notifications/useWorkspaceNotifications';
+import { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../../shared/database/connections/cloud-policy';
+import type { LargeCellRunContext } from './large-cell-actions';
 
 export type WorkspaceResultsPanelState = Readonly<{
     active: Draft;
@@ -599,6 +601,13 @@ function renderChartResult({
         <ChartView
             result={retainedSnapshot}
             loading={!retainedSnapshot && run.resultState === 'reopenable'}
+            largeCellContext={
+                {
+                    runId: run.id,
+                    queryId: run.queryId,
+                    isCloud: run.connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID,
+                } satisfies LargeCellRunContext
+            }
             chart={active.chart}
             onChart={chart => actions.onPatch({ chart })}
             toolbarContainer={chartToolbar}

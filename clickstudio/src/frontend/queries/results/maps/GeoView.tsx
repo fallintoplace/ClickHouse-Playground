@@ -1,4 +1,5 @@
 import {
+    useEffect,
     useMemo,
     useRef,
     useState,
@@ -23,15 +24,23 @@ import {
 } from './geo';
 import { geoHueForValue } from './geo-color';
 import { geometryForProjection } from './geo-projection';
-import type { Column } from '../../../../shared/common/values';
+import type { Column, Json, Row } from '../../../../shared/common/values';
 import type { Result } from '../../../../shared/queries/results/types';
 import { ScrollEdgeFrame } from '../../../ui/components/ScrollEdgeShadows';
+import { Spinner } from '../../../ui/components/primitives';
 import type { ChartConfig } from '../../../../shared/queries/results/chart-settings';
 import type { Copy } from '../../../ui/copy';
 import type { prepareChartSelection } from '../charts/controls/chart-selection';
 import { GeoChartControls } from './GeoChartControls';
 import { useGeoBasemap } from './useGeoBasemap';
 import type { MapLabel } from './geo-basemap';
+import { isLargeCellReference } from '../../../../shared/queries/results/large-cells';
+import {
+    fetchLargeCellText,
+    LARGE_CELL_FETCH_CONCURRENCY,
+    largeCellUrl,
+    type LargeCellRunContext,
+} from '../large-cell-actions';
 
 const WIDTH = 960;
 const HEIGHT = 470;
@@ -150,11 +159,13 @@ function MapContext({
 function MapCanvas({
     prepared,
     columns,
+    largeCellToken,
     measureIndex,
     completeness,
 }: {
     prepared: ReturnType<typeof prepareGeoFeatures>;
     columns: Column[];
+    largeCellToken?: string;
     measureIndex?: number;
     completeness: Result['completeness'];
 }) {
@@ -412,6 +423,7 @@ function MapCanvas({
             </div>
             <GeoMapDetails
                 columns={columns}
+                largeCellToken={largeCellToken}
                 measureIndex={measureIndex}
                 measures={measures}
                 minimum={minimum}
@@ -424,6 +436,7 @@ function MapCanvas({
 
 function GeoMapDetails({
     columns,
+    largeCellToken,
     measureIndex,
     measures,
     minimum,
@@ -431,6 +444,7 @@ function GeoMapDetails({
     selected,
 }: {
     columns: Column[];
+    largeCellToken?: string;
     measureIndex: number | undefined;
     measures: number[];
     minimum: number;
@@ -463,7 +477,7 @@ function GeoMapDetails({
                             {columns.slice(0, 6).map((column, index) => (
                                 <div key={index}>
                                     <dt>{column.name}</dt>
-                                    <dd>{displayValue(selected.row[index])}</dd>
+                                    <dd>{displayValue(selected.row[index], largeCellToken)}</dd>
                                 </div>
                             ))}
                         </dl>
@@ -592,6 +606,7 @@ export function GeoView({
     recommendation,
     copy,
     toolbarContainer,
+    largeCellContext,
 }: {
     result: Result;
     chart: ChartConfig;
@@ -600,15 +615,98 @@ export function GeoView({
     recommendation: GeoRecommendation;
     copy: Copy['chart'];
     toolbarContainer?: HTMLElement | null;
+    largeCellContext?: LargeCellRunContext;
 }) {
     const columns = result.columns;
     const config = useMemo(
         () => geographyForColumns(columns, chart.geography) ?? recommendation,
         [columns, chart.geography, recommendation],
     );
+    const geometryColumn = config.source.mode === 'geometry' ? config.source.column : undefined;
+    const hasLargeGeometry =
+        geometryColumn !== undefined &&
+        result.rows.some(row => isLargeCellReference(row[geometryColumn], result.largeCellToken));
+    const geometryKey = `${result.runId}:${result.queryId}:${geometryColumn ?? ''}:${result.largeCellToken ?? ''}`;
+    const [hydratedGeometry, setHydratedGeometry] = useState<
+        { key: string; rows: Row[]; failed: boolean } | undefined
+    >();
+    useEffect(() => {
+        if (!hasLargeGeometry || geometryColumn === undefined || !largeCellContext) return;
+        const controller = new AbortController();
+        let active = true;
+        let geometryLoadFailed = false;
+        let nextReference = 0;
+        const rows: Row[] = result.rows.map(row => [...row]);
+        const references = result.rows.flatMap((row, rowIndex) => {
+            const value = row[geometryColumn];
+            return isLargeCellReference(value, result.largeCellToken)
+                ? [{ rowIndex, reference: value }]
+                : [];
+        });
+        const loadGeometry = async () => {
+            while (!controller.signal.aborted) {
+                const referenceIndex = nextReference++;
+                if (referenceIndex >= references.length) return;
+                const entry = references[referenceIndex];
+                if (!entry) return;
+                const { rowIndex, reference } = entry;
+                try {
+                    const text = await fetchLargeCellText(
+                        largeCellUrl(
+                            largeCellContext.runId,
+                            largeCellContext.queryId,
+                            largeCellContext.isCloud,
+                            reference.id,
+                        ),
+                        controller.signal,
+                    );
+                    const value: Json =
+                        reference.valueType === 'text' ? text : (JSON.parse(text) as Json);
+                    const row = rows[rowIndex];
+                    if (row) row[geometryColumn] = value;
+                } catch {
+                    if (!controller.signal.aborted) geometryLoadFailed = true;
+                }
+            }
+        };
+        void Promise.all(
+            Array.from({ length: Math.min(LARGE_CELL_FETCH_CONCURRENCY, references.length) }, () =>
+                loadGeometry(),
+            ),
+        ).then(() => {
+            if (active && !controller.signal.aborted) {
+                setHydratedGeometry({ key: geometryKey, rows, failed: geometryLoadFailed });
+            }
+        });
+        return () => {
+            active = false;
+            controller.abort();
+        };
+    }, [
+        geometryColumn,
+        geometryKey,
+        hasLargeGeometry,
+        largeCellContext?.isCloud,
+        largeCellContext?.queryId,
+        largeCellContext?.runId,
+        result.largeCellToken,
+        result.rows,
+    ]);
+    const hydrated = hydratedGeometry?.key === geometryKey ? hydratedGeometry : undefined;
+    const geometryPending = hasLargeGeometry && Boolean(largeCellContext) && !hydrated;
+    const geometryUnavailable = hasLargeGeometry && (!largeCellContext || hydrated?.failed);
+    const rowsForMap = hydrated?.rows ?? result.rows;
     const prepared = useMemo(
-        () => prepareGeoFeatures(result.rows, columns, config),
-        [config, result.rows, columns],
+        () =>
+            prepareGeoFeatures(
+                rowsForMap,
+                columns,
+                config,
+                undefined,
+                result.largeCellToken,
+                result.rows,
+            ),
+        [config, rowsForMap, result.largeCellToken, result.rows, columns],
     );
     return (
         <ScrollEdgeFrame<HTMLDivElement> className="geo-workspace-frame">
@@ -623,18 +721,32 @@ export function GeoView({
                         onChart={onChart}
                         toolbarContainer={toolbarContainer}
                     />
-                    {!prepared.features.length ? (
+                    {geometryPending ? (
+                        <div className="result-loading">
+                            <Spinner />
+                            <span>Loading large geometry values</span>
+                        </div>
+                    ) : !prepared.features.length ? (
                         <div className="chart-empty" role="status">
-                            No returned rows contain valid longitude/latitude geometry for this
-                            selection.
+                            {geometryUnavailable
+                                ? 'Large geometry values could not be loaded.'
+                                : 'No returned rows contain valid longitude/latitude geometry for this selection.'}
                         </div>
                     ) : (
-                        <MapCanvas
-                            prepared={prepared}
-                            columns={columns}
-                            measureIndex={config.measure}
-                            completeness={result.completeness}
-                        />
+                        <>
+                            {geometryUnavailable && (
+                                <div className="chart-empty" role="status">
+                                    Some large geometry values could not be loaded.
+                                </div>
+                            )}
+                            <MapCanvas
+                                prepared={prepared}
+                                columns={columns}
+                                largeCellToken={result.largeCellToken}
+                                measureIndex={config.measure}
+                                completeness={result.completeness}
+                            />
+                        </>
                     )}
                 </div>
             )}

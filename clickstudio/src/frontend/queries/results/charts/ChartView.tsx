@@ -11,6 +11,7 @@ import { renderCandlestickChart } from './types/candlestick-chart-view';
 import { createChartSvgRenderer } from './rendering/chart-svg-renderer';
 import { Spinner } from '../../../ui/components/primitives';
 import { renderChartWorkspace } from './controls/chart-workspace';
+import type { LargeCellRunContext } from '../large-cell-actions';
 
 export function ChartView({
     result,
@@ -19,6 +20,7 @@ export function ChartView({
     onChart,
     toolbarContainer,
     copy,
+    largeCellContext,
 }: {
     result?: Result;
     loading: boolean;
@@ -26,6 +28,7 @@ export function ChartView({
     onChart: (chart: Draft['chart']) => void;
     toolbarContainer?: HTMLElement | null;
     copy: Copy;
+    largeCellContext?: LargeCellRunContext;
 }) {
     const {
         width: categoryViewportWidth,
@@ -63,6 +66,7 @@ export function ChartView({
                 recommendation={selection.geography}
                 copy={chartCopy}
                 toolbarContainer={toolbarContainer}
+                largeCellContext={largeCellContext}
             />
         );
     const { suggestion, numericIndexes } = selection;

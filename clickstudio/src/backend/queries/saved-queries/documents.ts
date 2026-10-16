@@ -13,10 +13,13 @@ import type {
     QueryDocument,
 } from '../../../shared/queries/saved-queries/types.js';
 import type { Principal } from '../../../shared/common/identity.js';
+import type { Row } from '../../../shared/common/values.js';
 import { isRecord, isStringArray } from '../../../shared/common/values.js';
 import { isQueryDocument } from '../../../shared/queries/saved-queries/validation.js';
 import { isResult, isRun } from '../../../shared/queries/execution/validation.js';
 import { DEFAULT_LIMITS } from '../../../shared/queries/execution/settings.js';
+import { isLargeCellReference } from '../../../shared/queries/results/large-cells.js';
+import type { Result } from '../../../shared/queries/results/types.js';
 import { AppError, requireThat } from '../../system/requests/errors.js';
 import { canWrite, mustOwn } from '../../system/login/permissions.js';
 import { hash, audit, MemoryStore, type Store } from '../../system/store.js';
@@ -25,6 +28,7 @@ import { boundResult, type RunService } from '../execution/runs.js';
 import { MAX_CHART_SERIES } from '../../../shared/queries/results/results.js';
 import { isStoredQueryDocument, LEGACY_CHART_KINDS } from './stored-document.js';
 import type { StoredQueryDocument } from './stored-document.js';
+import { LargeCellStore } from '../execution/large-cells.js';
 interface Share {
     id: string;
     owner: string;
@@ -85,7 +89,65 @@ export class ArtifactService {
         private readonly store: Store,
         private readonly runs: RunService,
         private readonly authorizeConnection: (p: Principal, id: string) => void,
+        private readonly largeCells: LargeCellStore = new LargeCellStore(store),
     ) {}
+
+    private publicationSnapshot(owner: string, runId: string, result: Result) {
+        const limits = { ...DEFAULT_LIMITS, rows: 1000, bytes: 1000000 };
+        const rows: Row[] = [];
+        let bytes = Buffer.byteLength(JSON.stringify(result.columns));
+        let truncated = result.completeness === 'truncated';
+
+        for (const row of result.rows) {
+            if (rows.length >= limits.rows) {
+                truncated = true;
+                break;
+            }
+
+            const snapshotRow: Row = [];
+            let estimatedRowBytes = 2;
+            let rowUnavailable = false;
+            for (const value of row) {
+                const reference = isLargeCellReference(value, result.largeCellToken)
+                    ? value
+                    : undefined;
+                const valueBytes = reference
+                    ? reference.serializedBytes
+                    : Buffer.byteLength(JSON.stringify(value));
+                const separatorBytes = snapshotRow.length ? 1 : 0;
+                // Skip fetching a cell that cannot fit in the remaining snapshot budget.
+                if (valueBytes + separatorBytes > limits.bytes - bytes - estimatedRowBytes) {
+                    truncated = true;
+                    rowUnavailable = true;
+                    break;
+                }
+                if (reference) {
+                    const cell = this.largeCells.get(owner, runId, reference.id);
+                    requireThat(
+                        cell,
+                        409,
+                        'LARGE_CELL_UNAVAILABLE',
+                        'A large result value is no longer available. Run the query again before publishing.',
+                    );
+                    snapshotRow.push(this.largeCells.jsonValue(cell));
+                } else {
+                    snapshotRow.push(value);
+                }
+                estimatedRowBytes += valueBytes + separatorBytes;
+            }
+            if (rowUnavailable) break;
+
+            const rowBytes = Buffer.byteLength(JSON.stringify(snapshotRow));
+            if (bytes + rowBytes > limits.bytes) {
+                truncated = true;
+                break;
+            }
+            rows.push(snapshotRow);
+            bytes += rowBytes;
+        }
+
+        return boundResult({ columns: result.columns, rows, truncated }, limits);
+    }
     list(p: Principal, includeTrash = false, connectionId?: string): QueryDocument[] {
         return this.store
             .list('documents', isStoredQueryDocument)
@@ -323,14 +385,7 @@ export class ArtifactService {
             'EVIDENCE_REQUIRED',
             'Only completed result evidence can be published',
         );
-        const bounded = boundResult(
-            {
-                columns: result.columns,
-                rows: result.rows,
-                truncated: result.completeness === 'truncated',
-            },
-            { ...DEFAULT_LIMITS, rows: 1000, bytes: 1000000 },
-        );
+        const bounded = this.publicationSnapshot(p.id, run.queryId, result);
         requireThat(
             !bounded.truncated || acknowledgeTruncated,
             409,

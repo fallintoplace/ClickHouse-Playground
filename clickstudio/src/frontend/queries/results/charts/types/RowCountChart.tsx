@@ -69,8 +69,12 @@ export function RowCountChart({
         timeAxis && defaultGroupBy !== undefined && breakdowns.includes(defaultGroupBy)
             ? defaultGroupBy
             : undefined;
-    const countData = timeAxis ? countRowsOverTime(result.rows, xIndex, groupByIndex) : undefined;
-    const categoryData = !timeAxis ? countRowsByCategory(result.rows, xIndex) : undefined;
+    const countData = timeAxis
+        ? countRowsOverTime(result.rows, xIndex, groupByIndex, 5, result.largeCellToken)
+        : undefined;
+    const categoryData = !timeAxis
+        ? countRowsByCategory(result.rows, xIndex, result.largeCellToken)
+        : undefined;
     const series = countData?.series ?? [];
     const allTimePoints = series
         .flatMap(item => item.points)

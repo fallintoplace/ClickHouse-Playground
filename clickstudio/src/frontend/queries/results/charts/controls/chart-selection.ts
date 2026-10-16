@@ -72,6 +72,11 @@ export function prepareChartSelection(result: Result, chart: Draft['chart']) {
         candleX,
         activeCandle,
         activeCandleValid,
-        geography: recommendValidGeo(result.columns, result.rows, chart.geography),
+        geography: recommendValidGeo(
+            result.columns,
+            result.rows,
+            chart.geography,
+            result.largeCellToken,
+        ),
     };
 }

@@ -676,6 +676,22 @@
   .result-cell-trigger:hover {
     color: var(--text);
   }
+  .result-cell-trigger-large {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .result-cell-preview {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .result-cell-size {
+    flex: none;
+    color: var(--muted);
+    font-size: 10px;
+  }
   .result-cell-inspector {
     --transfer-dialog-width: 760px;
   }

@@ -1,6 +1,7 @@
 import type { CandlestickConfig, ChartConfig } from './chart-settings.js';
 import type { Column, Json, Row } from '../../common/values.js';
 import type { Result } from './types.js';
+import { isLargeCellReference } from './large-cells.js';
 export const MAX_CHART_SERIES = 20;
 export const MAX_CHART_POINTS = 5000;
 export const MAX_CHART_RENDER_POINTS = 240;
@@ -15,8 +16,9 @@ export function sampleChartRows(rows: Row[], maxPoints = MAX_CHART_POINTS): Row[
     }
     return sampled;
 }
-export function displayValue(value: Json | undefined): string {
+export function displayValue(value: Json | undefined, largeCellToken?: string): string {
     if (value === null || value === undefined) return 'NULL';
+    if (isLargeCellReference(value, largeCellToken)) return value.preview;
     return typeof value === 'object' ? JSON.stringify(value) : String(value);
 }
 
@@ -59,8 +61,9 @@ function nestedValuePreview(value: Json, depth: number): string {
 }
 
 /** A bounded table label. The retained value stays unchanged for inspection and export. */
-export function previewResultCell(value: Json | undefined): string {
+export function previewResultCell(value: Json | undefined, largeCellToken?: string): string {
     if (value === null || value === undefined) return 'NULL';
+    if (isLargeCellReference(value, largeCellToken)) return value.preview;
     if (typeof value === 'string') return truncatePreview(value, RESULT_CELL_PREVIEW_LENGTH);
     if (typeof value !== 'object') return String(value);
     return truncatePreview(nestedValuePreview(value, 0), RESULT_CELL_PREVIEW_LENGTH);
@@ -92,7 +95,9 @@ export function chartNumber(value: Json | undefined): number | null {
 export const MAX_HEATMAP_CELLS = 1200;
 export type HeatmapPreparation = {
     xLabels: string[];
+    xKeys: string[];
     yLabels: string[];
+    yKeys: string[];
     cells: Map<string, number>;
     present: Set<string>;
     maximum: number;
@@ -103,29 +108,44 @@ export type HeatmapPreparation = {
 export function heatmapCellKey(xLabel: string, yLabel: string): string {
     return JSON.stringify([yLabel, xLabel]);
 }
+function chartCategoryKey(value: Json | undefined, largeCellToken?: string): string {
+    return isLargeCellReference(value, largeCellToken)
+        ? `large:${value.fingerprint}`
+        : valueKey(value);
+}
+export function chartCategoryLabel(value: Json | undefined, largeCellToken?: string): string {
+    return isLargeCellReference(value, largeCellToken)
+        ? `${value.preview} · ${value.fingerprint.slice(0, 12)}`
+        : displayValue(value, largeCellToken);
+}
 export function prepareHeatmap(
     rows: Row[],
     xIndex: number,
     yIndex: number,
     measureIndex: number,
     maxCells = MAX_HEATMAP_CELLS,
+    largeCellToken?: string,
 ): HeatmapPreparation {
-    const xLabels = new Set<string>(),
-        yLabels = new Set<string>(),
+    const xLabels = new Map<string, string>(),
+        yLabels = new Map<string, string>(),
         cells = new Map<string, number>(),
         present = new Set<string>();
     let maximum = 0,
         combinedRows = 0,
         processedRows = 0;
     for (const row of rows) {
-        const xLabel = displayValue(row[xIndex]),
-            yLabel = displayValue(row[yIndex]);
-        const nextXLabelCount = xLabels.size + Number(!xLabels.has(xLabel));
-        const nextYLabelCount = yLabels.size + Number(!yLabels.has(yLabel));
+        const xKey = chartCategoryKey(row[xIndex], largeCellToken),
+            yKey = chartCategoryKey(row[yIndex], largeCellToken);
+        const xLabel = chartCategoryLabel(row[xIndex], largeCellToken),
+            yLabel = chartCategoryLabel(row[yIndex], largeCellToken);
+        const nextXLabelCount = xLabels.size + Number(!xLabels.has(xKey));
+        const nextYLabelCount = yLabels.size + Number(!yLabels.has(yKey));
         if (nextXLabelCount * nextYLabelCount > maxCells)
             return {
-                xLabels: [...xLabels],
-                yLabels: [...yLabels],
+                xLabels: [...xLabels.values()],
+                xKeys: [...xLabels.keys()],
+                yLabels: [...yLabels.values()],
+                yKeys: [...yLabels.keys()],
                 cells,
                 present,
                 maximum,
@@ -133,9 +153,9 @@ export function prepareHeatmap(
                 combinedRows,
                 processedRows,
             };
-        xLabels.add(xLabel);
-        yLabels.add(yLabel);
-        const key = heatmapCellKey(xLabel, yLabel);
+        xLabels.set(xKey, xLabel);
+        yLabels.set(yKey, yLabel);
+        const key = heatmapCellKey(xKey, yKey);
         if (present.has(key)) combinedRows++;
         present.add(key);
         processedRows++;
@@ -146,8 +166,10 @@ export function prepareHeatmap(
         maximum = Math.max(maximum, combined);
     }
     return {
-        xLabels: [...xLabels],
-        yLabels: [...yLabels],
+        xLabels: [...xLabels.values()],
+        xKeys: [...xLabels.keys()],
+        yLabels: [...yLabels.values()],
+        yKeys: [...yLabels.keys()],
         cells,
         present,
         maximum,
@@ -256,12 +278,16 @@ function valueKey(value: Json | undefined): string {
 export function countRowsByCategory(
     rows: Row[],
     columnIndex: number,
+    largeCellToken?: string,
 ): Array<{ key: string; label: string; count: number }> {
     const counts = new Map<string, { label: string; count: number }>();
     for (const row of rows) {
         const value = row[columnIndex];
-        const key = valueKey(value);
-        const group = counts.get(key) ?? { label: displayValue(value), count: 0 };
+        const key = chartCategoryKey(value, largeCellToken);
+        const group = counts.get(key) ?? {
+            label: chartCategoryLabel(value, largeCellToken),
+            count: 0,
+        };
         group.count++;
         counts.set(key, group);
     }
@@ -279,6 +305,7 @@ export function countRowsOverTime(
     timeIndex: number,
     groupByIndex?: number,
     maxSeries = 5,
+    largeCellToken?: string,
 ): { unit: TimeBucketUnit; excludedRows: number; series: RowCountSeries[] } {
     const validRows = rows.flatMap(row => {
         const timestamp = chartTimestamp(row[timeIndex]);
@@ -291,8 +318,11 @@ export function countRowsOverTime(
     if (groupByIndex !== undefined) {
         for (const { row } of validRows) {
             const value = row[groupByIndex];
-            const key = valueKey(value);
-            const group = categoryCounts.get(key) ?? { label: displayValue(value), count: 0 };
+            const key = chartCategoryKey(value, largeCellToken);
+            const group = categoryCounts.get(key) ?? {
+                label: chartCategoryLabel(value, largeCellToken),
+                count: 0,
+            };
             group.count++;
             categoryCounts.set(key, group);
         }
@@ -320,7 +350,10 @@ export function countRowsOverTime(
     }
     for (const { row, timestamp } of validRows) {
         const bucket = bucketStart(timestamp, unit);
-        const categoryKey = groupByIndex === undefined ? '__rows__' : valueKey(row[groupByIndex]);
+        const categoryKey =
+            groupByIndex === undefined
+                ? '__rows__'
+                : chartCategoryKey(row[groupByIndex], largeCellToken);
         const key =
             groupByIndex === undefined || visibleKeys.has(categoryKey) ? categoryKey : '__other__';
         const series = seriesByKey.get(key);
@@ -417,19 +450,24 @@ export function recommendChart(
                 : 'A dimension with numeric measures; no hidden aggregation is performed.',
     };
 }
-export function filterRows(rows: Row[], term: string, searchableRows?: string[]): Row[] {
+export function filterRows(
+    rows: Row[],
+    term: string,
+    searchableRows?: string[],
+    largeCellToken?: string,
+): Row[] {
     const needle = term.toLocaleLowerCase();
     return needle
         ? rows.filter((r, index) =>
               (
                   searchableRows?.[index] ??
-                  r.map(v => displayValue(v).toLocaleLowerCase()).join('\u0001')
+                  r.map(v => displayValue(v, largeCellToken).toLocaleLowerCase()).join('\u0001')
               ).includes(needle),
           )
         : rows;
 }
-function csvCell(value: Json | undefined, type?: string): string {
-    let cell = value === null || value === undefined ? '' : displayValue(value);
+function csvCell(value: Json | undefined, type?: string, largeCellToken?: string): string {
+    let cell = value === null || value === undefined ? '' : displayValue(value, largeCellToken);
     // Formula-prefix escaping is for textual spreadsheet cells. Numeric ClickHouse
     // values such as -42 stay numeric in CSV; JSON remains the exact typed export.
     if (!type || !numericType(type)) {
@@ -437,11 +475,15 @@ function csvCell(value: Json | undefined, type?: string): string {
     }
     return /[",\r\n]/.test(cell) ? '"' + cell.replace(/"/g, '""') + '"' : cell;
 }
-export function exportCsv(result: Pick<Result, 'columns' | 'rows'>): string {
+export function exportCsv(result: Pick<Result, 'columns' | 'rows' | 'largeCellToken'>): string {
     return [
         result.columns.map(c => csvCell(c.name)).join(','),
         ...result.rows.map(r =>
-            r.map((value, index) => csvCell(value, result.columns[index]?.type)).join(','),
+            r
+                .map((value, index) =>
+                    csvCell(value, result.columns[index]?.type, result.largeCellToken),
+                )
+                .join(','),
         ),
     ].join('\r\n');
 }

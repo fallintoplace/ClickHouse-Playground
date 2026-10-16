@@ -9,6 +9,7 @@ import {
     displayValue,
     numericType,
 } from '../../../../shared/queries/results/results.js';
+import { isLargeCellReference } from '../../../../shared/queries/results/large-cells.js';
 
 export const MAX_GEO_RENDER_FEATURES = 2000;
 export const NATIVE_GEO_TYPES = [
@@ -392,15 +393,30 @@ function rowGeometry(row: Row, columns: Column[], config: GeographyConfig) {
         : coordinateGeometry(row, config.source);
 }
 
+function rowHasGeometry(
+    row: Row,
+    columns: Column[],
+    config: GeographyConfig,
+    largeCellToken?: string,
+): boolean {
+    return (
+        (config.source.mode === 'geometry' &&
+            isLargeCellReference(row[config.source.column], largeCellToken)) ||
+        Boolean(rowGeometry(row, columns, config))
+    );
+}
+
 /** Use the renderer's validation and stop as soon as a retained row can be drawn. */
 export function recommendValidGeo(
     columns: Column[],
     rows: Row[],
     configured?: GeographyConfig,
+    largeCellToken?: string,
 ): GeoRecommendation | undefined {
     if (!rows.length) return undefined;
     const saved = geographyForColumns(columns, configured);
-    if (saved && rows.some(row => rowGeometry(row, columns, saved))) return saved;
+    if (saved && rows.some(row => rowHasGeometry(row, columns, saved, largeCellToken)))
+        return saved;
     const sources: GeoSource[] = [
         ...nativeGeoColumns(columns).map(column => ({ mode: 'geometry' as const, column })),
         ...coordinatePairs(columns).map(pair => ({ mode: 'coordinates' as const, ...pair })),
@@ -420,7 +436,8 @@ export function recommendValidGeo(
                     ? `Native ClickHouse ${nativeGeoType(columns[source.column]!.type)} column`
                     : 'Longitude and latitude columns',
         };
-        if (rows.some(row => rowGeometry(row, columns, candidate))) return candidate;
+        if (rows.some(row => rowHasGeometry(row, columns, candidate, largeCellToken)))
+            return candidate;
     }
     return undefined;
 }
@@ -440,10 +457,13 @@ export function prepareGeoFeatures(
     columns: Column[],
     config: GeoRecommendation,
     maximum = MAX_GEO_RENDER_FEATURES,
+    largeCellToken?: string,
+    displayRows: Row[] = rows,
 ): PreparedGeoFeatures {
     const valid: GeoFeature[] = [];
     for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
         const row = rows[rowIndex]!;
+        const displayRow = displayRows[rowIndex] ?? row;
         const geometry = rowGeometry(row, columns, config);
         if (!geometry) continue;
         valid.push({
@@ -452,9 +472,9 @@ export function prepareGeoFeatures(
             label:
                 config.label === undefined
                     ? `Row ${rowIndex + 1}`
-                    : displayValue(row[config.label]),
+                    : displayValue(displayRow[config.label], largeCellToken),
             measure: config.measure === undefined ? null : chartNumber(row[config.measure]),
-            row,
+            row: displayRow,
         });
     }
     return {

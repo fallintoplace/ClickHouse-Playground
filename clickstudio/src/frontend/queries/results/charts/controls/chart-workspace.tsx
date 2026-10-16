@@ -28,7 +28,9 @@ export function renderChartWorkspace({
     heatmapTooLarge,
     heatmap,
     heatmapXLabels,
+    heatmapXKeys,
     heatmapYLabels,
+    heatmapYKeys,
     heatmapMaximum,
     compactNumber,
     values,
@@ -68,7 +70,12 @@ export function renderChartWorkspace({
                             return (
                                 <div className="chart-number-card">
                                     <span className="eyebrow">{chartCopy.singleValue}</span>
-                                    <strong>{displayValue(result.rows[0]?.[yIndex])}</strong>
+                                    <strong>
+                                        {displayValue(
+                                            result.rows[0]?.[yIndex],
+                                            result.largeCellToken,
+                                        )}
+                                    </strong>
                                     <span>{result.columns[yIndex]?.name}</span>
                                     <small>{chartCopy.exactResultValue}</small>
                                 </div>
@@ -96,7 +103,9 @@ export function renderChartWorkspace({
                                         groupByIndex,
                                         xIndex,
                                         heatmapXLabels,
+                                        heatmapXKeys,
                                         heatmapYLabels,
+                                        heatmapYKeys,
                                         heatmap,
                                         heatmapMaximum,
                                         compactNumber,

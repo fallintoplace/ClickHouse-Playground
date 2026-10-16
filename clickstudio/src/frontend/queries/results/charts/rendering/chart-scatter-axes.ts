@@ -65,7 +65,7 @@ export function prepareScatterAxes({
         .map(row => ({
             x: chartNumber(row[xIndex]),
             y: chartNumber(row[yIndex]),
-            label: displayValue(row[xIndex]),
+            label: displayValue(row[xIndex], result.largeCellToken),
         }))
         .filter(
             (point): point is { x: number; y: number; label: string } =>
@@ -126,7 +126,7 @@ export function prepareScatterAxes({
             })) ?? [];
     } else {
         chartXTicks = chartRows.map((row, index) => ({
-            label: displayValue(row[xIndex]),
+            label: displayValue(row[xIndex], result.largeCellToken),
             position: x(index),
         }));
     }
