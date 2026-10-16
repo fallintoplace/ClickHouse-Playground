@@ -220,6 +220,7 @@ export function RailButton({
 
 export function ExecutionBar({
     run,
+    retentionLimitReached,
     failedAttempt,
     failureInToolbar,
     eventState,
@@ -232,6 +233,7 @@ export function ExecutionBar({
     copy,
 }: {
     run?: Run;
+    retentionLimitReached?: boolean;
     failedAttempt?: boolean;
     failureInToolbar?: boolean;
     eventState: RunEventState;
@@ -385,14 +387,15 @@ export function ExecutionBar({
             <div className="execution-state">
                 <div className="execution-summary">
                     {!failureInToolbar && renderCurrentStatus()}
-                    {!failureInToolbar && currentRun?.status === 'truncated' && (
-                        <span
-                            className="execution-retention-note"
-                            title="A result retention limit was reached."
-                        >
-                            Limit reached
-                        </span>
-                    )}
+                    {!failureInToolbar &&
+                        (currentRun?.status === 'truncated' || retentionLimitReached) && (
+                            <span
+                                className="execution-retention-note"
+                                title="A result retention limit was reached."
+                            >
+                                Limit reached
+                            </span>
+                        )}
                     {currentRun && scriptRunning && (
                         <span className="execution-kind">{copy.runScript.toUpperCase()}</span>
                     )}

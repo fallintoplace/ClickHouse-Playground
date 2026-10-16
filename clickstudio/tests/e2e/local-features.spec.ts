@@ -196,12 +196,13 @@ for (const mode of ['Standard', 'Experimental']) {
         await setWorkspaceMode(page, mode);
 
         const results = await run(page);
-        await expect(results.locator('.result-retention-notice')).toContainText(
-            '1 retained row. The 2 MB result-size limit was reached',
+        const retentionNote = page.locator('.execution-retention-note');
+        await expect(retentionNote).toHaveText('Limit reached');
+        await expect(retentionNote).toHaveAttribute(
+            'title',
+            'A result retention limit was reached.',
         );
-        await expect(results.locator('.result-retention-notice')).toContainText(
-            'the full result is not available here',
-        );
+        await expect(results.locator('.result-retention-notice')).toHaveCount(0);
     });
 }
 

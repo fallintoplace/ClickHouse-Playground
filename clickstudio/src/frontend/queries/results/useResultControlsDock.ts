@@ -81,11 +81,12 @@ export function useResultControlsDock() {
             const path = event.composedPath();
             const button = invoker.current;
             const target = event.target;
+            const opensStatementMenu =
+                target instanceof Element && target.closest('.script-results-trigger') !== null;
             const insidePanel =
-                path.includes(element) ||
-                (target instanceof Node && element.contains(target));
+                path.includes(element) || (target instanceof Node && element.contains(target));
             if (
-                !pinned &&
+                (!pinned || opensStatementMenu) &&
                 !insidePanel &&
                 (!button || !path.includes(button))
             )

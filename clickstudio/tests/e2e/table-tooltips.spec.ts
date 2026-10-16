@@ -31,12 +31,15 @@ test('Result tooltips follow clipping and new result data without covering contr
     await trust(page);
     await runButton(page).click();
     const header = page.locator('.data-table th[data-type-group]');
-    const cells = page.locator('.data-table tbody td:not(.row-number)');
+    const cells = page.locator('.data-table tbody td:not(.row-number) .result-cell-trigger');
     await expect(header).toHaveAttribute('title', `value\n${nestedType}`);
     await expect(header).toHaveAccessibleName(`value ${nestedType}`);
     await expect(cells.first()).toHaveAttribute('title', '');
-    await expect(cells.last()).toHaveAttribute('title', longValue);
-    await expect(cells.last()).toHaveText(longValue.trim());
+    const preview = (await cells.last().textContent())?.trim() ?? '';
+    expect(preview.length).toBeLessThan(longValue.length);
+    expect(preview.endsWith('…')).toBe(true);
+    await expect(cells.last()).toHaveAttribute('title', preview);
+    await expect(cells.last()).toHaveText(preview);
     await cells.last().hover();
     await expect(page.getByRole('tooltip')).toHaveCount(0);
 

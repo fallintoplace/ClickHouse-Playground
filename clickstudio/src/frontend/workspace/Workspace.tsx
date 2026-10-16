@@ -716,6 +716,13 @@ function renderWorkspaceOverlays({
             />
             <ExecutionBar
                 run={run}
+                retentionLimitReached={
+                    model.evidence.resultPage?.completeness === 'truncated' ||
+                    Boolean(
+                        pendingExecution.execution &&
+                        pendingExecution.retainedExecutionResult?.page.completeness === 'truncated',
+                    )
+                }
                 failedAttempt={Boolean(
                     failedQueryError ||
                     (viewState.failureError &&

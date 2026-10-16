@@ -492,7 +492,7 @@ test('Switching to Experimental keeps the AI chat, query and run evidence', asyn
 
     const results = page.getByRole('region', { name: 'Query results', exact: true });
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'succeeded');
-    await expect(results.getByRole('cell', { name: '2026-01-01', exact: true })).toBeVisible();
+    await expect(results.getByRole('cell').filter({ hasText: /^2026-01-01$/ })).toBeVisible();
     const queryId = await currentQueryId(page);
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();
     await expect(results.locator('.chart-canvas svg[role="img"]')).toBeVisible();

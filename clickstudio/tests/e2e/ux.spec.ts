@@ -170,11 +170,16 @@ test('A local search can be cleared, closed and reopened without rerunning SQL',
     await expect(results.locator('tbody tr')).toHaveCount(7);
     await filter.fill('2026-01-02');
     await expect(dock.locator('.result-match-count')).toHaveText('1 of 7 rows on this page');
-    await filter.press('Escape');
+    const closeButton = dock.getByRole('button', { name: 'Close search and pages', exact: true });
+    await closeButton.focus();
+    await closeButton.press('Escape');
+    await expect(dock).toBeVisible();
+    await expect(filter).toHaveValue('2026-01-02');
+    await expect(results.locator('tbody tr')).toHaveCount(1);
+    await closeButton.click();
     await expect(dock).toBeHidden();
     await expect(toggle).toBeFocused();
     await expect(toggle.locator('.result-search-active')).toBeVisible();
-    await expect(results.locator('tbody tr')).toHaveCount(1);
     await openResultFilter(results);
     await expect(filter).toHaveValue('2026-01-02');
     await results.getByRole('button', { name: 'Collapse Query results', exact: true }).click();
@@ -300,7 +305,15 @@ for (const mode of ['Standard', 'Experimental']) {
         await jump.press('Enter');
         await expect(pages).toHaveText('1/3');
         await expect(jump).toHaveValue('1');
-        await jump.press('Escape');
+        const closeButton = dock.getByRole('button', {
+            name: 'Close search and pages',
+            exact: true,
+        });
+        await closeButton.focus();
+        await closeButton.press('Escape');
+        await expect(dock).toBeVisible();
+        await expect(pages).toHaveText('1/3');
+        await closeButton.click();
         await expect(dock).toBeHidden();
         for (const theme of ['Dark', 'Light']) {
             await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
@@ -318,7 +331,11 @@ for (const mode of ['Standard', 'Experimental']) {
                 await expect(dock.locator('.result-match-count')).toHaveText(
                     '1 of 200 rows on this page',
                 );
-                await filter.press('Escape');
+                await closeButton.focus();
+                await closeButton.press('Escape');
+                await expect(dock).toBeVisible();
+                await expect(filter).toHaveValue('row-199');
+                await closeButton.click();
                 await expect(dock).toBeHidden();
                 await expect(header.locator('.result-search-active')).toBeVisible();
                 await openResultFilter(header);
@@ -365,7 +382,15 @@ for (const mode of ['Standard', 'Experimental']) {
                     '1 of 7 rows on this page',
                 );
                 await expect(results.locator('tbody tr')).toHaveCount(1);
-                await filter.press('Escape');
+                const closeButton = dock.getByRole('button', {
+                    name: 'Close search and pages',
+                    exact: true,
+                });
+                await closeButton.focus();
+                await closeButton.press('Escape');
+                await expect(dock).toBeVisible();
+                await expect(filter).toHaveValue('2026-01-02');
+                await closeButton.click();
                 await expect(dock).toBeHidden();
                 await expect(toggle).toBeFocused();
                 await openResultFilter(header);
@@ -569,7 +594,12 @@ test('Pinned search stays open on the grid, moves, clamps and yields to the quer
     await openResultFilter(results);
     await expect(menu).toBeHidden();
     await expect(filter).toHaveValue('row-1');
-    await filter.press('Escape');
+    const closeButton = dock.getByRole('button', { name: 'Close search and pages', exact: true });
+    await closeButton.focus();
+    await closeButton.press('Escape');
+    await expect(dock).toBeVisible();
+    await expect(filter).toHaveValue('row-1');
+    await closeButton.click();
     await expect(header.getByRole('button', { name: 'Search rows', exact: true })).toBeFocused();
     expect(errors).toEqual([]);
 });
@@ -670,7 +700,12 @@ test('The largest retained result keeps its range and long search out of a narro
     await expectDockFits(dock);
     await expectResultsToolbarFits(header);
     await expect(header).toHaveCSS('height', '34px');
-    await filter.press('Escape');
+    const closeButton = dock.getByRole('button', { name: 'Close search and pages', exact: true });
+    await closeButton.focus();
+    await closeButton.press('Escape');
+    await expect(dock).toBeVisible();
+    await expect(filter).toHaveValue('A very long string to search for '.repeat(40));
+    await closeButton.click();
     await expect(header.locator('.result-search-active')).toBeVisible();
     await expect(header.locator('.result-row-count')).toHaveText('20,000 rows');
     await expectResultsToolbarFits(header);

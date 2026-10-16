@@ -392,7 +392,7 @@ test('Run, chart, save and reload preserve the same execution evidence', async (
     await page.getByTestId('run-button').click();
     const results = page.getByRole('region', { name: 'Query results' });
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'succeeded');
-    await expect(results.getByRole('cell', { name: '2026-01-01', exact: true })).toBeVisible();
+    await expect(results.getByRole('cell').filter({ hasText: /^2026-01-01$/ })).toBeVisible();
     const queryId = await currentQueryId(page);
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();
     await expect(results.locator('svg[role="img"]')).toBeVisible();
@@ -407,7 +407,7 @@ test('Run, chart, save and reload preserve the same execution evidence', async (
     await page.reload();
     const recovered = page.getByRole('region', { name: 'Query results' });
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'succeeded');
-    await expect(recovered.getByRole('cell', { name: '2026-01-01', exact: true })).toBeVisible();
+    await expect(recovered.getByRole('cell').filter({ hasText: /^2026-01-01$/ })).toBeVisible();
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-query-id', queryId);
     expect(runs()).toBe(1);
 });
@@ -423,7 +423,8 @@ test("Switching connections never reuses another connection's result", async ({ 
     await expect(
         page
             .getByRole('region', { name: 'Query results' })
-            .getByRole('cell', { name: '2026-01-01', exact: true }),
+            .getByRole('cell')
+            .filter({ hasText: /^2026-01-01$/ }),
     ).toBeVisible();
 });
 
