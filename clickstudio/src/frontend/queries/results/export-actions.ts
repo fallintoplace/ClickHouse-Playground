@@ -45,7 +45,7 @@ export function createQueryExportActions({
         if (!run) return;
         try {
             if (run.connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID) {
-                downloadClickHouseCloudCsv(run.sql, run.parameters);
+                downloadClickHouseCloudCsv(run.sql, run.parameters, run.tags.preview_limit);
                 return;
             }
             const link = document.createElement('a');

@@ -4,4 +4,5 @@ export const MAX_SCRIPT_STATEMENTS = 50;
 export const MAX_RESULT_PAGE_ROWS = 1_000;
 export const DEFAULT_RESULT_PAGE_ROWS = 200;
 export const DEFAULT_MCP_RESULT_PAGE_ROWS = 100;
+export const TABLE_PREVIEW_ROW_LIMIT = 100;
 export const SQL_FILE_SIZE_LABEL = `${MAX_SQL_FILE_BYTES / 1_000} KB`;

@@ -10,6 +10,7 @@ import {
 } from '../../../shared/database/connections/cloud-requests.js';
 import type { ImportJobStatus } from '../../../shared/database/imports/status.js';
 import { MAX_SQL_CHARS } from '../../../shared/queries/execution/limits.js';
+import { fullResultExportSql } from '../../../shared/queries/execution/full-result-export.js';
 import {
     IMPORT_FORMATS,
     IMPORT_FILE_SIZE_LABEL,
@@ -1820,7 +1821,10 @@ async function handleCloudFullExport(
     let response: Awaited<ReturnType<typeof client.exec>>;
     try {
         response = await client.exec({
-            query: `${statements[0]!.sql}\nFORMAT CSVWithNames`,
+            query: `${fullResultExportSql(
+                statements[0]!.sql,
+                typeof body.previewLimit === 'string' ? body.previewLimit : undefined,
+            )}\nFORMAT CSVWithNames`,
             query_id: queryId,
             query_params: parameters,
             abort_signal: controller.signal,
@@ -1917,6 +1921,7 @@ function parseCloudRequestBody(rawBody: string, contentType: string): unknown | 
                 sql: form.get('sql'),
                 parameters: JSON.parse(form.get('parameters') ?? '{}') as unknown,
                 credentials: JSON.parse(form.get('credentials') ?? 'null') as unknown,
+                previewLimit: form.get('previewLimit') ?? undefined,
             };
         } catch {
             return fail('REQUEST_BODY', 'The download request is not valid.');

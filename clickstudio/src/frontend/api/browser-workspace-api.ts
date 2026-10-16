@@ -14,6 +14,7 @@ import type { Run, Script } from '../../shared/queries/execution/types.js';
 import type { Schema } from '../../shared/database/schema/types.js';
 import type { Connection } from '../../shared/database/connections/types.js';
 import { splitSql } from '../../shared/sql/sql.js';
+import { TABLE_PREVIEW_ROW_LIMIT } from '../../shared/queries/execution/limits.js';
 import {
     explainPrefixLength,
     sqlForRunKind,
@@ -467,6 +468,7 @@ export class BrowserWorkspaceApi {
         parameters: Record<string, string>,
         cloud: NonNullable<ReturnType<typeof getClickHouseCloudConnection>>,
         range: Pick<Run, 'sourceFrom' | 'sourceTo'>,
+        previewLimit?: string,
     ) {
         const id = crypto.randomUUID();
         const queryId = `clickstudio-run-${id}`;
@@ -486,6 +488,7 @@ export class BrowserWorkspaceApi {
                 workspace: 'clickstudio',
                 source: 'ClickHouse Cloud',
                 execution: 'browser direct',
+                ...(previewLimit ? { preview_limit: previewLimit } : {}),
             },
             status: 'running',
             createdAt: startedAt,
@@ -1844,7 +1847,12 @@ export class BrowserWorkspaceApi {
                     401,
                 );
             const sql = typeof body.sql === 'string' ? body.sql : '';
-            return this.startCloudRun(sql, requestedKind, parameters, cloud, range);
+            const tags = record(body.tags);
+            const previewLimit =
+                tags.preview_limit === String(TABLE_PREVIEW_ROW_LIMIT)
+                    ? String(TABLE_PREVIEW_ROW_LIMIT)
+                    : undefined;
+            return this.startCloudRun(sql, requestedKind, parameters, cloud, range, previewLimit);
         }
         const run = this.addRun(
             crypto.randomUUID(),

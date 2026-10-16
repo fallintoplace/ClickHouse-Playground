@@ -20,6 +20,7 @@ import { Button, cx } from '../../../ui/components/primitives';
 import { formatBytes, formatCount } from '../../../browser/metric-formatters';
 import { Icon } from '../../../ui/components/icons';
 import { resultTypeGroup } from '../../../queries/results/result-type-group';
+import type { OpenSqlDraft } from '../../../queries/execution/sql-draft-observer';
 
 type ObjectDetailsProps = {
     copy: Copy['common'];
@@ -31,7 +32,7 @@ type ObjectDetailsProps = {
     onClose?: () => void;
     onInsert: (value: string) => void;
     onCopy: (value: string, id: string) => void | Promise<void>;
-    onOpenSqlDraft: (name: string, sql: string, run: boolean, reuseExisting?: boolean) => void;
+    onOpenSqlDraft: OpenSqlDraft;
     onOpenReference: (name: string, type: string) => void;
     onOpenParts: (table: SchemaTable) => void;
     onSelect: (id: string) => void;
@@ -327,14 +328,17 @@ function RelationDetails({
                         className="toolbar-small object-preview-action"
                         disabled={!trusted}
                         title={!trusted ? copy.runActionTrustRequired : undefined}
-                        onClick={() =>
+                        onClick={() => {
+                            const sql = tableQuerySql(table, columns, 'preview');
                             onOpenSqlDraft(
                                 `Preview ${table.name}.sql`,
-                                tableQuerySql(table, columns, 'preview'),
+                                sql,
                                 true,
                                 true,
-                            )
-                        }
+                                undefined,
+                                { generatedPreviewSql: sql },
+                            );
+                        }}
                     >
                         <Icon name="table" />
                         {copy.previewRows}

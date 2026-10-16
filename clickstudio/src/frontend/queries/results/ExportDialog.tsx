@@ -7,6 +7,7 @@ export function ExportDialog({
     queryAvailable,
     rowsAvailable,
     fullResultAvailable,
+    fullResultDisabledReason,
     onClose,
     onExportQuery,
     onExportRows,
@@ -16,6 +17,7 @@ export function ExportDialog({
     queryAvailable: boolean;
     rowsAvailable: boolean;
     fullResultAvailable: boolean;
+    fullResultDisabledReason: string;
     onClose: () => void;
     onExportQuery: () => void;
     onExportRows: () => void;
@@ -88,21 +90,36 @@ export function ExportDialog({
                         </small>
                     </span>
                 </button>
-                <button
-                    type="button"
-                    data-footer-help="Rerun the query and download its full result."
-                    disabled={!fullResultAvailable}
-                    onClick={onDownloadFullResult}
-                    className="export-option transfer-dialog-option"
+                <span
+                    className="block w-full"
+                    title={!fullResultAvailable ? fullResultDisabledReason : undefined}
                 >
-                    <Icon name="refresh" className="mt-0.5 shrink-0 text-[var(--accent)]" />
-                    <span className="grid gap-1">
-                        <strong className="text-sm">Download full result (.csv)</strong>
-                        <small className="text-xs text-[var(--muted)]">
-                            Reruns the query and downloads all rows.
-                        </small>
+                    <button
+                        type="button"
+                        data-footer-help="Rerun the query and download its full result."
+                        disabled={!fullResultAvailable}
+                        aria-describedby={
+                            !fullResultAvailable
+                                ? 'full-result-download-disabled-reason'
+                                : undefined
+                        }
+                        onClick={onDownloadFullResult}
+                        className="export-option transfer-dialog-option w-full"
+                    >
+                        <Icon name="refresh" className="mt-0.5 shrink-0 text-[var(--accent)]" />
+                        <span className="grid gap-1">
+                            <strong className="text-sm">Download full result (.csv)</strong>
+                            <small className="text-xs text-[var(--muted)]">
+                                Reruns the query and downloads all rows.
+                            </small>
+                        </span>
+                    </button>
+                </span>
+                {!fullResultAvailable && (
+                    <span id="full-result-download-disabled-reason" className="sr-only">
+                        {fullResultDisabledReason}
                     </span>
-                </button>
+                )}
                 {!rowsAvailable && (
                     <p className="pl-9 text-[11px] text-[var(--muted)]">
                         Run a query to export its rows.

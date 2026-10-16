@@ -238,6 +238,7 @@ export function registerCloudApi(
                         sql: form.sql,
                         parameters: formJson(form.parameters),
                         credentials: credentials ?? formJson(form.credentials),
+                        previewLimit: form.previewLimit,
                     }),
                     signal: controller.signal,
                 });

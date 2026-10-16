@@ -13,6 +13,7 @@ import type { Connection, Manifest } from '../../../shared/database/connections/
 import type { Json } from '../../../shared/common/values.js';
 import type { Principal } from '../../../shared/common/identity.js';
 import type { Progress, Run } from '../../../shared/queries/execution/types.js';
+import { fullResultExportSql } from '../../../shared/queries/execution/full-result-export.js';
 import type { ReferenceCategory } from '../../../shared/database/reference/reference.js';
 import type { Schema } from '../../../shared/database/schema/types.js';
 import {
@@ -727,7 +728,7 @@ export class ClickHouseDriver implements QueryDriver, ImportDriver, CreateTableD
         }
     }
     async exportFullCsv(run: Run, signal: AbortSignal): Promise<AsyncIterable<Buffer | string>> {
-        const statement = splitSql(run.sql)[0]!.sql;
+        const statement = fullResultExportSql(run.sql, run.tags.preview_limit);
         const sql = sqlForRunKind(statement, run.kind);
         try {
             const response = await this.client(run.connectionId).exec({

@@ -96,9 +96,15 @@ export function runRequest(value: unknown): RunRequest {
     const tags = stringMap(v.tags, 'tags', 5);
     requireThat(
         Object.keys(tags).every(k =>
-            ['workspace', 'owner', 'artifact', 'environment', 'cost_center', 'experience'].includes(
-                k,
-            ),
+            [
+                'workspace',
+                'owner',
+                'artifact',
+                'environment',
+                'cost_center',
+                'experience',
+                'preview_limit',
+            ].includes(k),
         ),
         400,
         'INVALID_TAG',

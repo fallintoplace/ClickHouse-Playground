@@ -459,7 +459,11 @@ export function getClickHouseCloudConnection() {
     return activeCloud?.connection;
 }
 
-export function downloadClickHouseCloudCsv(sql: string, parameters: Record<string, string>) {
+export function downloadClickHouseCloudCsv(
+    sql: string,
+    parameters: Record<string, string>,
+    previewLimit?: string,
+) {
     const cloud = requireCloudConnection('Reconnect to ClickHouse Cloud before downloading rows.');
     const form = document.createElement('form');
     form.method = 'post';
@@ -469,6 +473,7 @@ export function downloadClickHouseCloudCsv(sql: string, parameters: Record<strin
         action: 'full-export',
         sql,
         parameters: JSON.stringify(parameters),
+        ...(previewLimit ? { previewLimit } : {}),
     };
     if (cloud.credentials) values.credentials = JSON.stringify(cloud.credentials);
     for (const [name, value] of Object.entries(values)) {

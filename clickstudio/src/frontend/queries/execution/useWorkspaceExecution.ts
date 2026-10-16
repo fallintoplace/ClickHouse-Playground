@@ -1,4 +1,4 @@
-import type { SqlDraftObserver } from './sql-draft-observer';
+import type { SqlDraftObserver, SqlDraftOpenOptions } from './sql-draft-observer';
 import { useRef, type Dispatch, type RefObject, type SetStateAction } from 'react';
 import {
     parameterNames,
@@ -9,6 +9,7 @@ import {
 import type { Run, Script } from '../../../shared/queries/execution/types';
 import type { RunKind } from '../../../shared/queries/execution/status';
 import { DEFAULT_LIMITS } from '../../../shared/queries/execution/settings';
+import { TABLE_PREVIEW_ROW_LIMIT } from '../../../shared/queries/execution/limits';
 import { rememberRunIds } from '../saved-queries/draft-save-state';
 import { api, apiResponses, message, post, RequestError } from '../../api/client';
 import { SavedQueryUnavailableError } from '../../api/browser-workspace-api';
@@ -369,6 +370,7 @@ export function useWorkspaceExecution({
         run: boolean,
         reuseExisting = false,
         observer?: SqlDraftObserver,
+        openOptions: SqlDraftOpenOptions = {},
     ) => {
         if (run && (busy || executionInFlightRef.current)) {
             setError(copy.common.runActionWait, { tone: 'warning', timeoutMs: 5000 });
@@ -388,6 +390,8 @@ export function useWorkspaceExecution({
                 sql,
                 id => setWorkspace(current => ({ ...current, activeId: id })),
                 draft => {
+                    if (openOptions.generatedPreviewSql)
+                        draft.generatedPreviewSql = openOptions.generatedPreviewSql;
                     reusedDraft = { draftId: draft.id };
                     void executeObservedDraft(draft, executeSqlForDraft, connection.id, observer);
                 },
@@ -395,6 +399,8 @@ export function useWorkspaceExecution({
         )
             return reusedDraft;
         const draft = newDraft(name, sql);
+        if (openOptions.generatedPreviewSql)
+            draft.generatedPreviewSql = openOptions.generatedPreviewSql;
         if (!openNewDraft(draft, !run)) return;
         if (!run) {
             window.requestAnimationFrame(() => editor.current?.focus());
@@ -584,11 +590,21 @@ function createDraftExecutor({
                     }
                 }
 
+                const runSql = isScript ? sql : statement!.sql;
+                const generatedPreviewStatements = draft.generatedPreviewSql
+                    ? splitSql(draft.generatedPreviewSql)
+                    : [];
+                const generatedPreviewLimit =
+                    !isScript &&
+                    generatedPreviewStatements.length === 1 &&
+                    generatedPreviewStatements[0]!.sql === runSql
+                        ? String(TABLE_PREVIEW_ROW_LIMIT)
+                        : undefined;
                 const payload = {
                     clientRequestId: crypto.randomUUID(),
                     connectionId: connection.id,
                     documentId,
-                    sql: isScript ? sql : statement!.sql,
+                    sql: runSql,
                     parameters: draft.parameters,
                     parentRunId: draft.parentRunId,
                     kind,
@@ -596,7 +612,11 @@ function createDraftExecutor({
                         rows: connection.limits.rows || DEFAULT_LIMITS.rows,
                         seconds: connection.limits.seconds || DEFAULT_LIMITS.seconds,
                     },
-                    tags: { workspace: 'clickstudio', experience },
+                    tags: {
+                        workspace: 'clickstudio',
+                        experience,
+                        ...(generatedPreviewLimit ? { preview_limit: generatedPreviewLimit } : {}),
+                    },
                     ...(sourceRange
                         ? { sourceFrom: sourceRange.from, sourceTo: sourceRange.to }
                         : {}),

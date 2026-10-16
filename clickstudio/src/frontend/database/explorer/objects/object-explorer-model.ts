@@ -6,6 +6,7 @@ import type {
     SchemaSkipIndex,
     SchemaTable,
 } from '../../../../shared/database/schema/types.js';
+import { TABLE_PREVIEW_ROW_LIMIT } from '../../../../shared/queries/execution/limits.js';
 import { quoteIdentifier } from '../../../../shared/sql/sql.js';
 
 export type ExplorerRelationKind = 'table' | 'view';
@@ -313,11 +314,12 @@ export function tableQuerySql(
     mode: 'preview' | 'select',
 ): string {
     const qualifiedName = `${quoteIdentifier(table.database)}.${quoteIdentifier(table.name)}`;
-    if (mode === 'preview') return `SELECT *\nFROM ${qualifiedName}\nLIMIT 100;`;
+    if (mode === 'preview')
+        return `SELECT *\nFROM ${qualifiedName}\nLIMIT ${TABLE_PREVIEW_ROW_LIMIT};`;
 
     const selectList =
         columns.length > 0 && columns.length <= 24
             ? columns.map(column => `    ${quoteIdentifier(column.name)}`).join(',\n')
             : '    *';
-    return `SELECT\n${selectList}\nFROM ${qualifiedName}\nLIMIT 100;`;
+    return `SELECT\n${selectList}\nFROM ${qualifiedName}\nLIMIT ${TABLE_PREVIEW_ROW_LIMIT};`;
 }

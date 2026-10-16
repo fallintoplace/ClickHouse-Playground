@@ -6,10 +6,15 @@ export type SqlDraftObserver = {
     failed: (error: ApiError) => void;
 };
 
+export type SqlDraftOpenOptions = {
+    generatedPreviewSql?: string;
+};
+
 export type OpenSqlDraft = (
     name: string,
     sql: string,
     run: boolean,
     reuseExisting?: boolean,
     observer?: SqlDraftObserver,
+    options?: SqlDraftOpenOptions,
 ) => { draftId: string } | undefined;

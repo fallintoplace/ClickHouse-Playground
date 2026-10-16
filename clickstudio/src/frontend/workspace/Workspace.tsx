@@ -616,6 +616,27 @@ function renderWorkspaceOverlays({
 }) {
     const { active } = model.tabs;
     const { run, eventState } = model.evidence;
+    const liveClickHouseSource = Boolean(
+        run &&
+        run.dataSource === 'clickhouse' &&
+        (!demoMode || run.connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID) &&
+        (run.connectionId !== PLAYGROUND_CONNECTION_ID || !demoMode),
+    );
+    const fullResultAvailable = Boolean(
+        run &&
+        run.kind === 'query' &&
+        (run.status === 'succeeded' || run.status === 'truncated') &&
+        liveClickHouseSource,
+    );
+    const fullResultDisabledReason = (() => {
+        if (!run) return 'Run a query on a live ClickHouse connection first.';
+        if (run.status === 'queued' || run.status === 'running')
+            return 'Wait for the query to finish before downloading the full result.';
+        if (run.kind !== 'query') return 'Full result downloads are available for query runs.';
+        if (!liveClickHouseSource)
+            return 'Preview results cannot be rerun. Use a live ClickHouse connection for a full download.';
+        return 'Run a successful ClickHouse query to enable the full download.';
+    })();
     const {
         trusted,
         setObservabilityOpen,
@@ -678,16 +699,11 @@ function renderWorkspaceOverlays({
                               const table = model.data.schema?.tables.find(
                                   table => `${table.database}.${table.name}` === job.table,
                               );
-                              return Boolean(
-                                  table &&
-                                  openNewDraft(
-                                      newDraft(
-                                          `Inspect ${job.table}`,
-                                          tableQuerySql(table, [], 'preview'),
-                                      ),
-                                      true,
-                                  ),
-                              );
+                              if (!table) return false;
+                              const sql = tableQuerySql(table, [], 'preview');
+                              const draft = newDraft(`Inspect ${job.table}`, sql);
+                              draft.generatedPreviewSql = sql;
+                              return openNewDraft(draft, true);
                           }
                         : undefined
                 }
@@ -696,14 +712,8 @@ function renderWorkspaceOverlays({
                 open={exportOpen}
                 queryAvailable={Boolean(active.sql.trim())}
                 rowsAvailable={run?.resultState === 'reopenable'}
-                fullResultAvailable={Boolean(
-                    run &&
-                    run.kind === 'query' &&
-                    (run.status === 'succeeded' || run.status === 'truncated') &&
-                    run.dataSource === 'clickhouse' &&
-                    (!demoMode || run.connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID) &&
-                    (run.connectionId !== PLAYGROUND_CONNECTION_ID || !demoMode),
-                )}
+                fullResultAvailable={fullResultAvailable}
+                fullResultDisabledReason={fullResultDisabledReason}
                 onClose={() => setExportOpen(false)}
                 onExportQuery={() => {
                     setExportOpen(false);

@@ -420,9 +420,11 @@ test('Object explorer shows ClickHouse metadata, searchable children, and previe
         request => request.method() === 'POST' && new URL(request.url()).pathname === '/api/runs',
     );
     await page.getByRole('button', { name: 'Preview rows', exact: true }).click();
-    const previewSql = jsonRecord((await previewRequest).postDataJSON()).sql;
+    const previewPayload = jsonRecord((await previewRequest).postDataJSON());
+    const previewSql = previewPayload.sql;
     expect(previewSql).toContain('SELECT *');
     expect(previewSql).toContain('FROM `analytics`.`events`');
+    expect(jsonRecord(previewPayload.tags).preview_limit).toBe('100');
     await expect(
         sqlTabs.getByRole('tab', { name: 'Preview events.sql', exact: true }),
     ).toHaveAttribute('aria-selected', 'true');
