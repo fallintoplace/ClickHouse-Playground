@@ -75,21 +75,26 @@ export function ExportDialog({
                         </small>
                     </span>
                 </button>
-                <button
-                    type="button"
-                    data-footer-help="Download the rows retained from the latest query result."
-                    disabled={!rowsAvailable}
-                    onClick={onExportRows}
-                    className="export-option transfer-dialog-option"
+                <span
+                    className="block w-full"
+                    title={!rowsAvailable ? 'Run a query to export its rows.' : undefined}
                 >
-                    <Icon name="table" className="mt-0.5 shrink-0 text-[var(--accent)]" />
-                    <span className="grid gap-1">
-                        <strong className="text-sm">Export retained rows (.csv)</strong>
-                        <small className="text-xs text-[var(--muted)]">
-                            Download rows from the latest query result.
-                        </small>
-                    </span>
-                </button>
+                    <button
+                        type="button"
+                        data-footer-help="Download the rows retained from the latest query result."
+                        disabled={!rowsAvailable}
+                        onClick={onExportRows}
+                        className="export-option transfer-dialog-option w-full"
+                    >
+                        <Icon name="table" className="mt-0.5 shrink-0 text-[var(--accent)]" />
+                        <span className="grid gap-1">
+                            <strong className="text-sm">Export retained rows (.csv)</strong>
+                            <small className="text-xs text-[var(--muted)]">
+                                Download rows from the latest query result.
+                            </small>
+                        </span>
+                    </button>
+                </span>
                 <span
                     className="block w-full"
                     title={!fullResultAvailable ? fullResultDisabledReason : undefined}
@@ -119,11 +124,6 @@ export function ExportDialog({
                     <span id="full-result-download-disabled-reason" className="sr-only">
                         {fullResultDisabledReason}
                     </span>
-                )}
-                {!rowsAvailable && (
-                    <p className="pl-9 text-[11px] text-[var(--muted)]">
-                        Run a query to export its rows.
-                    </p>
                 )}
             </div>
         </dialog>

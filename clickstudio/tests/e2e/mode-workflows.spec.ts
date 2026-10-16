@@ -119,6 +119,8 @@ test('Standard exposes assignment actions and can run a query without opening AI
     const exportDialog = page.getByRole('dialog', { name: 'Export' });
     await expect(exportDialog.getByRole('button', { name: /Export query/ })).toBeEnabled();
     await expect(exportDialog.getByRole('button', { name: /Export retained rows/ })).toBeDisabled();
+    await expect(exportDialog.getByTitle('Run a query to export its rows.')).toBeVisible();
+    await expect(exportDialog.getByText('Run a query to export its rows.')).toHaveCount(0);
     await expect(exportDialog.getByRole('button', { name: /Download full result/ })).toBeDisabled();
     await expect(
         exportDialog.getByTitle('Run a query on a live ClickHouse connection first.'),
