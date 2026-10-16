@@ -2607,6 +2607,11 @@
     font-family: var(--font-mono);
     font-size: 10px;
   }
+  .execution-retention-note {
+    color: var(--amber);
+    font-size: 9px;
+    white-space: nowrap;
+  }
   .execution-separator {
     width: 1px;
     height: 15px;

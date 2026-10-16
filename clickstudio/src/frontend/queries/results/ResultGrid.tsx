@@ -11,7 +11,6 @@ import type { Run } from '../../../shared/queries/execution/types';
 import { NativeTable } from '../../ui/components/NativeTable';
 import { ScrollEdgeFrame } from '../../ui/components/ScrollEdgeShadows';
 import { cx, Spinner } from '../../ui/components/primitives';
-import { Icon } from '../../ui/components/icons';
 import { ResultTableControls } from './ResultTableControls';
 import { CellInspector, type InspectedCell } from './CellInspector';
 import { terminal } from '../execution/status';
@@ -50,29 +49,6 @@ function ResultColumnHeader({
             </div>
         </th>
     );
-}
-
-function byteLimitLabel(bytes: number): string {
-    let divisor = 1;
-    let unit = 'bytes';
-    if (bytes >= 1_000_000) {
-        divisor = 1_000_000;
-        unit = 'MB';
-    } else if (bytes >= 1_000) {
-        divisor = 1_000;
-        unit = 'KB';
-    }
-    const value = bytes / divisor;
-    return `${Number(value.toFixed(value >= 10 ? 0 : 1)).toLocaleString()} ${unit}`;
-}
-
-function truncationMessage(page: ResultPage, run: Run): string {
-    const retainedRows = `${page.totalRows.toLocaleString()} retained ${page.totalRows === 1 ? 'row' : 'rows'}`;
-    if (page.truncationReason === 'rows')
-        return `Showing ${retainedRows}. The ${run.limits.rows.toLocaleString()}-row retention limit was reached; more rows may exist.`;
-    if (page.truncationReason === 'bytes')
-        return `Showing ${retainedRows}. The ${byteLimitLabel(run.limits.bytes)} result-size limit was reached; the full result is not available here.`;
-    return `Showing ${retainedRows}. An output retention limit was reached, so the full result is not available here.`;
 }
 
 function emptyRetainedRowsMessage(page: ResultPage): string {
@@ -423,12 +399,6 @@ export function ResultGrid({
                         </div>
                     )}
                 </ScrollEdgeFrame>
-            )}
-            {page.completeness === 'truncated' && (
-                <div className="result-retention-notice" role="status">
-                    <Icon name="warning" />
-                    <span>{truncationMessage(page, run)}</span>
-                </div>
             )}
             {inspectedCell && (
                 <CellInspector cell={inspectedCell} onClose={() => setInspectedCell(null)} />

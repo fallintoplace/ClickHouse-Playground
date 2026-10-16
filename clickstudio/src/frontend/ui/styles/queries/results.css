@@ -676,24 +676,6 @@
   .result-cell-trigger:hover {
     color: var(--text);
   }
-  .result-retention-notice {
-    display: flex;
-    flex: none;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 7px 12px;
-    border-top: 1px solid var(--line);
-    background: color-mix(in srgb, var(--amber) 8%, var(--page));
-    color: var(--text-soft);
-    font-size: 11px;
-    line-height: 1.45;
-  }
-  .result-retention-notice > svg {
-    width: 14px;
-    height: 14px;
-    flex: none;
-    color: var(--amber);
-  }
   .result-cell-inspector {
     --transfer-dialog-width: 760px;
   }

@@ -385,6 +385,14 @@ export function ExecutionBar({
             <div className="execution-state">
                 <div className="execution-summary">
                     {!failureInToolbar && renderCurrentStatus()}
+                    {!failureInToolbar && currentRun?.status === 'truncated' && (
+                        <span
+                            className="execution-retention-note"
+                            title="A result retention limit was reached."
+                        >
+                            Limit reached
+                        </span>
+                    )}
                     {currentRun && scriptRunning && (
                         <span className="execution-kind">{copy.runScript.toUpperCase()}</span>
                     )}
