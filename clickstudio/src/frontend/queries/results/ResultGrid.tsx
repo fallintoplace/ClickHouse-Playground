@@ -310,12 +310,6 @@ export function ResultGrid({
             inert={obscured || undefined}
         >
             {renderInContainer(toolbar, toolbarContainer)}
-            {page.completeness === 'truncated' && (
-                <div className="result-retention-notice" role="status">
-                    <Icon name="warning" />
-                    <span>{truncationMessage(page, run)}</span>
-                </div>
-            )}
             {pageLoading ? (
                 <div className="result-loading" role="status">
                     <Spinner />
@@ -429,6 +423,12 @@ export function ResultGrid({
                         </div>
                     )}
                 </ScrollEdgeFrame>
+            )}
+            {page.completeness === 'truncated' && (
+                <div className="result-retention-notice" role="status">
+                    <Icon name="warning" />
+                    <span>{truncationMessage(page, run)}</span>
+                </div>
             )}
             {inspectedCell && (
                 <CellInspector cell={inspectedCell} onClose={() => setInspectedCell(null)} />

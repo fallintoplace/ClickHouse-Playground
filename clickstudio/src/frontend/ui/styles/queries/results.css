@@ -682,7 +682,7 @@
     align-items: flex-start;
     gap: 8px;
     padding: 7px 12px;
-    border-bottom: 1px solid var(--line);
+    border-top: 1px solid var(--line);
     background: color-mix(in srgb, var(--amber) 8%, var(--page));
     color: var(--text-soft);
     font-size: 11px;
