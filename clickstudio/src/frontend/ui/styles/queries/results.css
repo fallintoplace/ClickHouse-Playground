@@ -268,11 +268,6 @@
     width: 14px;
     height: 14px;
   }
-  .result-columns-toggle > small {
-    color: var(--muted);
-    font-size: 9px;
-    font-variant-numeric: tabular-nums;
-  }
   .result-columns-toggle.is-active {
     color: var(--accent-cyan);
   }

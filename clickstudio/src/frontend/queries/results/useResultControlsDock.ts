@@ -78,21 +78,17 @@ export function useResultControlsDock() {
         const view = document?.defaultView;
         if (!element || !control || !document || !view) return;
         const outside = (event: Event) => {
+            const path = event.composedPath();
+            const button = invoker.current;
+            const target = event.target;
+            const insidePanel =
+                path.includes(element) ||
+                (target instanceof Node && element.contains(target));
             if (
                 !pinned &&
-                !event.composedPath().includes(element) &&
-                !event.composedPath().includes(control)
+                !insidePanel &&
+                (!button || !path.includes(button))
             )
-                close();
-        };
-        const escape = (event: globalThis.KeyboardEvent) => {
-            if (event.key !== 'Escape' || !element.matches(':popover-open')) return;
-            event.preventDefault();
-            event.stopPropagation();
-            close(true);
-        };
-        const otherPopover = (event: Event) => {
-            if ('newState' in event && event.newState === 'open' && event.target !== element)
                 close();
         };
         const observer = new ResizeObserver(reposition);
@@ -101,17 +97,11 @@ export function useResultControlsDock() {
         view.addEventListener('resize', reposition);
         document.addEventListener('scroll', reposition, true);
         document.addEventListener('pointerdown', outside, true);
-        document.addEventListener('focusin', outside);
-        document.addEventListener('keydown', escape, true);
-        document.addEventListener('beforetoggle', otherPopover, true);
         return () => {
             observer.disconnect();
             view.removeEventListener('resize', reposition);
             document.removeEventListener('scroll', reposition, true);
             document.removeEventListener('pointerdown', outside, true);
-            document.removeEventListener('focusin', outside);
-            document.removeEventListener('keydown', escape, true);
-            document.removeEventListener('beforetoggle', otherPopover, true);
         };
     }, [pinned, close, reposition]);
 

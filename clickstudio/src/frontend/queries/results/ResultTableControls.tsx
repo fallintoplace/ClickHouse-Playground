@@ -194,10 +194,6 @@ export function ResultTableControls({
                     onClick={event => dock.show('columns', event.currentTarget)}
                 >
                     <Icon name="column" />
-                    <span>Columns</span>
-                    <small>
-                        {visibleColumnCount}/{columns.length}
-                    </small>
                 </button>
             )}
             <div
