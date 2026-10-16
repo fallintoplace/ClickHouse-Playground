@@ -1,8 +1,8 @@
-import type { Json } from '../../../shared/common/values.js';
+import { isJson, isRecord, type Json } from '../../../shared/common/values.js';
 import type { CloudCredentials } from '../../../shared/database/connections/cloud-requests.js';
 import { hash, type Store } from '../../system/store.js';
-import { isRecord } from '../../../shared/common/values.js';
 import { MAX_LARGE_CELL_STORAGE_BYTES } from '../../../shared/queries/results/large-cells.js';
+import { requireThat } from '../../system/requests/errors.js';
 
 export const CLOUD_LARGE_CELL_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -36,29 +36,46 @@ export interface LargeCellContext {
 }
 
 function storedLargeCell(value: unknown): StoredLargeCell | undefined {
+    if (!isRecord(value)) return undefined;
+    const {
+        ownerKey,
+        runId,
+        cellId,
+        value: content,
+        valueType,
+        bytes,
+        serializedBytes,
+        fileName,
+        mimeType,
+    } = value;
     if (
-        isRecord(value) &&
-        typeof value.ownerKey === 'string' &&
-        typeof value.runId === 'string' &&
-        typeof value.cellId === 'string' &&
-        typeof value.value === 'string' &&
-        (value.valueType === 'text' || value.valueType === 'json') &&
-        typeof value.bytes === 'number' &&
-        Number.isSafeInteger(value.bytes) &&
-        (value.serializedBytes === undefined ||
-            (typeof value.serializedBytes === 'number' &&
-                Number.isSafeInteger(value.serializedBytes) &&
-                value.serializedBytes >= value.bytes)) &&
-        typeof value.fileName === 'string' &&
-        typeof value.mimeType === 'string'
+        typeof ownerKey !== 'string' ||
+        typeof runId !== 'string' ||
+        typeof cellId !== 'string' ||
+        typeof content !== 'string' ||
+        (valueType !== 'text' && valueType !== 'json') ||
+        typeof bytes !== 'number' ||
+        !Number.isSafeInteger(bytes) ||
+        (serializedBytes !== undefined &&
+            (typeof serializedBytes !== 'number' ||
+                !Number.isSafeInteger(serializedBytes) ||
+                serializedBytes < bytes)) ||
+        typeof fileName !== 'string' ||
+        typeof mimeType !== 'string'
     ) {
-        return {
-            ...value,
-            serializedBytes:
-                typeof value.serializedBytes === 'number' ? value.serializedBytes : value.bytes,
-        } as StoredLargeCell;
+        return undefined;
     }
-    return undefined;
+    return {
+        ownerKey,
+        runId,
+        cellId,
+        value: content,
+        valueType,
+        bytes,
+        serializedBytes: typeof serializedBytes === 'number' ? serializedBytes : bytes,
+        fileName,
+        mimeType,
+    };
 }
 
 function isLargeCellIndexEntry(value: unknown): value is LargeCellIndexEntry {
@@ -322,6 +339,9 @@ export class LargeCellStore {
     }
 
     jsonValue(cell: StoredLargeCell): Json {
-        return cell.valueType === 'text' ? cell.value : (JSON.parse(cell.value) as Json);
+        if (cell.valueType === 'text') return cell.value;
+        const value: unknown = JSON.parse(cell.value);
+        requireThat(isJson(value), 500, 'LARGE_CELL_INVALID', 'Stored large cell is invalid JSON');
+        return value;
     }
 }

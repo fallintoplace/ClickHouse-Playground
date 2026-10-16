@@ -76,8 +76,8 @@ export function HeatmapGrid({
                             </tr>
                         </thead>
                         <tbody>
-                            {heatmapYLabels.map((yLabel, yIndex) => (
-                                <tr key={`y-${heatmapYKeys[yIndex]}`}>
+                            {heatmapYLabels.map((yLabel, rowIndex) => (
+                                <tr key={`y-${heatmapYKeys[rowIndex]}`}>
                                     <th
                                         className="heatmap-axis-label heatmap-row-label"
                                         scope="row"
@@ -88,7 +88,7 @@ export function HeatmapGrid({
                                     {heatmapXLabels.map((xLabel, xIndex) => {
                                         const key = heatmapCellKey(
                                             heatmapXKeys[xIndex]!,
-                                            heatmapYKeys[yIndex]!,
+                                            heatmapYKeys[rowIndex]!,
                                         );
                                         const value = heatmap.cells.get(key);
                                         const hasRow = heatmap.present.has(key);
@@ -114,7 +114,7 @@ export function HeatmapGrid({
                                         return (
                                             <td
                                                 className="heatmap-cell"
-                                                key={`${heatmapYKeys[yIndex]}-${heatmapXKeys[xIndex]}`}
+                                                key={`${heatmapYKeys[rowIndex]}-${heatmapXKeys[xIndex]}`}
                                                 title={`${result.columns[groupByIndex]?.name}: ${yLabel} · ${result.columns[xIndex]?.name}: ${xLabel} · ${result.columns[yIndex]?.name}: ${cellDescription}`}
                                                 aria-label={`${yLabel}, ${xLabel}: ${cellDescription}`}
                                                 style={{

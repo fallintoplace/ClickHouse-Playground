@@ -6,6 +6,8 @@ import { SessionService } from '../../.core-build/src/backend/system/login/sessi
 import { DEFAULT_LIMITS } from '../../.core-build/src/shared/queries/execution/settings.js';
 import { CLOUD_QUERY_LIMITS } from '../../.core-build/src/shared/database/connections/cloud-policy.js';
 import { FileStore, MemoryStore, audit } from '../../.core-build/src/backend/system/store.js';
+import { LargeCellStore } from '../../.core-build/src/backend/queries/execution/large-cells.js';
+import { isLargeCellReference } from '../../.core-build/src/shared/queries/results/large-cells.js';
 import { isRecord } from '../../.core-build/src/shared/common/values.js';
 import { mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -112,6 +114,27 @@ test('Oversized unterminated rows are bounded before JSON.parse', async () => {
     assert.equal(output.truncated, true);
     assert.equal(output.truncationReason, 'bytes');
     assert.equal(output.rows.length, 0);
+});
+test('Large result cells are stored separately and can be recovered losslessly', async () => {
+    const value = 'x'.repeat(260_001);
+    const objectValue = { payload: value };
+    const store = new LargeCellStore(new MemoryStore());
+    const output = await collectCompactStream(
+        Readable.from([
+            `${JSON.stringify(['text', 'json'])}\n`,
+            `${JSON.stringify(['String', 'JSON'])}\n`,
+            `${JSON.stringify([value, objectValue])}\n`,
+        ]),
+        { ...DEFAULT_LIMITS, bytes: 2_000 },
+        { store, ownerKey: 'owner', runId: 'run', referenceToken: 'cell-token' },
+    );
+    const textReference = output.rows[0]?.[0];
+    const jsonReference = output.rows[0]?.[1];
+    assert.equal(output.truncated, false);
+    assert.ok(isLargeCellReference(textReference, 'cell-token'));
+    assert.ok(isLargeCellReference(jsonReference, 'cell-token'));
+    assert.equal(store.jsonValue(store.get('owner', 'run', textReference.id)), value);
+    assert.deepEqual(store.jsonValue(store.get('owner', 'run', jsonReference.id)), objectValue);
 });
 test('Invalid names/types headers are rejected', async () => {
     await assert.rejects(

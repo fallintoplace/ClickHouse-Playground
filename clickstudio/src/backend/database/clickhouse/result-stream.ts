@@ -14,9 +14,235 @@ import { AppError, requireThat } from '../../system/requests/errors.js';
 import type { DriverResult } from '../../queries/execution/runs.js';
 import type { LargeCellContext } from '../../queries/execution/large-cells.js';
 
+interface StreamState {
+    stage: 0 | 1 | 2;
+    names: string[];
+    columns: Column[];
+    rows: Row[];
+    bytes: number;
+    largeCellBytes: number;
+    largeCellSerializedBytes: number;
+    truncated: boolean;
+    truncationReason?: ResultTruncationReason;
+}
+
+interface DetachedCell {
+    id: string;
+    index: number;
+    columnName: string;
+    value: string;
+    valueType: 'text' | 'json';
+    bytes: number;
+    serializedBytes: number;
+}
+
+interface PreparedRow {
+    row: Row;
+    cells: DetachedCell[];
+    bytes: number;
+    serializedBytes: number;
+}
+
 function isRow(value: unknown): value is Row {
     return Array.isArray(value) && value.every(isJson);
 }
+
+function parseCompactLine(line: string): unknown {
+    try {
+        return JSON.parse(line);
+    } catch {
+        throw new AppError(
+            502,
+            'RESULT_STREAM_ERROR',
+            'ClickHouse interrupted the result stream or returned invalid data. Inspect this query ID on the server.',
+        );
+    }
+}
+
+function markTruncated(state: StreamState, reason: ResultTruncationReason): void {
+    state.truncated = true;
+    state.truncationReason = reason;
+}
+
+function consumeHeader(data: unknown[], size: number, state: StreamState): void {
+    requireThat(
+        isStringArray(data) && data.length > 0 && data.length <= 500,
+        502,
+        'RESULT_METADATA',
+        'Invalid names/types header',
+    );
+    if (state.stage === 0) {
+        state.names = data;
+    } else {
+        requireThat(
+            data.length === state.names.length,
+            502,
+            'RESULT_METADATA',
+            'Column names and types differ',
+        );
+        state.columns = state.names.map((name, index) => {
+            const type = data[index];
+            requireThat(
+                type !== undefined,
+                502,
+                'RESULT_METADATA',
+                'Column names and types differ',
+            );
+            return { name, type };
+        });
+    }
+    state.bytes += size;
+    state.stage = state.stage === 0 ? 1 : 2;
+}
+
+function prepareRow(
+    data: Row,
+    columns: Column[],
+    largeCellContext: LargeCellContext | undefined,
+    state: StreamState,
+): PreparedRow | undefined {
+    const row = [...data];
+    const cells: DetachedCell[] = [];
+    let bytes = 0;
+    let serializedBytes = 0;
+
+    if (!largeCellContext) return { row, cells, bytes, serializedBytes };
+
+    for (let index = 0; index < data.length; index++) {
+        const value = data[index];
+        if (value === undefined || value === null) continue;
+        const valueType = typeof value === 'string' ? 'text' : 'json';
+        const fullValue =
+            typeof value === 'string' ? value : (JSON.stringify(value) ?? String(value));
+        const jsonValue = JSON.stringify(value) ?? fullValue;
+        const cellBytes = Buffer.byteLength(fullValue);
+        const cellSerializedBytes = Buffer.byteLength(jsonValue);
+        if (cellBytes <= LARGE_CELL_INLINE_BYTES) continue;
+
+        const nextBytes = bytes + cellBytes;
+        const nextSerializedBytes = serializedBytes + cellSerializedBytes;
+        if (
+            cellBytes > MAX_LARGE_CELL_BYTES ||
+            cellSerializedBytes > MAX_LARGE_CELL_BYTES ||
+            state.largeCellBytes + nextBytes > MAX_LARGE_CELL_BYTES_PER_RESULT ||
+            state.largeCellSerializedBytes + nextSerializedBytes > MAX_LARGE_CELL_BYTES_PER_RESULT
+        ) {
+            return undefined;
+        }
+
+        const column = columns[index];
+        requireThat(
+            column !== undefined,
+            502,
+            'RESULT_WIDTH',
+            'Unexpected number of fields in a result row',
+        );
+        const id = largeCellContext.expiresAt
+            ? `e${largeCellContext.expiresAt.toString(36)}_${randomUUID()}`
+            : randomUUID();
+        row[index] = {
+            __clickstudioLargeCell: largeCellContext.referenceToken,
+            id,
+            bytes: cellBytes,
+            serializedBytes: cellSerializedBytes,
+            fingerprint: createHash('sha256')
+                .update(valueType)
+                .update('\0')
+                .update(fullValue)
+                .digest('hex'),
+            preview: previewResultCell(value),
+            valueType,
+        };
+        cells.push({
+            id,
+            index,
+            columnName: column.name,
+            value: fullValue,
+            valueType,
+            bytes: cellBytes,
+            serializedBytes: cellSerializedBytes,
+        });
+        bytes = nextBytes;
+        serializedBytes = nextSerializedBytes;
+    }
+
+    return { row, cells, bytes, serializedBytes };
+}
+
+function retainRow(
+    data: unknown[],
+    state: StreamState,
+    limits: Pick<Limits, 'rows' | 'bytes'>,
+    largeCellContext?: LargeCellContext,
+): void {
+    requireThat(isRow(data), 502, 'RESULT_FORMAT', 'Expected a compact JSON row');
+    requireThat(
+        data.length === state.columns.length,
+        502,
+        'RESULT_WIDTH',
+        'Unexpected number of fields in a result row',
+    );
+    const prepared = prepareRow(data, state.columns, largeCellContext, state);
+    if (!prepared) {
+        markTruncated(state, 'bytes');
+        return;
+    }
+    const rowBytes = Buffer.byteLength(JSON.stringify(prepared.row));
+    if (state.bytes + rowBytes > limits.bytes) {
+        markTruncated(state, 'bytes');
+        return;
+    }
+    for (const cell of prepared.cells) {
+        largeCellContext?.store.save({
+            ownerKey: largeCellContext.ownerKey,
+            runId: largeCellContext.runId,
+            cellId: cell.id,
+            value: cell.value,
+            valueType: cell.valueType,
+            bytes: cell.bytes,
+            serializedBytes: cell.serializedBytes,
+            columnName: cell.columnName,
+            columnIndex: cell.index,
+            rowNumber: state.rows.length + 1,
+        });
+    }
+    state.largeCellBytes += prepared.bytes;
+    state.largeCellSerializedBytes += prepared.serializedBytes;
+    state.rows.push(prepared.row);
+    state.bytes += rowBytes;
+}
+
+function consumeLine(
+    line: string,
+    state: StreamState,
+    limits: Pick<Limits, 'rows' | 'bytes'>,
+    largeCellContext?: LargeCellContext,
+): void {
+    if (!line.trim()) return;
+    const size = Buffer.byteLength(line);
+    if (state.stage < 2 && state.bytes + size > limits.bytes) {
+        throw new AppError(
+            413,
+            'METADATA_TOO_LARGE',
+            'Result metadata exceeds the configured byte limit',
+        );
+    }
+    if (state.stage >= 2 && state.rows.length >= limits.rows) {
+        markTruncated(state, 'rows');
+        return;
+    }
+    const maxRowBytes = largeCellContext ? MAX_LARGE_CELL_ROW_BYTES : limits.bytes - state.bytes;
+    if (state.stage >= 2 && size > maxRowBytes) {
+        markTruncated(state, 'bytes');
+        return;
+    }
+
+    const data = parseCompactLine(line);
+    requireThat(Array.isArray(data), 502, 'RESULT_FORMAT', 'Expected a compact JSON row');
+    if (state.stage < 2) consumeHeader(data, size, state);
+    else retainRow(data, state, limits, largeCellContext);
+}
+
 /** Bounded parsing before JSON.parse: even one very large string cannot grow without limit. */
 export async function collectCompactStream(
     stream: AsyncIterable<Buffer | string>,
@@ -24,213 +250,62 @@ export async function collectCompactStream(
     largeCellContext?: LargeCellContext,
 ): Promise<DriverResult> {
     const decoder = new StringDecoder('utf8');
-    let pending = '',
-        stage = 0,
-        names: string[] = [],
-        columns: Column[] = [];
-    let bytes = 0,
-        largeCellBytes = 0,
-        largeCellSerializedBytes = 0,
-        truncated = false,
-        truncationReason: ResultTruncationReason | undefined;
-    const rows: Row[] = [];
-    const consume = (line: string) => {
-        if (!line.trim()) return;
-        const size = Buffer.byteLength(line);
-        if (stage < 2 && bytes + size > limits.bytes)
-            throw new AppError(
-                413,
-                'METADATA_TOO_LARGE',
-                'Result metadata exceeds the configured byte limit',
-            );
-        if (stage >= 2 && rows.length >= limits.rows) {
-            truncated = true;
-            truncationReason = 'rows';
-            return;
-        }
-        if (stage >= 2 && size > MAX_LARGE_CELL_ROW_BYTES) {
-            truncated = true;
-            truncationReason = 'bytes';
-            return;
-        }
-        let data: unknown;
-        try {
-            data = JSON.parse(line);
-        } catch {
-            throw new AppError(
-                502,
-                'RESULT_STREAM_ERROR',
-                'ClickHouse interrupted the result stream or returned invalid data. Inspect this query ID on the server.',
-            );
-        }
-        requireThat(Array.isArray(data), 502, 'RESULT_FORMAT', 'Expected a compact JSON row');
-        if (stage < 2) {
-            requireThat(
-                isStringArray(data) && data.length > 0 && data.length <= 500,
-                502,
-                'RESULT_METADATA',
-                'Invalid names/types header',
-            );
-            if (stage === 0) names = data;
-            else {
-                requireThat(
-                    data.length === names.length,
-                    502,
-                    'RESULT_METADATA',
-                    'Column names and types differ',
-                );
-                columns = names.map((name, i) => {
-                    const type = data[i];
-                    requireThat(
-                        type !== undefined,
-                        502,
-                        'RESULT_METADATA',
-                        'Column names and types differ',
-                    );
-                    return { name, type };
-                });
-            }
-            bytes += size;
-            stage++;
-            return;
-        }
-        requireThat(isRow(data), 502, 'RESULT_FORMAT', 'Expected a compact JSON row');
-        requireThat(
-            data.length === columns.length,
-            502,
-            'RESULT_WIDTH',
-            'Unexpected number of fields in a result row',
-        );
-        const row = [...data];
-        const detachedCells: {
-            id: string;
-            index: number;
-            value: string;
-            valueType: 'text' | 'json';
-            bytes: number;
-            serializedBytes: number;
-        }[] = [];
-        for (let index = 0; index < data.length; index++) {
-            const value = data[index];
-            if (value === undefined || value === null) continue;
-            const valueType = typeof value === 'string' ? 'text' : 'json';
-            const fullValue =
-                valueType === 'text' ? (value as string) : (JSON.stringify(value) ?? String(value));
-            const cellBytes = Buffer.byteLength(fullValue);
-            const serializedBytes =
-                valueType === 'text' ? Buffer.byteLength(JSON.stringify(value)) : cellBytes;
-            if (cellBytes <= LARGE_CELL_INLINE_BYTES || !largeCellContext) continue;
-            if (
-                cellBytes > MAX_LARGE_CELL_BYTES ||
-                serializedBytes > MAX_LARGE_CELL_BYTES ||
-                largeCellBytes +
-                    detachedCells.reduce((total, cell) => total + cell.bytes, 0) +
-                    cellBytes >
-                    MAX_LARGE_CELL_BYTES_PER_RESULT ||
-                largeCellSerializedBytes +
-                    detachedCells.reduce((total, cell) => total + cell.serializedBytes, 0) +
-                    serializedBytes >
-                    MAX_LARGE_CELL_BYTES_PER_RESULT
-            ) {
-                truncated = true;
-                truncationReason = 'bytes';
-                return;
-            }
-            const cellId = randomUUID();
-            const id = largeCellContext!.expiresAt
-                ? `e${largeCellContext!.expiresAt.toString(36)}_${cellId}`
-                : cellId;
-            row[index] = {
-                __clickstudioLargeCell: largeCellContext.referenceToken,
-                id,
-                bytes: cellBytes,
-                serializedBytes,
-                fingerprint: createHash('sha256')
-                    .update(valueType)
-                    .update('\0')
-                    .update(fullValue)
-                    .digest('hex'),
-                preview: previewResultCell(value),
-                valueType,
-            };
-            detachedCells.push({
-                id,
-                index,
-                value: fullValue,
-                valueType,
-                bytes: cellBytes,
-                serializedBytes,
-            });
-        }
-        const retainedRowBytes = Buffer.byteLength(JSON.stringify(row));
-        if (bytes + retainedRowBytes > limits.bytes) {
-            truncated = true;
-            truncationReason = 'bytes';
-            return;
-        }
-        for (const cell of detachedCells) {
-            largeCellContext!.store.save({
-                ownerKey: largeCellContext!.ownerKey,
-                runId: largeCellContext!.runId,
-                cellId: cell.id,
-                value: cell.value,
-                valueType: cell.valueType,
-                bytes: cell.bytes,
-                serializedBytes: cell.serializedBytes,
-                columnName: columns[cell.index]!.name,
-                columnIndex: cell.index,
-                rowNumber: rows.length + 1,
-            });
-            largeCellBytes += cell.bytes;
-            largeCellSerializedBytes += cell.serializedBytes;
-        }
-        rows.push(row);
-        bytes += retainedRowBytes;
+    const state: StreamState = {
+        stage: 0,
+        names: [],
+        columns: [],
+        rows: [],
+        bytes: 0,
+        largeCellBytes: 0,
+        largeCellSerializedBytes: 0,
+        truncated: false,
     };
+    let pending = '';
+
     outer: for await (const chunk of stream) {
         pending += typeof chunk === 'string' ? chunk : decoder.write(chunk);
         let newline: number;
         while ((newline = pending.indexOf('\n')) >= 0) {
             const line = pending.slice(0, newline);
             pending = pending.slice(newline + 1);
-            consume(line);
-            if (truncated) break outer;
+            consumeLine(line, state, limits, largeCellContext);
+            if (state.truncated) break outer;
         }
         // Limit an unterminated row before it is parsed. Exiting for-await closes the source
         // stream.
         const pendingBytes = Buffer.byteLength(pending);
         if (
-            stage < 2
-                ? pendingBytes + bytes > limits.bytes
+            state.stage < 2
+                ? pendingBytes + state.bytes > limits.bytes
                 : pendingBytes > MAX_LARGE_CELL_ROW_BYTES
         ) {
-            if (stage < 2)
+            if (state.stage < 2) {
                 throw new AppError(
                     413,
                     'METADATA_TOO_LARGE',
                     'Result metadata exceeds the configured byte limit',
                 );
-            truncated = true;
-            truncationReason = 'bytes';
+            }
+            markTruncated(state, 'bytes');
             break;
         }
     }
-    if (!truncated) {
+    if (!state.truncated) {
         pending += decoder.end();
-        if (pending.trim()) consume(pending);
+        if (pending.trim()) consumeLine(pending, state, limits, largeCellContext);
     }
     requireThat(
-        stage === 2,
+        state.stage === 2,
         502,
         'RESULT_INCOMPLETE',
         'The server did not return a complete result header',
     );
     return {
-        columns,
-        rows,
-        bytes,
-        truncated,
-        ...(truncationReason ? { truncationReason } : {}),
+        columns: state.columns,
+        rows: state.rows,
+        bytes: state.bytes,
+        truncated: state.truncated,
+        ...(state.truncationReason ? { truncationReason: state.truncationReason } : {}),
         bounded: { rows: limits.rows, bytes: limits.bytes },
     };
 }

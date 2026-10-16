@@ -24,7 +24,7 @@ import {
 } from './geo';
 import { geoHueForValue } from './geo-color';
 import { geometryForProjection } from './geo-projection';
-import type { Column, Json, Row } from '../../../../shared/common/values';
+import type { Column, Row } from '../../../../shared/common/values';
 import type { Result } from '../../../../shared/queries/results/types';
 import { ScrollEdgeFrame } from '../../../ui/components/ScrollEdgeShadows';
 import { Spinner } from '../../../ui/components/primitives';
@@ -39,6 +39,7 @@ import {
     fetchLargeCellText,
     LARGE_CELL_FETCH_CONCURRENCY,
     largeCellUrl,
+    parseLargeCellValue,
     type LargeCellRunContext,
 } from '../large-cell-actions';
 
@@ -626,12 +627,23 @@ export function GeoView({
     const hasLargeGeometry =
         geometryColumn !== undefined &&
         result.rows.some(row => isLargeCellReference(row[geometryColumn], result.largeCellToken));
+    const largeCellRunId = largeCellContext?.runId;
+    const largeCellQueryId = largeCellContext?.queryId;
+    const largeCellIsCloud = largeCellContext?.isCloud;
     const geometryKey = `${result.runId}:${result.queryId}:${geometryColumn ?? ''}:${result.largeCellToken ?? ''}`;
     const [hydratedGeometry, setHydratedGeometry] = useState<
         { key: string; rows: Row[]; failed: boolean } | undefined
     >();
     useEffect(() => {
-        if (!hasLargeGeometry || geometryColumn === undefined || !largeCellContext) return;
+        if (
+            !hasLargeGeometry ||
+            geometryColumn === undefined ||
+            largeCellRunId === undefined ||
+            largeCellQueryId === undefined ||
+            largeCellIsCloud === undefined
+        ) {
+            return;
+        }
         const controller = new AbortController();
         let active = true;
         let geometryLoadFailed = false;
@@ -653,15 +665,14 @@ export function GeoView({
                 try {
                     const text = await fetchLargeCellText(
                         largeCellUrl(
-                            largeCellContext.runId,
-                            largeCellContext.queryId,
-                            largeCellContext.isCloud,
+                            largeCellRunId,
+                            largeCellQueryId,
+                            largeCellIsCloud,
                             reference.id,
                         ),
                         controller.signal,
                     );
-                    const value: Json =
-                        reference.valueType === 'text' ? text : (JSON.parse(text) as Json);
+                    const value = parseLargeCellValue(text, reference.valueType);
                     const row = rows[rowIndex];
                     if (row) row[geometryColumn] = value;
                 } catch {
@@ -686,9 +697,9 @@ export function GeoView({
         geometryColumn,
         geometryKey,
         hasLargeGeometry,
-        largeCellContext?.isCloud,
-        largeCellContext?.queryId,
-        largeCellContext?.runId,
+        largeCellIsCloud,
+        largeCellQueryId,
+        largeCellRunId,
         result.largeCellToken,
         result.rows,
     ]);
@@ -721,18 +732,20 @@ export function GeoView({
                         onChart={onChart}
                         toolbarContainer={toolbarContainer}
                     />
-                    {geometryPending ? (
+                    {geometryPending && (
                         <div className="result-loading">
                             <Spinner />
                             <span>Loading large geometry values</span>
                         </div>
-                    ) : !prepared.features.length ? (
+                    )}
+                    {!geometryPending && !prepared.features.length && (
                         <div className="chart-empty" role="status">
                             {geometryUnavailable
                                 ? 'Large geometry values could not be loaded.'
                                 : 'No returned rows contain valid longitude/latitude geometry for this selection.'}
                         </div>
-                    ) : (
+                    )}
+                    {!geometryPending && prepared.features.length > 0 && (
                         <>
                             {geometryUnavailable && (
                                 <div className="chart-empty" role="status">

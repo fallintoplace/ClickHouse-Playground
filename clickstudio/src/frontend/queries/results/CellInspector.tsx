@@ -127,7 +127,7 @@ export function CellInspector({ cell, onClose }: { cell: InspectedCell; onClose:
                     <Icon name="copy" />
                     Copy value
                 </Button>
-                <Button variant="secondary" onClick={downloadValue}>
+                <Button variant="secondary" onClick={() => void downloadValue()}>
                     <Icon name="exportFile" />
                     Download full value
                 </Button>

@@ -122,6 +122,112 @@ function usePinnedColumnOffsets(
     return { tableViewport, pinnedOffsets };
 }
 
+function ResultRows({
+    run,
+    page,
+    visibleRows,
+    orderedColumnIndices,
+    columnGroups,
+    pinnedColumns,
+    pinnedOffsets,
+    onInspectCell,
+}: {
+    run: Run;
+    page: ResultPage;
+    visibleRows: Array<{ row: ResultPage['rows'][number]; index: number }>;
+    orderedColumnIndices: number[];
+    columnGroups: ResultTypeGroup[];
+    pinnedColumns: Set<number>;
+    pinnedOffsets: Record<number, number>;
+    onInspectCell: (cell: InspectedCell) => void;
+}) {
+    return (
+        <tbody>
+            {visibleRows.map(({ row, index: rowIndex }) => (
+                <tr
+                    key={`${page.offset}-${rowIndex}`}
+                    style={{ animationDelay: `${Math.min(rowIndex, 12) * 16}ms` }}
+                >
+                    <td className="row-number">{page.offset + rowIndex + 1}</td>
+                    {orderedColumnIndices.map(columnIndex => {
+                        const value = row[columnIndex];
+                        const largeCell = isLargeCellReference(value, page.largeCellToken)
+                            ? value
+                            : undefined;
+                        const column = page.columns[columnIndex]!;
+                        const preview = previewResultCell(value, page.largeCellToken);
+                        const pinned = pinnedColumns.has(columnIndex);
+                        const rowNumber = page.offset + rowIndex + 1;
+                        const largeCellDescription = largeCell
+                            ? `, large value ${(largeCell.bytes / 1_000_000).toFixed(1)} MB`
+                            : '';
+                        const accessibleLabel =
+                            `Inspect ${column.name}, column ${columnIndex + 1}, row ${rowNumber}` +
+                            `${largeCellDescription}: ${preview}`;
+                        return (
+                            <td
+                                key={columnIndex}
+                                data-column-index={columnIndex}
+                                data-pinned-column={pinned || undefined}
+                                style={
+                                    pinned
+                                        ? { left: `${pinnedOffsets[columnIndex] ?? 48}px` }
+                                        : undefined
+                                }
+                                data-type-group={columnGroups[columnIndex] ?? 'other'}
+                                className={value === null ? 'cell-null' : ''}
+                            >
+                                <button
+                                    type="button"
+                                    className={`result-cell-trigger${largeCell ? ' result-cell-trigger-large' : ''}`}
+                                    data-overflow-title={
+                                        largeCell
+                                            ? `${preview}\n${(largeCell.bytes / 1_000_000).toFixed(1)} MB`
+                                            : preview
+                                    }
+                                    aria-label={accessibleLabel}
+                                    onClick={() =>
+                                        onInspectCell({
+                                            columnName: column.name,
+                                            columnType: column.type,
+                                            columnIndex,
+                                            rowNumber,
+                                            value,
+                                            largeCellToken: page.largeCellToken,
+                                            ...(largeCell
+                                                ? {
+                                                      largeCellUrl: largeCellUrl(
+                                                          run.id,
+                                                          page.queryId,
+                                                          run.connectionId ===
+                                                              CLICKHOUSE_CLOUD_CONNECTION_ID,
+                                                          largeCell.id,
+                                                      ),
+                                                  }
+                                                : {}),
+                                        })
+                                    }
+                                >
+                                    {largeCell ? (
+                                        <>
+                                            <span className="result-cell-preview">{preview}</span>
+                                            <small className="result-cell-size">
+                                                {(largeCell.bytes / 1_000_000).toFixed(1)} MB
+                                            </small>
+                                        </>
+                                    ) : (
+                                        preview
+                                    )}
+                                </button>
+                            </td>
+                        );
+                    })}
+                </tr>
+            ))}
+        </tbody>
+    );
+}
+
 export function ResultGrid({
     run,
     page,
@@ -338,107 +444,16 @@ export function ResultGrid({
                                         })}
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    {visibleRows.map(({ row, index: rowIndex }) => (
-                                        <tr
-                                            key={`${page.offset}-${rowIndex}`}
-                                            style={{
-                                                animationDelay: `${Math.min(rowIndex, 12) * 16}ms`,
-                                            }}
-                                        >
-                                            <td className="row-number">
-                                                {page.offset + rowIndex + 1}
-                                            </td>
-                                            {orderedColumnIndices.map(columnIndex => {
-                                                const value = row[columnIndex];
-                                                const largeCell = isLargeCellReference(
-                                                    value,
-                                                    page.largeCellToken,
-                                                )
-                                                    ? value
-                                                    : undefined;
-                                                const column = page.columns[columnIndex]!;
-                                                const preview = previewResultCell(
-                                                    value,
-                                                    page.largeCellToken,
-                                                );
-                                                const pinned = pinnedColumns.has(columnIndex);
-                                                const rowNumber = page.offset + rowIndex + 1;
-                                                return (
-                                                    <td
-                                                        key={columnIndex}
-                                                        data-column-index={columnIndex}
-                                                        data-pinned-column={pinned || undefined}
-                                                        style={
-                                                            pinned
-                                                                ? {
-                                                                      left: `${pinnedOffsets[columnIndex] ?? 48}px`,
-                                                                  }
-                                                                : undefined
-                                                        }
-                                                        data-type-group={
-                                                            columnGroups[columnIndex] ?? 'other'
-                                                        }
-                                                        className={
-                                                            value === null ? 'cell-null' : ''
-                                                        }
-                                                    >
-                                                        <button
-                                                            type="button"
-                                                            className={`result-cell-trigger${largeCell ? ' result-cell-trigger-large' : ''}`}
-                                                            data-overflow-title={
-                                                                largeCell
-                                                                    ? `${preview}\n${(largeCell.bytes / 1_000_000).toFixed(1)} MB`
-                                                                    : preview
-                                                            }
-                                                            aria-label={`Inspect ${column.name}, column ${columnIndex + 1}, row ${rowNumber}${largeCell ? `, large value ${(largeCell.bytes / 1_000_000).toFixed(1)} MB` : ''}: ${preview}`}
-                                                            onClick={() =>
-                                                                setInspectedCell({
-                                                                    columnName: column.name,
-                                                                    columnType: column.type,
-                                                                    columnIndex,
-                                                                    rowNumber,
-                                                                    value,
-                                                                    largeCellToken:
-                                                                        page.largeCellToken,
-                                                                    ...(largeCell
-                                                                        ? {
-                                                                              largeCellUrl:
-                                                                                  largeCellUrl(
-                                                                                      run.id,
-                                                                                      page.queryId,
-                                                                                      run.connectionId ===
-                                                                                          CLICKHOUSE_CLOUD_CONNECTION_ID,
-                                                                                      largeCell.id,
-                                                                                  ),
-                                                                          }
-                                                                        : {}),
-                                                                })
-                                                            }
-                                                        >
-                                                            {largeCell ? (
-                                                                <>
-                                                                    <span className="result-cell-preview">
-                                                                        {preview}
-                                                                    </span>
-                                                                    <small className="result-cell-size">
-                                                                        {(
-                                                                            largeCell.bytes /
-                                                                            1_000_000
-                                                                        ).toFixed(1)}{' '}
-                                                                        MB
-                                                                    </small>
-                                                                </>
-                                                            ) : (
-                                                                preview
-                                                            )}
-                                                        </button>
-                                                    </td>
-                                                );
-                                            })}
-                                        </tr>
-                                    ))}
-                                </tbody>
+                                <ResultRows
+                                    run={run}
+                                    page={page}
+                                    visibleRows={visibleRows}
+                                    orderedColumnIndices={orderedColumnIndices}
+                                    columnGroups={columnGroups}
+                                    pinnedColumns={pinnedColumns}
+                                    pinnedOffsets={pinnedOffsets}
+                                    onInspectCell={setInspectedCell}
+                                />
                             </NativeTable>
                             {noRowsText && (
                                 <div className="no-rows" role="status">

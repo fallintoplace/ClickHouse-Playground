@@ -808,7 +808,10 @@ test('Heatmaps combine repeated cells and sort dimension labels naturally', () =
         { kind: 'heatmap', ys: [2], groupBy: 1 },
     );
     assert.deepEqual(view.heatmapXLabels, ['day2', 'day10']);
-    assert.equal(view.heatmap.cells.get(heatmapCellKey('day2', 'hour2')), 9);
+    const xIndex = view.heatmapXLabels.indexOf('day2');
+    const yIndex = view.heatmapYLabels.indexOf('hour2');
+    const key = heatmapCellKey(view.heatmapXKeys[xIndex], view.heatmapYKeys[yIndex]);
+    assert.equal(view.heatmap.cells.get(key), 9);
     assert.equal(view.heatmapMaximum, 9);
 });
 
@@ -827,10 +830,16 @@ test('Heatmaps keep returned NULL cells distinct from missing combinations', () 
         ),
         { kind: 'heatmap', ys: [2], groupBy: 1 },
     );
-    const key = heatmapCellKey('Mon', '10');
+    const xIndex = view.heatmapXLabels.indexOf('Mon');
+    const yIndex = view.heatmapYLabels.indexOf('10');
+    const key = heatmapCellKey(view.heatmapXKeys[xIndex], view.heatmapYKeys[yIndex]);
     assert.equal(view.heatmap.present.has(key), true);
     assert.equal(view.heatmap.cells.has(key), false);
-    assert.equal(view.heatmap.present.has(heatmapCellKey('Mon', '11')), false);
+    const missingKey = heatmapCellKey(
+        view.heatmapXKeys[view.heatmapXLabels.indexOf('Mon')],
+        view.heatmapYKeys[view.heatmapYLabels.indexOf('11')],
+    );
+    assert.equal(view.heatmap.present.has(missingKey), false);
 });
 
 test('Heatmaps keep a bounded partial grid when their cell budget is exceeded', () => {

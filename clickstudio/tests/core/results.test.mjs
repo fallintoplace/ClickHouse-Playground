@@ -6,6 +6,12 @@ import {
     previewResultCell,
 } from '../../.core-build/src/shared/queries/results/results.js';
 
+function keyForLabels(prepared, xLabel, yLabel) {
+    const xIndex = prepared.xLabels.indexOf(xLabel);
+    const yIndex = prepared.yLabels.indexOf(yLabel);
+    return heatmapCellKey(prepared.xKeys[xIndex], prepared.yKeys[yIndex]);
+}
+
 test('Result cell previews are bounded while full strings remain available elsewhere', () => {
     const value = '😀'.repeat(200);
     const preview = previewResultCell(value);
@@ -39,20 +45,36 @@ test('Heatmap sums duplicate X/Y cells from retained rows', () => {
     );
     assert.equal(prepared.tooLarge, false);
     assert.equal(prepared.combinedRows, 1);
-    assert.equal(prepared.cells.get(heatmapCellKey('10:00', 'Mon')), 12);
-    assert.equal(prepared.cells.get(heatmapCellKey('10:00', 'Tue')), 3);
+    assert.equal(prepared.cells.get(keyForLabels(prepared, '10:00', 'Mon')), 12);
+    assert.equal(prepared.cells.get(keyForLabels(prepared, '10:00', 'Tue')), 3);
     assert.equal(prepared.maximum, 12);
 });
 
 test('Heatmap keeps returned NULL cells distinct from missing groups', () => {
     const prepared = prepareHeatmap([['Mon', '10:00', null]], 1, 0, 2);
-    const key = heatmapCellKey('10:00', 'Mon');
+    const key = keyForLabels(prepared, '10:00', 'Mon');
     assert.equal(prepared.present.has(key), true);
     assert.equal(prepared.cells.has(key), false);
 });
 
 test('Heatmap cell keys cannot collide on separator-like data', () => {
     assert.notEqual(heatmapCellKey('a\u0000b', 'c'), heatmapCellKey('a', 'b\u0000c'));
+});
+
+test('Heatmap category keys distinguish values with the same display label', () => {
+    const prepared = prepareHeatmap(
+        [
+            [1, 'group', 4],
+            ['1', 'group', 5],
+        ],
+        0,
+        1,
+        2,
+    );
+    assert.deepEqual(prepared.xLabels, ['1', '1']);
+    assert.notEqual(prepared.xKeys[0], prepared.xKeys[1]);
+    assert.equal(prepared.cells.get(heatmapCellKey(prepared.xKeys[0], prepared.yKeys[0])), 4);
+    assert.equal(prepared.cells.get(heatmapCellKey(prepared.xKeys[1], prepared.yKeys[0])), 5);
 });
 
 test('Heatmap stops scanning once the rendered grid exceeds its cell budget', () => {

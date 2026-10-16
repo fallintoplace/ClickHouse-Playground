@@ -1,4 +1,4 @@
-import type { Json } from '../../../shared/common/values';
+import { isJson, type Json } from '../../../shared/common/values';
 import { isLargeCellReference } from '../../../shared/queries/results/large-cells';
 import type { Result } from '../../../shared/queries/results/types';
 
@@ -9,6 +9,13 @@ export interface LargeCellRunContext {
 }
 
 export const LARGE_CELL_FETCH_CONCURRENCY = 6;
+
+export function parseLargeCellValue(text: string, valueType: 'text' | 'json'): Json {
+    if (valueType === 'text') return text;
+    const value: unknown = JSON.parse(text);
+    if (!isJson(value)) throw new Error('This large cell contains invalid JSON.');
+    return value;
+}
 
 export function largeCellUrl(
     runId: string,
@@ -63,8 +70,7 @@ export async function hydrateLargeCells(
             if (!cell) return;
             try {
                 const text = await fetchLargeCellText(urlFor(cell.reference.id), controller.signal);
-                const value: Json =
-                    cell.reference.valueType === 'text' ? text : (JSON.parse(text) as Json);
+                const value = parseLargeCellValue(text, cell.reference.valueType);
                 const row = rows[cell.rowIndex];
                 if (row) row[cell.columnIndex] = value;
             } catch (error) {
