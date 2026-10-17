@@ -25,7 +25,8 @@
     justify-content: space-between;
     gap: 20px;
   }
-  .insights-heading h3 {
+  .insights-heading h3,
+  .geo-title-row h3 {
     margin: 5px 0 4px;
     font-family: var(--font-display);
     font-size: 17px;
@@ -236,7 +237,8 @@
     border-color: var(--line);
     background: color-mix(in srgb, var(--panel) 72%, transparent);
   }
-  .sql-flow-view {
+  .sql-flow-view,
+  .explain-plan-view {
     display: grid;
     min-width: 0;
     min-height: 0;
@@ -410,7 +412,8 @@
     gap: 4px;
     min-width: 0;
   }
-  .pipeline-graph-heading > div > strong {
+  .pipeline-graph-heading > div > strong,
+  .pipeline-node-facts strong {
     color: var(--text-soft);
     font-family: var(--font-mono);
     font-size: 9px;
@@ -822,11 +825,6 @@
     color: var(--muted);
     font-size: 7px;
   }
-  .pipeline-node-facts strong {
-    color: var(--text-soft);
-    font-family: var(--font-mono);
-    font-size: 9px;
-  }
   .pipeline-graph-empty {
     padding: 13px;
     border: 1px dashed var(--line-bright);
@@ -967,16 +965,6 @@
     font-size: 8px;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-  .explain-plan-view {
-    display: grid;
-    min-width: 0;
-    min-height: 0;
-    flex: 1;
-    align-content: start;
-    gap: 8px;
-    overflow: auto;
-    padding: 8px;
   }
   .explain-plan-view-switch {
     display: inline-flex;
@@ -2021,13 +2009,6 @@
     justify-content: space-between;
     gap: 18px;
   }
-  .geo-title-row h3 {
-    margin: 5px 0 4px;
-    font-family: var(--font-display);
-    font-size: 17px;
-    font-weight: 650;
-    letter-spacing: -0.03em;
-  }
   .geo-title-row p {
     max-width: 650px;
     margin: 0;
@@ -2455,7 +2436,8 @@
   cursor: default;
 }
 
-.chart-select-value {
+.chart-select-value,
+.chart-select-option > span:first-child {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2554,13 +2536,6 @@
   color: var(--text-soft);
   font: 400 11px/1.35 var(--font-sans);
   cursor: pointer;
-}
-
-.chart-select-option > span:first-child {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .chart-select-option[data-active="true"] {

@@ -20,12 +20,17 @@
   gap: 7px;
   color: var(--muted);
 }
-.native-run-picker[data-side="before"] {
+/* Share the before/after accent between run pickers and summaries. */
+:is(.native-run-picker, .native-run-summary)[data-side="before"] {
   --run-accent: var(--accent-cyan);
+}
+:is(.native-run-picker, .native-run-summary)[data-side="after"] {
+  --run-accent: var(--violet);
+}
+.native-run-picker[data-side="before"] {
   grid-area: before;
 }
 .native-run-picker[data-side="after"] {
-  --run-accent: var(--violet);
   grid-area: after;
 }
 .native-run-picker-heading {
@@ -282,12 +287,6 @@
     color-mix(in srgb, var(--run-accent, var(--panel)) 5%, var(--panel)),
     var(--panel) 62%
   );
-}
-.native-run-summary[data-side="before"] {
-  --run-accent: var(--accent-cyan);
-}
-.native-run-summary[data-side="after"] {
-  --run-accent: var(--violet);
 }
 .native-run-summary::before {
   position: absolute;
