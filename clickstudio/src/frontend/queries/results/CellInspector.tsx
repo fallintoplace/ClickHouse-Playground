@@ -4,6 +4,7 @@ import { download } from '../../api/client';
 import { useDialogFocus } from '../../ui/focus/useDialogFocus';
 import { Icon } from '../../ui/components/icons';
 import { Button } from '../../ui/components/primitives';
+import { copy } from '../../ui/copy';
 import { isLargeCellReference } from '../../../shared/queries/results/large-cells';
 import { downloadLargeCell, fetchLargeCellText } from './large-cell-actions';
 
@@ -37,7 +38,9 @@ function downloadName(
 export function CellInspector({ cell, onClose }: { cell: InspectedCell; onClose: () => void }) {
     const dialog = useRef<HTMLDialogElement>(null);
     const closeButton = useRef<HTMLButtonElement>(null);
+    const copyTimer = useRef<number | undefined>(undefined);
     const [copyMessage, setCopyMessage] = useState('');
+    const [copied, setCopied] = useState(false);
     const value = cellText(cell.value, cell.largeCellToken);
     const largeCell = isLargeCellReference(cell.value, cell.largeCellToken)
         ? cell.value
@@ -47,8 +50,17 @@ export function CellInspector({ cell, onClose }: { cell: InspectedCell; onClose:
         try {
             const fullValue = largeCell ? await fetchLargeCellText(cell.largeCellUrl ?? '') : value;
             await navigator.clipboard.writeText(fullValue);
-            setCopyMessage('Copied full value.');
+            setCopyMessage('');
+            setCopied(true);
+            if (copyTimer.current !== undefined) window.clearTimeout(copyTimer.current);
+            copyTimer.current = window.setTimeout(() => {
+                setCopied(false);
+                copyTimer.current = undefined;
+            }, 1200);
         } catch {
+            if (copyTimer.current !== undefined) window.clearTimeout(copyTimer.current);
+            copyTimer.current = undefined;
+            setCopied(false);
             setCopyMessage('Couldn’t copy this value.');
         }
     };
@@ -77,7 +89,10 @@ export function CellInspector({ cell, onClose }: { cell: InspectedCell; onClose:
         const element = dialog.current;
         if (!element) return;
         element.showModal();
-        return () => element.close();
+        return () => {
+            element.close();
+            if (copyTimer.current !== undefined) window.clearTimeout(copyTimer.current);
+        };
     }, []);
     useDialogFocus(dialog, {
         onClose,
@@ -125,7 +140,7 @@ export function CellInspector({ cell, onClose }: { cell: InspectedCell; onClose:
             <div className="result-cell-inspector-actions">
                 <Button variant="secondary" onClick={() => void copyValue()}>
                     <Icon name="copy" />
-                    Copy value
+                    {copied ? copy.common.copied : 'Copy value'}
                 </Button>
                 <Button variant="secondary" onClick={() => void downloadValue()}>
                     <Icon name="exportFile" />

@@ -164,8 +164,12 @@ for (const mode of ['Standard', 'Experimental']) {
         const dialog = page.getByRole('dialog', { name: 'payload' });
         await expect(dialog.locator('.result-cell-inspector-value')).toHaveText(fullValue);
         await dialog.getByRole('button', { name: 'Copy value' }).click();
-        await expect(dialog.getByRole('status')).toHaveText('Copied full value.');
+        await expect(dialog.getByRole('button', { name: 'Copied' })).toBeVisible();
+        await expect(dialog.getByRole('status')).toBeEmpty();
         expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(fullValue);
+        await expect(dialog.getByRole('button', { name: 'Copy value' })).toBeVisible({
+            timeout: 2000,
+        });
         const [download] = await Promise.all([
             page.waitForEvent('download'),
             dialog.getByRole('button', { name: 'Download full value' }).click(),
