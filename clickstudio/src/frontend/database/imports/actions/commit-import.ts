@@ -19,6 +19,7 @@ import {
 } from '../state/import-wizard-model';
 import type { ImportActionSetters } from '../state/import-wizard-controller-types';
 import { loadConnectionImportSetup } from '../recovery/useImportWizardRecovery';
+import { importFailureMessage } from '../state/import-failure-message';
 
 type ForgetCloudImportContext = Pick<
     ImportActionSetters,
