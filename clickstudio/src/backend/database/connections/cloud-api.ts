@@ -17,7 +17,6 @@ import {
     MAX_IMPORT_FILE_BYTES,
     MAX_IMPORT_ROWS,
     MAX_IMPORT_COLUMNS,
-    type ImportFormat,
 } from '../../../shared/database/imports/limits.js';
 import {
     CLICKHOUSE_CLOUD_CONNECTION_ID,
