@@ -18,12 +18,6 @@
   color: var(--text-soft);
   font-size: var(--help-text-meta);
 }
-.workspace-help-compare .native-run-picker[data-side="before"] {
-  --run-accent: var(--accent-cyan);
-}
-.workspace-help-compare .native-run-picker[data-side="after"] {
-  --run-accent: var(--violet);
-}
 .workspace-help-compare .native-run-picker .chart-select-trigger {
   min-height: 40px;
   border-color: color-mix(in srgb, var(--run-accent) 34%, var(--help-border-strong));
@@ -130,19 +124,13 @@
   gap: 7px;
   overflow: hidden;
   padding: 15px;
-  border-color: color-mix(in srgb, var(--comparison-run-accent) 28%, var(--help-border));
+  border-color: color-mix(in srgb, var(--run-accent) 28%, var(--help-border));
   border-radius: var(--help-radius-card);
   background: linear-gradient(
     145deg,
-    color-mix(in srgb, var(--comparison-run-accent) 5%, var(--help-surface)),
+    color-mix(in srgb, var(--run-accent) 5%, var(--help-surface)),
     var(--help-surface) 62%
   );
-}
-.workspace-help-compare .native-run-summary[data-side="before"] {
-  --comparison-run-accent: var(--accent-cyan);
-}
-.workspace-help-compare .native-run-summary[data-side="after"] {
-  --comparison-run-accent: var(--violet);
 }
 .workspace-help-compare .native-run-summary::before {
   position: absolute;
@@ -150,7 +138,7 @@
   right: 0;
   left: 0;
   height: 2px;
-  background: var(--comparison-run-accent);
+  background: var(--run-accent);
   content: "";
 }
 .workspace-help-compare .native-run-summary h4 {
