@@ -13,14 +13,15 @@ import {
     type CloudCredentials,
     type CloudRequest,
 } from '../../../shared/database/connections/cloud-requests.js';
-import type { ImportJobStatus } from '../../../shared/database/imports/status.js';
+import type { CloudImportJob } from '../../../shared/database/imports/status.js';
 import type { ImportFormat } from '../../../shared/database/imports/limits.js';
 import {
     CLICKHOUSE_CLOUD_CONNECTION_ID,
     CLOUD_QUERY_LIMITS,
 } from '../../../shared/database/connections/cloud-policy.js';
 import { DEFAULT_LIMITS } from '../../../shared/queries/execution/settings.js';
-import { type Capability, type Connection } from '../../../shared/database/connections/types.js';
+import { isCapability } from '../../../shared/database/connections/types.js';
+import type { Capability, Connection } from '../../../shared/database/connections/types.js';
 import type { ClickHouseDocumentationEntry } from '../../../shared/database/reference/types.js';
 import {
     isJson,
@@ -58,6 +59,7 @@ import { isDatabaseDrop } from '../../../shared/database/databases/delete-databa
 export { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../../shared/database/connections/cloud-policy.js';
 
 export type { CloudCredentials } from '../../../shared/database/connections/cloud-requests.js';
+export type { CloudImportJob } from '../../../shared/database/imports/status.js';
 export type SavedCloudConnectionProfile = Pick<CloudCredentials, 'host' | 'database' | 'username'>;
 export type CloudQueryResult = {
     queryId: string;
@@ -68,21 +70,6 @@ export type CloudQueryResult = {
     bytes: number;
     truncated: boolean;
     writtenRows?: number;
-};
-export type CloudImportJob = {
-    id: string;
-    connectionId: string;
-    table: string;
-    queryId: string;
-    deduplicationToken?: string;
-    rows: number;
-    createdAt: string;
-    status: ImportJobStatus;
-    error?: string;
-    reviewedAt?: string;
-    reconciliationRequired?: boolean;
-    tableCreated?: boolean;
-    tableExists?: boolean;
 };
 export type CloudImportInput = {
     file: File;
@@ -199,14 +186,6 @@ function isSavedCloudConnectionProfile(value: unknown): value is SavedCloudConne
         typeof value.host === 'string' &&
         typeof value.database === 'string' &&
         typeof value.username === 'string'
-    );
-}
-
-function isCapability(value: unknown): value is Capability {
-    return (
-        isRecord(value) &&
-        typeof value.available === 'boolean' &&
-        (value.reason === undefined || typeof value.reason === 'string')
     );
 }
 

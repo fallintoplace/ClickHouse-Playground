@@ -9,7 +9,8 @@ import {
     isStringRecord,
 } from '../../shared/common/values.js';
 import type { Principal } from '../../shared/common/identity.js';
-import type { Capability, Connection, Manifest } from '../../shared/database/connections/types.js';
+import { isCapability } from '../../shared/database/connections/types.js';
+import type { Connection, Manifest } from '../../shared/database/connections/types.js';
 import type {
     WorkloadFamily,
     WorkloadPoint,
@@ -49,7 +50,7 @@ import type {
     ClickHouseDocumentationSummary,
 } from '../../shared/database/reference/types.js';
 import { IMPORT_JOB_STATUSES, type ImportJobStatus } from '../../shared/database/imports/status.js';
-import { IMPORT_FORMATS, type ImportFormat } from '../../shared/database/imports/limits.js';
+import { isImportFormat } from '../../shared/database/imports/limits.js';
 import { isLimits, isResult, isRun, isScript } from '../../shared/queries/execution/validation.js';
 import type { ResultPage } from '../../shared/queries/results/types.js';
 import { isQueryDocument } from '../../shared/queries/saved-queries/validation.js';
@@ -94,10 +95,6 @@ export function arrayOf<T>(guard: ResponseGuard<T>): ResponseGuard<T[]> {
 }
 
 export const isRecordArrayResponse = arrayOf(isRecord);
-
-function isImportFormat(value: unknown): value is ImportFormat {
-    return IMPORT_FORMATS.some(format => format === value);
-}
 
 function isImportJobStatus(value: unknown): value is ImportJobStatus {
     return IMPORT_JOB_STATUSES.some(status => status === value);
@@ -282,12 +279,6 @@ export function isFlamegraphSnapshot(value: unknown): value is FlamegraphSnapsho
         ['CPU', 'Real'].every(type => isSafeInteger(samples[type])) &&
         isSafeInteger(value.symbolizedSamples) &&
         typeof value.truncated === 'boolean'
-    );
-}
-
-function isCapability(value: unknown): value is Capability {
-    return (
-        isRecord(value) && typeof value.available === 'boolean' && isOptionalString(value.reason)
     );
 }
 

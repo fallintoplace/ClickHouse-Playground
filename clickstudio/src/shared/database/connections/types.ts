@@ -1,3 +1,4 @@
+import { isOptionalString, isRecord } from '../../common/values.js';
 import type { QueryLogSource } from '../explorer/activity/workload.js';
 import type { FlamegraphSource } from '../../queries/inspection/flamegraph.js';
 import type { Limits } from '../../queries/execution/settings.js';
@@ -6,6 +7,14 @@ export type Capability = {
     available: boolean;
     reason?: string;
 };
+
+export function isCapability(value: unknown): value is Capability {
+    return (
+        isRecord(value) &&
+        typeof value.available === 'boolean' &&
+        isOptionalString(value.reason)
+    );
+}
 
 export interface Manifest {
     version: 1;

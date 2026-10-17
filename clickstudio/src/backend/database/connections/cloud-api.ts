@@ -8,11 +8,11 @@ import {
     CLOUD_ACTIONS,
     type CloudCredentials,
 } from '../../../shared/database/connections/cloud-requests.js';
-import type { ImportJobStatus } from '../../../shared/database/imports/status.js';
+import type { CloudImportJob as SharedCloudImportJob } from '../../../shared/database/imports/status.js';
 import { MAX_SQL_CHARS } from '../../../shared/queries/execution/limits.js';
 import { fullResultExportSql } from '../../../shared/queries/execution/full-result-export.js';
 import {
-    IMPORT_FORMATS,
+    isImportFormat,
     IMPORT_FILE_SIZE_LABEL,
     MAX_IMPORT_FILE_BYTES,
     MAX_IMPORT_ROWS,
@@ -137,21 +137,8 @@ const clickhouseRunSettings = {
     output_format_json_quote_decimals: 1 as const,
 };
 
-type CloudImportJob = {
-    id: string;
-    connectionId: typeof CLICKHOUSE_CLOUD_CONNECTION_ID;
-    table: string;
-    queryId: string;
-    deduplicationToken?: string;
-    rows: number;
-    createdAt: string;
-    status: ImportJobStatus;
-    error?: string;
-    reviewedAt?: string;
-    reconciliationRequired?: boolean;
-    tableCreated?: boolean;
-    tableExists?: boolean;
-};
+
+type CloudImportJob = SharedCloudImportJob<typeof CLICKHOUSE_CLOUD_CONNECTION_ID>;
 
 function isSameOrigin(request: Request) {
     const origin = request.headers.get('origin');
@@ -1099,10 +1086,6 @@ function parseFormJson(form: FormData, key: string): unknown {
     } catch {
         throw new AppError(400, 'IMPORT_REQUEST', `The ${key} field is not valid JSON.`);
     }
-}
-
-function isImportFormat(value: unknown): value is ImportFormat {
-    return IMPORT_FORMATS.some(format => format === value);
 }
 
 function isImportIdentifier(value: unknown): value is string {
