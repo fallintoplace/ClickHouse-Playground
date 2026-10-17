@@ -10,9 +10,7 @@ export type Capability = {
 
 export function isCapability(value: unknown): value is Capability {
     return (
-        isRecord(value) &&
-        typeof value.available === 'boolean' &&
-        isOptionalString(value.reason)
+        isRecord(value) && typeof value.available === 'boolean' && isOptionalString(value.reason)
     );
 }
 

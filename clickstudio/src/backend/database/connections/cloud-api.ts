@@ -136,7 +136,6 @@ const clickhouseRunSettings = {
     output_format_json_quote_decimals: 1 as const,
 };
 
-
 type CloudImportJob = SharedCloudImportJob<typeof CLICKHOUSE_CLOUD_CONNECTION_ID>;
 
 function isSameOrigin(request: Request) {
