@@ -54,6 +54,7 @@ import type {
 } from '../../../shared/database/explorer/explorers.js';
 import type { MergeTreePartsSnapshot } from '../../../shared/database/explorer/storage/parts.js';
 import * as apiResponses from '../../api/response-guards.js';
+import type { ResponseGuard } from '../../api/response-guards.js';
 import { isDatabaseDrop } from '../../../shared/database/databases/delete-database.js';
 
 export { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../../shared/database/connections/cloud-policy.js';
@@ -95,7 +96,6 @@ type ActiveCloudConnection = {
 const CLOUD_PROFILE_STORAGE_KEY = 'clickstudio:cloud-connection-profile:v1';
 let activeCloud: ActiveCloudConnection | undefined;
 
-type CloudResponseGuard<T> = (value: unknown) => value is T;
 type CloudSessionState = {
     session: { profile: SavedCloudConnectionProfile; tested: CloudConnectionTest } | null;
 };
@@ -158,7 +158,7 @@ function isCloudTableDrop(
     );
 }
 
-function cloudResponse<T>(value: unknown, guard: CloudResponseGuard<T>): T {
+function cloudResponse<T>(value: unknown, guard: ResponseGuard<T>): T {
     if (!guard(value))
         throw new CloudRequestError(
             'INVALID_RESPONSE',
@@ -298,7 +298,7 @@ function requireCloudConnection(message: string): ActiveCloudConnection {
 
 async function requestCloud<T>(
     body: CloudRequest,
-    guard: CloudResponseGuard<T>,
+    guard: ResponseGuard<T>,
     signal?: AbortSignal,
 ): Promise<T> {
     const requestBody = activeCloud?.localSession
@@ -318,7 +318,7 @@ async function requestCloud<T>(
 
 async function localCloudSession<T>(
     method: 'GET' | 'POST' | 'DELETE',
-    guard: CloudResponseGuard<T>,
+    guard: ResponseGuard<T>,
     body?: unknown,
 ): Promise<T> {
     const response = await fetch('/api/cloud/session', {
@@ -335,7 +335,7 @@ async function localCloudSession<T>(
     return cloudResponse(payload, guard);
 }
 
-async function requestCloudImport<T>(form: FormData, guard: CloudResponseGuard<T>): Promise<T> {
+async function requestCloudImport<T>(form: FormData, guard: ResponseGuard<T>): Promise<T> {
     const response = await fetch('/api/cloud', {
         method: 'POST',
         credentials: 'same-origin',
