@@ -287,6 +287,7 @@ test('Draft storage warning clears after eight seconds and stays clear after rec
     page,
 }) => {
     await trust(page);
+    await page.clock.install();
     await page.evaluate(() => {
         const original = Storage.prototype.setItem;
         Storage.prototype.setItem = function (key, value) {
@@ -307,7 +308,6 @@ test('Draft storage warning clears after eight seconds and stays clear after rec
     );
     await expect(warning.locator('.toast-timer')).toBeVisible();
     await page.mouse.move(0, 0);
-    await page.clock.install();
     await page.clock.runFor(8100);
     await expect(warning).toHaveCount(0);
     await page.evaluate(() => window.restoreDraftStorage());

@@ -643,7 +643,25 @@ test('Paging keeps the dock and search through loading and a retained-page read 
     await expect(dock.locator('.result-match-count')).toHaveText('Loading this page…');
     release();
     await expect(results.getByText('Couldn’t load the result rows. Try again.')).toBeVisible();
-    await results.getByRole('button', { name: 'Retry', exact: true }).click();
+    const retry = results.getByRole('button', { name: 'Retry', exact: true });
+    const moveHandle = dock.getByRole('button', { name: 'Move search and pages', exact: true });
+    const retryBounds = await retry.boundingBox();
+    let dockBounds = await dock.boundingBox();
+    // The pinned top-layer dock can cover this inline action. Move it out of the way first.
+    while (
+        retryBounds &&
+        dockBounds &&
+        retryBounds.x < dockBounds.x + dockBounds.width &&
+        retryBounds.x + retryBounds.width > dockBounds.x &&
+        retryBounds.y < dockBounds.y + dockBounds.height &&
+        retryBounds.y + retryBounds.height > dockBounds.y
+    ) {
+        const currentY = dockBounds.y;
+        await moveHandle.press('Shift+ArrowUp');
+        dockBounds = await dock.boundingBox();
+        if (!dockBounds || dockBounds.y === currentY) break;
+    }
+    await retry.click();
     await expect(dock).not.toHaveAttribute('aria-busy', 'true');
     await expect(dock.locator('.result-match-count')).toHaveText('1 of 200 rows on this page');
     await expect(results.locator('tbody .row-number')).toHaveText('250');
