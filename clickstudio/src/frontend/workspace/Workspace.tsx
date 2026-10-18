@@ -1,6 +1,6 @@
 import { createInspectorProps } from './layout/panels/workspace-inspector-props';
 import { createPortal } from 'react-dom';
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { download } from '../api/client';
 import { DetachedQueryPlaceholder } from '../queries/editor/components/DetachedQueryPlaceholder';
 import { ExportDialog } from '../queries/results/ExportDialog';
@@ -92,6 +92,10 @@ export function Workspace({
         dark,
         copy,
     });
+    const [dismissedStorageError, setDismissedStorageError] = useState('');
+    useEffect(() => {
+        if (!model.storageError) setDismissedStorageError('');
+    }, [model.storageError]);
     const { active } = model.tabs;
     const editorSessions = useSqlEditorSessions(model.workspace);
     useWorkspaceDocumentSaveShortcut(model.saveDraft, model.detachedEditor.detached?.window);
@@ -332,6 +336,8 @@ export function Workspace({
         inspectorProps,
         demoMode,
         model,
+        dismissedStorageError,
+        onDismissStorageError: () => setDismissedStorageError(model.storageError),
     });
 }
 
@@ -345,6 +351,8 @@ function renderWorkspaceLayout({
     inspectorProps,
     demoMode,
     model,
+    dismissedStorageError,
+    onDismissStorageError,
 }: {
     experience: WorkspaceProps['experience'];
     copy: WorkspaceProps['copy'];
@@ -355,6 +363,8 @@ function renderWorkspaceLayout({
     inspectorProps: ReturnType<typeof createInspectorProps>;
     demoMode: WorkspaceProps['demoMode'];
     model: ReturnType<typeof useWorkspaceController>;
+    dismissedStorageError: string;
+    onDismissStorageError: () => void;
 }) {
     const { active } = model.tabs;
     const { run } = model.evidence;
@@ -391,7 +401,6 @@ function renderWorkspaceLayout({
         setDrawerOpen,
     } = model;
     const helpHint = resultsViewHelpHint(visibleResultsView, copy.common);
-
     return (
         <div
             className={cx(
@@ -410,7 +419,7 @@ function renderWorkspaceLayout({
                             onDismiss={dismissToast}
                         />
                     )}
-                    {storageError && (
+                    {storageError && storageError !== dismissedStorageError && (
                         <WorkspaceToast
                             notification={{
                                 id: 0,
@@ -419,6 +428,7 @@ function renderWorkspaceLayout({
                                 message:
                                     'Drafts aren’t being saved in this browser. Export them before closing.',
                             }}
+                            onDismiss={onDismissStorageError}
                         />
                     )}
                 </div>

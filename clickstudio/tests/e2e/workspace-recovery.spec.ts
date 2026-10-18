@@ -9,6 +9,27 @@ const runId = 'missing-selected-run';
 const workspaceKey = 'clickstudio:workspace:demo:v1';
 const sql = 'SELECT 42 AS preserved_query';
 
+declare global {
+    interface Window {
+        setWorkspaceStorageBlocked: (blocked: boolean) => void;
+    }
+}
+
+async function blockWorkspaceStorage(page: Page) {
+    await page.addInitScript(() => {
+        let blocked = true;
+        const setItem = Storage.prototype.setItem;
+        Storage.prototype.setItem = function (this: Storage, key: string, value: string) {
+            if (blocked && key === 'clickstudio:workspace:demo:v1')
+                throw new DOMException('Storage is full', 'QuotaExceededError');
+            setItem.call(this, key, value);
+        };
+        window.setWorkspaceStorageBlocked = value => {
+            blocked = value;
+        };
+    });
+}
+
 async function restoreDraft(page: Page, query = sql) {
     await page.addInitScript(
         ({ draftId, documentId, runId, workspaceKey, query }) => {
@@ -60,6 +81,44 @@ async function missingRun(page: Page) {
     await page.route(`**/api/runs/${runId}`, route =>
         route.fulfill(missingRecord('Run not found')),
     );
+}
+
+for (const mode of ['Standard', 'Experimental']) {
+    test(`${mode} lets me dismiss a browser draft-storage warning`, async ({ page }) => {
+        await blockWorkspaceStorage(page);
+        await trust(page, mode);
+        const warning = page
+            .getByRole('alert')
+            .filter({ hasText: 'Drafts aren’t being saved in this browser.' });
+        await expect(warning).toBeVisible();
+        await warning.getByRole('button', { name: 'Dismiss error' }).click();
+        await expect(warning).toHaveCount(0);
+        await page.getByRole('button', { name: 'Help', exact: true }).click();
+        await expect(page.getByRole('dialog', { name: 'Explore ClickStudio' })).toBeVisible();
+    });
+
+    test(`${mode} shows the draft-storage warning again after storage recovers and fails`, async ({
+        page,
+    }) => {
+        await blockWorkspaceStorage(page);
+        await trust(page, mode);
+        const warning = page
+            .getByRole('alert')
+            .filter({ hasText: 'Drafts aren’t being saved in this browser.' });
+        await expect(warning).toBeVisible();
+        await warning.getByRole('button', { name: 'Dismiss error' }).click();
+        await expect(warning).toHaveCount(0);
+
+        await page.evaluate(() => window.setWorkspaceStorageBlocked(false));
+        await replaceSql(page, 'SELECT 44');
+        await expect
+            .poll(() => page.evaluate(key => Boolean(localStorage.getItem(key)), workspaceKey))
+            .toBe(true);
+
+        await page.evaluate(() => window.setWorkspaceStorageBlocked(true));
+        await replaceSql(page, 'SELECT 45');
+        await expect(warning).toBeVisible();
+    });
 }
 
 for (const mode of ['Standard', 'Experimental']) {
