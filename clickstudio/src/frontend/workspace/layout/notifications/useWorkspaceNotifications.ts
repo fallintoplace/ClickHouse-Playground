@@ -1,5 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 
+export const WORKSPACE_NOTIFICATION_TIMEOUT_MS = 8000 as const;
+
 export type WorkspaceFeedback = Readonly<{
     message: string;
     tone: 'error' | 'warning' | 'info';
@@ -9,7 +11,7 @@ export type WorkspaceFeedback = Readonly<{
 
 export type ToastOptions = Readonly<{
     tone?: 'error' | 'warning';
-    timeoutMs?: number | null;
+    timeoutMs?: typeof WORKSPACE_NOTIFICATION_TIMEOUT_MS;
     context?: string;
     detail?: string;
     action?: { label: string; onSelect: () => void };
@@ -19,7 +21,7 @@ export type WorkspaceToastMessage = Readonly<{
     id: number;
     message: string;
     tone: 'error' | 'warning';
-    timeoutMs: number | null;
+    timeoutMs: typeof WORKSPACE_NOTIFICATION_TIMEOUT_MS;
     context?: string;
     detail?: string;
     action?: ToastOptions['action'];
@@ -36,7 +38,7 @@ export function useWorkspaceNotifications() {
         const notification = {
             message,
             tone: options.tone ?? 'error',
-            timeoutMs: options.timeoutMs === undefined ? 8000 : options.timeoutMs,
+            timeoutMs: WORKSPACE_NOTIFICATION_TIMEOUT_MS,
             context: options.context,
             detail: options.detail,
             action: options.action,

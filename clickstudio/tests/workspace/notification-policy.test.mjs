@@ -17,18 +17,18 @@ for (const operation of ['save', 'restore']) {
         for (const error of [{}, { status: 408 }, { status: 500 }, { status: 503 }]) {
             const notice = documentFailureNotice('query.sql', operation, error);
             assert.equal(notice.tone, 'warning');
-            assert.equal(notice.timeoutMs, null);
+            assert.equal(notice.timeoutMs, 8000);
             assert.match(notice.message, /Couldn’t confirm/);
         }
     });
 
-    test(`${operation} revision conflict stays visible with a recovery instruction`, () => {
+    test(`${operation} revision conflict has a timed recovery instruction`, () => {
         const notice = documentFailureNotice('query.sql', operation, {
             status: 409,
             code: 'REVISION_CONFLICT',
         });
         assert.equal(notice.tone, 'warning');
-        assert.equal(notice.timeoutMs, null);
+        assert.equal(notice.timeoutMs, 8000);
         assert.match(notice.message, /changed elsewhere/);
         assert.match(notice.message, /Review the latest version/);
     });

@@ -8,15 +8,15 @@ export function WorkspaceToast({
     onDismiss,
 }: {
     notification: WorkspaceToastMessage;
-    onDismiss?: () => void;
+    onDismiss: () => void;
 }) {
     const [hovered, setHovered] = useState(false);
     const [focused, setFocused] = useState(false);
-    const remaining = useRef(notification.timeoutMs ?? 0);
+    const remaining = useRef<number>(notification.timeoutMs);
     const paused = hovered || focused;
 
     useEffect(() => {
-        if (notification.timeoutMs === null || paused || !onDismiss) return;
+        if (paused) return;
         const started = performance.now();
         const timer = window.setTimeout(onDismiss, remaining.current);
         return () => {
@@ -55,28 +55,29 @@ export function WorkspaceToast({
                     className="toast-action"
                     onClick={() => {
                         notification.action?.onSelect();
-                        onDismiss?.();
+                        onDismiss();
                     }}
                 >
                     {notification.action.label}
                 </button>
             )}
-            {onDismiss && (
-                <button
-                    className="toast-dismiss"
-                    onClick={onDismiss}
-                    aria-label={notification.tone === 'error' ? 'Dismiss error' : 'Dismiss message'}
-                >
-                    <Icon name="close" />
-                </button>
-            )}
-            {notification.timeoutMs !== null && (
-                <div
-                    className="toast-timer"
-                    style={{ animationDuration: `${notification.timeoutMs}ms` }}
-                    aria-hidden="true"
-                />
-            )}
+            <button
+                className="toast-dismiss"
+                onClick={onDismiss}
+                aria-label={
+                    {
+                        error: 'Dismiss error',
+                        warning: 'Dismiss warning',
+                    }[notification.tone]
+                }
+            >
+                <Icon name="close" />
+            </button>
+            <div
+                className="toast-timer"
+                style={{ animationDuration: `${notification.timeoutMs}ms` }}
+                aria-hidden="true"
+            />
         </div>
     );
 }

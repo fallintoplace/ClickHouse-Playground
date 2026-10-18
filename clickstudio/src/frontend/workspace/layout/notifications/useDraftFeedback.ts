@@ -44,9 +44,22 @@ export function useDraftFeedback(activeDraftId: string) {
             };
         });
     }, []);
+    const dismiss = useCallback(
+        (source: DraftFeedbackSource) => {
+            const key = `${activeDraftId}:${source}`;
+            attempts.current.delete(key);
+            setByDraft(current => {
+                if (!current[activeDraftId]?.[source]) return current;
+                const next = { ...current[activeDraftId] };
+                delete next[source];
+                return { ...current, [activeDraftId]: next };
+            });
+        },
+        [activeDraftId],
+    );
     const feedback: DraftFeedback[] = Object.entries(byDraft[activeDraftId] ?? {}).flatMap(
         ([source, feedback]) =>
             feedback && isDraftFeedbackSource(source) ? [{ ...feedback, source }] : [],
     );
-    return { feedback, begin, clearInfo };
+    return { feedback, begin, clearInfo, dismiss };
 }

@@ -86,6 +86,7 @@ export function useWorkspaceUiState({
         feedback: draftFeedback,
         begin: beginDraftFeedback,
         clearInfo: clearDraftFeedbackInfo,
+        dismiss: dismissDraftFeedback,
     } = useDraftFeedback(active.id);
     const {
         error: failedQueryError,
@@ -99,6 +100,7 @@ export function useWorkspaceUiState({
         clearToast,
         beginDraftFeedback,
         clearDraftFeedbackInfo,
+        dismissDraftFeedback,
         draftFeedback,
         toast,
         dismissToast,

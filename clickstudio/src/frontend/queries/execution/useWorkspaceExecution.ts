@@ -177,7 +177,6 @@ export function useWorkspaceExecution({
         if (workspaceRef.current.tabs.length >= MAX_TABS) {
             setError(`${MAX_TABS} tabs open. Close one to create another.`, {
                 tone: 'warning',
-                timeoutMs: 5000,
             });
             return false;
         }
@@ -249,11 +248,11 @@ export function useWorkspaceExecution({
 
     const runExample = (example: SqlExample, output: 'results' | 'chart' | 'geography') => {
         if (busy || executionInFlightRef.current) {
-            setError(copy.common.runActionWait, { tone: 'warning', timeoutMs: 5000 });
+            setError(copy.common.runActionWait, { tone: 'warning' });
             return true;
         }
         if (!trusted) {
-            setError(copy.common.runActionTrustRequired, { tone: 'warning', timeoutMs: 5000 });
+            setError(copy.common.runActionTrustRequired, { tone: 'warning' });
             return true;
         }
         const draft = createExampleDraft(example, copy.common);
@@ -373,11 +372,11 @@ export function useWorkspaceExecution({
         openOptions: SqlDraftOpenOptions = {},
     ) => {
         if (run && (busy || executionInFlightRef.current)) {
-            setError(copy.common.runActionWait, { tone: 'warning', timeoutMs: 5000 });
+            setError(copy.common.runActionWait, { tone: 'warning' });
             return;
         }
         if (run && !trusted) {
-            setError(copy.common.runActionTrustRequired, { tone: 'warning', timeoutMs: 5000 });
+            setError(copy.common.runActionTrustRequired, { tone: 'warning' });
             return;
         }
         let reusedDraft: { draftId: string } | undefined;

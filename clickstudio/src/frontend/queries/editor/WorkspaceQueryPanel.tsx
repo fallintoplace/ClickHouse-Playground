@@ -45,6 +45,7 @@ export type WorkspaceQueryPanelState = Readonly<{
     executionStopRequested: boolean;
     cancelling: boolean;
     draftFeedback: readonly DraftFeedback[];
+    onDismissDraftFeedback: (source: DraftFeedback['source']) => void;
     editorProposal?: ReturnType<typeof pendingEditorProposal>;
     proposalBusy?: boolean;
     proposalError?: string;
@@ -542,6 +543,7 @@ function renderQueryHeading({
                     <DraftFeedbackNotice
                         key={`${active.id}:${feedback.source}`}
                         feedback={feedback}
+                        onDismiss={() => state.onDismissDraftFeedback(feedback.source)}
                     />
                 ))}
                 {runButton}

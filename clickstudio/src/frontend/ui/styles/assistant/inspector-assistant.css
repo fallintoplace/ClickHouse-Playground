@@ -2817,7 +2817,7 @@
     font-size: 11px;
     line-height: 1.5;
   }
-  .workspace-inline-notice > div {
+  .workspace-inline-notice-content {
     min-width: 0;
     overflow-wrap: anywhere;
   }
@@ -2832,6 +2832,25 @@
   }
   .workspace-inline-notice > button {
     flex: none;
+  }
+  .workspace-inline-dismiss {
+    display: grid;
+    width: 23px;
+    height: 23px;
+    place-items: center;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .workspace-inline-dismiss:hover {
+    background: var(--panel-hover);
+    color: var(--text);
+  }
+  .workspace-inline-dismiss svg {
+    width: 14px;
+    height: 14px;
   }
   .toast > button:hover {
     background: var(--panel-hover);

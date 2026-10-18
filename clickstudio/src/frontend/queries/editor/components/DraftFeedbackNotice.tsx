@@ -11,7 +11,13 @@ function positionPanel(element: HTMLDivElement, trigger: HTMLButtonElement) {
     element.style.top = `${Math.max(8, Math.min(anchor.bottom + 6, view.innerHeight - bounds.height - 8))}px`;
 }
 
-export function DraftFeedbackNotice({ feedback }: { feedback: DraftFeedback }) {
+export function DraftFeedbackNotice({
+    feedback,
+    onDismiss,
+}: {
+    feedback: DraftFeedback;
+    onDismiss: () => void;
+}) {
     const id = useId();
     const trigger = useRef<HTMLButtonElement>(null);
     const panel = useRef<HTMLDivElement>(null);
@@ -68,7 +74,7 @@ export function DraftFeedbackNotice({ feedback }: { feedback: DraftFeedback }) {
                     element.focus({ preventScroll: true });
                 }}
             >
-                <WorkspaceInlineNotice feedback={feedback} />
+                <WorkspaceInlineNotice feedback={feedback} active={open} onDismiss={onDismiss} />
             </div>
         </span>
     );

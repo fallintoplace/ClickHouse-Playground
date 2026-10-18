@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { isQueryDocument } from '../../src/shared/queries/saved-queries/validation.js';
 import { decodeValue, jsonRecord } from '../helpers/type-guards.js';
-import { runButton, trust } from './helpers.js';
+import { replaceSql, runButton, trust } from './helpers.js';
 
 const draftId = 'recovered-query';
 const documentId = 'missing-saved-query';
@@ -95,6 +95,22 @@ for (const mode of ['Standard', 'Experimental']) {
         await expect(warning).toHaveCount(0);
         await page.getByRole('button', { name: 'Help', exact: true }).click();
         await expect(page.getByRole('dialog', { name: 'Explore ClickStudio' })).toBeVisible();
+    });
+
+    test(`${mode} hides the browser draft-storage warning after eight seconds`, async ({
+        page,
+    }) => {
+        await blockWorkspaceStorage(page);
+        await page.clock.install({ time: new Date('2026-10-11T10:00:00Z') });
+        await trust(page, mode);
+        await page.clock.runFor(200);
+        const warning = page
+            .getByRole('alert')
+            .filter({ hasText: 'Drafts aren’t being saved in this browser.' });
+        await expect(warning).toBeVisible();
+        await page.mouse.move(0, 0);
+        await page.clock.runFor(8100);
+        await expect(warning).toHaveCount(0);
     });
 
     test(`${mode} shows the draft-storage warning again after storage recovers and fails`, async ({

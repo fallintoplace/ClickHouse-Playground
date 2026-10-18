@@ -41,7 +41,7 @@ async function pendingScript(page: Page) {
     return script;
 }
 
-test('Repeated script poll failures stay inline and recover without a popup', async ({ page }) => {
+test('Repeated script poll warnings time out and recover without a popup', async ({ page }) => {
     const script = await pendingScript(page);
     let fail = true,
         polls = 0;
@@ -65,14 +65,42 @@ test('Repeated script poll failures stay inline and recover without a popup', as
     });
     await trust(page);
     await replaceSql(page, script.sql);
+    await page.clock.install();
     await runButton(page).click();
     const notice = page.locator('.results-surface .workspace-inline-notice');
+    await page.clock.runFor(2000);
     await expect(notice).toContainText('Couldn’t refresh the script status. Retrying…');
+    await expect(notice.getByRole('button', { name: 'Dismiss warning' })).toBeVisible();
     await expect.poll(() => polls).toBeGreaterThanOrEqual(2);
     await expect(page.locator('.toast')).toHaveCount(0);
+    await page.mouse.move(0, 0);
+    await page.clock.runFor(6100);
+    await expect(notice).toHaveCount(0);
     fail = false;
+    await page.clock.runFor(2000);
     await expect(notice).toHaveCount(0);
     await expect(page.locator('.toast')).toHaveCount(0);
+});
+
+test('Inline warnings can be closed before their timeout', async ({ page }) => {
+    const script = await pendingScript(page);
+    await page.route('**/api/scripts/notification-script', route =>
+        route.fulfill({
+            status: 503,
+            json: { error: { code: 'READ_FAILED', message: 'Script poll diagnostic' } },
+        }),
+    );
+    await trust(page);
+    await replaceSql(page, script.sql);
+    await page.clock.install();
+    await runButton(page).click();
+
+    const notice = page.locator('.results-surface .workspace-inline-notice');
+    await expect(notice).toContainText('Couldn’t refresh the script status. Retrying…');
+    await notice.getByRole('button', { name: 'Dismiss warning' }).click();
+    await expect(notice).toHaveCount(0);
+    await page.clock.runFor(2000);
+    await expect(notice).toHaveCount(0);
 });
 
 test('An unconfirmed cancellation warns without claiming the query stopped', async ({ page }) => {
@@ -208,11 +236,8 @@ test('An unconfirmed save in another tab persists and opens the affected draft',
     release();
     const toast = page.locator('.toast-warning');
     await expect(toast).toContainText('Couldn’t confirm the save of “Getting started.sql”');
-    await expect(toast.locator('.toast-timer')).toHaveCount(0);
+    await expect(toast.locator('.toast-timer')).toBeVisible();
     await expect(page.locator('.editor-surface .workspace-inline-notice')).toHaveCount(0);
-    await page.clock.install();
-    await page.clock.runFor(15000);
-    await expect(toast).toBeVisible();
     await toast.getByRole('button', { name: 'Open tab', exact: true }).click();
     await expect(page.locator('.cm-content')).toContainText('SELECT 345');
     await page.getByRole('button', { name: 'Check save', exact: true }).click();
@@ -258,7 +283,9 @@ test('Repeating the same popup error does not restart its timer', async ({ page 
     await expect(page.locator('.toast')).toHaveCount(0);
 });
 
-test('Draft storage warning stays visible until browser storage recovers', async ({ page }) => {
+test('Draft storage warning clears after eight seconds and stays clear after recovery', async ({
+    page,
+}) => {
     await trust(page);
     await page.evaluate(() => {
         const original = Storage.prototype.setItem;
@@ -278,10 +305,11 @@ test('Draft storage warning stays visible until browser storage recovers', async
     await expect(warning).toContainText(
         'Drafts aren’t being saved in this browser. Export them before closing.',
     );
-    await expect(warning.locator('.toast-timer')).toHaveCount(0);
+    await expect(warning.locator('.toast-timer')).toBeVisible();
+    await page.mouse.move(0, 0);
     await page.clock.install();
-    await page.clock.runFor(20000);
-    await expect(warning).toBeVisible();
+    await page.clock.runFor(8100);
+    await expect(warning).toHaveCount(0);
     await page.evaluate(() => window.restoreDraftStorage());
     await replaceSql(page, 'SELECT 124');
     await page.clock.runFor(200);
@@ -368,7 +396,10 @@ for (const mode of ['Standard', 'Experimental'])
         );
         await expect(documents).toHaveCount(100);
         await expect(page.locator('.cm-content')).toContainText('SELECT 1 AS first_tab_marker');
-        await page.clock.runFor(5100);
+        await expect(
+            page.locator('.toast-warning').getByRole('button', { name: 'Dismiss warning' }),
+        ).toBeVisible();
+        await page.clock.runFor(8100);
         await expect(page.locator('.toast')).toHaveCount(0);
         await documents
             .first()

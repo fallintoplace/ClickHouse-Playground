@@ -30,6 +30,7 @@ import { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../database/connections/cloud-co
 import { closeDraft, newDraft, type Draft } from '../queries/editor/drafts/workspace-state';
 
 import { WorkspaceToast } from './layout/notifications/WorkspaceToast';
+import { WORKSPACE_NOTIFICATION_TIMEOUT_MS } from './layout/notifications/useWorkspaceNotifications';
 import {
     focusEditor,
     helpParseDuration,
@@ -185,6 +186,7 @@ export function Workspace({
                 ),
                 cancelling,
                 draftFeedback: model.draftFeedback,
+                onDismissDraftFeedback: model.dismissDraftFeedback,
                 editorProposal: model.assistant.editorProposal,
                 proposalBusy: model.assistant.assistantBusy,
                 proposalError: model.assistant.assistantError,
@@ -424,7 +426,7 @@ function renderWorkspaceLayout({
                             notification={{
                                 id: 0,
                                 tone: 'error',
-                                timeoutMs: null,
+                                timeoutMs: WORKSPACE_NOTIFICATION_TIMEOUT_MS,
                                 message:
                                     'Drafts aren’t being saved in this browser. Export them before closing.',
                             }}
