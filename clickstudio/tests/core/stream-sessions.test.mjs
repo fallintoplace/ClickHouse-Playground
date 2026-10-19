@@ -164,6 +164,109 @@ test('Header-only output is a valid empty result', async () => {
     assert.equal(output.rows.length, 0);
     assert.equal(output.truncated, false);
 });
+test('Fragmented large rows preserve detachable values and Unicode', async () => {
+    const value = '🧪'.repeat(300_000);
+    const encoded = Buffer.from(header + JSON.stringify(['1', value]) + '\n');
+    const chunks = Array.from({ length: Math.ceil(encoded.length / 4096) }, (_, index) =>
+        encoded.subarray(index * 4096, (index + 1) * 4096),
+    );
+    const store = new LargeCellStore(new MemoryStore());
+    const output = await collectCompactStream(
+        Readable.from(chunks),
+        { ...DEFAULT_LIMITS, bytes: 2_000 },
+        { store, ownerKey: 'owner', runId: 'chunked', referenceToken: 'token' },
+    );
+    const reference = output.rows[0]?.[1];
+    assert.equal(output.truncated, false);
+    assert.equal(output.rows.length, 1);
+    assert.ok(isLargeCellReference(reference, 'token'));
+    assert.equal(store.jsonValue(store.get('owner', 'chunked', reference.id)), value);
+});
+
+test('Chunked rows preserve boundaries and a final row without a newline', async () => {
+    const result = header + '["1","first"]\n["2","🧪"]';
+    const encoded = Buffer.from(result);
+    const output = await collectCompactStream(
+        Readable.from([...encoded].map(byte => Buffer.from([byte]))),
+        DEFAULT_LIMITS,
+    );
+    assert.deepEqual(output.rows, [
+        ['1', 'first'],
+        ['2', '🧪'],
+    ]);
+    assert.equal(output.truncated, false);
+});
+
+test('String chunks split across surrogate pairs retain exact header byte limits', async () => {
+    const names = '["value"]';
+    const types = '["🧪🧪"]';
+    const output = await collectCompactStream(
+        Readable.from([names + '\n', '["', '\ud83e', '\uddea', '\ud83e', '\uddea', '"]\n']),
+        {
+            ...DEFAULT_LIMITS,
+            bytes: Buffer.byteLength(names) + Buffer.byteLength(types),
+        },
+    );
+    assert.deepEqual(output.columns, [{ name: 'value', type: '🧪🧪' }]);
+    assert.equal(output.truncated, false);
+});
+
+test('Chunked rows still stop at the retained result byte budget', async () => {
+    const firstRow = '["1","one"]';
+    const secondRow = '["2","' + 'x'.repeat(512) + '"]';
+    const encoded = Buffer.from(header + firstRow + '\n' + secondRow + '\n');
+    const chunks = Array.from({ length: Math.ceil(encoded.length / 17) }, (_, index) =>
+        encoded.subarray(index * 17, (index + 1) * 17),
+    );
+    const output = await collectCompactStream(Readable.from(chunks), {
+        ...DEFAULT_LIMITS,
+        bytes: Buffer.byteLength(header) + Buffer.byteLength(firstRow) + 20,
+    });
+    assert.deepEqual(output.rows, [['1', 'one']]);
+    assert.equal(output.truncated, true);
+    assert.equal(output.truncationReason, 'bytes');
+});
+
+test('Unterminated rows without large-cell storage stop at the remaining byte cap', async () => {
+    let chunksRead = 0;
+    let closed = false;
+    async function* source() {
+        try {
+            yield header;
+            for (let index = 0; index < 100; index++) {
+                chunksRead++;
+                yield 'x'.repeat(64);
+            }
+        } finally {
+            closed = true;
+        }
+    }
+    const output = await collectCompactStream(source(), {
+        ...DEFAULT_LIMITS,
+        bytes: Buffer.byteLength(header) + 128,
+    });
+    assert.equal(output.truncated, true);
+    assert.equal(output.truncationReason, 'bytes');
+    assert.equal(output.rows.length, 0);
+    assert.equal(chunksRead, 3);
+    assert.equal(closed, true);
+});
+
+test('Row caps take precedence over bytes for a fragmented extra row', async () => {
+    const firstRow = '["1","one"]\n';
+    const output = await collectCompactStream(
+        Readable.from([header + firstRow, '["2","', 'x'.repeat(500)]),
+        {
+            ...DEFAULT_LIMITS,
+            rows: 1,
+            bytes: Buffer.byteLength(header + firstRow) + 16,
+        },
+    );
+    assert.deepEqual(output.rows, [['1', 'one']]);
+    assert.equal(output.truncated, true);
+    assert.equal(output.truncationReason, 'rows');
+});
+
 test('Local-only sessions are explicit single-owner identities', () =>
     assert.equal(new SessionService().principal().id, 'local-owner'));
 test('Configured sessions require authentication and use random cookies', () => {

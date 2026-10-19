@@ -23,6 +23,7 @@ interface StreamState {
     largeCellBytes: number;
     largeCellSerializedBytes: number;
     truncated: boolean;
+    allowDetachedCells: boolean;
     truncationReason?: ResultTruncationReason;
 }
 
@@ -101,24 +102,35 @@ function prepareRow(
     largeCellContext: LargeCellContext | undefined,
     state: StreamState,
 ): PreparedRow | undefined {
+    // Rows without detachable cells can be retained directly.
+    if (!largeCellContext) return { row: data, cells: [], bytes: 0, serializedBytes: 0 };
+
     const row = [...data];
     const cells: DetachedCell[] = [];
     let bytes = 0;
     let serializedBytes = 0;
 
-    if (!largeCellContext) return { row, cells, bytes, serializedBytes };
-
     for (let index = 0; index < data.length; index++) {
         const value = data[index];
-        if (value === undefined || value === null) continue;
+        // JSON scalars other than strings cannot reach the large-cell threshold.
+        if (
+            value === undefined ||
+            value === null ||
+            typeof value === 'number' ||
+            typeof value === 'boolean'
+        )
+            continue;
+
         const valueType = typeof value === 'string' ? 'text' : 'json';
         const fullValue =
             typeof value === 'string' ? value : (JSON.stringify(value) ?? String(value));
-        const jsonValue = JSON.stringify(value) ?? fullValue;
         const cellBytes = Buffer.byteLength(fullValue);
-        const cellSerializedBytes = Buffer.byteLength(jsonValue);
         if (cellBytes <= LARGE_CELL_INLINE_BYTES) continue;
 
+        // Only detached strings need their quoted JSON size. For objects/arrays,
+        // the serialized value is already the representation we measured.
+        const cellSerializedBytes =
+            valueType === 'text' ? Buffer.byteLength(JSON.stringify(value)) : cellBytes;
         const nextBytes = bytes + cellBytes;
         const nextSerializedBytes = serializedBytes + cellSerializedBytes;
         if (
@@ -243,6 +255,44 @@ function consumeLine(
     else retainRow(data, state, limits, largeCellContext);
 }
 
+interface PendingLine {
+    fragments: string[];
+    bytes: number;
+}
+
+function appendPendingFragment(
+    pending: PendingLine,
+    fragment: string,
+    state: StreamState,
+    limits: Pick<Limits, 'rows' | 'bytes'>,
+): boolean {
+    pending.fragments.push(fragment);
+    pending.bytes += Buffer.byteLength(fragment);
+    const limit =
+        state.stage < 2 || !state.allowDetachedCells
+            ? limits.bytes - state.bytes
+            : MAX_LARGE_CELL_ROW_BYTES;
+    if (pending.bytes <= limit) return true;
+
+    // A string source may split a surrogate pair between chunks. Its halves
+    // overestimate UTF-8 bytes, so remeasure the joined value only near the cap.
+    const combined = pending.fragments.join('');
+    pending.bytes = Buffer.byteLength(combined);
+    if (pending.bytes > limit) {
+        if (state.stage < 2) {
+            throw new AppError(
+                413,
+                'METADATA_TOO_LARGE',
+                'Result metadata exceeds the configured byte limit',
+            );
+        }
+        markTruncated(state, state.rows.length >= limits.rows ? 'rows' : 'bytes');
+        return false;
+    }
+    pending.fragments = [combined];
+    return true;
+}
+
 /** Bounded parsing before JSON.parse: even one very large string cannot grow without limit. */
 export async function collectCompactStream(
     stream: AsyncIterable<Buffer | string>,
@@ -259,40 +309,38 @@ export async function collectCompactStream(
         largeCellBytes: 0,
         largeCellSerializedBytes: 0,
         truncated: false,
+        allowDetachedCells: largeCellContext !== undefined,
     };
-    let pending = '';
+    // Keep incomplete lines as fragments instead of rebuilding and measuring their
+    // entire contents for every network chunk. Large values may span thousands of chunks.
+    const pending: PendingLine = { fragments: [], bytes: 0 };
 
     outer: for await (const chunk of stream) {
-        pending += typeof chunk === 'string' ? chunk : decoder.write(chunk);
-        let newline: number;
-        while ((newline = pending.indexOf('\n')) >= 0) {
-            const line = pending.slice(0, newline);
-            pending = pending.slice(newline + 1);
+        const decoded = typeof chunk === 'string' ? chunk : decoder.write(chunk);
+        let start = 0;
+        let newline = decoded.indexOf('\n');
+        while (newline >= 0) {
+            let line = decoded.slice(start, newline);
+            if (pending.fragments.length) {
+                pending.fragments.push(line);
+                line = pending.fragments.join('');
+                pending.fragments = [];
+            }
+            pending.bytes = 0;
             consumeLine(line, state, limits, largeCellContext);
             if (state.truncated) break outer;
+            start = newline + 1;
+            newline = decoded.indexOf('\n', start);
         }
-        // Limit an unterminated row before it is parsed. Exiting for-await closes the source
-        // stream.
-        const pendingBytes = Buffer.byteLength(pending);
-        if (
-            state.stage < 2
-                ? pendingBytes + state.bytes > limits.bytes
-                : pendingBytes > MAX_LARGE_CELL_ROW_BYTES
-        ) {
-            if (state.stage < 2) {
-                throw new AppError(
-                    413,
-                    'METADATA_TOO_LARGE',
-                    'Result metadata exceeds the configured byte limit',
-                );
-            }
-            markTruncated(state, 'bytes');
-            break;
-        }
+
+        if (start === decoded.length) continue;
+        if (!appendPendingFragment(pending, decoded.slice(start), state, limits)) break;
     }
     if (!state.truncated) {
-        pending += decoder.end();
-        if (pending.trim()) consumeLine(pending, state, limits, largeCellContext);
+        const tail = decoder.end();
+        if (tail) pending.fragments.push(tail);
+        const remainder = pending.fragments.join('');
+        if (remainder.trim()) consumeLine(remainder, state, limits, largeCellContext);
     }
     requireThat(
         state.stage === 2,
