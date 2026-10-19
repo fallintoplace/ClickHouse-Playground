@@ -30,7 +30,7 @@
     margin: 0;
     color: var(--text);
     font-family: var(--font-display);
-    font-size: 18px;
+    font-size: var(--font-size-scale-18);
     font-weight: 680;
     letter-spacing: -0.02em;
   }
@@ -38,7 +38,7 @@
     max-width: 420px;
     margin: 0 0 3px;
     color: var(--muted);
-    font-size: 10px;
+    font-size: var(--font-size-scale-10);
     line-height: 1.55;
   }
   .empty-sql-workspace > .button-base {
@@ -179,7 +179,7 @@
   }
   .detached-query-location {
     color: var(--text-soft);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     letter-spacing: 0.08em;
   }
   .detached-query-name {
@@ -278,14 +278,14 @@
     background: var(--panel-raised);
     color: var(--signal-accent);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     font-weight: 800;
     letter-spacing: 0.03em;
   }
   .file-type-icon.small {
     width: 28px;
     height: 28px;
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
   }
   .document-name {
     display: grid;
@@ -466,7 +466,7 @@
   .run-option-button {
     min-height: 34px;
     padding: 0 9px;
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     letter-spacing: 0.02em;
   }
   .run-action-group > .run-option-button {
@@ -607,7 +607,7 @@
     padding: 0 8px 0 2px;
     border-right: 1px solid var(--line);
     color: var(--text);
-    font-size: 10px;
+    font-size: var(--font-size-scale-10);
     font-weight: 600;
     line-height: 20px;
     white-space: nowrap;
@@ -616,7 +616,7 @@
     flex: none;
     padding: 7px 12px;
     color: var(--red);
-    font-size: 11px;
+    font-size: var(--font-size-scale-11);
   }
   .sql-editor {
     position: relative;
@@ -735,7 +735,7 @@
   }
   .sql-editor .cm-lint-marker-error::after {
     content: "×";
-    font-size: 15px;
+    font-size: var(--font-size-scale-15);
     font-weight: 700;
   }
   .sql-editor .cm-server-error-token {
@@ -749,7 +749,7 @@
     padding: 9px 11px;
     color: var(--text-soft);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--font-size-scale-10);
   }
   .parameters-row {
     display: flex;
@@ -769,16 +769,16 @@
   }
   .parameters-label > span {
     color: var(--accent);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     font-weight: 760;
     letter-spacing: 0.14em;
   }
   .parameters-label strong {
-    font-size: 10px;
+    font-size: var(--font-size-scale-10);
   }
   .parameters-label small {
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .parameter-field {
     display: grid;
@@ -787,14 +787,14 @@
   }
   .parameter-field > span {
     color: var(--text-soft);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     font-weight: 620;
   }
   .parameter-field code {
     margin-left: 4px;
     color: var(--muted);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .parameter-field input,
   .field-input,
@@ -807,13 +807,13 @@
     outline: none;
     background: var(--page-raised);
     color: var(--text);
-    font-size: 10px;
+    font-size: var(--font-size-scale-10);
     transition: 0.18s ease;
   }
   .parameter-count {
     padding-bottom: 8px;
     color: var(--green);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     white-space: nowrap;
   }
 } /* Light theme */
@@ -849,7 +849,7 @@
 }
 .sql-editor .cm-editor .cm-tooltip-lint .cm-diagnosticText::first-line {
   color: var(--text);
-  font-size: 11px;
+  font-size: var(--font-size-scale-11);
   font-weight: 600;
 }
 .sql-editor .cm-editor .cm-tooltip-lint .cm-diagnosticText {
@@ -909,7 +909,7 @@
   .toolbar-small {
     min-height: 25px;
     padding: 0 5px;
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
   }
   .editor-actions {
     min-width: 0;
@@ -935,7 +935,7 @@
     width: auto;
     min-width: 0;
     padding: 0 8px;
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .run-action-group {
     display: grid;
@@ -952,7 +952,7 @@
   .run-option-button {
     min-height: 30px;
     padding: 0 7px;
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .parameters-row {
     align-items: stretch;

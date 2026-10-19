@@ -45,7 +45,7 @@
 
 .transfer-dialog-title {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--font-size-scale-16);
   font-weight: 600;
   line-height: 1.5;
   letter-spacing: normal;
@@ -53,14 +53,14 @@
 
 .transfer-dialog-context {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   line-height: 1.5;
 }
 
 .transfer-dialog-description {
   margin-top: 4px;
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   line-height: 1.5;
 }
 

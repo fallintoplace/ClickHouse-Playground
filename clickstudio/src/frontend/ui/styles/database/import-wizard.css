@@ -28,12 +28,12 @@
   margin-bottom: 0;
 }
 .import-wizard-main.is-query > section > div:first-child h3 {
-  font-size: 14px;
+  font-size: var(--font-size-scale-14);
   letter-spacing: normal;
 }
 .import-wizard-main.is-query > section > div:first-child p {
   max-width: 55ch;
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-wizard-main > [role="status"],
 .import-wizard-main > [role="alert"] {
@@ -55,7 +55,7 @@
 }
 .import-file-copy > small {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   line-height: 1.45;
 }
 .import-file-input {
@@ -63,7 +63,7 @@
   width: min(100%, 460px);
   min-width: 0;
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-file-input::file-selector-button:hover {
   border-color: var(--line-bright);
@@ -79,7 +79,7 @@
   border-radius: var(--radius-label);
   background: var(--panel);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-sample-card > div {
   display: grid;
@@ -129,7 +129,7 @@
   border-radius: var(--radius-control);
   background: var(--page);
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   letter-spacing: normal;
 }
 .import-destination-select .chart-select-trigger:hover {
@@ -143,7 +143,7 @@
 }
 .import-new-table-heading span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-new-table-card > label {
   max-width: none;
@@ -173,7 +173,7 @@
 .import-generated-id-option small,
 .import-id-source-note {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   line-height: 1.45;
 }
 .import-id-source-note {
@@ -222,7 +222,7 @@
 }
 .import-ready-title {
   line-height: 1.5;
-  font-size: 17px;
+  font-size: var(--font-size-scale-17);
 }
 .import-ready-title code {
   overflow-wrap: anywhere;
@@ -235,7 +235,7 @@
 }
 .import-review-metrics dt {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   font-weight: 600;
   letter-spacing: normal;
   text-transform: uppercase;
@@ -244,7 +244,7 @@
   overflow: hidden;
   margin: 0;
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -256,12 +256,12 @@
 }
 .import-review-mapping-header h4 {
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   font-weight: 600;
 }
 .import-review-mapping-header > span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   white-space: nowrap;
 }
 .import-review-mapping-list {
@@ -275,7 +275,7 @@
   min-width: 440px;
   border-collapse: collapse;
   text-align: left;
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-review-mapping-list thead {
   position: sticky;
@@ -283,7 +283,7 @@
   top: 0;
   background: var(--panel-raised);
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   text-transform: uppercase;
 }
 .import-review-mapping-list th,
@@ -308,7 +308,7 @@
 .import-review-mapping-list code {
   color: var(--text);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-review-mapping-list .import-review-skipped {
   display: inline-flex;
@@ -316,7 +316,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-label);
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-review-mapping-list tr.is-generated {
   background: color-mix(in srgb, var(--accent) 5%, transparent);
@@ -386,11 +386,11 @@
 }
 .import-status-card > h3 {
   line-height: 1.35;
-  font-size: 16px;
+  font-size: var(--font-size-scale-16);
 }
 .import-status-card > p {
   max-width: 78ch;
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   line-height: 1.6;
 }
 .import-wizard-main [role="alert"]:not(.sr-only) {
@@ -400,7 +400,7 @@
 }
 .import-wizard-footer > span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   line-height: 1.45;
 }
 .import-wizard-footer button:not(:disabled):hover {
@@ -477,12 +477,12 @@
 }
 .import-kind-copy > strong {
   font-weight: 600;
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-kind-copy > small {
   color: var(--muted);
   line-height: 1.5;
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 
 .import-wizard-steps {
@@ -499,7 +499,7 @@
   padding: 8px 0;
   border-bottom: 1px solid var(--line);
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   font-weight: 500;
 }
 .import-step-item.is-current {
@@ -516,7 +516,7 @@
   width: 20px;
   height: 20px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   font-variant-numeric: tabular-nums;
 }
 .import-step-item.is-current .import-step-number {
@@ -574,7 +574,7 @@
 .import-file-copy > strong {
   color: var(--text);
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--font-size-scale-14);
 }
 .import-file-input::file-selector-button {
   min-height: 32px;
@@ -614,7 +614,7 @@
   padding-block: 10px;
   border-bottom: 1px solid var(--line);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   color: var(--text-soft);
 }
 .import-preview-table > div:last-child {
@@ -655,7 +655,7 @@
   gap: 3px;
 }
 .import-setup-kicker {
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   font-weight: 600;
   letter-spacing: normal;
   color: var(--muted);
@@ -664,7 +664,7 @@
   overflow: hidden;
   color: var(--text);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -674,7 +674,7 @@
   align-items: center;
   gap: 7px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-change-file {
   min-height: 34px;
@@ -683,7 +683,7 @@
   border-radius: var(--radius-panel);
   background: color-mix(in srgb, var(--panel) 75%, transparent);
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   font-weight: 650;
 }
 .import-change-file:hover:not(:disabled) {
@@ -713,7 +713,7 @@
   grid-column: 1 / -1;
   margin-bottom: -2px;
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   font-weight: 600;
   letter-spacing: normal;
 }
@@ -767,20 +767,20 @@
   border-radius: var(--radius-label);
   color: var(--accent);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   font-weight: 600;
 }
 .import-destination-option-title {
   color: inherit;
   font-weight: 650;
   line-height: 1.35;
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-destination-option-description {
   color: var(--muted);
   font-weight: 450;
   line-height: 1.45;
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-destination-select-shell {
   display: grid;
@@ -795,7 +795,7 @@
   min-width: 0;
   gap: 6px;
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   font-weight: 600;
   letter-spacing: normal;
 }
@@ -811,7 +811,7 @@
   background: var(--page);
   color: var(--text);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   letter-spacing: normal;
 }
 .import-destination-select .chart-select-trigger:hover,
@@ -823,7 +823,7 @@
   align-self: center;
   padding-bottom: 2px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   line-height: 1.5;
 }
 .import-destination-panel {
@@ -838,7 +838,7 @@
 }
 .import-section-heading h3 {
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   font-weight: 600;
   letter-spacing: normal;
 }
@@ -863,12 +863,12 @@
 }
 .import-new-table-heading strong {
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--font-size-scale-13);
   font-weight: 600;
 }
 .import-new-table-heading small {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-new-table-fields {
   display: grid;
@@ -880,7 +880,7 @@
   display: grid;
   min-width: 0;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   font-weight: 600;
   letter-spacing: normal;
   color: var(--text-soft);
@@ -909,17 +909,17 @@
 .import-generated-id-option strong {
   color: var(--text);
   font-weight: 650;
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-generated-id-option small {
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-id-source-note,
 .import-table-hint {
   grid-column: 1 / -1;
   margin: 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-create-columns {
   display: grid;
@@ -936,7 +936,7 @@
 .import-create-columns-heading {
   padding: 0 3px 2px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   font-weight: 600;
   letter-spacing: normal;
 }
@@ -944,7 +944,7 @@
   overflow: hidden;
   color: var(--text-soft);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -959,7 +959,7 @@
   background: var(--page);
   color: var(--text);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 
 .import-setup-columns {
@@ -988,14 +988,14 @@
   font-weight: 600;
   margin-top: 2px;
   letter-spacing: normal;
-  font-size: 14px;
+  font-size: var(--font-size-scale-14);
 }
 .import-mapping-heading p {
   margin-top: 3px;
   color: var(--muted);
   line-height: 1.4;
   max-width: 50ch;
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-mapping-counts > span {
   padding: 5px 8px;
@@ -1006,7 +1006,7 @@
   border-radius: var(--radius-label);
   background: var(--page);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-mapping-counts > span:first-child {
   border-color: var(--line);
@@ -1040,12 +1040,12 @@
 .import-mapping-empty-state strong {
   color: var(--text);
   font-weight: 600;
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-mapping-empty-state p {
   color: var(--muted);
   line-height: 1.5;
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-column-map {
   min-width: 0;
@@ -1076,7 +1076,7 @@
   font-weight: 600;
   padding: 10px 11px;
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-column-map thead th:first-child,
 .import-column-map tbody th {
@@ -1104,7 +1104,7 @@
 .import-column-map tbody th {
   overflow: hidden;
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1114,7 +1114,7 @@
   color: var(--text);
   font-family: var(--font-mono);
   font-weight: 600;
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-column-map tbody td:nth-child(2) {
   padding-inline: 8px;
@@ -1130,7 +1130,7 @@
   padding-inline: 9px;
   border-color: var(--line);
   background: color-mix(in srgb, var(--panel) 72%, var(--page));
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-column-type {
   display: inline-block;
@@ -1146,7 +1146,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   padding-inline: 6px;
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   line-height: 1.4;
 }
 .import-setup-preview {
@@ -1162,7 +1162,7 @@
 .import-inline-error {
   margin: 0;
   color: var(--red);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 .import-table-name-error {
   grid-column: 1 / -1;
@@ -1181,7 +1181,7 @@
 }
 .import-ready-eyebrow {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   letter-spacing: normal;
 }
 .import-review-metrics > div {
@@ -1219,7 +1219,7 @@
 }
 .import-wizard-footer-note {
   max-width: 54ch;
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   line-height: 1.5;
 }
 .import-wizard-footer > div {
@@ -1227,7 +1227,7 @@
 }
 .import-wizard-footer button {
   min-height: 34px;
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 
 @media (max-width: 640px) {
@@ -1268,7 +1268,7 @@
     padding: 8px;
   }
   .import-review-metrics dd {
-    font-size: 12px;
+    font-size: var(--font-size-scale-12);
   }
   .import-file-input {
     grid-column: 1 / -1;
@@ -1287,7 +1287,7 @@
     align-items: center;
   }
   .import-review-metrics dd {
-    font-size: 12px;
+    font-size: var(--font-size-scale-12);
   }
 }
 
@@ -1337,16 +1337,16 @@
     padding: 10px;
   }
   .import-setup-source-copy > strong {
-    font-size: 12px;
+    font-size: var(--font-size-scale-12);
   }
   .import-setup-source-copy > span:last-child {
     gap: 5px;
-    font-size: 12px;
+    font-size: var(--font-size-scale-12);
   }
   .import-change-file {
     min-height: 31px;
     padding-inline: 8px;
-    font-size: 12px;
+    font-size: var(--font-size-scale-12);
   }
   .import-destination-choice,
   .import-destination-panel,
@@ -1463,7 +1463,7 @@
     background: var(--panel-raised);
     box-shadow: var(--shadow-popover);
     color: var(--text-soft);
-    font-size: 12px;
+    font-size: var(--font-size-scale-12);
     line-height: 1.5;
     overflow-wrap: anywhere;
   }
