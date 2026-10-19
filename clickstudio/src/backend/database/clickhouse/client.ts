@@ -675,9 +675,8 @@ export class ClickHouseDriver implements QueryDriver, ImportDriver, CreateTableD
                     });
             }, 750);
         try {
-            const maxResultRows = this.profile(run.connectionId).publicPlayground
-                ? '10000'
-                : '100000';
+            const profile = this.profile(run.connectionId);
+            const maxResultRows = profile.publicPlayground ? '10000' : '100000';
             const response = await this.client(run.connectionId).exec({
                 query: `${sql}\nFORMAT JSONCompactEachRowWithNamesAndTypes`,
                 query_id: run.queryId,
@@ -691,7 +690,12 @@ export class ClickHouseDriver implements QueryDriver, ImportDriver, CreateTableD
                     max_result_rows: maxResultRows,
                     // ClickHouse caps this at 50 MB; the stream collector enforces app limits.
                     max_result_bytes: '50000000',
-                    result_overflow_mode: 'throw',
+                    // Only an explicitly compatible readonly profile can choose
+                    // break. Preserve the previous throw setting for remote servers.
+                    result_overflow_mode:
+                        profile.previewOverflowMode === 'break' ? 'break' : 'throw',
+                    // Reader profiles control exception framing. Do not modify
+                    // http_write_exception_in_output_format on readonly connections.
                     max_rows_to_read: '100000000',
                     max_bytes_to_read: '5000000000',
                     output_format_json_quote_64bit_integers: 1,
@@ -748,8 +752,8 @@ export class ClickHouseDriver implements QueryDriver, ImportDriver, CreateTableD
                     max_execution_time: run.limits.seconds,
                     max_memory_usage: String(run.limits.memory),
                     max_threads: run.limits.threads,
-                    max_result_rows: '0',
-                    max_result_bytes: '0',
+                    // Respect the connection profile's result caps. In particular, the local
+                    // read-only profile rejects explicit zero limits, even for streamed exports.
                     result_overflow_mode: 'throw',
                     max_rows_to_read: '100000000',
                     max_bytes_to_read: '5000000000',

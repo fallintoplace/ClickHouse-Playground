@@ -51,6 +51,19 @@ test(
         );
         assert.equal((await service.wait(owner, bounded.id)).status, 'truncated');
         assert.equal(service.result(owner, bounded.id).rows.length, 5);
+        // Regress the case where ClickHouse serialized an overflow exception as
+        // a successful single UInt64 result row instead of yielding a preview.
+        const unbounded = service.submit(owner, input('SELECT * FROM numbers(5000000)'));
+        const unboundedRun = await service.wait(owner, unbounded.id);
+        assert.equal(unboundedRun.status, 'truncated');
+        assert.equal(unboundedRun.rowCount, 5_000);
+        const retained = service.result(owner, unbounded.id).rows;
+        assert.equal(retained.length, 5_000);
+        // A parallel numbers() source does not guarantee output order.
+        for (const row of [retained[0], retained.at(-1)]) {
+            const number = Number(row?.[0]);
+            assert.ok(Number.isSafeInteger(number) && number >= 0 && number < 5_000_000);
+        }
         const slow = service.submit(
             owner,
             input('SELECT sum(sin(number)) FROM numbers(100000000)', { seconds: 10 }),

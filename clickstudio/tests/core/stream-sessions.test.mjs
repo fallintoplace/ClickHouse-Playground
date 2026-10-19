@@ -206,6 +206,19 @@ test('A broken ClickHouse stream cannot become a successful empty answer', async
         { code: 'RESULT_STREAM_ERROR' },
     );
 });
+test('JSON-encoded ClickHouse exception cannot masquerade as UInt64', async () => {
+    const error = 'Code: 396. DB::Exception: Limit for result exceeded.';
+    const numericResult = '["number"]\n["UInt64"]\n' + JSON.stringify([error]) + '\n';
+    await assert.rejects(collectCompactStream(Readable.from([numericResult]), DEFAULT_LIMITS), {
+        code: 'RESULT_STREAM_ERROR',
+    });
+
+    // A query returning user text with the same bytes must not be rejected.
+    const textResult = '["message"]\n["String"]\n' + JSON.stringify([error]) + '\n';
+    const output = await collectCompactStream(Readable.from([textResult]), DEFAULT_LIMITS);
+    assert.deepEqual(output.rows, [[error]]);
+    assert.equal(output.truncated, false);
+});
 test('Repeated column names remain separate positional columns', async () => {
     const output = await collectCompactStream(
         Readable.from(['["n","n"]\n["UInt64","UInt64"]\n["1","2"]\n']),

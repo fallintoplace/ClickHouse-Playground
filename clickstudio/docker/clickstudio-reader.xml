@@ -12,6 +12,8 @@
       <max_rows_to_read>100000000</max_rows_to_read>
       <max_bytes_to_read>5000000000</max_bytes_to_read>
       <result_overflow_mode>throw</result_overflow_mode>
+      <!-- Stream exceptions as errors rather than valid compact JSON data rows. -->
+      <http_write_exception_in_output_format>0</http_write_exception_in_output_format>
       <output_format_json_quote_64bit_integers>1</output_format_json_quote_64bit_integers>
       <output_format_json_quote_decimals>1</output_format_json_quote_decimals>
       <constraints>
@@ -24,7 +26,9 @@
         <max_result_bytes><min>1</min><max>50000000</max><changeable_in_readonly/></max_result_bytes>
         <max_rows_to_read><min>1</min><max>100000000</max><changeable_in_readonly/></max_rows_to_read>
         <max_bytes_to_read><min>1</min><max>5000000000</max><changeable_in_readonly/></max_bytes_to_read>
-        <result_overflow_mode><const/></result_overflow_mode>
+        <!-- The app uses break for bounded previews and throw for full exports. -->
+        <result_overflow_mode><changeable_in_readonly/></result_overflow_mode>
+        <http_write_exception_in_output_format><const/></http_write_exception_in_output_format>
         <output_format_json_quote_64bit_integers><const/></output_format_json_quote_64bit_integers>
         <output_format_json_quote_decimals><const/></output_format_json_quote_decimals>
         <log_comment><changeable_in_readonly/></log_comment>

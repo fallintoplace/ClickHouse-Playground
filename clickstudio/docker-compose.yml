@@ -46,6 +46,8 @@ services:
       CLICKHOUSE_URL: http://clickhouse:8123
       CLICKHOUSE_DATABASE: default
       CLICKHOUSE_USER: clickstudio_reader
+      # Matches the bundled reader profile's narrowly allowed overflow setting.
+      CLICKHOUSE_PREVIEW_OVERFLOW_MODE: break
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?Reader password is required}
       CLICKHOUSE_WRITER_USER: clickstudio_writer
       CLICKHOUSE_WRITER_PASSWORD: ${CLICKHOUSE_WRITER_PASSWORD:?Writer password is required}

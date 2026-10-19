@@ -23,6 +23,7 @@ export default defineConfig({
         '**/preview.spec.ts',
         '**/playground-scripts.spec.ts',
         '**/large-results-soak.spec.ts',
+        '**/live-clickhouse-soak.spec.ts',
     ],
     projects: [
         {

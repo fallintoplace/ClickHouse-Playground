@@ -29,6 +29,8 @@ export interface Profile {
     password: string;
     limits: Limits;
     publicPlayground?: boolean;
+    /** Only opt in if the readonly ClickHouse profile permits result_overflow_mode=break. */
+    previewOverflowMode?: 'break';
     writer?: {
         username: string;
         password: string;
@@ -106,6 +108,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
                   database: env.CLICKHOUSE_DATABASE ?? 'default',
                   username: env.CLICKHOUSE_USER ?? 'default',
                   passwordEnv: 'CLICKHOUSE_PASSWORD',
+                  previewOverflowMode: env.CLICKHOUSE_PREVIEW_OVERFLOW_MODE,
                   ...(env.CLICKHOUSE_WRITER_USER && env.CLICKHOUSE_WRITER_PASSWORD
                       ? {
                             writer: {
@@ -138,6 +141,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
         );
         const username = text(v.username, 'username', 128);
         requireThat(
+            v.previewOverflowMode === undefined ||
+                v.previewOverflowMode === 'throw' ||
+                v.previewOverflowMode === 'break',
+            400,
+            'PREVIEW_OVERFLOW_MODE',
+            'Preview overflow mode must be break or throw',
+        );
+        requireThat(
             local || username !== 'default',
             400,
             'RESTRICTED_IDENTITY',
@@ -151,6 +162,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
             username,
             password: getSecret(v.passwordEnv),
             limits: limits(v.limits),
+            // The bundled loopback reader explicitly allows break in its server
+            // profile. Custom and public connections must opt in themselves.
+            ...(v.previewOverflowMode === 'break' ||
+            (v.previewOverflowMode === undefined &&
+                !env.CONNECTIONS_FILE &&
+                username === 'clickstudio_reader' &&
+                isLoopbackHost(url.hostname))
+                ? { previewOverflowMode: 'break' as const }
+                : {}),
         };
         if (v.writer !== undefined) {
             const w = record(v.writer);

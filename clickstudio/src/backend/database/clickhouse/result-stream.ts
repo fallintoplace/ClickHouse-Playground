@@ -191,6 +191,27 @@ function prepareRow(
     return { row, cells, bytes, serializedBytes };
 }
 
+function rejectEmbeddedClickHouseException(data: unknown[], columns: Column[]): void {
+    if (
+        data.length !== 1 ||
+        columns.length !== 1 ||
+        typeof data[0] !== 'string' ||
+        !data[0].startsWith('Code: ') ||
+        // Text and variant columns can legitimately contain error-like strings.
+        /String|Enum|JSON|Dynamic|Variant|Object/.test(columns[0]!.type)
+    )
+        return;
+    // Older ClickHouse HTTP responses can encode an exception as a JSON array
+    // after the result headers. A one-column numeric result would otherwise
+    // accept the error message as a successful data row.
+    if (/^Code: \d+\. DB::Exception:/.test(data[0]))
+        throw new AppError(
+            502,
+            'RESULT_STREAM_ERROR',
+            'ClickHouse interrupted the result stream. Inspect this query ID on the server.',
+        );
+}
+
 function retainRow(
     data: unknown[],
     state: StreamState,
@@ -204,6 +225,7 @@ function retainRow(
         'RESULT_WIDTH',
         'Unexpected number of fields in a result row',
     );
+    rejectEmbeddedClickHouseException(data, state.columns);
     const prepared = prepareRow(data, state.columns, largeCellContext, state);
     if (!prepared) {
         markTruncated(state, 'bytes');

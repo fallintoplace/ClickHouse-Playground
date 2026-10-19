@@ -5,6 +5,30 @@ import {
     publicProfile,
     redactor,
 } from '../../.core-build/src/backend/system/config.js';
+test('Bundled reader permits bounded previews without changing remote profiles', () => {
+    const bundled = loadConfig({ CLICKHOUSE_USER: 'clickstudio_reader' });
+    assert.equal(bundled.profiles[0].previewOverflowMode, 'break');
+    assert.equal(bundled.profiles.find(p => p.publicPlayground)?.previewOverflowMode, undefined);
+
+    const remote = loadConfig({
+        CLICKHOUSE_USER: 'clickstudio_reader',
+        CLICKHOUSE_URL: 'https://sql.example.com',
+    });
+    assert.equal(remote.profiles[0].previewOverflowMode, undefined);
+    const optedIn = loadConfig({
+        CLICKHOUSE_USER: 'reader',
+        CLICKHOUSE_PREVIEW_OVERFLOW_MODE: 'break',
+    });
+    assert.equal(optedIn.profiles[0].previewOverflowMode, 'break');
+    const optedOut = loadConfig({
+        CLICKHOUSE_USER: 'clickstudio_reader',
+        CLICKHOUSE_PREVIEW_OVERFLOW_MODE: 'throw',
+    });
+    assert.equal(optedOut.profiles[0].previewOverflowMode, undefined);
+    assert.throws(() => loadConfig({ CLICKHOUSE_PREVIEW_OVERFLOW_MODE: 'truncate' }), {
+        code: 'PREVIEW_OVERFLOW_MODE',
+    });
+});
 test('Local startup binds loopback by default', () =>
     assert.equal(loadConfig({}).host, '127.0.0.1'));
 test('The assistant defaults to Luna Fast mode and accepts Standard processing', () => {

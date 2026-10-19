@@ -18,6 +18,7 @@
     "playwright.config.ts",
     "playwright.preview.config.ts",
     "playwright.memory.config.ts",
-    "playwright.large-results.config.ts"
+    "playwright.large-results.config.ts",
+    "playwright.live-clickhouse.config.ts"
   ]
 }

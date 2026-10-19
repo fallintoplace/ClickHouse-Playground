@@ -303,10 +303,15 @@ test('An open query can run after its saved document is moved to Trash', async (
     await runButton(page).click();
     expect(jsonRecord((await submitted).postDataJSON()).documentId).toBeUndefined();
     await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'succeeded');
-    const stored = jsonRecord(
-        await page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? 'null'), workspaceKey),
-    );
-    expect(stored.tabs).toEqual(
-        expect.arrayContaining([expect.objectContaining({ serverId: saved.id })]),
-    );
+    // Workspace persistence runs after the React update. Verify that the
+    // document association is eventually stored, not that it is synchronous.
+    await expect
+        .poll(async () => {
+            const savedWorkspace = await page.evaluate(
+                key => JSON.parse(localStorage.getItem(key) ?? 'null'),
+                workspaceKey,
+            );
+            return jsonRecord(savedWorkspace).tabs;
+        })
+        .toEqual(expect.arrayContaining([expect.objectContaining({ serverId: saved.id })]));
 });
