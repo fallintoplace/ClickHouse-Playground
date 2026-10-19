@@ -1,11 +1,8 @@
-import {
-    createDocumentFailureReporter,
-    createRevisionRestorer,
-} from '../queries/saved-queries/workspace-document-actions';
+import { createDocumentFailureReporter } from '../queries/saved-queries/workspace-document-actions';
+import { useWorkspaceDocumentActions } from '../queries/saved-queries/useWorkspaceDocumentActions';
 import { createQueryEvidenceActions } from '../queries/inspection/evidence-actions';
 import { createQueryExportActions } from '../queries/results/export-actions';
 import { useWorkspaceUiState } from './layout/useWorkspaceUiState';
-import type { SqlExample } from '../help/examples/sql-examples';
 import {
     useCallback,
     useEffect,
@@ -16,8 +13,7 @@ import {
     type SetStateAction,
 } from 'react';
 import type { NativeParserStatus, NativeParseSnapshot } from '../../shared/sql/parser';
-import { recommendChart } from '../../shared/queries/results/results';
-import { parameterNames, type SqlParameter } from '../../shared/sql/sql';
+import { parameterNames } from '../../shared/sql/sql';
 import type { QueryDocument } from '../../shared/queries/saved-queries/types';
 import type { Run, Script } from '../../shared/queries/execution/types';
 import { apiResponses, message, post } from '../api/client';
@@ -31,7 +27,7 @@ import {
     useImportedTableReveal,
 } from '../database/tables/useImportedTableReveal';
 import { usePendingExecution } from '../queries/execution/usePendingExecution';
-import { useResultSnapshot } from '../queries/execution/useResultSnapshot';
+import { useWorkspaceSnapshotState } from '../queries/execution/useWorkspaceSnapshotState';
 import { useRunEvidence } from '../queries/execution/useRunEvidence';
 import { useScopedValue } from '../browser/useScopedValue';
 import { useScriptExecution } from '../queries/execution/useScriptExecution';
@@ -59,7 +55,6 @@ import type {
     WorkspaceRunCapabilityAction,
 } from './workspace-types';
 import { useDetachedQueryEditor } from './layout/windows/useDetachedQueryEditor';
-import { useWorkspaceDocumentSave } from '../queries/saved-queries/useWorkspaceDocumentSave';
 import { useWorkspaceExecution } from '../queries/execution/useWorkspaceExecution';
 import type { useWorkspaceNotifications } from './layout/notifications/useWorkspaceNotifications';
 import { type WorkspaceFeedback } from './layout/notifications/useWorkspaceNotifications';
@@ -534,7 +529,8 @@ export function useWorkspaceController({
     const openDocument = (document: QueryDocument) => {
         addDraft(draftFromDocument(document));
     };
-    return createWorkspaceControllerModel({
+    return {
+        ...workspaceViewBindings(ui, executionView, resultActions),
         tabs,
         assistant,
         data,
@@ -572,10 +568,7 @@ export function useWorkspaceController({
         sqlExamples,
         workspaceRef,
         emptySqlActionRef,
-        ui,
-        executionView,
-        resultActions,
-    });
+    };
 }
 
 function useFocusEmptySqlAction(tabCount: number) {
@@ -589,158 +582,6 @@ function useFocusEmptySqlAction(tabCount: number) {
         return () => window.cancelAnimationFrame(frame);
     }, [tabCount]);
     return emptySqlActionRef;
-}
-
-function useWorkspaceDocumentActions({
-    active,
-    busy,
-    reviewingSql,
-    connectionId,
-    workspaceRef,
-    inspectorRef,
-    perform,
-    updateDraft,
-    setSavingDraftIds,
-    setDocuments,
-    beginDraftFeedback,
-    clearToast,
-    loadDocumentRevisions,
-    update,
-    updateTabRename,
-    setRestoreRevisionConfirmation,
-    data,
-    reportDocumentFailure,
-}: Omit<Parameters<typeof useWorkspaceDocumentSave>[0], 'onFailure'> & {
-    update: (id: string, change: (draft: Draft) => Draft) => void;
-    updateTabRename: ReturnType<typeof useWorkspaceTabs>['finishTabRename'];
-    setRestoreRevisionConfirmation: ReturnType<
-        typeof useWorkspaceUiState
-    >['setRestoreRevisionConfirmation'];
-    data: ReturnType<typeof useWorkspaceData>;
-    reportDocumentFailure: ReturnType<typeof createDocumentFailureReporter>;
-}) {
-    const saveDraft = useWorkspaceDocumentSave({
-        active,
-        reviewingSql,
-        busy,
-        connectionId,
-        workspaceRef,
-        inspectorRef,
-        perform,
-        updateDraft,
-        setSavingDraftIds,
-        setDocuments,
-        loadDocumentRevisions,
-        beginDraftFeedback,
-        clearToast,
-        onFailure: (draft, caught, complete) =>
-            reportDocumentFailure(draft, 'save', caught, complete),
-    });
-    const finishTabRename = (
-        id: string,
-        value: string,
-        restoreFocus = false,
-        saveAfterRename = true,
-    ) => {
-        const renamedDraft = updateTabRename(id, value, restoreFocus);
-        if (saveAfterRename && renamedDraft) void saveDraft(renamedDraft);
-    };
-    const restoreDocumentRevision = createRevisionRestorer({
-        perform,
-        workspaceRef,
-        setRestoreRevisionConfirmation,
-        update,
-        data,
-        beginDraftFeedback,
-        clearToast,
-        reportDocumentFailure,
-    });
-    return { saveDraft, finishTabRename, restoreDocumentRevision };
-}
-
-function useWorkspaceSnapshotState({
-    active,
-    activeRunId,
-    activeRunIdRef,
-    exampleChartRunId,
-    setExampleChartRunId,
-    run,
-    snapshot,
-    setSnapshotForRun,
-    setAssetReadFeedback,
-    patch,
-    view,
-    workspaceRef,
-}: {
-    active: Draft;
-    activeRunId: string | undefined;
-    activeRunIdRef: { current: string | undefined };
-    exampleChartRunId: string | undefined;
-    setExampleChartRunId: Dispatch<SetStateAction<string | undefined>>;
-    run: Run | undefined;
-    snapshot: ReturnType<typeof useRunEvidence>['snapshot'];
-    setSnapshotForRun: ReturnType<typeof useRunEvidence>['setSnapshotForRun'];
-    setAssetReadFeedback: ReturnType<typeof useRunEvidence>['setAssetReadFeedback'];
-    patch: (values: Partial<Draft>) => void;
-    view: ResultsView;
-    workspaceRef: { current: WorkspaceState };
-}) {
-    const loadSnapshot = useResultSnapshot({
-        activeRunId,
-        run,
-        snapshot,
-        setSnapshotForRun,
-        onSnapshot: (runId, full) => {
-            setAssetReadFeedback(runId, undefined);
-            if (activeRunIdRef.current !== runId || workspaceRef.current.activeId !== active.id)
-                return;
-            const suggestion = recommendChart(full.columns, full.rows);
-            if (active.chart.kind === 'table' && suggestion.config.kind !== 'table')
-                patch({ chart: suggestion.config });
-        },
-    });
-    const reportSnapshotFailure = useSnapshotReadFailure(loadSnapshot, setAssetReadFeedback);
-
-    useEffect(() => {
-        if (
-            !exampleChartRunId ||
-            exampleChartRunId !== activeRunId ||
-            run?.id !== exampleChartRunId ||
-            !terminal(run)
-        )
-            return;
-        if (snapshot?.runId === exampleChartRunId || run.resultState !== 'reopenable') {
-            setExampleChartRunId(undefined);
-            return;
-        }
-        void loadSnapshot()
-            .catch(caught => reportSnapshotFailure(exampleChartRunId, caught))
-            .finally(() => {
-                setExampleChartRunId(current =>
-                    current === exampleChartRunId ? undefined : current,
-                );
-            });
-    }, [
-        activeRunId,
-        exampleChartRunId,
-        loadSnapshot,
-        run,
-        reportSnapshotFailure,
-        setExampleChartRunId,
-        snapshot?.runId,
-    ]);
-
-    useEffect(() => {
-        if (
-            !run ||
-            !['chart', 'indexes', 'plan', 'pipeline', 'runtime'].includes(view) ||
-            !terminal(run) ||
-            run.resultState !== 'reopenable' ||
-            snapshot?.runId === run.id
-        )
-            return;
-        void loadSnapshot().catch(caught => reportSnapshotFailure(run.id, caught));
-    }, [loadSnapshot, run, reportSnapshotFailure, snapshot?.runId, view]);
 }
 
 function useDismissVisibleDraftToast(
@@ -757,25 +598,6 @@ function useDismissVisibleDraftToast(
 function createRunActionTitle(options: Parameters<typeof workspaceRunActionTitle>[2]) {
     return (capability: WorkspaceRunCapability | undefined, action: WorkspaceRunCapabilityAction) =>
         workspaceRunActionTitle(capability, action, options);
-}
-
-function useSnapshotReadFailure(
-    loadSnapshot: ReturnType<typeof useResultSnapshot>,
-    setAssetReadFeedback: ReturnType<typeof useRunEvidence>['setAssetReadFeedback'],
-) {
-    const reportSnapshotFailure = useCallback(
-        function report(runId: string, caught: unknown) {
-            setAssetReadFeedback(runId, {
-                tone: 'error',
-                message: 'Couldn’t load the result data. Try again.',
-                detail: message(caught),
-                retry: () => void loadSnapshot().catch(next => report(runId, next)),
-            });
-        },
-        [loadSnapshot, setAssetReadFeedback],
-    );
-
-    return reportSnapshotFailure;
 }
 
 function useScriptReadFeedback(scriptId?: string) {
@@ -997,252 +819,65 @@ function useWorkspaceExecutionView({
     };
 }
 
-function createWorkspaceControllerModel({
-    tabs,
-    assistant,
-    data,
-    evidence,
-    showInspector,
-    importedReveal,
-    editor,
-    setWorkspace,
-    openDocument,
-    setView,
-    trusted,
-    restoreDocumentRevision,
-    selectableRunId,
-    nativeParserStatus,
-    nativeParseSnapshot,
-    unsupportedParameters,
-    parameters,
-    pendingExecution,
-    patch,
-    saveDraft,
-    formatActiveSql,
-    runActionTitle,
-    setNativeParserStatus,
-    setNativeParseSnapshot,
-    script,
-    setSelectedScriptResult,
-    scriptFollowRef,
-    scriptReadFeedback,
-    update,
-    inspectorDocked,
-    storageError,
-    workspace,
-    savingDraftIds,
-    finishTabRename,
-    sqlExamples,
-    workspaceRef,
-    emptySqlActionRef,
-    ui,
-    executionView,
-    resultActions,
-}: {
-    tabs: ReturnType<typeof useWorkspaceTabs>;
-    assistant: ReturnType<typeof useWorkspaceAssistant>;
-    data: ReturnType<typeof useWorkspaceData>;
-    evidence: ReturnType<typeof useRunEvidence>;
-    showInspector: (next: Inspector) => void;
-    importedReveal: ReturnType<typeof useImportedTableReveal>;
-    editor: import('react').RefObject<EditorHandle | null>;
-    setWorkspace: import('react').Dispatch<import('react').SetStateAction<WorkspaceState>>;
-    openDocument: (document: QueryDocument) => void;
-    setView: Dispatch<SetStateAction<ResultsView>>;
-    trusted: boolean;
-    restoreDocumentRevision: ReturnType<typeof createRevisionRestorer>;
-    selectableRunId: string | undefined;
-    nativeParserStatus: NativeParserStatus;
-    nativeParseSnapshot: NativeParseSnapshot | undefined;
-    unsupportedParameters: boolean;
-    parameters: SqlParameter[];
-    pendingExecution: ReturnType<typeof usePendingExecution>;
-    patch: (values: Partial<Draft>) => void;
-    saveDraft: ReturnType<typeof useWorkspaceDocumentSave>;
-    formatActiveSql: ReturnType<typeof useWorkspaceSqlFormatter>;
-    runActionTitle: (
-        capability: WorkspaceRunCapability | undefined,
-        action: WorkspaceRunCapabilityAction,
-    ) => string | undefined;
-    setNativeParserStatus: import('react').Dispatch<
-        import('react').SetStateAction<NativeParserStatus>
-    >;
-    setNativeParseSnapshot: import('react').Dispatch<
-        import('react').SetStateAction<NativeParseSnapshot | undefined>
-    >;
-    script: Script | undefined;
-    setSelectedScriptResult: ReturnType<typeof useScopedValue<string>>[1];
-    scriptFollowRef: ReturnType<typeof useScriptExecution>;
-    scriptReadFeedback: WorkspaceFeedback | undefined;
-    update: (id: string, change: (draft: Draft) => Draft) => void;
-    inspectorDocked: boolean;
-    storageError: ReturnType<typeof useWorkspacePersistence>;
-    workspace: WorkspaceState;
-    savingDraftIds: Record<string, boolean>;
-    finishTabRename: (
-        id: string,
-        value: string,
-        restoreFocus?: boolean,
-        saveAfterRename?: boolean,
-    ) => void;
-    sqlExamples: SqlExample[];
-    workspaceRef: import('react').RefObject<WorkspaceState>;
-    emptySqlActionRef: import('react').RefObject<HTMLButtonElement | null>;
-    ui: ReturnType<typeof useWorkspaceUiState>;
-    executionView: ReturnType<typeof useWorkspaceExecutionView>;
+function workspaceViewBindings(
+    ui: ReturnType<typeof useWorkspaceUiState>,
+    executionView: ReturnType<typeof useWorkspaceExecutionView>,
     resultActions: ReturnType<typeof createQueryEvidenceActions> &
-        ReturnType<typeof createQueryExportActions>;
-}) {
-    const {
-        inspector,
-        search,
-        setSearch,
-        busy,
-        cancelling,
-        failedQueryError,
-        setError,
-        toast,
-        dismissToast,
-        draftFeedback,
-        dismissDraftFeedback,
-        drawerOpen,
-        setImportOpen,
-        setExportOpen,
-        clearFailedQueryError,
-        helpPanelOpen,
-        helpPanelSection,
-        setHelpPanelSection,
-        closeHelpPanel,
-        setObservabilityOpen,
-        setDrawerOpen,
-        observabilityOpen,
-        importOpen,
-        exportOpen,
-        restoreRevisionConfirmation,
-        setRestoreRevisionConfirmation,
-        openHelp,
-    } = ui;
-    const {
-        sortedHistory,
-        savedDocument,
-        saveStatus,
-        openSqlDraft,
-        openRun,
-        perform,
-        execute,
-        cancel,
-        detachedEditor,
-        panels,
-        viewState,
-        sqlMapStatement,
-        sqlMapParseStatement,
-        queryTreeAvailable,
-        queryTreeUnavailableReason,
-        openNewDraft,
-        runExample,
-        startBlankSql,
-        outputVisible,
-        visibleResultsView,
-    } = executionView;
-    const {
-        loadProfile,
-        loadPipeline,
-        loadFlamegraph,
-        exportCurrentQuery,
-        exportCurrentCsv,
-        downloadFullResultCsv,
-    } = resultActions;
-
+        ReturnType<typeof createQueryExportActions>,
+) {
     return {
-        tabs,
-        assistant,
-        data,
-        evidence,
-        inspector,
-        showInspector,
-        search,
-        setSearch,
-        sortedHistory,
-        savedDocument,
-        saveStatus,
-        importedReveal,
-        editor,
-        openSqlDraft,
-        setWorkspace,
-        openRun,
-        openDocument,
-        perform,
-        loadProfile,
-        loadPipeline,
-        setView,
-        trusted,
-        restoreDocumentRevision,
-        selectableRunId,
-        nativeParserStatus,
-        nativeParseSnapshot,
-        execute,
-        busy,
-        unsupportedParameters,
-        parameters,
-        pendingExecution,
-        cancelling,
-        patch,
-        saveDraft,
-        formatActiveSql,
-        cancel,
-        runActionTitle,
-        setNativeParserStatus,
-        setNativeParseSnapshot,
-        detachedEditor,
-        panels,
-        viewState,
-        failedQueryError,
-        script,
-        setSelectedScriptResult,
-        scriptFollowRef,
-        scriptReadFeedback,
-        update,
-        loadFlamegraph,
-        inspectorDocked,
-        setError,
-        toast,
-        dismissToast,
-        draftFeedback,
-        dismissDraftFeedback,
-        storageError,
-        drawerOpen,
-        setImportOpen,
-        setExportOpen,
-        workspace,
-        savingDraftIds,
-        finishTabRename,
-        clearFailedQueryError,
-        helpPanelOpen,
-        helpPanelSection,
-        setHelpPanelSection,
-        closeHelpPanel,
-        setObservabilityOpen,
-        sqlExamples,
-        sqlMapStatement,
-        sqlMapParseStatement,
-        queryTreeAvailable,
-        queryTreeUnavailableReason,
-        openNewDraft,
-        runExample,
-        startBlankSql,
-        workspaceRef,
-        outputVisible,
-        visibleResultsView,
-        emptySqlActionRef,
-        setDrawerOpen,
-        observabilityOpen,
-        importOpen,
-        exportOpen,
-        exportCurrentQuery,
-        exportCurrentCsv,
-        downloadFullResultCsv,
-        restoreRevisionConfirmation,
-        setRestoreRevisionConfirmation,
-        openHelp,
+        inspector: ui.inspector,
+        search: ui.search,
+        setSearch: ui.setSearch,
+        busy: ui.busy,
+        cancelling: ui.cancelling,
+        failedQueryError: ui.failedQueryError,
+        setError: ui.setError,
+        toast: ui.toast,
+        dismissToast: ui.dismissToast,
+        draftFeedback: ui.draftFeedback,
+        dismissDraftFeedback: ui.dismissDraftFeedback,
+        drawerOpen: ui.drawerOpen,
+        setImportOpen: ui.setImportOpen,
+        setExportOpen: ui.setExportOpen,
+        clearFailedQueryError: ui.clearFailedQueryError,
+        helpPanelOpen: ui.helpPanelOpen,
+        helpPanelSection: ui.helpPanelSection,
+        setHelpPanelSection: ui.setHelpPanelSection,
+        closeHelpPanel: ui.closeHelpPanel,
+        setObservabilityOpen: ui.setObservabilityOpen,
+        setDrawerOpen: ui.setDrawerOpen,
+        observabilityOpen: ui.observabilityOpen,
+        importOpen: ui.importOpen,
+        exportOpen: ui.exportOpen,
+        restoreRevisionConfirmation: ui.restoreRevisionConfirmation,
+        setRestoreRevisionConfirmation: ui.setRestoreRevisionConfirmation,
+        openHelp: ui.openHelp,
+        sortedHistory: executionView.sortedHistory,
+        savedDocument: executionView.savedDocument,
+        saveStatus: executionView.saveStatus,
+        openSqlDraft: executionView.openSqlDraft,
+        openRun: executionView.openRun,
+        perform: executionView.perform,
+        execute: executionView.execute,
+        cancel: executionView.cancel,
+        detachedEditor: executionView.detachedEditor,
+        panels: executionView.panels,
+        viewState: executionView.viewState,
+        sqlMapStatement: executionView.sqlMapStatement,
+        sqlMapParseStatement: executionView.sqlMapParseStatement,
+        queryTreeAvailable: executionView.queryTreeAvailable,
+        queryTreeUnavailableReason: executionView.queryTreeUnavailableReason,
+        openNewDraft: executionView.openNewDraft,
+        runExample: executionView.runExample,
+        startBlankSql: executionView.startBlankSql,
+        outputVisible: executionView.outputVisible,
+        visibleResultsView: executionView.visibleResultsView,
+        loadProfile: resultActions.loadProfile,
+        loadPipeline: resultActions.loadPipeline,
+        loadFlamegraph: resultActions.loadFlamegraph,
+        exportCurrentQuery: resultActions.exportCurrentQuery,
+        exportCurrentCsv: resultActions.exportCurrentCsv,
+        downloadFullResultCsv: resultActions.downloadFullResultCsv,
     };
 }
