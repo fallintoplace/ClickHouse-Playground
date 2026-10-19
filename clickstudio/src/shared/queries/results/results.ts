@@ -307,24 +307,32 @@ export function countRowsOverTime(
     maxSeries = 5,
     largeCellToken?: string,
 ): { unit: TimeBucketUnit; excludedRows: number; series: RowCountSeries[] } {
-    const validRows = rows.flatMap(row => {
+    const validRows: Array<{ row: Row; timestamp: number; categoryKey: string }> = [];
+    let earliest = Infinity;
+    let latest = -Infinity;
+    for (const row of rows) {
         const timestamp = chartTimestamp(row[timeIndex]);
-        return timestamp === null ? [] : [{ row, timestamp }];
-    });
+        if (timestamp === null) continue;
+        const categoryKey =
+            groupByIndex === undefined
+                ? '__rows__'
+                : chartCategoryKey(row[groupByIndex], largeCellToken);
+        validRows.push({ row, timestamp, categoryKey });
+        if (timestamp < earliest) earliest = timestamp;
+        if (timestamp > latest) latest = timestamp;
+    }
     if (!validRows.length) return { unit: 'day', excludedRows: rows.length, series: [] };
-    const timestamps = validRows.map(({ timestamp }) => timestamp);
-    const unit = selectTimeBucket(Math.max(...timestamps) - Math.min(...timestamps));
+    const unit = selectTimeBucket(latest - earliest);
     const categoryCounts = new Map<string, { label: string; count: number }>();
     if (groupByIndex !== undefined) {
-        for (const { row } of validRows) {
+        for (const { row, categoryKey } of validRows) {
             const value = row[groupByIndex];
-            const key = chartCategoryKey(value, largeCellToken);
-            const group = categoryCounts.get(key) ?? {
+            const group = categoryCounts.get(categoryKey) ?? {
                 label: chartCategoryLabel(value, largeCellToken),
                 count: 0,
             };
             group.count++;
-            categoryCounts.set(key, group);
+            categoryCounts.set(categoryKey, group);
         }
     }
     const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
@@ -348,12 +356,8 @@ export function countRowsOverTime(
                 buckets: new Map(),
             });
     }
-    for (const { row, timestamp } of validRows) {
+    for (const { timestamp, categoryKey } of validRows) {
         const bucket = bucketStart(timestamp, unit);
-        const categoryKey =
-            groupByIndex === undefined
-                ? '__rows__'
-                : chartCategoryKey(row[groupByIndex], largeCellToken);
         const key =
             groupByIndex === undefined || visibleKeys.has(categoryKey) ? categoryKey : '__other__';
         const series = seriesByKey.get(key);

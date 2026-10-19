@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { ChartTypeSelect } from '../controls/ChartTypeSelect';
 import type { GeoRecommendation } from '../../maps/geo';
 import type { RefCallback } from 'react';
@@ -57,7 +58,6 @@ export function RowCountChart({
     const dimensions = result.columns.flatMap((column, index) =>
         numericType(column.type) ? [] : [index],
     );
-    if (!dimensions.length) return <div className="chart-empty">{copy.noDimensions}</div>;
     const usesSuggestion = chart.kind === 'table' || !dimensions.includes(chart.x);
     const xIndex = usesSuggestion ? suggestion.config.x : chart.x;
     const timeAxis = temporalType(result.columns[xIndex]?.type ?? '');
@@ -69,30 +69,55 @@ export function RowCountChart({
         timeAxis && defaultGroupBy !== undefined && breakdowns.includes(defaultGroupBy)
             ? defaultGroupBy
             : undefined;
-    const countData = timeAxis
-        ? countRowsOverTime(result.rows, xIndex, groupByIndex, 5, result.largeCellToken)
-        : undefined;
-    const categoryData = !timeAxis
-        ? countRowsByCategory(result.rows, xIndex, result.largeCellToken)
-        : undefined;
+    const countData = useMemo(
+        () =>
+            dimensions.length && timeAxis
+                ? countRowsOverTime(result.rows, xIndex, groupByIndex, 5, result.largeCellToken)
+                : undefined,
+        [dimensions.length, timeAxis, result.rows, result.largeCellToken, xIndex, groupByIndex],
+    );
+    const categoryData = useMemo(
+        () =>
+            dimensions.length && !timeAxis
+                ? countRowsByCategory(result.rows, xIndex, result.largeCellToken)
+                : undefined,
+        [dimensions.length, timeAxis, result.rows, result.largeCellToken, xIndex],
+    );
     const series = countData?.series ?? [];
-    const allTimePoints = series
-        .flatMap(item => item.points)
-        .sort((left, right) => left.timestamp - right.timestamp);
-    const timeTicks = [...new Map(allTimePoints.map(point => [point.timestamp, point])).values()];
-    const counts = timeAxis
-        ? allTimePoints.map(point => point.count)
-        : (categoryData?.map(group => group.count) ?? []);
-    const max = Math.max(0, ...counts);
+    const allTimePoints = useMemo(
+        () =>
+            countData?.series
+                .flatMap(item => item.points)
+                .sort((left, right) => left.timestamp - right.timestamp) ?? [],
+        [countData],
+    );
+    const timeTicks = useMemo(
+        () => [...new Map(allTimePoints.map(point => [point.timestamp, point])).values()],
+        [allTimePoints],
+    );
+    const max = useMemo(() => {
+        let maximum = 0;
+        if (timeAxis) {
+            for (const point of allTimePoints) maximum = Math.max(maximum, point.count);
+        } else {
+            for (const group of categoryData ?? []) maximum = Math.max(maximum, group.count);
+        }
+        return maximum;
+    }, [timeAxis, allTimePoints, categoryData]);
+    const categoryLayout = useMemo(
+        () =>
+            !dimensions.length || timeAxis
+                ? undefined
+                : categoryAxisLayout(
+                      categoryData?.map(group => group.label) ?? [],
+                      categoryViewportWidth,
+                  ),
+        [dimensions.length, timeAxis, categoryData, categoryViewportWidth],
+    );
+    if (!dimensions.length) return <div className="chart-empty">{copy.noDimensions}</div>;
     const min = 0;
     const range = max || 1;
     const bars = categoryData ?? [];
-    const categoryLayout = timeAxis
-        ? undefined
-        : categoryAxisLayout(
-              bars.map(group => group.label),
-              categoryViewportWidth,
-          );
     const plotLeft = timeAxis ? 80 : 0,
         plotRight = categoryLayout?.width ?? viewportWidth - 28,
         plotWidth = plotRight - plotLeft;
