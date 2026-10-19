@@ -28,9 +28,3 @@ npm run dev
 ```
 
 Open http://localhost:5173 and sign in with `CLICKSTUDIO_TOKEN` from `.env`.
-
-## Documentation
-
-- [Setup and product guide](docs/CLICKSTUDIO.md)
-- [SQL editing tools](docs/EDITOR-TOOLS.md)
-- [MCP connection guide](docs/MCP.md)
