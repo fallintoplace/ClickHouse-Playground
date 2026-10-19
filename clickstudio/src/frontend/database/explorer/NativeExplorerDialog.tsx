@@ -40,7 +40,7 @@ export function NativeExplorerDialog({
                 <DialogHeader
                     className="native-heading"
                     closeLabel={closeLabel}
-                    closeClassName="native-dialog-close"
+                    closeClassName="button-base button-ghost native-dialog-close"
                     onClose={onClose}
                 >
                     <div>
