@@ -158,27 +158,27 @@ export function prepareChartView({
     } else {
         chartRows = sampleChartRows(result.rows, MAX_CHART_RENDER_POINTS);
     }
+    const labels = chartRows.map(row => chartCategoryLabel(row[xIndex], result.largeCellToken));
+    let min = 0;
+    let max = 0;
+    let hasNumericValues = false;
     const plotSeries = measureIndexes.map((columnIndex, seriesIndex) => ({
         columnIndex,
         color: seriesColor(seriesIndex),
-        points: chartRows.map((row, index) => ({
-            label: chartCategoryLabel(row[xIndex], result.largeCellToken),
-            value: chartNumber(row[columnIndex]),
-            index,
-        })),
+        points: chartRows.map((row, index) => {
+            const value = chartNumber(row[columnIndex]);
+            if (value !== null) {
+                hasNumericValues = true;
+                min = Math.min(min, value);
+                max = Math.max(max, value);
+            }
+            return { label: labels[index]!, value, index };
+        }),
     }));
     const categoryLayout = categoricalAxis
-        ? categoryAxisLayout(
-              plotSeries[0]?.points.map(point => point.label) ?? [],
-              categoryViewportWidth,
-          )
+        ? categoryAxisLayout(labels, categoryViewportWidth)
         : undefined;
-    const values = plotSeries.flatMap(series =>
-        series.points.flatMap(point => (point.value === null ? [] : [point.value])),
-    );
-    const min = Math.min(0, ...values),
-        max = Math.max(0, ...values),
-        range = max - min || 1;
+    const range = max - min || 1;
     const plotLeft = categoricalAxis ? 0 : 80,
         plotRight = categoryLayout?.width ?? plotViewportWidth - 28,
         plotWidth = plotRight - plotLeft;
@@ -329,7 +329,7 @@ export function prepareChartView({
         heatmapYKeys,
         heatmapMaximum,
         compactNumber: tickNumber,
-        values,
+        hasNumericValues,
         categoricalAxis,
         chartYTicks,
         scatterSummary,
