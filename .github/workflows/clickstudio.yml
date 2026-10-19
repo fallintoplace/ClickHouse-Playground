@@ -38,6 +38,8 @@ jobs:
         run: npm run check:syntax
       - name: TypeScript contracts
         run: npm run typecheck
+      - name: Benchmark harness tests
+        run: npm run bench:test
       - name: ESLint
         run: npm run lint
       - name: Core and workspace coverage gates

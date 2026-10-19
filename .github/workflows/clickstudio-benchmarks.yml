@@ -1,0 +1,72 @@
+name: ClickStudio benchmarks
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "clickstudio/benchmarks/**"
+      - "clickstudio/src/backend/database/clickhouse/result-stream.ts"
+      - "clickstudio/src/shared/queries/results/**"
+      - "clickstudio/src/shared/sql/fallback-lexer.ts"
+      - "clickstudio/src/frontend/queries/results/charts/**"
+      - "clickstudio/src/frontend/database/explorer/objects/**"
+      - "clickstudio/src/frontend/ui/copy.ts"
+      - "clickstudio/package.json"
+      - "clickstudio/package-lock.json"
+      - "clickstudio/tsconfig.core.json"
+      - "clickstudio/tsconfig.workspace.json"
+      - ".github/workflows/clickstudio-benchmarks.yml"
+  pull_request:
+    paths:
+      - "clickstudio/benchmarks/**"
+      - "clickstudio/src/backend/database/clickhouse/result-stream.ts"
+      - "clickstudio/src/shared/queries/results/**"
+      - "clickstudio/src/shared/sql/fallback-lexer.ts"
+      - "clickstudio/src/frontend/queries/results/charts/**"
+      - "clickstudio/src/frontend/database/explorer/objects/**"
+      - "clickstudio/src/frontend/ui/copy.ts"
+      - "clickstudio/package.json"
+      - "clickstudio/package-lock.json"
+      - "clickstudio/tsconfig.core.json"
+      - "clickstudio/tsconfig.workspace.json"
+      - ".github/workflows/clickstudio-benchmarks.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: clickstudio-benchmarks-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: clickstudio
+
+jobs:
+  microbenchmarks:
+    name: Report-only microbenchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: clickstudio/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Check benchmark formatting
+        run: npx prettier --check 'benchmarks/**/*.mjs'
+      - name: Check benchmark harness
+        run: npm run bench:test
+      - name: Measure performance (non-gating)
+        run: npm run bench -- --samples=5 --warmup=2 --output=benchmarks/results/ci.json
+      - name: Preserve benchmark results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: clickstudio-benchmarks
+          path: clickstudio/benchmarks/results/ci.json
+          if-no-files-found: ignore
+          retention-days: 14
