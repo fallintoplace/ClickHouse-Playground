@@ -4,7 +4,7 @@ A SQL workspace for ClickHouse. Write queries, explore data, inspect results, bu
 
 [Open ClickStudio](https://clickstudio-eight.vercel.app/)
 
-![ClickStudio workspace with an SQL editor, chart, and Objects panel](docs/images/clickstudio-workspace-latency.png)
+![ClickStudio SQL workspace with a service latency chart and Objects panel](docs/images/clickstudio-workspace-slo-chart.png)
 
 ## Features
 
