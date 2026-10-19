@@ -73,7 +73,10 @@ export function RestoreRevisionDialog({
                             <h2 id="restore-revision-title" className="dialog-chrome-title">
                                 {copy.title(revision)}
                             </h2>
-                            <p id="restore-revision-description" className="dialog-chrome-description">
+                            <p
+                                id="restore-revision-description"
+                                className="dialog-chrome-description"
+                            >
                                 {copy.description}
                             </p>
                         </div>
