@@ -10,6 +10,8 @@ import { retainedResultChange } from '../../queries/results/result-provenance';
 import { recommendChart } from '../../../shared/queries/results/results';
 import { draftSaveStatus } from '../../queries/saved-queries/draft-save-state';
 import type { NativeParseSnapshot } from '../../../shared/sql/parser';
+import type { Statement } from '../../../shared/sql/sql';
+import { createSqlDocumentContext } from '../../queries/editor/sql-editor-helpers';
 import type { Copy, ExperienceLevel } from '../../ui/copy';
 import {
     sqlErrorRange,
@@ -22,7 +24,6 @@ import {
     resultPanelAriaLabel,
     resultsViewTitle,
     resultsViews,
-    safeSelectedStatement,
     type FailedQueryError,
 } from '../workspace-helpers';
 
@@ -68,6 +69,7 @@ function workspaceFailureState(
     script: Script | undefined,
     scriptResultSelected: boolean,
     failedQueryError: FailedQueryError | undefined,
+    selectedRunStatement: Statement | undefined,
 ) {
     const unrecordedScriptFailure = unrecordedFailureStatement(script, scriptResultSelected);
     const failureError =
@@ -88,7 +90,6 @@ function workspaceFailureState(
             : failureError;
     const failureRange =
         failureSql && statementError ? sqlErrorRange(failureSql, statementError) : undefined;
-    const selectedRunStatement = safeSelectedStatement(active.sql, active.from, active.to);
     const runErrorContext =
         run?.error &&
         (run.sql === active.sql ||
@@ -236,6 +237,12 @@ export function useWorkspaceViewState({
         pending: !documentsLoaded,
         readError: documentsReadError,
     });
+    const sqlContext = useMemo(() => createSqlDocumentContext(active.sql), [active.sql]);
+    const hasRunError = Boolean(run?.error);
+    const selectedRunStatement = useMemo(
+        () => (hasRunError ? sqlContext.selectedStatement(active.from, active.to) : undefined),
+        [hasRunError, sqlContext, active.from, active.to],
+    );
     const {
         failureError,
         failureSql,
@@ -243,7 +250,14 @@ export function useWorkspaceViewState({
         failureLocation,
         editorErrorContext,
         editorErrorRange,
-    } = workspaceFailureState(active, run, script, scriptResultSelected, failedQueryError);
+    } = workspaceFailureState(
+        active,
+        run,
+        script,
+        scriptResultSelected,
+        failedQueryError,
+        selectedRunStatement,
+    );
     const invalidatedSource =
         run && active.activeRunId === run.id && active.invalidatedSource?.runId === run.id
             ? active.invalidatedSource
@@ -267,7 +281,7 @@ export function useWorkspaceViewState({
     );
     const requestedResultsView =
         experience === 'beginner' && view === 'insights' ? 'results' : view;
-    const sqlMapStatement = safeSelectedStatement(active.sql, active.from, active.from);
+    const sqlMapStatement = sqlContext.selectedStatement(active.from);
     const queryTreeCapability = connection.manifest?.queryTree ?? connection.manifest?.explain;
     const queryTreeAvailable =
         trusted && !unsupportedParameters && queryTreeCapability?.available !== false;
@@ -323,9 +337,13 @@ export function useWorkspaceViewState({
     const analyzeEvidence = useMemo(() => parseExplainAnalyze(analyzeOutput), [analyzeOutput]);
     const resultsTitle = resultsViewTitle(visibleResultsView, copy.common);
     const resultsPanelLabel = resultPanelAriaLabel(visibleResultsView, copy.common);
-    const snapshotChart = retainedSnapshot
-        ? recommendChart(retainedSnapshot.columns, retainedSnapshot.rows)
-        : undefined;
+    const snapshotChart = useMemo(
+        () =>
+            retainedSnapshot
+                ? recommendChart(retainedSnapshot.columns, retainedSnapshot.rows)
+                : undefined,
+        [retainedSnapshot],
+    );
 
     return {
         sortedHistory,
@@ -342,6 +360,7 @@ export function useWorkspaceViewState({
         staleResultLabel,
         sourceDeleted: Boolean(invalidatedSource),
         requestedResultsView,
+        sqlStatementCount: sqlContext.statementCount,
         sqlMapStatement,
         queryTreeAvailable,
         queryTreeUnavailableReason,

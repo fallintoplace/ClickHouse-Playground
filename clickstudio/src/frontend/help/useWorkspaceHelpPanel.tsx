@@ -92,7 +92,11 @@ export function useWorkspaceHelpPanel(
     }, [category, examples, featuredExamples]);
     const selected =
         filteredExamples.find(example => example.id === selectedId) ?? filteredExamples[0];
-    const selectedIsScript = selected ? (safeStatementCount(selected.sql) ?? 0) > 1 : false;
+    const selectedSql = selected?.sql;
+    const selectedIsScript = useMemo(
+        () => selectedSql !== undefined && (safeStatementCount(selectedSql) ?? 0) > 1,
+        [selectedSql],
+    );
     const availableCategories = helpCategories.filter(value => {
         if (value === 'all') return true;
         if (value === 'featured') return featuredExamples.length > 0;
