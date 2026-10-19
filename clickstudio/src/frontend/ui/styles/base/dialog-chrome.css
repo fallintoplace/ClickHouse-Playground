@@ -18,7 +18,7 @@
 
 .cloud-connect-dialog .dialog-chrome-title {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--font-size-scale-18);
   font-weight: 650;
   letter-spacing: -0.02em;
   line-height: 1.4;
@@ -26,7 +26,7 @@
 
 .cloud-connect-dialog .cloud-connect-description {
   padding: 16px 24px 0;
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
 }
 
 .cloud-connect-dialog .cloud-connect-form {
@@ -91,7 +91,7 @@
 }
 
 .transfer-dialog:not(.result-cell-inspector) > .dialog-chrome-header .dialog-chrome-title {
-  font-size: 18px;
+  font-size: var(--font-size-scale-18);
   font-weight: 650;
   letter-spacing: -0.02em;
   line-height: 1.4;

@@ -29,14 +29,14 @@
   .geo-title-row h3 {
     margin: 5px 0 4px;
     font-family: var(--font-display);
-    font-size: 17px;
+    font-size: var(--font-size-scale-17);
     font-weight: 650;
     letter-spacing: -0.03em;
   }
   .insights-heading p {
     margin: 0;
     color: var(--muted);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     line-height: 1.6;
   }
   .insight-metrics {
@@ -83,13 +83,13 @@
     height: 13px;
   }
   .insight-metric .eyebrow {
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
     letter-spacing: 0.1em;
   }
   .insight-metric strong {
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: var(--font-size-scale-13);
     font-weight: 620;
   }
   .insight-list {
@@ -119,7 +119,7 @@
     border-radius: var(--radius-label);
     background: color-mix(in srgb, var(--amber) 9%, transparent);
     color: var(--amber);
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
     font-weight: 760;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -129,12 +129,12 @@
     color: var(--red);
   }
   .insight-card strong {
-    font-size: 10px;
+    font-size: var(--font-size-scale-10);
   }
   .insight-card p {
     margin: 4px 0 0;
     color: var(--muted);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     line-height: 1.5;
   }
   .run-analysis {
@@ -162,7 +162,7 @@
   }
   .run-analysis-heading > div > strong {
     color: var(--text);
-    font-size: 10px;
+    font-size: var(--font-size-scale-10);
     font-weight: 650;
   }
   .run-analysis-columns {
@@ -182,19 +182,19 @@
   .run-analysis-columns article > strong {
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 15px;
+    font-size: var(--font-size-scale-15);
     font-weight: 650;
   }
   .run-analysis-columns article > small {
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     line-height: 1.5;
   }
   .run-analysis-columns code {
     overflow: hidden;
     color: var(--muted);
     font-family: var(--font-mono);
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -216,20 +216,20 @@
   .run-analysis-stages i {
     color: var(--accent);
     font-family: var(--font-mono);
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
     font-style: normal;
   }
   .run-analysis-stages strong {
     overflow: hidden;
     color: var(--text-soft);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .run-analysis-stages small,
   .run-analysis-stages > small {
     color: var(--muted);
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
     text-transform: capitalize;
   }
   .pipeline-graph-card {
@@ -272,12 +272,12 @@
   }
   .sql-flow-heading > div > .eyebrow {
     flex: none;
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
   }
   .sql-flow-heading h3 {
     margin: 0;
     color: var(--text);
-    font-size: 12px;
+    font-size: var(--font-size-scale-12);
     font-weight: 690;
   }
   .sql-flow-heading p {
@@ -286,7 +286,7 @@
     overflow: hidden;
     margin: 0;
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     line-height: 1.35;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -301,7 +301,7 @@
     border-radius: var(--radius-label);
     background: var(--panel);
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     white-space: nowrap;
   }
   .sql-flow-parser-state.is-native {
@@ -314,7 +314,7 @@
     border-radius: var(--radius-panel);
     background: color-mix(in srgb, var(--amber) 7%, transparent);
     color: var(--amber);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     line-height: 1.5;
   }
   .sql-flow-mode-tabs {
@@ -339,7 +339,7 @@
     background: transparent;
     color: var(--muted);
     font: inherit;
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     font-weight: 700;
     cursor: pointer;
     transition:
@@ -374,7 +374,7 @@
     flex: none;
     align-items: center;
     padding-inline: 9px;
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     white-space: nowrap;
   }
   .sql-flow-mode-name {
@@ -416,7 +416,7 @@
   .pipeline-node-facts strong {
     color: var(--text-soft);
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
   }
   .pipeline-graph-heading i {
     padding: 0 3px;
@@ -425,7 +425,7 @@
   }
   .pipeline-graph-heading > small {
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     text-align: right;
   }
   .pipeline-graph-warning {
@@ -435,7 +435,7 @@
     border-radius: var(--radius-panel);
     background: color-mix(in srgb, var(--amber) 7%, transparent);
     color: var(--amber);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .pipeline-graph-controls {
     display: flex;
@@ -456,7 +456,7 @@
     background: var(--panel);
     color: var(--text-soft);
     font: inherit;
-    font-size: 10px;
+    font-size: var(--font-size-scale-10);
     cursor: pointer;
     transition:
       border-color 0.16s ease,
@@ -477,7 +477,7 @@
     gap: 6px;
     padding-inline: 10px;
     color: var(--text);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     font-weight: 650;
     white-space: nowrap;
   }
@@ -504,7 +504,7 @@
     background: color-mix(in srgb, var(--panel-raised) 72%, var(--panel));
     color: var(--text-soft);
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     text-align: center;
   }
   .is-explain-graph .pipeline-graph-toolbar {
@@ -664,7 +664,7 @@
   .pipeline-graph-edges text {
     fill: var(--muted);
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     paint-order: stroke;
     stroke: var(--panel);
     stroke-width: 4px;
@@ -735,26 +735,26 @@
   .pipeline-node-kind {
     fill: var(--muted);
     font-family: var(--font-sans);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     font-weight: 730;
     letter-spacing: 0.12em;
   }
   .pipeline-node-label {
     fill: var(--text);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: var(--font-size-scale-11);
     font-weight: 610;
   }
   .pipeline-node-parallel {
     fill: var(--accent);
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     font-weight: 700;
   }
   .pipeline-node-status {
     fill: var(--muted);
     font-family: var(--font-sans);
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
     text-transform: uppercase;
   }
   .pipeline-node-read .pipeline-node-kind {
@@ -794,13 +794,13 @@
     overflow-wrap: anywhere;
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--font-size-scale-10);
   }
   .pipeline-node-inspector-main > small,
   .pipeline-node-inspector-main > p {
     margin: 0;
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .pipeline-node-inspector-main i {
     padding: 0 3px;
@@ -823,14 +823,14 @@
   }
   .pipeline-node-facts small {
     color: var(--muted);
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
   }
   .pipeline-graph-empty {
     padding: 13px;
     border: 1px dashed var(--line-bright);
     border-radius: var(--radius-panel);
     color: var(--muted);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     text-align: center;
   }
   .ast-graph-card {
@@ -888,25 +888,25 @@
   .ast-node-field {
     fill: var(--muted);
     font-family: var(--font-mono);
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
     font-weight: 650;
     letter-spacing: 0.035em;
   }
   .ast-node-type {
     fill: var(--text);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--font-size-scale-10);
     font-weight: 760;
   }
   .ast-node-summary {
     fill: var(--text-soft);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .ast-node-toggle {
     fill: var(--accent);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     font-weight: 800;
   }
   .ast-expand-selected {
@@ -924,7 +924,7 @@
     overflow: hidden;
     color: var(--muted);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -948,7 +948,7 @@
     overflow: hidden;
     color: var(--muted);
     font-family: var(--font-mono);
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
     font-weight: 700;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -962,7 +962,7 @@
     overflow: hidden;
     color: var(--text-soft);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -986,7 +986,7 @@
     background: transparent;
     color: var(--muted);
     font: inherit;
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     cursor: pointer;
   }
   .explain-plan-view-switch button svg {
@@ -1040,7 +1040,7 @@
     width: 7px;
     color: var(--accent);
     content: "▸";
-    font-size: 10px;
+    font-size: var(--font-size-scale-10);
   }
   .explain-plan-node > details[open] > summary::before {
     content: "▾";
@@ -1049,7 +1049,7 @@
     min-width: 0;
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     font-weight: 700;
     overflow-wrap: anywhere;
   }
@@ -1059,7 +1059,7 @@
     margin-left: auto;
     color: var(--muted);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -1074,7 +1074,7 @@
   .explain-plan-node-body > p {
     margin: 0;
     color: var(--muted);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     line-height: 1.55;
   }
   .explain-plan-node-body > ul {
@@ -1099,7 +1099,7 @@
     gap: 7px;
     padding: 5px 7px;
     color: var(--text-soft);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     list-style: none;
     cursor: pointer;
   }
@@ -1127,13 +1127,13 @@
     gap: 7px;
     padding: 5px 7px;
     color: var(--text-soft);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .explain-plan-property code {
     overflow-wrap: anywhere;
     color: var(--text-soft);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .explain-plan-property pre {
     max-height: 260px;
@@ -1143,7 +1143,7 @@
     border-top: 1px solid var(--line);
     color: var(--muted);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
@@ -1161,12 +1161,12 @@
   .explain-plan-inspection > code {
     color: var(--muted);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .explain-plan-inspection > p {
     margin: 0;
     color: var(--text-soft);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     line-height: 1.45;
   }
   .explain-plan-inspection .explain-plan-properties {
@@ -1199,7 +1199,7 @@
   .explain-index-hint {
     margin: 0;
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .explain-index-metrics {
     display: grid;
@@ -1218,16 +1218,16 @@
   .explain-index-metric > span,
   .explain-index-metric > small {
     color: var(--muted);
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
   }
   .explain-index-metric > strong {
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--font-size-scale-10);
   }
   .explain-index-metric > strong small {
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     font-weight: 500;
   }
   .explain-index-meter {
@@ -1267,7 +1267,7 @@
   .explain-index-properties dt {
     color: var(--muted);
     font-family: var(--font-mono);
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
     font-weight: 700;
   }
   .explain-index-properties dd {
@@ -1278,7 +1278,7 @@
     display: block;
     color: var(--text-soft);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
@@ -1293,18 +1293,18 @@
     width: 7px;
     color: var(--green);
     content: "•";
-    font-size: 14px;
+    font-size: var(--font-size-scale-14);
   }
   .explain-plan-leaf > strong {
     min-width: 0;
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     overflow-wrap: anywhere;
   }
   .profile-note {
     color: var(--muted);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     line-height: 1.6;
   }
   .chart-controls {
@@ -1317,7 +1317,7 @@
     display: grid;
     gap: 4px;
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .chart-toolbar {
     display: flex;
@@ -1336,7 +1336,7 @@
     min-width: 0;
     align-items: center;
     gap: 8px;
-    font-size: 10px;
+    font-size: var(--font-size-scale-10);
   }
   .chart-popover-control {
     display: inline-flex;
@@ -1352,7 +1352,7 @@
     min-height: 30px;
     gap: 6px;
     padding: 0 7px;
-    font-size: 11px;
+    font-size: var(--font-size-scale-11);
   }
   .chart-popover-trigger svg {
     width: 14px;
@@ -1383,7 +1383,7 @@
     background: var(--panel-raised);
     box-shadow: var(--shadow-popover);
     color: var(--text-soft);
-    font-size: 11px;
+    font-size: var(--font-size-scale-11);
     inset: auto;
   }
   .chart-popover-heading {
@@ -1404,7 +1404,7 @@
   }
   .chart-popover p {
     margin: 0;
-    font-size: 10px;
+    font-size: var(--font-size-scale-10);
     line-height: 1.5;
   }
   .chart-setup-fields {
@@ -1451,7 +1451,7 @@
     border-radius: var(--radius-label);
     background: color-mix(in srgb, var(--panel) 75%, transparent);
     color: var(--text-soft);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .market-chart-badges > span:first-child {
     border-color: color-mix(in srgb, var(--green) 28%, var(--line));
@@ -1464,7 +1464,7 @@
     border-radius: var(--radius-control);
     background: var(--panel);
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     cursor: pointer;
     transition:
       border-color 0.15s ease,
@@ -1501,14 +1501,14 @@
   .market-pane-label {
     fill: var(--text-soft);
     font-family: var(--font-sans);
-    font-size: 11px;
+    font-size: var(--font-size-scale-11);
     font-weight: 650;
     letter-spacing: 0.02em;
   }
   .market-pane-empty {
     fill: var(--muted);
     font-family: var(--font-sans);
-    font-size: 10px;
+    font-size: var(--font-size-scale-10);
   }
   .market-candle {
     transition: opacity 0.12s ease;
@@ -1542,7 +1542,7 @@
     align-items: center;
     gap: 10px 16px;
     color: var(--text-soft);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .market-chart-legend > span {
     display: inline-flex;
@@ -1576,7 +1576,7 @@
   .market-chart-note {
     margin: 0;
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     line-height: 1.5;
   }
   .chart-row-count-type {
@@ -1588,7 +1588,7 @@
     border: 1px solid var(--line);
     border-radius: var(--radius-label);
     color: var(--text-soft);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
   }
   .chart-measures {
     display: grid;
@@ -1612,7 +1612,7 @@
     align-items: center;
     gap: 4px;
     color: var(--text-soft);
-    font-size: 11px;
+    font-size: var(--font-size-scale-11);
     overflow-wrap: anywhere;
   }
   .chart-measures input {
@@ -1692,7 +1692,7 @@
   .chart-x-labels text {
     fill: var(--muted);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .chart-gridline {
     stroke: var(--line-bright);
@@ -1740,7 +1740,7 @@
     gap: 12px;
     margin-top: 9px;
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .chart-footer > span:first-child {
     display: inline-flex;
@@ -1776,7 +1776,7 @@
     min-height: 150px;
     place-items: center;
     color: var(--muted);
-    font-size: 10px;
+    font-size: var(--font-size-scale-10);
   }
   .chart-table-fallback {
     display: flex;
@@ -1790,7 +1790,7 @@
     padding: 8px 14px;
     border-bottom: 1px solid var(--line);
     color: var(--muted);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
   }
   .chart-number-card {
     display: grid;
@@ -1815,7 +1815,7 @@
     overflow: hidden;
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: clamp(28px, 5vw, 48px);
+    font-size: clamp(var(--font-size-scale-28), 5vw, var(--font-size-scale-48));
     font-weight: 650;
     letter-spacing: -0.055em;
     text-overflow: ellipsis;
@@ -1823,11 +1823,11 @@
   }
   .chart-number-card > span:not(.eyebrow) {
     color: var(--text-soft);
-    font-size: 10px;
+    font-size: var(--font-size-scale-10);
   }
   .chart-number-card > small {
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .heatmap-scroll-frame {
     max-width: 100%;
@@ -1855,7 +1855,7 @@
     padding: 3px 5px;
     color: var(--muted);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     text-align: center;
     white-space: nowrap;
   }
@@ -1890,7 +1890,7 @@
     border: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
     border-radius: var(--radius-shell);
     font-family: var(--font-mono);
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
     font-variant-numeric: tabular-nums;
     text-align: center;
     transition:
@@ -1905,7 +1905,7 @@
   .heatmap-caption {
     padding: 0 12px 10px;
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .runtime-summary-grid {
     display: grid;
@@ -1954,14 +1954,14 @@
   }
   .runtime-summary-card > span {
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
   .runtime-summary-grid.is-compact .runtime-summary-card > span {
     overflow: hidden;
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -1969,13 +1969,13 @@
     overflow: hidden;
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: var(--font-size-scale-12);
     font-variant-numeric: tabular-nums;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .runtime-summary-grid.is-compact .runtime-summary-card > strong {
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
   }
   .is-runtime-graph .pipeline-node-face {
     fill: var(--runtime-node-fill, var(--panel-raised));
@@ -2013,7 +2013,7 @@
     max-width: 650px;
     margin: 0;
     color: var(--muted);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     line-height: 1.6;
   }
   .geo-controls {
@@ -2026,7 +2026,7 @@
     border-radius: var(--radius-control);
     background: var(--panel-raised);
     color: var(--text-soft);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     cursor: pointer;
   }
   .geo-swap > button[aria-pressed="true"] {
@@ -2104,7 +2104,7 @@
   }
   .geo-context-labels .is-water {
     fill: var(--muted);
-    font-size: 12px;
+    font-size: var(--font-size-scale-12);
     font-style: italic;
   }
   .geo-map-caption a {
@@ -2197,7 +2197,7 @@
     padding: 7px 10px;
     border-top: 1px solid var(--line);
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .geo-detail-row {
     display: grid;
@@ -2233,12 +2233,12 @@
   .geo-legend strong,
   .geo-selection strong {
     color: var(--text);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
   }
   .geo-legend small {
     color: var(--muted);
     font-family: var(--font-mono);
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
   }
   .geo-selection {
     display: grid;
@@ -2249,7 +2249,7 @@
   .geo-selection > p {
     margin: 0;
     color: var(--muted);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     line-height: 1.5;
   }
   .geo-selection dl {
@@ -2267,7 +2267,7 @@
   .geo-selection dt {
     overflow: hidden;
     color: var(--muted);
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -2276,7 +2276,7 @@
     margin: 3px 0 0;
     color: var(--text-soft);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -2335,7 +2335,7 @@
     border-top: 1px solid var(--line);
   }
   .runtime-summary-grid.is-compact .runtime-summary-card > strong {
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .insight-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2592,7 +2592,7 @@
 
 .results-chart-tools .chart-toolbar .chart-controls .chart-control-field {
   gap: 5px;
-  font-size: 9px;
+  font-size: var(--font-size-scale-9);
 }
 
 .results-chart-tools .chart-select {

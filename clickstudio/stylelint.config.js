@@ -28,6 +28,9 @@ export default {
             { ignore: ['consecutive-duplicates-with-different-values'] },
         ],
         'declaration-no-important': true,
+        'declaration-property-value-disallowed-list': {
+            'font-size': [/\d*\.?\d+px\b/],
+        },
         'declaration-property-value-no-unknown': true,
         'function-no-unknown': true,
         'no-duplicate-selectors': true,

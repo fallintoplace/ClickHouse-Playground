@@ -30,7 +30,7 @@
     border-radius: var(--radius-panel);
     background: color-mix(in srgb, var(--panel) 68%, transparent);
     color: var(--muted);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
   }
   .observability-profile-hint strong {
     color: var(--text-soft);
@@ -59,7 +59,7 @@
     margin: 2px 0 0;
     color: var(--text);
     font-family: var(--font-display);
-    font-size: 16px;
+    font-size: var(--font-size-scale-16);
     font-weight: 720;
     letter-spacing: -0.02em;
   }
@@ -67,7 +67,7 @@
   .flamegraph-heading p {
     margin: 0;
     color: var(--muted);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
   }
   .observability-view-heading p code,
   .flamegraph-heading p code {
@@ -93,7 +93,7 @@
     background: var(--panel);
     color: var(--text-soft);
     font: inherit;
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     cursor: pointer;
   }
   .observability-refresh:hover:not(:disabled) {
@@ -115,7 +115,7 @@
     background: color-mix(in srgb, var(--panel) 70%, transparent);
     color: var(--muted);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .observability-scope .status-light {
     width: 6px;
@@ -142,7 +142,7 @@
   .observability-metrics article > span {
     overflow: hidden;
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -150,7 +150,7 @@
     overflow: hidden;
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 14px;
+    font-size: var(--font-size-scale-14);
     font-variant-numeric: tabular-nums;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -173,13 +173,13 @@
     border-radius: var(--radius-panel);
     background: color-mix(in srgb, var(--panel) 60%, transparent);
     color: var(--muted);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     text-align: center;
   }
   .observability-state strong,
   .observability-empty strong {
     color: var(--text-soft);
-    font-size: 10px;
+    font-size: var(--font-size-scale-10);
     font-weight: 650;
   }
   .observability-state p,
@@ -194,7 +194,7 @@
   }
   .observability-empty-mark {
     color: var(--accent);
-    font-size: 20px;
+    font-size: var(--font-size-scale-20);
     line-height: 1;
   }
   .workload-scatter-card {
@@ -221,7 +221,7 @@
   }
   .workload-section-heading > div > strong {
     color: var(--text-soft);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
   }
   .workload-chart-legend {
     display: flex;
@@ -229,7 +229,7 @@
     align-items: center;
     gap: 6px;
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .workload-chart-legend i {
     width: 7px;
@@ -270,7 +270,7 @@
   .workload-axis text {
     fill: var(--muted);
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
   }
   .workload-scatter-point {
     fill: color-mix(in srgb, var(--accent) 72%, var(--panel));
@@ -339,14 +339,14 @@
     overflow: hidden;
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .workload-family-list small {
     overflow: hidden;
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -354,7 +354,7 @@
     flex: none;
     color: var(--accent);
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
   }
   .workload-family-detail > div:first-child {
     display: grid;
@@ -378,25 +378,25 @@
   }
   .workload-family-stats small {
     color: var(--muted);
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
   }
   .workload-family-stats strong {
     overflow: hidden;
     color: var(--text-soft);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .workload-family-detail > p {
     margin: 0;
     color: var(--muted);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
   }
   .observability-footnote {
     margin: 0;
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .replication-table-list {
     display: grid;
@@ -453,14 +453,14 @@
     margin: 1px 0 0;
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: var(--font-size-scale-11);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .replication-health-label {
     margin-left: auto;
     color: var(--green);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     text-transform: uppercase;
   }
   .replication-table-card.has-warning .replication-health-label {
@@ -482,14 +482,14 @@
   }
   .replication-table-meta small {
     color: var(--muted);
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
   }
   .replication-table-meta strong,
   .replication-table-meta code {
     overflow: hidden;
     color: var(--text-soft);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -504,7 +504,7 @@
     border-radius: var(--radius-label);
     background: color-mix(in srgb, var(--panel) 65%, transparent);
     color: var(--muted);
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
   }
   .replication-flags > span.is-warning {
     border-color: color-mix(in srgb, var(--amber) 34%, var(--line));
@@ -525,17 +525,17 @@
     border-radius: var(--radius-panel);
     background: color-mix(in srgb, var(--panel) 65%, transparent);
     color: var(--muted);
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
   }
   .replication-queue-list strong {
     color: var(--text-soft);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .replication-queue-list small {
     grid-column: 1 / -1;
     color: var(--muted);
-    font-size: 7px;
+    font-size: var(--font-size-scale-7);
   }
   .insights-view > [role="tabpanel"][hidden] {
     display: none;
@@ -560,7 +560,7 @@
     background: transparent;
     color: var(--muted);
     font: inherit;
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
     font-weight: 650;
     cursor: pointer;
   }
@@ -591,7 +591,7 @@
     gap: 3px;
   }
   .flamegraph-heading h3 {
-    font-size: 14px;
+    font-size: var(--font-size-scale-14);
   }
   .flamegraph-heading p code {
     display: inline-block;
@@ -605,7 +605,7 @@
     flex: none;
   }
   .flamegraph-trace-types button {
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .flamegraph-view {
     display: grid;
@@ -619,7 +619,7 @@
     justify-content: space-between;
     gap: 6px;
     color: var(--text-soft);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .flamegraph-summary > span {
     display: inline-flex;
@@ -629,7 +629,7 @@
   }
   .flamegraph-summary small {
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .flamegraph-signal {
     width: 7px;
@@ -691,7 +691,7 @@
   .flamegraph-node text {
     fill: var(--text);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--font-size-scale-10);
     pointer-events: none;
   }
   .flamegraph-detail {
@@ -706,7 +706,7 @@
   .flamegraph-detail > strong {
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: var(--font-size-scale-9);
     overflow-wrap: anywhere;
   }
   .flamegraph-detail > div {
@@ -714,7 +714,7 @@
     flex-wrap: wrap;
     gap: 6px 13px;
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   .flamegraph-detail code {
     color: var(--accent);
@@ -723,7 +723,7 @@
   .flamegraph-detail p {
     margin: 0;
     color: var(--muted);
-    font-size: 8px;
+    font-size: var(--font-size-scale-8);
   }
   @media (max-width: 850px) {
     .observability-metrics {

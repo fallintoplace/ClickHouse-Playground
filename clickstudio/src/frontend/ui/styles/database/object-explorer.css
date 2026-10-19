@@ -20,7 +20,7 @@
   margin: 0;
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: 17px;
+  font-size: var(--font-size-scale-17);
   font-weight: 620;
   letter-spacing: -0.02em;
   line-height: 1.3;
@@ -29,7 +29,7 @@
   margin: 4px 0 0;
   color: var(--text-soft);
   font-family: var(--font-sans);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   font-weight: 450;
   line-height: 1.4;
 }
@@ -83,7 +83,7 @@
   padding: 0 12px;
   border-radius: var(--radius-control);
   font-family: var(--font-sans);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   font-weight: 600;
   line-height: 1.2;
   white-space: nowrap;
@@ -129,7 +129,7 @@
   background: color-mix(in srgb, var(--text) 2%, var(--panel-raised));
 }
 .insert-row-dialog .table-action-dialog-title {
-  font-size: 18px;
+  font-size: var(--font-size-scale-18);
   font-weight: 650;
   letter-spacing: -0.025em;
   line-height: 1.25;
@@ -248,7 +248,7 @@
   border-radius: 3px;
   color: var(--text-soft);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   cursor: pointer;
 }
 .create-table-database-option:hover,
@@ -263,7 +263,7 @@
   margin: 0;
   padding: 11px 12px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--font-size-scale-11);
   font-weight: 450;
   line-height: 1.45;
 }
@@ -283,7 +283,7 @@
   border-radius: 3px;
   background: color-mix(in srgb, var(--text) 2%, var(--panel));
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
   font-weight: 550;
 }
 .create-table-target code {
@@ -312,7 +312,7 @@
 }
 .create-table-columns-heading h3 {
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   font-weight: 650;
   letter-spacing: 0.01em;
 }
@@ -325,7 +325,7 @@
   min-width: 0;
   gap: var(--create-table-column-field-gap);
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
   font-weight: 600;
 }
 .create-table-column-label {
@@ -360,7 +360,7 @@
 .create-table-supported-types {
   margin: 0;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
   font-weight: 450;
   line-height: 1.45;
 }
@@ -368,7 +368,7 @@
   min-width: 0;
   margin: 0 auto 0 0;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
   line-height: 1.4;
 }
 .create-table-secondary-button {
@@ -447,12 +447,12 @@
   left: 0;
   margin: 0;
   color: var(--red);
-  font-size: 9px;
+  font-size: var(--font-size-scale-9);
   line-height: 1.2;
 }
 .insert-row-column-name {
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   font-weight: 650;
   letter-spacing: 0.005em;
 }
@@ -467,12 +467,12 @@
   background: var(--panel-raised);
   color: var(--text-soft);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
   line-height: 1.25;
 }
 .insert-row-include {
   color: var(--text-soft);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
   font-weight: 550;
 }
 .insert-row-include input {
@@ -504,7 +504,7 @@
 .delete-table-confirmation-name {
   color: var(--red);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   font-weight: 600;
   overflow-wrap: anywhere;
 }
@@ -595,7 +595,7 @@
   border-radius: var(--radius-control);
   background: transparent;
   color: var(--muted);
-  font-size: 15px;
+  font-size: var(--font-size-scale-15);
   cursor: pointer;
 }
 .object-search-clear:hover {
@@ -839,12 +839,12 @@
 .object-tree-row.is-group:not(.is-database) .object-tree-label strong {
   color: color-mix(in srgb, var(--tree-kind-color) 68%, var(--muted));
   font-family: var(--font-sans);
-  font-size: 11px;
+  font-size: var(--font-size-scale-11);
   font-weight: 550;
 }
 .object-tree-row.is-database .object-tree-label strong {
   font-family: var(--font-sans);
-  font-size: 11.5px;
+  font-size: var(--font-size-scale-11-5);
   font-weight: 600;
 }
 .object-tree-count {
@@ -859,7 +859,7 @@
   background: color-mix(in srgb, var(--tree-kind-color) 10%, transparent);
   color: var(--tree-kind-color);
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--font-size-scale-8);
   font-variant-numeric: tabular-nums;
 }
 .object-tree-group-actions {
@@ -942,11 +942,11 @@
 }
 .object-empty-search strong {
   color: var(--text-soft);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
 }
 .object-empty-search span {
   max-width: 240px;
-  font-size: 8px;
+  font-size: var(--font-size-scale-8);
   line-height: 1.5;
 }
 .object-details {
@@ -997,7 +997,7 @@
   border-radius: var(--radius-control);
   background: var(--panel);
   color: var(--muted);
-  font-size: 17px;
+  font-size: var(--font-size-scale-17);
   cursor: pointer;
 }
 .object-details-close:hover {
@@ -1058,7 +1058,7 @@
   background: color-mix(in srgb, var(--object-detail-accent) 7%, var(--panel));
   color: var(--object-detail-accent);
   font-family: var(--font-sans);
-  font-size: 9px;
+  font-size: var(--font-size-scale-9);
   font-weight: 650;
   letter-spacing: 0.055em;
 }
@@ -1067,7 +1067,7 @@
   overflow-wrap: anywhere;
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: clamp(15px, 1.35vw, 18px);
+  font-size: clamp(var(--font-size-scale-15), 1.35vw, var(--font-size-scale-18));
   font-weight: 620;
   letter-spacing: -0.015em;
   line-height: 1.2;
@@ -1079,7 +1079,7 @@
   overflow-wrap: anywhere;
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: clamp(15px, 1.35vw, 18px);
+  font-size: clamp(var(--font-size-scale-15), 1.35vw, var(--font-size-scale-18));
   font-weight: 620;
   letter-spacing: -0.015em;
   line-height: 1.2;
@@ -1091,7 +1091,7 @@
   overflow: hidden;
   color: var(--text-soft);
   font-family: var(--font-sans);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1105,7 +1105,7 @@
   padding: 0;
   color: var(--muted);
   font-family: var(--font-sans);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
   font-variant-numeric: tabular-nums;
   font-weight: 500;
 }
@@ -1126,7 +1126,7 @@
   background: transparent;
   color: var(--muted);
   font-family: var(--font-sans);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
   font-weight: 570;
   cursor: pointer;
 }
@@ -1137,7 +1137,7 @@
 .object-detail-tabs button > span {
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--font-size-scale-9);
   font-variant-numeric: tabular-nums;
 }
 .object-detail-tab-panel {
@@ -1163,7 +1163,7 @@
   background: transparent;
   color: var(--muted);
   font-family: var(--font-sans);
-  font-size: 9px;
+  font-size: var(--font-size-scale-9);
   cursor: pointer;
 }
 .object-column-parent-action:hover {
@@ -1195,7 +1195,7 @@
   flex: none;
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--font-size-scale-9);
   font-variant-numeric: tabular-nums;
 }
 .object-column-search {
@@ -1225,7 +1225,7 @@
   background: transparent;
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
 }
 .object-column-search input::placeholder {
   color: var(--muted);
@@ -1277,7 +1277,7 @@
   overflow: hidden;
   color: var(--text-soft);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
   font-weight: 550;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1298,7 +1298,7 @@
   flex: none;
   color: var(--muted);
   font-family: var(--font-sans);
-  font-size: 8px;
+  font-size: var(--font-size-scale-8);
   font-weight: 650;
   letter-spacing: 0.04em;
 }
@@ -1309,7 +1309,7 @@
   border: 1px dashed var(--line);
   border-radius: var(--radius-control);
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
 }
 .object-action-grid {
   display: grid;
@@ -1336,7 +1336,7 @@
   min-height: 36px;
   border-radius: var(--radius-panel);
   font-family: var(--font-sans);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
   font-weight: 600;
   letter-spacing: 0;
 }
@@ -1379,7 +1379,7 @@
   background: var(--panel);
   color: var(--text-soft);
   font-family: var(--font-sans);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
   font-weight: 550;
   letter-spacing: 0;
   text-overflow: ellipsis;
@@ -1420,7 +1420,7 @@
 .object-fact > span {
   color: var(--muted);
   font-family: var(--font-sans);
-  font-size: 9px;
+  font-size: var(--font-size-scale-9);
   font-weight: 620;
   letter-spacing: 0.055em;
   text-transform: uppercase;
@@ -1429,7 +1429,7 @@
   overflow-wrap: anywhere;
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: 11px;
+  font-size: var(--font-size-scale-11);
   line-height: 1.4;
 }
 .object-reference-actions {
@@ -1445,7 +1445,7 @@
   justify-content: center;
   gap: 6px;
   border-radius: var(--radius-panel);
-  font-size: 8px;
+  font-size: var(--font-size-scale-8);
   letter-spacing: 0.015em;
 }
 .object-reference-actions .object-parts-action {
@@ -1487,7 +1487,7 @@
   border-radius: var(--radius-panel);
   background: color-mix(in srgb, var(--explorer-signal) 4%, var(--panel-raised));
   color: var(--text-soft);
-  font-size: 8px;
+  font-size: var(--font-size-scale-8);
   font-weight: 620;
 }
 .reference-source-title {
@@ -1502,7 +1502,7 @@
   margin-left: auto;
   overflow: hidden;
   color: var(--muted);
-  font-size: 7px;
+  font-size: var(--font-size-scale-7);
   font-weight: 450;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1537,7 +1537,7 @@
   border-radius: var(--radius-control);
   background: var(--panel-raised);
   color: var(--muted);
-  font-size: 8px;
+  font-size: var(--font-size-scale-8);
   font-weight: 650;
   cursor: pointer;
   transition: 0.16s ease;
@@ -1559,7 +1559,7 @@
   justify-content: space-between;
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--font-size-scale-8);
   font-weight: 760;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1571,7 +1571,7 @@
   border-radius: var(--radius-label);
   background: color-mix(in srgb, var(--explorer-signal) 8%, var(--panel));
   color: var(--explorer-signal);
-  font-size: 8px;
+  font-size: var(--font-size-scale-8);
   letter-spacing: 0;
   text-align: center;
 }
@@ -1677,12 +1677,12 @@
   min-width: 0;
   flex: 1;
   font-family: var(--font-sans);
-  font-size: 11px;
+  font-size: var(--font-size-scale-11);
   font-weight: 500;
 }
 .reference-result-copy strong {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
   font-weight: 640;
   letter-spacing: -0.01em;
 }
@@ -1695,7 +1695,7 @@
   border-radius: var(--radius-label);
   background: color-mix(in srgb, var(--explorer-row-accent) 7%, var(--page));
   color: var(--explorer-row-accent);
-  font-size: 7px;
+  font-size: var(--font-size-scale-7);
   font-weight: 680;
   letter-spacing: 0.025em;
   text-overflow: ellipsis;
@@ -1707,7 +1707,7 @@
   overflow: hidden;
   color: color-mix(in srgb, var(--tree-kind-color) 55%, var(--muted));
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--font-size-scale-8);
   font-weight: 450;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1721,7 +1721,7 @@
   border: 1px solid transparent;
   border-radius: var(--radius-panel);
   color: var(--muted);
-  font-size: 17px;
+  font-size: var(--font-size-scale-17);
   line-height: 1;
   transition:
     border-color 0.14s ease,
@@ -1797,7 +1797,7 @@
   border-bottom: 1px solid color-mix(in srgb, var(--explorer-signal) 18%, var(--line));
   background: transparent;
   color: var(--text-soft);
-  font-size: 9px;
+  font-size: var(--font-size-scale-9);
   font-weight: 670;
   text-align: left;
   cursor: pointer;
@@ -1816,7 +1816,7 @@
 .object-back-button span,
 .reference-back span {
   color: var(--explorer-signal);
-  font-size: 19px;
+  font-size: var(--font-size-scale-19);
   line-height: 1;
 }
 .reference-entry {
@@ -1843,7 +1843,7 @@
 }
 .reference-entry-heading > span {
   color: var(--explorer-signal);
-  font-size: 8px;
+  font-size: var(--font-size-scale-8);
   font-weight: 760;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1853,14 +1853,14 @@
   overflow-wrap: anywhere;
   color: var(--text);
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: var(--font-size-scale-15);
   font-weight: 690;
   letter-spacing: -0.025em;
 }
 .reference-entry-heading small {
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--font-size-scale-8);
 }
 .reference-entry-actions {
   display: flex;
@@ -1869,7 +1869,7 @@
 .reference-markdown {
   min-width: 0;
   color: var(--text-soft);
-  font-size: 9px;
+  font-size: var(--font-size-scale-9);
   line-height: 1.7;
   overflow-wrap: anywhere;
 }
@@ -1885,7 +1885,7 @@
 .reference-markdown h4 {
   margin: 15px 0 6px;
   color: var(--text);
-  font-size: 11px;
+  font-size: var(--font-size-scale-11);
   font-weight: 680;
 }
 .reference-markdown p,
@@ -1932,7 +1932,7 @@
   max-width: 100%;
   overflow: auto;
   border-collapse: collapse;
-  font-size: 8px;
+  font-size: var(--font-size-scale-8);
 }
 .reference-markdown th,
 .reference-markdown td {
@@ -1952,7 +1952,7 @@
 }
 .reference-entry-source span {
   color: var(--muted);
-  font-size: 7px;
+  font-size: var(--font-size-scale-7);
   font-weight: 760;
   letter-spacing: 0.1em;
 }
@@ -1960,13 +1960,13 @@
   overflow-wrap: anywhere;
   color: var(--text-soft);
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--font-size-scale-8);
 }
 .reference-entry-source a {
   overflow-wrap: anywhere;
   color: var(--explorer-signal);
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--font-size-scale-8);
 }
 .parts-explorer-layer {
   position: fixed;
@@ -2047,14 +2047,14 @@
   margin: 0 0 6px;
   color: var(--text);
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: var(--font-size-scale-20);
   font-weight: 650;
   letter-spacing: -0.025em;
 }
 .parts-explorer-header p {
   margin: 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--font-size-scale-11);
   line-height: 1.5;
 }
 .parts-explorer-toolbar {
@@ -2080,7 +2080,7 @@
   background: transparent;
   color: var(--muted);
   font: inherit;
-  font-size: 9px;
+  font-size: var(--font-size-scale-9);
   cursor: pointer;
 }
 .parts-view-control button[aria-pressed="true"] {
@@ -2111,12 +2111,12 @@
 }
 .parts-overview dt {
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--font-size-scale-11);
 }
 .parts-overview dd {
   margin: 4px 0 0;
   color: var(--text);
-  font-size: 20px;
+  font-size: var(--font-size-scale-20);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.025em;
@@ -2131,7 +2131,7 @@
 .parts-explorer-dialog .parts-view-control button {
   min-height: 28px;
   padding-inline: 10px;
-  font-size: 11px;
+  font-size: var(--font-size-scale-11);
 }
 .parts-explorer-dialog .parts-view-control button:hover {
   color: var(--text);
@@ -2145,7 +2145,7 @@
 .parts-count-summary {
   margin-left: auto;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--font-size-scale-11);
   font-variant-numeric: tabular-nums;
 }
 .parts-state {
@@ -2156,7 +2156,7 @@
   border: 1px dashed var(--line-bright);
   border-radius: var(--radius-panel);
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
 }
 .parts-state.is-error {
   border-color: color-mix(in srgb, var(--red) 48%, var(--line));
@@ -2182,7 +2182,7 @@
   border-radius: var(--radius-panel);
   background: color-mix(in srgb, var(--accent) 4%, var(--panel));
   color: var(--muted);
-  font-size: 9px;
+  font-size: var(--font-size-scale-9);
 }
 .schema-partial-state > span {
   min-width: 0;
@@ -2200,7 +2200,7 @@
   justify-content: space-between;
   gap: 10px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--font-size-scale-11);
 }
 .parts-graph-meta strong {
   color: var(--text-soft);
@@ -2295,7 +2295,7 @@
   border-bottom: 1px solid var(--line);
   background: var(--panel);
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
   font-weight: 600;
 }
 .parts-map-columns .parts-map-identity {
@@ -2345,14 +2345,14 @@
 .parts-map-partition-heading strong {
   overflow: hidden;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--font-size-scale-11);
   font-weight: 600;
   text-overflow: ellipsis;
 }
 .parts-map-partition-heading span {
   flex: none;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
   font-variant-numeric: tabular-nums;
 }
 .parts-map-partition-rows {
@@ -2401,13 +2401,13 @@
   overflow: hidden;
   color: var(--text);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--font-size-scale-11);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .parts-map-identity small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
   white-space: nowrap;
 }
 .parts-map-metrics {
@@ -2417,7 +2417,7 @@
   align-items: center;
   gap: 24px;
   color: var(--text-soft);
-  font-size: 11px;
+  font-size: var(--font-size-scale-11);
   font-variant-numeric: tabular-nums;
   text-align: right;
   white-space: nowrap;
@@ -2445,7 +2445,7 @@
 .parts-map-size > strong {
   min-width: 70px;
   color: var(--text);
-  font-size: 11px;
+  font-size: var(--font-size-scale-11);
   font-weight: 550;
   white-space: nowrap;
 }
@@ -2481,7 +2481,7 @@
 .parts-cell-label {
   fill: var(--text);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   font-weight: 580;
   pointer-events: none;
 }
@@ -2504,7 +2504,7 @@
 .parts-galaxy-cell text {
   fill: var(--text);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   text-anchor: middle;
   pointer-events: none;
 }
@@ -2530,7 +2530,7 @@
 .parts-partition-zoom text {
   fill: var(--text);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--font-size-scale-11);
   font-weight: 760;
   pointer-events: none;
 }
@@ -2546,7 +2546,7 @@
   justify-content: space-between;
   gap: 10px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
   pointer-events: none;
 }
 .parts-legend > span:first-child {
@@ -2577,7 +2577,7 @@
 .parts-inspector > p {
   margin: 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--font-size-scale-11);
 }
 .parts-inspector-heading {
   display: grid;
@@ -2588,12 +2588,12 @@
   overflow: hidden;
   color: var(--text);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-scale-12);
   text-overflow: ellipsis;
 }
 .parts-inspector-heading > code {
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
 }
 .parts-inspector-stats {
   display: flex;
@@ -2608,18 +2608,18 @@
 }
 .parts-inspector-stats small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
 }
 .parts-inspector-stats strong {
   color: var(--text-soft);
-  font-size: 11px;
+  font-size: var(--font-size-scale-11);
   font-weight: 550;
   font-variant-numeric: tabular-nums;
 }
 .parts-fixture-label {
   align-self: flex-start;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
 }
 .parts-explorer-footer {
   display: flex;
@@ -2630,7 +2630,7 @@
 }
 .parts-explorer-footer > span {
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
 }
 @media (max-width: 850px) {
   .object-explorer-section {
@@ -2693,7 +2693,7 @@
     border-right: 0;
   }
   .parts-overview dd {
-    font-size: 18px;
+    font-size: var(--font-size-scale-18);
   }
   .parts-inspector {
     align-items: flex-start;
@@ -2710,7 +2710,7 @@
   align-items: center;
   gap: 5px;
   color: var(--text-soft);
-  font-size: 10px;
+  font-size: var(--font-size-scale-10);
   font-weight: 550;
   line-height: 1.35;
 }

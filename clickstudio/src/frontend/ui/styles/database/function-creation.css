@@ -93,7 +93,7 @@
     justify-content: space-between;
     gap: 8px;
     color: var(--text-soft);
-    font-size: 12px;
+    font-size: var(--font-size-scale-12);
     font-weight: 600;
   }
 
@@ -105,7 +105,7 @@
 
   .function-creation-meta {
     color: var(--muted);
-    font-size: 11px;
+    font-size: var(--font-size-scale-11);
     font-weight: 400;
   }
 
