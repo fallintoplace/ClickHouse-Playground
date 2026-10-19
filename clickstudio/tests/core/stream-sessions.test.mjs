@@ -7,7 +7,10 @@ import { DEFAULT_LIMITS } from '../../.core-build/src/shared/queries/execution/s
 import { CLOUD_QUERY_LIMITS } from '../../.core-build/src/shared/database/connections/cloud-policy.js';
 import { FileStore, MemoryStore, audit } from '../../.core-build/src/backend/system/store.js';
 import { LargeCellStore } from '../../.core-build/src/backend/queries/execution/large-cells.js';
-import { isLargeCellReference } from '../../.core-build/src/shared/queries/results/large-cells.js';
+import {
+    isLargeCellReference,
+    LARGE_CELL_INLINE_BYTES,
+} from '../../.core-build/src/shared/queries/results/large-cells.js';
 import { isRecord } from '../../.core-build/src/shared/common/values.js';
 import { mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -136,6 +139,58 @@ test('Large result cells are stored separately and can be recovered losslessly',
     assert.equal(store.jsonValue(store.get('owner', 'run', textReference.id)), value);
     assert.deepEqual(store.jsonValue(store.get('owner', 'run', jsonReference.id)), objectValue);
 });
+test('Wide short-string streams retain every cell without detached-cell writes', async () => {
+    const names = Array.from({ length: 120 }, (_, index) => 'column_' + index);
+    const types = names.map(() => 'String');
+    const row = names.map((_, index) => `value-${index}-界🧪`);
+    const rows = Array.from({ length: 20 }, () => row);
+    const payload =
+        [JSON.stringify(names), JSON.stringify(types), ...rows.map(JSON.stringify)].join('\n') +
+        '\n';
+    let detachedWrites = 0;
+    const output = await collectCompactStream(
+        Readable.from([Buffer.from(payload)]),
+        { rows: 20, bytes: 2_000_000 },
+        {
+            store: { save: () => detachedWrites++ },
+            ownerKey: 'owner',
+            runId: 'wide',
+            referenceToken: 'wide-token',
+        },
+    );
+    assert.equal(output.truncated, false);
+    assert.equal(output.columns.length, names.length);
+    assert.deepEqual(output.rows, rows);
+    assert.equal(detachedWrites, 0);
+});
+
+test('Large-cell fast path preserves UTF-8 boundary and non-detached strings', async () => {
+    const codeUnits = Math.floor(LARGE_CELL_INLINE_BYTES / 3);
+    const inlineCjk = '界'.repeat(codeUnits);
+    const largeCjk = '界'.repeat(codeUnits + 1);
+    const inlineAscii = 'a'.repeat(codeUnits + 1);
+    const inlineEmoji = '🧪'.repeat(50_000);
+    assert.equal(Buffer.byteLength(inlineCjk), LARGE_CELL_INLINE_BYTES - 1);
+    assert.ok(Buffer.byteLength(largeCjk) > LARGE_CELL_INLINE_BYTES);
+    const columns = ['cjk', 'ascii', 'emoji', 'large'];
+    const row = [inlineCjk, inlineAscii, inlineEmoji, largeCjk];
+    const store = new LargeCellStore(new MemoryStore());
+    const output = await collectCompactStream(
+        Readable.from([
+            JSON.stringify(columns) + '\n',
+            JSON.stringify(columns.map(() => 'String')) + '\n',
+            JSON.stringify(row) + '\n',
+        ]),
+        { rows: 1, bytes: 2_000_000 },
+        { store, ownerKey: 'owner', runId: 'boundary', referenceToken: 'boundary-token' },
+    );
+    assert.equal(output.truncated, false);
+    assert.deepEqual(output.rows[0].slice(0, 3), row.slice(0, 3));
+    const detached = output.rows[0][3];
+    assert.ok(isLargeCellReference(detached, 'boundary-token'));
+    assert.equal(store.jsonValue(store.get('owner', 'boundary', detached.id)), largeCjk);
+});
+
 test('Invalid names/types headers are rejected', async () => {
     await assert.rejects(
         collectCompactStream(Readable.from(['["n"]\n["UInt64","String"]\n']), DEFAULT_LIMITS),
@@ -265,6 +320,78 @@ test('Row caps take precedence over bytes for a fragmented extra row', async () 
     assert.deepEqual(output.rows, [['1', 'one']]);
     assert.equal(output.truncated, true);
     assert.equal(output.truncationReason, 'rows');
+});
+
+test('Row caps stop before buffering an unterminated extra row', async () => {
+    for (const withLargeCells of [false, true]) {
+        let chunksRead = 0;
+        let closed = false;
+        async function* source() {
+            try {
+                yield Buffer.from(header + '["1","one"]\n');
+                for (let index = 0; index < 1_000; index++) {
+                    chunksRead++;
+                    yield Buffer.alloc(64 * 1024, 120);
+                }
+            } finally {
+                closed = true;
+            }
+        }
+        const context = withLargeCells
+            ? {
+                  store: {
+                      save: () => {
+                          throw new Error('Short cells must remain inline');
+                      },
+                  },
+                  ownerKey: 'owner',
+                  runId: 'cap',
+                  referenceToken: 'cap-token',
+              }
+            : undefined;
+        const output = await collectCompactStream(
+            source(),
+            { rows: 1, bytes: 55_000_000 },
+            context,
+        );
+        assert.deepEqual(output.rows, [['1', 'one']]);
+        assert.equal(output.truncated, true);
+        assert.equal(output.truncationReason, 'rows');
+        assert.equal(chunksRead, 1);
+        assert.equal(closed, true);
+    }
+});
+
+test('Trailing whitespace after an exact row cap does not imply truncation', async () => {
+    const lastRow = '["1","one"]';
+    const output = await collectCompactStream(
+        Readable.from([header + lastRow + '\n', ' '.repeat(128_000), '\n  ']),
+        { rows: 1, bytes: Buffer.byteLength(header + lastRow) },
+    );
+    assert.deepEqual(output.rows, [['1', 'one']]);
+    assert.equal(output.truncated, false);
+});
+
+test('Whitespace-only traffic after a row cap has a bounded read budget', async () => {
+    let chunksRead = 0;
+    let closed = false;
+    async function* source() {
+        try {
+            yield header + '["1","one"]\n';
+            for (let index = 0; index < 5_000; index++) {
+                chunksRead++;
+                yield ' '.repeat(16_384);
+            }
+        } finally {
+            closed = true;
+        }
+    }
+    const output = await collectCompactStream(source(), { rows: 1, bytes: 55_000_000 });
+    assert.deepEqual(output.rows, [['1', 'one']]);
+    assert.equal(output.truncated, true);
+    assert.equal(output.truncationReason, 'bytes');
+    assert.ok(chunksRead < 100);
+    assert.equal(closed, true);
 });
 
 test('Local-only sessions are explicit single-owner identities', () =>

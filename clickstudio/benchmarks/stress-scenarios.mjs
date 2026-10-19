@@ -19,6 +19,48 @@ import {
     makeWideResult,
 } from './stress-fixtures.mjs';
 
+// Real collector path: production passes a large-cell context on every local run,
+// even when the result contains only short values. Time parsing and inspection
+// together, excluding deterministic fixture generation and network transport.
+function wideStreamWithLargeCellContextCase(count, width) {
+    const fixture = makeWideResult(count, width);
+    const payload = Buffer.from(
+        [
+            JSON.stringify(fixture.columns.map(column => column.name)),
+            JSON.stringify(fixture.columns.map(column => column.type)),
+            ...fixture.rows.map(JSON.stringify),
+        ].join('\n') + '\n',
+    );
+    const chunks = chunkPayload(payload, 4_096);
+    const context = {
+        store: {
+            save: () => {
+                throw new Error('Short cells must not be detached');
+            },
+        },
+        ownerKey: 'benchmark',
+        runId: 'wide-result',
+        referenceToken: 'benchmark-token',
+    };
+    return {
+        id: `stream/large-cell-scan/${count}-rows-${width}-columns`,
+        group: 'stream',
+        description: 'Parse wide JSONCompact rows with production large-cell inspection enabled',
+        async: true,
+        units: 'cells',
+        unitsPerOperation: count * width,
+        run: () =>
+            collectCompactStream(Readable.from(chunks), { rows: count, bytes: 5_000_000 }, context),
+        verify: output => {
+            assert.equal(output.truncated, false);
+            assert.equal(output.rows.length, count);
+            assert.equal(output.columns.length, width);
+            assert.deepEqual(output.rows[0], fixture.rows[0]);
+            assert.deepEqual(output.rows.at(-1), fixture.rows.at(-1));
+        },
+    };
+}
+
 function fragmentedStreamCase(chunkSize) {
     const { payload, value } = makeLargeCompactPayload();
     const chunks = chunkPayload(payload, chunkSize);
@@ -144,6 +186,8 @@ function sqlCase() {
 
 export function stressScenarios() {
     return [
+        wideStreamWithLargeCellContextCase(1_000, 100),
+        wideStreamWithLargeCellContextCase(5_000, 100),
         fragmentedStreamCase(4096),
         fragmentedStreamCase(256),
         distinctCategoryCase(5_000),

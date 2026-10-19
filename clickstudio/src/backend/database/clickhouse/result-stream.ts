@@ -24,6 +24,7 @@ interface StreamState {
     largeCellSerializedBytes: number;
     truncated: boolean;
     allowDetachedCells: boolean;
+    trailingRowCapWhitespaceBytes: number;
     truncationReason?: ResultTruncationReason;
 }
 
@@ -43,6 +44,13 @@ interface PreparedRow {
     bytes: number;
     serializedBytes: number;
 }
+
+// UTF-8 encodes each UTF-16 code unit in at most three bytes (surrogate pairs
+// use four bytes for two units). Strings at or below this length cannot reach
+// the detached-cell byte threshold, regardless of their contents.
+const MAX_INLINE_STRING_CODE_UNITS = Math.floor(LARGE_CELL_INLINE_BYTES / 3);
+// Keep a bounded read budget for malformed streams that never end after the row cap.
+const MAX_ROW_CAP_TRAILING_WHITESPACE_BYTES = 1_000_000;
 
 function isRow(value: unknown): value is Row {
     return Array.isArray(value) && value.every(isJson);
@@ -105,21 +113,21 @@ function prepareRow(
     // Rows without detachable cells can be retained directly.
     if (!largeCellContext) return { row: data, cells: [], bytes: 0, serializedBytes: 0 };
 
-    const row = [...data];
+    // Most result rows contain no detached cells. Avoid copying every row.
+    let row = data;
     const cells: DetachedCell[] = [];
     let bytes = 0;
     let serializedBytes = 0;
 
     for (let index = 0; index < data.length; index++) {
         const value = data[index];
-        // JSON scalars other than strings cannot reach the large-cell threshold.
-        if (
-            value === undefined ||
-            value === null ||
-            typeof value === 'number' ||
-            typeof value === 'boolean'
-        )
+        // Most result cells are short strings. Check them before other JSON types.
+        // The UTF-16 bound is safe even for CJK, emoji, and unpaired surrogates.
+        if (typeof value === 'string') {
+            if (value.length <= MAX_INLINE_STRING_CODE_UNITS) continue;
+        } else if (value === null || typeof value !== 'object') {
             continue;
+        }
 
         const valueType = typeof value === 'string' ? 'text' : 'json';
         const fullValue =
@@ -149,6 +157,8 @@ function prepareRow(
             'RESULT_WIDTH',
             'Unexpected number of fields in a result row',
         );
+        // Copy only when the first detached cell needs a replacement reference.
+        if (row === data) row = [...data];
         const id = largeCellContext.expiresAt
             ? `e${largeCellContext.expiresAt.toString(36)}_${randomUUID()}`
             : randomUUID();
@@ -224,13 +234,31 @@ function retainRow(
     state.bytes += rowBytes;
 }
 
+function retainTrailingRowCapWhitespace(state: StreamState, bytes: number): boolean {
+    state.trailingRowCapWhitespaceBytes += bytes;
+    if (state.trailingRowCapWhitespaceBytes <= MAX_ROW_CAP_TRAILING_WHITESPACE_BYTES) return true;
+    markTruncated(state, 'bytes');
+    return false;
+}
+
 function consumeLine(
     line: string,
     state: StreamState,
     limits: Pick<Limits, 'rows' | 'bytes'>,
     largeCellContext?: LargeCellContext,
 ): void {
-    if (!line.trim()) return;
+    if (!line.trim()) {
+        if (state.stage === 2 && state.rows.length >= limits.rows) {
+            // Include line separators when counting repeated empty lines.
+            retainTrailingRowCapWhitespace(state, Buffer.byteLength(line) + 1);
+        }
+        return;
+    }
+    // Avoid measuring a full extra row once the retained result is complete.
+    if (state.stage === 2 && state.rows.length >= limits.rows) {
+        markTruncated(state, 'rows');
+        return;
+    }
     const size = Buffer.byteLength(line);
     if (state.stage < 2 && state.bytes + size > limits.bytes) {
         throw new AppError(
@@ -238,10 +266,6 @@ function consumeLine(
             'METADATA_TOO_LARGE',
             'Result metadata exceeds the configured byte limit',
         );
-    }
-    if (state.stage >= 2 && state.rows.length >= limits.rows) {
-        markTruncated(state, 'rows');
-        return;
     }
     const maxRowBytes = largeCellContext ? MAX_LARGE_CELL_ROW_BYTES : limits.bytes - state.bytes;
     if (state.stage >= 2 && size > maxRowBytes) {
@@ -266,6 +290,15 @@ function appendPendingFragment(
     state: StreamState,
     limits: Pick<Limits, 'rows' | 'bytes'>,
 ): boolean {
+    // An extra row needs no buffering or JSON parsing once the row cap is met.
+    // Ignore trailing whitespace so an exactly-at-limit result stays complete.
+    if (state.stage === 2 && state.rows.length >= limits.rows) {
+        if (fragment.trim()) {
+            markTruncated(state, 'rows');
+            return false;
+        }
+        return retainTrailingRowCapWhitespace(state, Buffer.byteLength(fragment));
+    }
     pending.fragments.push(fragment);
     pending.bytes += Buffer.byteLength(fragment);
     const limit =
@@ -310,6 +343,7 @@ export async function collectCompactStream(
         largeCellSerializedBytes: 0,
         truncated: false,
         allowDetachedCells: largeCellContext !== undefined,
+        trailingRowCapWhitespaceBytes: 0,
     };
     // Keep incomplete lines as fragments instead of rebuilding and measuring their
     // entire contents for every network chunk. Large values may span thousands of chunks.
