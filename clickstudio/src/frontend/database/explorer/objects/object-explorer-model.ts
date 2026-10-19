@@ -191,15 +191,27 @@ export interface ObjectExplorerIndex {
     dictionarySearch: WeakMap<SchemaDictionary, string>;
 }
 
+function columnSearchText(column: SchemaColumn): string {
+    return `${column.name} ${column.type} ${column.defaultKind} ${column.comment}`.toLowerCase();
+}
+
+function projectionSearchText(projection: SchemaProjection): string {
+    return `${projection.name} ${projection.type} ${projection.sortingKey}`.toLowerCase();
+}
+
+function skipIndexSearchText(index: SchemaSkipIndex): string {
+    return `${index.name} ${index.type} ${index.expression} ${index.granularity}`.toLowerCase();
+}
+
 function cachedIncludes<T extends object>(
     cache: WeakMap<T, string>,
     value: T,
     query: string,
-    makeText: () => string,
+    makeText: (value: T) => string,
 ): boolean {
     let text = cache.get(value);
     if (text === undefined) {
-        text = makeText();
+        text = makeText(value);
         cache.set(value, text);
     }
     return text.includes(query);
@@ -297,41 +309,20 @@ export function buildIndexedObjectExplorer(
         const relationId = explorerRelationId(table.database, table.name);
 
         const relationMatches =
-            !query ||
-            cachedIncludes(index.relationSearch, table, query, () => relationSearchText(table));
+            !query || cachedIncludes(index.relationSearch, table, query, relationSearchText);
         const matchedColumns = query
             ? columns.filter(column =>
-                  cachedIncludes(
-                      index.columnSearch,
-                      column,
-                      query,
-                      () =>
-                          `${column.name} ${column.type} ${column.defaultKind} ${column.comment}`
-                              .toLowerCase(),
-                  ),
+                  cachedIncludes(index.columnSearch, column, query, columnSearchText),
               )
             : [];
         const matchedProjections = query
             ? (table.projections ?? []).filter(projection =>
-                  cachedIncludes(
-                      index.projectionSearch,
-                      projection,
-                      query,
-                      () =>
-                          `${projection.name} ${projection.type} ${projection.sortingKey}`.toLowerCase(),
-                  ),
+                  cachedIncludes(index.projectionSearch, projection, query, projectionSearchText),
               )
             : [];
         const matchedSkipIndexes = query
             ? (table.skipIndexes ?? []).filter(indexItem =>
-                  cachedIncludes(
-                      index.skipIndexSearch,
-                      indexItem,
-                      query,
-                      () =>
-                          `${indexItem.name} ${indexItem.type} ${indexItem.expression} ${indexItem.granularity}`
-                              .toLowerCase(),
-                  ),
+                  cachedIncludes(index.skipIndexSearch, indexItem, query, skipIndexSearchText),
               )
             : [];
         if (
@@ -360,9 +351,7 @@ export function buildIndexedObjectExplorer(
     for (const dictionary of schema.dictionaries ?? []) {
         if (
             query &&
-            !cachedIncludes(index.dictionarySearch, dictionary, query, () =>
-                dictionarySearchText(dictionary),
-            )
+            !cachedIncludes(index.dictionarySearch, dictionary, query, dictionarySearchText)
         )
             continue;
         ensureDatabase(dictionary.database).dictionaries.push(dictionary);
