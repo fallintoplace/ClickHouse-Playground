@@ -9,6 +9,7 @@ import {
     chartTickLabelWidth,
     fitCategoryTicks,
     fitChartTicks,
+    formatCount,
 } from '../../.workspace-build/src/frontend/queries/results/charts/chart-helpers.js';
 import {
     heatmapCellKey,
@@ -1000,4 +1001,32 @@ test('Preparing a chart preserves frozen result data and saved configuration', (
     const view = prepare(data, { ys });
     assert.equal(view.chart.ys, ys);
     assert.equal(view.result, data);
+});
+
+
+test('ASCII chart labels retain their previous wrapping and geometry', () => {
+    const cases = [
+        ['ABCDEFGHIJK', ['ABCDE', 'FGHIJK']],
+        ['ABCDEFGHIJKL', ['ABCDEF', 'GHIJKL']],
+        ['Detroit Red Wings', ['Detroit', 'Red Wings']],
+        ['Hello, World From ClickStudio', ['Hello, World', 'From ClickStudio']],
+        ['A B C D E F', ['A B C', 'D E F']],
+        ['ABCDE   FGHIJK', ['ABCDE', 'FGHIJK']],
+        ['  Super   Long   Label  ', ['Super', 'Long Label']],
+        ['short', ['short']],
+    ];
+    for (const [label, expected] of cases) {
+        const [tick] = fitCategoryTicks([{ label, position: 50 }]);
+        assert.deepEqual(tick.lines, expected, 'Wrapping changed for ' + JSON.stringify(label));
+        const layout = categoryAxisLayout([label], 100);
+        const expectedSlot = Math.max(32, Math.max(...expected.map(chartLabelWidth)) + 16);
+        assert.equal(layout.minimumSlotWidth, Math.max(100, expectedSlot + 8) - 8);
+    }
+});
+
+test('Cached row-count number formatter preserves English number output', () => {
+    const expected = new Intl.NumberFormat('en');
+    for (const value of [0, -0, 1, 999, 1_000, 1_234_567.89, -12_345, NaN, Infinity, -Infinity]) {
+        assert.equal(formatCount(value), expected.format(value));
+    }
 });

@@ -83,8 +83,10 @@ export function chartTypeLabel(kind: Draft['chart']['kind'], copy: Copy['chart']
     }[kind];
 }
 
+const rowCountNumberFormatter = new Intl.NumberFormat('en');
+
 export function formatCount(value: number) {
-    return new Intl.NumberFormat('en').format(value);
+    return rowCountNumberFormatter.format(value);
 }
 
 export function categoryAxisLayout(labels: readonly string[], viewportWidth = 652) {
@@ -135,6 +137,26 @@ export function chartTickLabelWidth(label: string) {
 
 function wrapChartLabel(label: string) {
     const text = label.trim().replace(/\s+/g, ' ');
+    // Printable ASCII characters are individual graphemes with identical width.
+    // Avoid Unicode segmentation and its temporary arrays for common category names.
+    if (/^[\x20-\x7e]*$/.test(text)) {
+        if (text.length * 6 <= 64) return [text];
+        const firstSpace = text.indexOf(' ');
+        if (firstSpace < 0) {
+            const middle = Math.floor(text.length / 2);
+            return [text.slice(0, middle), text.slice(middle)];
+        }
+        let split = firstSpace;
+        let bestWidth = Number.POSITIVE_INFINITY;
+        for (let index = firstSpace; index >= 0; index = text.indexOf(' ', index + 1)) {
+            const widestLine = Math.max(index, text.length - index - 1);
+            if (widestLine < bestWidth) {
+                bestWidth = widestLine;
+                split = index;
+            }
+        }
+        return [text.slice(0, split).trim(), text.slice(split).trim()];
+    }
     const width = chartLabelWidth(text);
     if (width <= 64) return [text];
     const characters = Array.from(chartLabelSegments.segment(text), part => part.segment);

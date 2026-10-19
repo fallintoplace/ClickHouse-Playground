@@ -8,6 +8,7 @@ import {
 } from '../.core-build/src/shared/queries/results/results.js';
 import {
     categoryAxisLayout,
+    fitCategoryTicks,
     formatCount,
 } from '../.workspace-build/src/frontend/queries/results/charts/chart-helpers.js';
 import { chunkPayload, makeCategoryRows } from './fixtures.mjs';
@@ -73,6 +74,26 @@ function chartAxisCase(count) {
     };
 }
 
+function chartTicksCase(count) {
+    const labels = makeDistinctLabels(count);
+    const positions = categoryAxisLayout(labels, 652).positions;
+    const ticks = labels.map((label, index) => ({ label, position: positions[index] }));
+    return {
+        id: 'chart/category-ticks/' + count + '-long-labels',
+        group: 'chart',
+        description: 'Wrap high-cardinality labels for SVG axis ticks without DOM painting',
+        units: 'labels',
+        unitsPerOperation: count,
+        run: () => fitCategoryTicks(ticks),
+        verify: wrapped => {
+            assert.equal(wrapped.length, count);
+            assert.equal(wrapped[0].label, labels[0]);
+            assert.equal(wrapped.at(-1).label, labels.at(-1));
+            assert.ok(wrapped.every(tick => tick.lines.length <= 2));
+        },
+    };
+}
+
 function chartFormatCase(count) {
     const values = Array.from({ length: count }, (_, index) => index * 1001);
     return {
@@ -130,6 +151,7 @@ export function stressScenarios() {
         chartAxisCase(200),
         chartAxisCase(1_000),
         chartAxisCase(5_000),
+        chartTicksCase(5_000),
         chartFormatCase(5_000),
         csvCase(5_000, 20),
         csvCase(20_000, 12),
