@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SchemaColumn, SchemaTable } from '../../../../../shared/database/schema/types';
 import {
-    buildObjectExplorer,
+    buildIndexedObjectExplorer,
+    indexObjectExplorer,
     explorerCategoryId,
     explorerDatabaseId,
     explorerRelationId,
@@ -73,9 +74,10 @@ export function useObjectExplorerState(props: ObjectExplorerProps) {
         compact = false,
     } = props;
 
+    const index = useMemo(() => indexObjectExplorer(schema), [schema]);
     const model = useMemo(
-        () => buildObjectExplorer(schema, search, connection.database),
-        [schema, search, connection.database],
+        () => buildIndexedObjectExplorer(index, search, connection.database),
+        [index, search, connection.database],
     );
     const storageKey = uiStateKey(connection.id);
     const recovered = useMemo(() => recoverUiState(storageKey), [storageKey]);

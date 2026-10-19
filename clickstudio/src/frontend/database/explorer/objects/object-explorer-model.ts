@@ -179,14 +179,35 @@ function addRelationChildSelections(
     }
 }
 
-export function buildObjectExplorer(
-    schema: Schema | undefined,
-    search: string,
-    preferredDatabase = '',
-): ObjectExplorerModel {
-    const query = search.trim().toLowerCase();
-    const selectionById = new Map<string, ExplorerSelection>();
-    if (!schema) return { query, databases: [], totalObjects: 0, visibleObjects: 0, selectionById };
+export interface ObjectExplorerIndex {
+    schema: Schema;
+    columnsByTable: ReadonlyMap<string, readonly SchemaColumn[]>;
+    selectionById: ReadonlyMap<string, ExplorerSelection>;
+    relationKinds: ReadonlyMap<SchemaTable, ExplorerRelationKind>;
+    relationSearch: WeakMap<SchemaTable, string>;
+    columnSearch: WeakMap<SchemaColumn, string>;
+    projectionSearch: WeakMap<SchemaProjection, string>;
+    skipIndexSearch: WeakMap<SchemaSkipIndex, string>;
+    dictionarySearch: WeakMap<SchemaDictionary, string>;
+}
+
+function cachedIncludes<T extends object>(
+    cache: WeakMap<T, string>,
+    value: T,
+    query: string,
+    makeText: () => string,
+): boolean {
+    let text = cache.get(value);
+    if (text === undefined) {
+        text = makeText();
+        cache.set(value, text);
+    }
+    return text.includes(query);
+}
+
+/** Build the stable selectable-object index once per schema, before applying search queries. */
+export function indexObjectExplorer(schema: Schema | undefined): ObjectExplorerIndex | undefined {
+    if (!schema) return undefined;
 
     const columnsByTable = new Map<string, SchemaColumn[]>();
     for (const column of schema.columns) {
@@ -195,6 +216,57 @@ export function buildObjectExplorer(
         columns.push(column);
         columnsByTable.set(tableKey, columns);
     }
+
+    const selectionById = new Map<string, ExplorerSelection>();
+    const relationKinds = new Map<SchemaTable, ExplorerRelationKind>();
+    for (const table of schema.tables) {
+        const columns = columnsByTable.get(key(table.database, table.name)) ?? [];
+        const kind = relationKind(table);
+        relationKinds.set(table, kind);
+        const id = explorerRelationId(table.database, table.name);
+        selectionById.set(id, {
+            id,
+            kind: 'relation',
+            relationKind: kind,
+            table,
+            columns,
+        });
+        addRelationChildSelections(selectionById, table, columns);
+    }
+    for (const dictionary of schema.dictionaries ?? []) {
+        const id = explorerDictionaryId(dictionary.database, dictionary.name);
+        selectionById.set(id, { id, kind: 'dictionary', dictionary });
+    }
+
+    return {
+        schema,
+        columnsByTable,
+        selectionById,
+        relationKinds,
+        relationSearch: new WeakMap(),
+        columnSearch: new WeakMap(),
+        projectionSearch: new WeakMap(),
+        skipIndexSearch: new WeakMap(),
+        dictionarySearch: new WeakMap(),
+    };
+}
+
+export function buildIndexedObjectExplorer(
+    index: ObjectExplorerIndex | undefined,
+    search: string,
+    preferredDatabase = '',
+): ObjectExplorerModel {
+    const query = search.trim().toLowerCase();
+    if (!index)
+        return {
+            query,
+            databases: [],
+            totalObjects: 0,
+            visibleObjects: 0,
+            selectionById: new Map(),
+        };
+
+    const { schema, columnsByTable, selectionById } = index;
 
     type MutableDatabase = {
         id: string;
@@ -221,37 +293,45 @@ export function buildObjectExplorer(
 
     for (const table of schema.tables) {
         const columns = columnsByTable.get(key(table.database, table.name)) ?? [];
-        const kind = relationKind(table);
+        const kind = index.relationKinds.get(table)!;
         const relationId = explorerRelationId(table.database, table.name);
-        selectionById.set(relationId, {
-            id: relationId,
-            kind: 'relation',
-            relationKind: kind,
-            table,
-            columns,
-        });
-        addRelationChildSelections(selectionById, table, columns);
 
-        const relationMatches = !query || relationSearchText(table).includes(query);
+        const relationMatches =
+            !query ||
+            cachedIncludes(index.relationSearch, table, query, () => relationSearchText(table));
         const matchedColumns = query
             ? columns.filter(column =>
-                  `${column.name} ${column.type} ${column.defaultKind} ${column.comment}`
-                      .toLowerCase()
-                      .includes(query),
+                  cachedIncludes(
+                      index.columnSearch,
+                      column,
+                      query,
+                      () =>
+                          `${column.name} ${column.type} ${column.defaultKind} ${column.comment}`
+                              .toLowerCase(),
+                  ),
               )
             : [];
         const matchedProjections = query
             ? (table.projections ?? []).filter(projection =>
-                  `${projection.name} ${projection.type} ${projection.sortingKey}`
-                      .toLowerCase()
-                      .includes(query),
+                  cachedIncludes(
+                      index.projectionSearch,
+                      projection,
+                      query,
+                      () =>
+                          `${projection.name} ${projection.type} ${projection.sortingKey}`.toLowerCase(),
+                  ),
               )
             : [];
         const matchedSkipIndexes = query
-            ? (table.skipIndexes ?? []).filter(index =>
-                  `${index.name} ${index.type} ${index.expression} ${index.granularity}`
-                      .toLowerCase()
-                      .includes(query),
+            ? (table.skipIndexes ?? []).filter(indexItem =>
+                  cachedIncludes(
+                      index.skipIndexSearch,
+                      indexItem,
+                      query,
+                      () =>
+                          `${indexItem.name} ${indexItem.type} ${indexItem.expression} ${indexItem.granularity}`
+                              .toLowerCase(),
+                  ),
               )
             : [];
         if (
@@ -278,9 +358,13 @@ export function buildObjectExplorer(
     }
 
     for (const dictionary of schema.dictionaries ?? []) {
-        const id = explorerDictionaryId(dictionary.database, dictionary.name);
-        selectionById.set(id, { id, kind: 'dictionary', dictionary });
-        if (query && !dictionarySearchText(dictionary).includes(query)) continue;
+        if (
+            query &&
+            !cachedIncludes(index.dictionarySearch, dictionary, query, () =>
+                dictionarySearchText(dictionary),
+            )
+        )
+            continue;
         ensureDatabase(dictionary.database).dictionaries.push(dictionary);
     }
 
@@ -306,6 +390,14 @@ export function buildObjectExplorer(
     const totalObjects = schema.tables.length + (schema.dictionaries?.length ?? 0);
     const visibleObjects = result.reduce((sum, database) => sum + database.visibleObjectCount, 0);
     return { query, databases: result, totalObjects, visibleObjects, selectionById };
+}
+
+export function buildObjectExplorer(
+    schema: Schema | undefined,
+    search: string,
+    preferredDatabase = '',
+): ObjectExplorerModel {
+    return buildIndexedObjectExplorer(indexObjectExplorer(schema), search, preferredDatabase);
 }
 
 export function tableQuerySql(
