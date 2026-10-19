@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+    buildIndexedObjectExplorer,
     buildObjectExplorer,
+    indexObjectExplorer,
     explorerColumnId,
     explorerDictionaryId,
     explorerProjectionId,
@@ -152,6 +154,47 @@ test('Object explorer keeps stable selectable IDs for every navigable object', (
         model.selectionById.get(explorerDictionaryId('analytics', 'campaign_lookup'))?.kind,
         'dictionary',
     );
+});
+
+test('Indexed object search preserves search results and selection IDs across queries', () => {
+    const index = indexObjectExplorer(schema);
+    assert.ok(index);
+    const unfiltered = buildIndexedObjectExplorer(index, '', 'analytics');
+    for (const query of [
+        '',
+        'events',
+        'customer email',
+        'by_day',
+        'tenant_bloom',
+        'campaign_lookup',
+        'analytics',
+        'missing',
+    ]) {
+        const indexed = buildIndexedObjectExplorer(index, query, 'analytics');
+        assert.deepEqual(indexed, buildObjectExplorer(schema, query, 'analytics'));
+        assert.strictEqual(indexed.selectionById, unfiltered.selectionById);
+    }
+    assert.equal(buildIndexedObjectExplorer(index, '', 'system').databases[0]?.name, 'system');
+});
+
+test('Indexed object search lazily reuses normalized metadata between searches', () => {
+    let metadataReads = 0;
+    const table = {
+        ...schema.tables[0],
+        get orderBy() {
+            metadataReads++;
+            return '(tenant_id, day)';
+        },
+    };
+    const index = indexObjectExplorer({ ...schema, tables: [table] });
+    assert.ok(index);
+
+    buildIndexedObjectExplorer(index, '', 'analytics');
+    assert.equal(metadataReads, 0);
+    assert.equal(buildIndexedObjectExplorer(index, 'tenant', 'analytics').visibleObjects, 1);
+    assert.equal(metadataReads, 1);
+    assert.equal(buildIndexedObjectExplorer(index, 'day', 'analytics').visibleObjects, 1);
+    assert.equal(metadataReads, 1);
 });
 
 test('Generated table SQL is quoted, bounded, and uses explicit columns when practical', () => {
