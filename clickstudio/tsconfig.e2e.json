@@ -16,6 +16,7 @@
   "include": [
     "tests/e2e/**/*.ts",
     "playwright.config.ts",
-    "playwright.preview.config.ts"
+    "playwright.preview.config.ts",
+    "playwright.memory.config.ts"
   ]
 }

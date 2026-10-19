@@ -1,0 +1,113 @@
+name: ClickStudio memory
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * *"
+  push:
+    paths:
+      - "clickstudio/benchmarks/**"
+      - "clickstudio/tests/e2e/memory-soak.spec.ts"
+      - "clickstudio/playwright.memory.config.ts"
+      - "clickstudio/src/backend/database/clickhouse/result-stream.ts"
+      - "clickstudio/src/backend/queries/execution/**"
+      - "clickstudio/src/backend/system/store.ts"
+      - "clickstudio/src/shared/queries/results/**"
+      - "clickstudio/src/frontend/browser/useScopedValue.ts"
+      - "clickstudio/src/frontend/queries/results/**"
+      - "clickstudio/src/frontend/queries/execution/**"
+      - "clickstudio/src/frontend/api/browser-workspace-api.ts"
+      - "clickstudio/package.json"
+      - "clickstudio/package-lock.json"
+      - "clickstudio/tsconfig.*.json"
+      - ".github/workflows/clickstudio-memory.yml"
+  pull_request:
+    paths:
+      - "clickstudio/benchmarks/**"
+      - "clickstudio/tests/e2e/memory-soak.spec.ts"
+      - "clickstudio/playwright.memory.config.ts"
+      - "clickstudio/src/backend/database/clickhouse/result-stream.ts"
+      - "clickstudio/src/backend/queries/execution/**"
+      - "clickstudio/src/backend/system/store.ts"
+      - "clickstudio/src/shared/queries/results/**"
+      - "clickstudio/src/frontend/browser/useScopedValue.ts"
+      - "clickstudio/src/frontend/queries/results/**"
+      - "clickstudio/src/frontend/queries/execution/**"
+      - "clickstudio/src/frontend/api/browser-workspace-api.ts"
+      - "clickstudio/package.json"
+      - "clickstudio/package-lock.json"
+      - "clickstudio/tsconfig.*.json"
+      - ".github/workflows/clickstudio-memory.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: clickstudio-memory-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: clickstudio
+
+jobs:
+  core-memory:
+    name: Memory guards and report
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: clickstudio/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Check benchmark formatting
+        run: npx prettier --check 'benchmarks/memory-run.mjs' 'benchmarks/tests/memory-guards.test.mjs'
+      - name: Build memory fixtures
+        run: npm run bench:build
+      - name: Enforce bounded streams and large-cell cleanup
+        run: node --expose-gc --test benchmarks/tests/memory-guards.test.mjs
+      - name: Measure sampled memory (report only)
+        run: node --expose-gc benchmarks/memory-run.mjs --output=benchmarks/results/memory-ci.json
+      - name: Preserve memory diagnostics
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: clickstudio-core-memory
+          path: clickstudio/benchmarks/results/memory-ci.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  browser-memory:
+    name: Browser memory lifecycle
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MEMORY_SOAK_CYCLES: ${{ github.event_name == 'schedule' && '60' || '8' }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: clickstudio/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps --only-shell chromium
+      - name: Browser lifecycle and report-only heap samples
+        run: npm run test:e2e:memory
+      - name: Preserve browser memory diagnostics
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: clickstudio-browser-memory
+          path: |
+            clickstudio/benchmarks/results/browser-memory.json
+            clickstudio/playwright-report
+            clickstudio/test-results
+          if-no-files-found: warn
+          retention-days: 14

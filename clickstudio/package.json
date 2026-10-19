@@ -29,7 +29,7 @@
     "test:workspace": "tsc -p tsconfig.workspace.json && node --test tests/workspace/*.test.mjs",
     "bench:build": "tsc -p tsconfig.core.json && tsc -p tsconfig.workspace.json",
     "bench": "npm run bench:build && node benchmarks/run.mjs",
-    "bench:test": "node --test benchmarks/tests/*.test.mjs",
+    "bench:test": "tsc -p tsconfig.core.json && node --test benchmarks/tests/*.test.mjs",
     "bench:compare": "node benchmarks/compare.mjs",
     "coverage:core": "tsc -p tsconfig.core.json && node --test --experimental-test-coverage --test-coverage-lines=70 --test-coverage-functions=70 --test-coverage-branches=60 --test-coverage-include='.core-build/src/backend/**/*.js' --test-coverage-include='.core-build/src/shared/**/*.js' --test-coverage-include='.core-build/src/frontend/**/*.js' tests/core/*.test.mjs",
     "coverage:workspace": "tsc -p tsconfig.workspace.json && node --test --experimental-test-coverage --test-coverage-lines=70 --test-coverage-functions=65 --test-coverage-branches=60 --test-coverage-include='.workspace-build/src/frontend/**/*.js' --test-coverage-include='.workspace-build/src/shared/queries/execution/settings.js' tests/workspace/*.test.mjs",
@@ -44,7 +44,10 @@
     "test:e2e:styles": "playwright test tests/e2e/css-appearance.spec.ts",
     "test:e2e:styles:update": "node scripts/update-style-reference.mjs",
     "format": "prettier --write \"**/*.{js,mjs,cjs,ts,tsx,css}\"",
-    "format:check": "prettier --check \"**/*.{js,mjs,cjs,ts,tsx,css}\""
+    "format:check": "prettier --check \"**/*.{js,mjs,cjs,ts,tsx,css}\"",
+    "test:memory": "npm run bench:build && node --expose-gc --test benchmarks/tests/memory-guards.test.mjs",
+    "bench:memory": "npm run bench:build && node --expose-gc benchmarks/memory-run.mjs",
+    "test:e2e:memory": "playwright test --config playwright.memory.config.ts"
   },
   "dependencies": {
     "@clickhouse/click-ui": "^0.12.0",
