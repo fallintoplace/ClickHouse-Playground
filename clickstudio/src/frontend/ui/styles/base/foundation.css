@@ -42,6 +42,7 @@
   --font-size-scale-26: 26px;
   --font-size-scale-28: 28px;
   --font-size-scale-42: 42px;
+  --font-size-scale-48: 48px;
   --font-size-control: var(--font-size-scale-10);
   --font-size-control-small: var(--font-size-scale-8);
   --font-size-control-compact: var(--font-size-scale-9);

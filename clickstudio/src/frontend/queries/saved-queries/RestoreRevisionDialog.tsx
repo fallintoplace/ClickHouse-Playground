@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Button } from '../../ui/components/primitives';
+import { DialogFooter, DialogHeader } from '../../ui/components/DialogChrome';
 import { Icon } from '../../ui/components/icons';
 
 export function RestoreRevisionDialog({
@@ -56,24 +57,28 @@ export function RestoreRevisionDialog({
         >
             {revision !== undefined && (
                 <div className="restore-revision-content">
-                    <div className="restore-revision-topline">
+                    <DialogHeader
+                        className="restore-revision-topline"
+                        closeLabel={copy.close}
+                        closeClassName="restore-revision-close button-base button-ghost"
+                        onClose={onClose}
+                    >
                         <span>{copy.eyebrow}</span>
-                        <Button
-                            variant="ghost"
-                            className="restore-revision-close"
-                            aria-label={copy.close}
-                            onClick={onClose}
-                        >
-                            <Icon name="close" />
-                        </Button>
-                    </div>
+                    </DialogHeader>
                     <div className="restore-revision-title-row">
                         <span className="restore-revision-icon">
                             <Icon name="history" />
                         </span>
                         <div>
-                            <h2 id="restore-revision-title">{copy.title(revision)}</h2>
-                            <p id="restore-revision-description">{copy.description}</p>
+                            <h2 id="restore-revision-title" className="dialog-chrome-title">
+                                {copy.title(revision)}
+                            </h2>
+                            <p
+                                id="restore-revision-description"
+                                className="dialog-chrome-description"
+                            >
+                                {copy.description}
+                            </p>
                         </div>
                     </div>
                     <div className="restore-revision-summary">
@@ -81,14 +86,14 @@ export function RestoreRevisionDialog({
                         <strong>{copy.version(revision)}</strong>
                     </div>
                     <p className="restore-revision-history-note">{copy.history}</p>
-                    <div className="restore-revision-actions">
+                    <DialogFooter className="restore-revision-actions">
                         <Button variant="secondary" onClick={onClose}>
                             {copy.cancel}
                         </Button>
                         <Button variant="primary" onClick={onConfirm}>
                             {copy.confirm(revision)}
                         </Button>
-                    </div>
+                    </DialogFooter>
                 </div>
             )}
         </dialog>

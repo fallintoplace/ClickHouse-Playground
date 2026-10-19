@@ -4,6 +4,7 @@ import { download } from '../../api/client';
 import { useDialogFocus } from '../../ui/focus/useDialogFocus';
 import { Icon } from '../../ui/components/icons';
 import { Button } from '../../ui/components/primitives';
+import { DialogHeader } from '../../ui/components/DialogChrome';
 import { copy } from '../../ui/copy';
 import { isLargeCellReference } from '../../../shared/queries/results/large-cells';
 import { downloadLargeCell, fetchLargeCellText } from './large-cell-actions';
@@ -113,30 +114,30 @@ export function CellInspector({ cell, onClose }: { cell: InspectedCell; onClose:
                 if (event.target === dialog.current) onClose();
             }}
         >
-            <header className="transfer-dialog-header">
+            <DialogHeader
+                className="transfer-dialog-header"
+                closeLabel="Close cell inspector"
+                closeClassName="button-base button-ghost"
+                onClose={onClose}
+                closeRef={closeButton}
+            >
                 <div>
-                    <h2 id="result-cell-inspector-title" className="transfer-dialog-title">
+                    <h2
+                        id="result-cell-inspector-title"
+                        className="transfer-dialog-title dialog-chrome-title"
+                    >
                         {cell.columnName}
                     </h2>
                     <p
                         id="result-cell-inspector-description"
-                        className="transfer-dialog-description"
+                        className="transfer-dialog-description dialog-chrome-description"
                     >
                         Column {cell.columnIndex + 1} · Row {cell.rowNumber} · {cell.columnType}
                         {largeCell &&
                             ` · Large value · ${(largeCell.bytes / 1_000_000).toFixed(1)} MB`}
                     </p>
                 </div>
-                <button
-                    type="button"
-                    ref={closeButton}
-                    className="button-base button-ghost"
-                    aria-label="Close cell inspector"
-                    onClick={onClose}
-                >
-                    <Icon name="close" />
-                </button>
-            </header>
+            </DialogHeader>
             <div className="result-cell-inspector-actions">
                 <Button variant="secondary" onClick={() => void copyValue()}>
                     <Icon name="copy" />

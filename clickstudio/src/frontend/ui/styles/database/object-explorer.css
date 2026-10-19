@@ -1067,7 +1067,7 @@
   overflow-wrap: anywhere;
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: clamp(15px, 1.35vw, 18px);
+  font-size: clamp(var(--font-size-scale-15), 1.35vw, var(--font-size-scale-18));
   font-weight: 620;
   letter-spacing: -0.015em;
   line-height: 1.2;
@@ -1079,7 +1079,7 @@
   overflow-wrap: anywhere;
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: clamp(15px, 1.35vw, 18px);
+  font-size: clamp(var(--font-size-scale-15), 1.35vw, var(--font-size-scale-18));
   font-weight: 620;
   letter-spacing: -0.015em;
   line-height: 1.2;

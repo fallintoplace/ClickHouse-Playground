@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Button } from '../../ui/components/primitives';
+import { DialogHeader } from '../../ui/components/DialogChrome';
 import { Icon } from '../../ui/components/icons';
 
 export function ExportDialog({
@@ -46,19 +46,23 @@ export function ExportDialog({
             }}
             className="transfer-dialog"
         >
-            <header className="transfer-dialog-header">
+            <DialogHeader
+                className="transfer-dialog-header"
+                closeLabel="Close export options"
+                onClose={onClose}
+            >
                 <div>
-                    <h2 id="export-dialog-title" className="transfer-dialog-title">
+                    <h2
+                        id="export-dialog-title"
+                        className="transfer-dialog-title dialog-chrome-title"
+                    >
                         Export
                     </h2>
-                    <p className="transfer-dialog-description">
+                    <p className="transfer-dialog-description dialog-chrome-description">
                         Choose the query or its result rows.
                     </p>
                 </div>
-                <Button aria-label="Close export options" onClick={onClose}>
-                    Close
-                </Button>
-            </header>
+            </DialogHeader>
             <div className="transfer-dialog-body grid gap-2 overflow-y-auto">
                 <button
                     type="button"

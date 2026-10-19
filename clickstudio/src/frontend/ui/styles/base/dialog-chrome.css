@@ -1,0 +1,129 @@
+/* Keep established feature chrome dimensions for existing dialog snapshots.
+   New dialog variants share the header, footer, and X components in DialogChrome. */
+
+.cloud-connect-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
+  background: var(--panel);
+}
+
+.cloud-connect-dialog .dialog-chrome-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-raised);
+}
+
+.cloud-connect-dialog .dialog-chrome-title {
+  margin: 0;
+  font-size: var(--font-size-scale-18);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.4;
+}
+
+.cloud-connect-dialog .cloud-connect-description {
+  padding: 16px 24px 0;
+  font-size: var(--font-size-scale-12);
+}
+
+.cloud-connect-dialog .cloud-connect-form {
+  min-height: 0;
+  padding: 16px 24px 0;
+  overflow-y: auto;
+}
+
+.cloud-connect-dialog .dialog-chrome-footer {
+  gap: 10px;
+  margin: 8px -24px 0;
+  padding: 16px 24px;
+  border-top: 1px solid var(--line);
+  background: var(--panel-raised);
+}
+
+/* Export and cell inspection use the same 32px X treatment as creation dialogs. */
+.cloud-connect-dialog .dialog-chrome-close,
+.transfer-dialog > .dialog-chrome-header > .dialog-chrome-close {
+  display: grid;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  flex: none;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease;
+}
+
+.cloud-connect-dialog .dialog-chrome-close svg,
+.transfer-dialog > .dialog-chrome-header > .dialog-chrome-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.cloud-connect-dialog .dialog-chrome-close:hover:not(:disabled),
+.transfer-dialog > .dialog-chrome-header > .dialog-chrome-close:hover:not(:disabled) {
+  border-color: var(--line-bright);
+  background: var(--control-hover);
+  color: var(--text);
+}
+
+.cloud-connect-dialog .dialog-chrome-close:disabled,
+.transfer-dialog > .dialog-chrome-header > .dialog-chrome-close:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* Keep import's established header and footer styles unchanged. */
+.transfer-dialog:not(.result-cell-inspector):not(.import-wizard-dialog) > .dialog-chrome-header {
+  padding: 20px 24px;
+  background: var(--panel-raised);
+}
+
+.transfer-dialog:not(.result-cell-inspector) > .dialog-chrome-header .dialog-chrome-title {
+  font-size: var(--font-size-scale-18);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .cloud-connect-dialog {
+    padding: 0;
+  }
+
+  .cloud-connect-dialog .dialog-chrome-header,
+  .transfer-dialog:not(.result-cell-inspector):not(.import-wizard-dialog) > .dialog-chrome-header {
+    padding: 16px;
+  }
+
+  .cloud-connect-dialog .cloud-connect-description {
+    padding: 16px 16px 0;
+  }
+
+  .cloud-connect-dialog .cloud-connect-form {
+    padding: 16px 16px 0;
+  }
+
+  .cloud-connect-dialog .dialog-chrome-footer {
+    margin-inline: -16px;
+    padding: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cloud-connect-dialog .dialog-chrome-close,
+  .transfer-dialog > .dialog-chrome-header > .dialog-chrome-close {
+    transition: none;
+  }
+}
