@@ -25,7 +25,7 @@ export const sqlEditorTheme = (dark: boolean) =>
             },
             '.cm-scroller': {
                 fontFamily: 'var(--font-mono)',
-                fontSize: 'var(--font-size-scale-12)',
+                fontSize: 'var(--font-size-scale-12, 12px)',
                 lineHeight: '1.55',
                 fontVariantLigatures: 'none',
                 fontVariantNumeric: 'tabular-nums',
