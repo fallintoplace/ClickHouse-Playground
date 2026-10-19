@@ -302,7 +302,13 @@ for (const theme of ['Dark', 'Light']) {
             await expect(dialog).toHaveClass(/creation-dialog/);
             await expect(dialog).toHaveCSS('border-radius', '4px');
             await expect(dialog.locator('.creation-dialog-title')).toHaveCSS('font-size', '18px');
-            await expect(dialog.locator('.creation-dialog-close')).toHaveCSS('width', '32px');
+            const close = dialog.locator('.dialog-chrome-close');
+            await expect(close).toHaveCount(1);
+            await expect(close).toHaveText('');
+            await expect(close.locator('svg')).toBeVisible();
+            await expect(close).toHaveCSS('width', '32px');
+            await expect(dialog.locator('.dialog-chrome-header')).toHaveCount(1);
+            await expect(dialog.locator('.dialog-chrome-footer')).toHaveCount(1);
             await expect(dialog.locator('.creation-dialog-footer')).toHaveCSS(
                 'padding',
                 '16px 24px',

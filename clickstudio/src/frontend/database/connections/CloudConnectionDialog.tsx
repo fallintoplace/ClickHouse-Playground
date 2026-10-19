@@ -9,6 +9,7 @@ import {
 } from './cloud-connection';
 import type { Connected } from '../../workspace/workspace-types';
 import { Button, Spinner } from '../../ui/components/primitives';
+import { DialogFooter, DialogHeader } from '../../ui/components/DialogChrome';
 import { Icon } from '../../ui/components/icons';
 import { OverlayPortal } from '../../ui/components/OverlayPortal';
 import { useDialogFocus } from '../../ui/focus/useDialogFocus';
@@ -81,20 +82,19 @@ export function CloudConnectionDialog({
                     aria-describedby="cloud-connect-description"
                     className="cloud-connect-dialog"
                 >
-                    <header className="cloud-connect-heading">
+                    <DialogHeader
+                        className="cloud-connect-heading"
+                        closeLabel="Close connection dialog"
+                        closeDisabled={busy}
+                        onClose={onClose}
+                    >
                         <div>
                             <span className="eyebrow">CLICKHOUSE CLOUD</span>
-                            <h2 id="cloud-connect-title">Connect to your service</h2>
+                            <h2 id="cloud-connect-title" className="dialog-chrome-title">
+                                Connect to your service
+                            </h2>
                         </div>
-                        <Button
-                            variant="ghost"
-                            aria-label="Close connection dialog"
-                            disabled={busy}
-                            onClick={onClose}
-                        >
-                            <Icon name="close" />
-                        </Button>
-                    </header>
+                    </DialogHeader>
                     <p id="cloud-connect-description" className="cloud-connect-description">
                         Use the HTTPS host and user credentials from the service’s Connect dialog.
                         ClickStudio checks the connection before opening the workspace.
@@ -163,7 +163,7 @@ export function CloudConnectionDialog({
                                 {error}
                             </div>
                         )}
-                        <div className="cloud-connect-actions">
+                        <DialogFooter className="cloud-connect-actions">
                             <Button variant="secondary" disabled={busy} onClick={onClose}>
                                 Cancel
                             </Button>
@@ -176,7 +176,7 @@ export function CloudConnectionDialog({
                                     'Connect service'
                                 )}
                             </Button>
-                        </div>
+                        </DialogFooter>
                     </form>
                 </section>
             </div>

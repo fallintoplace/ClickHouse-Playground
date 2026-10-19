@@ -11,7 +11,7 @@ import {
 } from 'react';
 import type { SchemaColumn, SchemaTable } from '../../../shared/database/schema/types';
 import { api, apiResponses, message, post, RequestError } from '../../api/client';
-import { Icon } from '../../ui/components/icons';
+import { DialogFooter, DialogHeader } from '../../ui/components/DialogChrome';
 import { InsertRowFields } from './InsertRowFields';
 import { insertRowValidationErrors, isOptionalInsertRowColumn } from './insert-row-validation';
 import {
@@ -620,25 +620,25 @@ function renderInsertRowDialog({
             className="table-action-dialog insert-row-dialog m-auto max-h-[min(90dvh,800px)] w-[min(760px,calc(100vw-2rem))] max-w-none overflow-hidden border border-[var(--line-bright)] bg-[var(--panel)] p-0 text-[var(--text)] shadow-[var(--shadow-dialog)]"
         >
             <div className="table-action-dialog-layout">
-                <header className="table-action-dialog-header">
+                <DialogHeader
+                    className="table-action-dialog-header"
+                    closeLabel="Close insert row"
+                    closeClassName="table-action-dialog-close"
+                    closeDisabled={!canClose}
+                    onClose={close}
+                >
                     <div className="min-w-0">
-                        <h2 id="insert-row-title" className="table-action-dialog-title">
+                        <h2
+                            id="insert-row-title"
+                            className="table-action-dialog-title dialog-chrome-title"
+                        >
                             Insert row
                         </h2>
-                        <p className="table-action-dialog-description">
+                        <p className="table-action-dialog-description dialog-chrome-description">
                             Add one row to <code>{name}</code>.
                         </p>
                     </div>
-                    <button
-                        type="button"
-                        aria-label="Close insert row"
-                        disabled={!canClose}
-                        onClick={close}
-                        className="table-action-dialog-close"
-                    >
-                        <Icon name="close" />
-                    </button>
-                </header>
+                </DialogHeader>
                 <main className="insert-row-content table-action-dialog-content min-h-0 flex-1 overflow-y-auto">
                     {loading && (
                         <p role="status" className="text-sm text-[var(--text-soft)]">
@@ -752,7 +752,7 @@ function renderInsertRowDialog({
                         </p>
                     )}
                 </main>
-                <footer className="table-action-dialog-footer">
+                <DialogFooter className="table-action-dialog-footer">
                     {step === 'edit' && allowed && (
                         <button
                             type="submit"
@@ -798,7 +798,7 @@ function renderInsertRowDialog({
                             Done
                         </button>
                     )}
-                </footer>
+                </DialogFooter>
             </div>
         </dialog>
     );

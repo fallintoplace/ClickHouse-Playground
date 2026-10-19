@@ -4,6 +4,7 @@ import {
     IMPORT_ROW_LIMIT_LABEL,
 } from '../../../../shared/database/imports/limits';
 import { Button } from '../../../ui/components/primitives';
+import { DialogFooter } from '../../../ui/components/DialogChrome';
 import { formatImportColumnCount } from '../state/import-wizard-model';
 import type { useImportWizardController } from '../useImportWizardController';
 
@@ -160,7 +161,7 @@ export function ImportWizardFooter({
         return 'Import rows';
     };
     return (
-        <footer className="import-wizard-footer">
+        <DialogFooter className="import-wizard-footer">
             <span className="import-wizard-footer-note">{getStepHint()}</span>
             <div className="flex items-center gap-2">
                 {importKind === 'query' && (
@@ -245,6 +246,6 @@ export function ImportWizardFooter({
                     </>
                 )}
             </div>
-        </footer>
+        </DialogFooter>
     );
 }

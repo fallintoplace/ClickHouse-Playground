@@ -40,6 +40,8 @@ for (const theme of ['Light', 'Dark']) {
         const close = dialog.getByRole('button', { name: 'Close import wizard', exact: true });
         await expect(close.locator('svg')).toBeVisible();
         await expect(close).toHaveText('');
+        await expect(dialog.locator('.dialog-chrome-header')).toHaveCount(1);
+        await expect(dialog.locator('.dialog-chrome-footer')).toHaveCount(1);
         const target = dialog.getByRole('combobox', { name: 'Import target table', exact: true });
         await target.press('ArrowDown');
         const tableSearch = dialog.getByRole('searchbox', { name: 'Search import target table' });
