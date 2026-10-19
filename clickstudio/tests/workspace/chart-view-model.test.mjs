@@ -1003,7 +1003,6 @@ test('Preparing a chart preserves frozen result data and saved configuration', (
     assert.equal(view.result, data);
 });
 
-
 test('ASCII chart labels retain their previous wrapping and geometry', () => {
     const cases = [
         ['ABCDEFGHIJK', ['ABCDE', 'FGHIJK']],
