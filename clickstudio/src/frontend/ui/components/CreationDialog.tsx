@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, type FormEvent, type ReactNode, type RefObject } from 'react';
 import { useDialogFocus } from '../focus/useDialogFocus';
-import { Icon } from './icons';
+import { DialogFooter, DialogHeader } from './DialogChrome';
 import { cx } from './primitives';
 
 function outsideDialog(dialog: HTMLDialogElement, x: number, y: number) {
@@ -75,29 +75,32 @@ export function CreationDialog({
             }}
         >
             <form className="creation-dialog-layout" onSubmit={onSubmit} aria-busy={busy}>
-                <header className="creation-dialog-header">
+                <DialogHeader
+                    className="creation-dialog-header"
+                    closeLabel={closeLabel}
+                    closeDisabled={busy}
+                    closeClassName="creation-dialog-close"
+                    onClose={onClose}
+                >
                     <div className="creation-dialog-heading">
-                        <h2 id={`${id}-title`} className="creation-dialog-title">
+                        <h2
+                            id={`${id}-title`}
+                            className="creation-dialog-title dialog-chrome-title"
+                        >
                             {title}
                         </h2>
-                        <p id={`${id}-description`} className="creation-dialog-description">
+                        <p
+                            id={`${id}-description`}
+                            className="creation-dialog-description dialog-chrome-description"
+                        >
                             {description}
                         </p>
                     </div>
-                    <button
-                        type="button"
-                        className="creation-dialog-close"
-                        aria-label={closeLabel}
-                        disabled={busy}
-                        onClick={onClose}
-                    >
-                        <Icon name="close" />
-                    </button>
-                </header>
+                </DialogHeader>
                 <fieldset className="creation-dialog-content" disabled={busy}>
                     {children}
                 </fieldset>
-                <footer className="creation-dialog-footer">{footer}</footer>
+                <DialogFooter className="creation-dialog-footer">{footer}</DialogFooter>
             </form>
         </dialog>
     );

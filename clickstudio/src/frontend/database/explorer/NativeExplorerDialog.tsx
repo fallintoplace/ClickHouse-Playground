@@ -1,6 +1,5 @@
 import { useRef, type ReactNode } from 'react';
-import { Button } from '../../ui/components/primitives';
-import { Icon } from '../../ui/components/icons';
+import { DialogHeader } from '../../ui/components/DialogChrome';
 import { useDialogFocus } from '../../ui/focus/useDialogFocus';
 
 export function NativeExplorerDialog({
@@ -38,22 +37,18 @@ export function NativeExplorerDialog({
                 aria-label={title}
                 className={`parts-explorer-dialog native-dialog${className ? ` ${className}` : ''}`}
             >
-                <header className="native-heading">
+                <DialogHeader
+                    className="native-heading"
+                    closeLabel={closeLabel}
+                    closeClassName="native-dialog-close"
+                    onClose={onClose}
+                >
                     <div>
                         <span className="eyebrow">{eyebrow}</span>
-                        <h2>{title}</h2>
-                        {description && <p>{description}</p>}
+                        <h2 className="dialog-chrome-title">{title}</h2>
+                        {description && <p className="dialog-chrome-description">{description}</p>}
                     </div>
-                    <Button
-                        variant="ghost"
-                        className="native-dialog-close"
-                        aria-label={closeLabel}
-                        title={closeLabel}
-                        onClick={onClose}
-                    >
-                        <Icon name="close" />
-                    </Button>
-                </header>
+                </DialogHeader>
                 {children}
             </section>
         </div>

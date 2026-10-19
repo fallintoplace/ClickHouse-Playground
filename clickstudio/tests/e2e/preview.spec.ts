@@ -389,6 +389,10 @@ test('Static production preview loads the native parser and exports retained sam
 
     await page.getByRole('button', { name: 'Export', exact: true }).click();
     const exportDialog = page.getByRole('dialog', { name: 'Export' });
+    const exportClose = exportDialog.getByRole('button', { name: 'Close export options' });
+    await expect(exportDialog.locator('.dialog-chrome-header')).toHaveCount(1);
+    await expect(exportClose).toHaveText('');
+    await expect(exportClose.locator('svg')).toBeVisible();
     const [download] = await Promise.all([
         page.waitForEvent('download'),
         exportDialog.getByRole('button', { name: /Export retained rows/ }).click(),

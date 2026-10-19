@@ -1,5 +1,6 @@
 import { importSteps } from '../state/import-wizard-model';
 import type { useImportWizardController } from '../useImportWizardController';
+import { DialogHeader } from '../../../ui/components/DialogChrome';
 import { Icon } from '../../../ui/components/icons';
 
 export function ImportWizardHeader({
@@ -48,31 +49,33 @@ export function ImportWizardHeader({
         return 'Preview, map, and review rows before inserting them.';
     };
     return (
-        <header className="import-wizard-header transfer-dialog-header">
+        <DialogHeader
+            className="import-wizard-header transfer-dialog-header"
+            closeLabel="Close import wizard"
+            closeClassName="creation-dialog-close"
+            closeDisabled={
+                openingQuery ||
+                (importKind === 'rows' &&
+                    !browserCloudImport &&
+                    (Boolean(busy) || job?.status === 'running'))
+            }
+            onClose={() => (importKind === 'query' ? closeQueryMode() : void closeWizard())}
+        >
             <div className="min-w-0">
                 <div className="transfer-dialog-heading">
-                    <h2 id="import-wizard-title" className="transfer-dialog-title">
+                    <h2
+                        id="import-wizard-title"
+                        className="transfer-dialog-title dialog-chrome-title"
+                    >
                         Import data
                     </h2>
                     <span className="transfer-dialog-context">{getImportSourceLabel()}</span>
                 </div>
-                <p className="transfer-dialog-description">{getImportDescription()}</p>
+                <p className="transfer-dialog-description dialog-chrome-description">
+                    {getImportDescription()}
+                </p>
             </div>
-            <button
-                type="button"
-                className="creation-dialog-close"
-                aria-label="Close import wizard"
-                disabled={
-                    openingQuery ||
-                    (importKind === 'rows' &&
-                        !browserCloudImport &&
-                        (Boolean(busy) || job?.status === 'running'))
-                }
-                onClick={() => (importKind === 'query' ? closeQueryMode() : void closeWizard())}
-            >
-                <Icon name="close" />
-            </button>
-        </header>
+        </DialogHeader>
     );
 }
 

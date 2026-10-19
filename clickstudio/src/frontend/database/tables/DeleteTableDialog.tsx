@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { tableDeletionConfirmation } from '../../../shared/database/tables/delete-table';
 import type { SchemaTable } from '../../../shared/database/schema/types';
 import { api, apiResponses } from '../../api/client';
-import { Icon } from '../../ui/components/icons';
+import { DialogFooter, DialogHeader } from '../../ui/components/DialogChrome';
 import {
     CLICKHOUSE_CLOUD_CONNECTION_ID,
     dropClickHouseCloudTable,
@@ -71,22 +71,22 @@ export function DeleteTableDialog({ connectionId, table, onClose, onDeleted }: P
             }}
             className="table-action-dialog m-auto w-[min(440px,calc(100vw-2rem))] max-w-none overflow-hidden rounded-2xl border border-[var(--line-bright)] bg-[var(--panel)] p-0 text-[var(--text)] shadow-[var(--shadow-dialog)]"
         >
-            <header className="table-action-dialog-header">
+            <DialogHeader
+                className="table-action-dialog-header"
+                closeLabel="Close delete table"
+                closeClassName="table-action-dialog-close"
+                closeDisabled={busy}
+                onClose={onClose}
+            >
                 <div className="min-w-0">
-                    <h2 id="delete-table-title" className="table-action-dialog-title">
+                    <h2
+                        id="delete-table-title"
+                        className="table-action-dialog-title dialog-chrome-title"
+                    >
                         Delete table
                     </h2>
                 </div>
-                <button
-                    type="button"
-                    aria-label="Close delete table"
-                    disabled={busy}
-                    onClick={onClose}
-                    className="table-action-dialog-close"
-                >
-                    <Icon name="close" />
-                </button>
-            </header>
+            </DialogHeader>
             <main className="table-action-dialog-content grid gap-3 px-4 py-3 sm:px-5 sm:py-4">
                 <p id="delete-table-description" className="text-sm text-[var(--text-soft)]">
                     Delete <code className="break-all text-[var(--text)]">{name}</code>? This cannot
@@ -112,7 +112,7 @@ export function DeleteTableDialog({ connectionId, table, onClose, onDeleted }: P
                     </p>
                 )}
             </main>
-            <footer className="table-action-dialog-footer">
+            <DialogFooter className="table-action-dialog-footer">
                 <button
                     type="button"
                     disabled={busy}
@@ -129,7 +129,7 @@ export function DeleteTableDialog({ connectionId, table, onClose, onDeleted }: P
                 >
                     {busy ? 'Deleting…' : 'Delete table'}
                 </button>
-            </footer>
+            </DialogFooter>
         </dialog>
     );
 }
