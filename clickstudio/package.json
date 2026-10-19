@@ -47,7 +47,8 @@
     "format:check": "prettier --check \"**/*.{js,mjs,cjs,ts,tsx,css}\"",
     "test:memory": "npm run bench:build && node --expose-gc --test benchmarks/tests/memory-guards.test.mjs",
     "bench:memory": "npm run bench:build && node --expose-gc benchmarks/memory-run.mjs",
-    "test:e2e:memory": "playwright test --config playwright.memory.config.ts"
+    "test:e2e:memory": "playwright test --config playwright.memory.config.ts",
+    "test:e2e:large-soak": "playwright test --config playwright.large-results.config.ts --project=chromium-large-results"
   },
   "dependencies": {
     "@clickhouse/click-ui": "^0.12.0",

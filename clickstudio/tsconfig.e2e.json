@@ -17,6 +17,7 @@
     "tests/e2e/**/*.ts",
     "playwright.config.ts",
     "playwright.preview.config.ts",
-    "playwright.memory.config.ts"
+    "playwright.memory.config.ts",
+    "playwright.large-results.config.ts"
   ]
 }

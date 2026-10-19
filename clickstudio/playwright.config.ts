@@ -19,7 +19,11 @@ export default defineConfig({
         ['html', { open: 'never' }],
         ['json', { outputFile: 'test-results/results.json' }],
     ],
-    testIgnore: ['**/preview.spec.ts', '**/playground-scripts.spec.ts'],
+    testIgnore: [
+        '**/preview.spec.ts',
+        '**/playground-scripts.spec.ts',
+        '**/large-results-soak.spec.ts',
+    ],
     projects: [
         {
             name: 'functional',

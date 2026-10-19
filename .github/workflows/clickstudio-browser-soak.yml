@@ -1,0 +1,90 @@
+name: ClickStudio large-result browser soak
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "41 4 * * 0"
+  push:
+    paths:
+      - "clickstudio/tests/e2e/large-results-soak.spec.ts"
+      - "clickstudio/tests/e2e/helpers.ts"
+      - "clickstudio/src/frontend/queries/results/**"
+      - "clickstudio/src/frontend/queries/execution/**"
+      - "clickstudio/src/frontend/api/**"
+      - "clickstudio/src/shared/queries/results/**"
+      - "clickstudio/src/shared/queries/execution/**"
+      - "clickstudio/playwright.config.ts"
+      - "clickstudio/playwright.large-results.config.ts"
+      - "clickstudio/tsconfig.e2e.json"
+      - "clickstudio/package.json"
+      - "clickstudio/package-lock.json"
+      - ".github/workflows/clickstudio-browser-soak.yml"
+  pull_request:
+    paths:
+      - "clickstudio/tests/e2e/large-results-soak.spec.ts"
+      - "clickstudio/tests/e2e/helpers.ts"
+      - "clickstudio/src/frontend/queries/results/**"
+      - "clickstudio/src/frontend/queries/execution/**"
+      - "clickstudio/src/frontend/api/**"
+      - "clickstudio/src/shared/queries/results/**"
+      - "clickstudio/src/shared/queries/execution/**"
+      - "clickstudio/playwright.config.ts"
+      - "clickstudio/playwright.large-results.config.ts"
+      - "clickstudio/tsconfig.e2e.json"
+      - "clickstudio/package.json"
+      - "clickstudio/package-lock.json"
+      - ".github/workflows/clickstudio-browser-soak.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: clickstudio-large-soak-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: clickstudio
+
+jobs:
+  browser-large-results:
+    name: Browser large-result soak
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      BROWSER_SOAK_CYCLES: ${{ github.event_name == 'schedule' && '12' || '4' }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: clickstudio/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Check browser benchmark formatting
+        run: |
+          if ! npx prettier --check 'tests/e2e/large-results-soak.spec.ts' 'playwright.large-results.config.ts'; then
+            npx prettier --write 'tests/e2e/large-results-soak.spec.ts' 'playwright.large-results.config.ts'
+            git diff -- tests/e2e/large-results-soak.spec.ts playwright.large-results.config.ts
+            exit 1
+          fi
+      - name: Typecheck browser tests
+        run: npx tsc --noEmit -p tsconfig.e2e.json
+      - name: ESLint browser soak tests
+        run: npx eslint tests/e2e/large-results-soak.spec.ts --max-warnings=0
+      - name: Install Chromium
+        run: npx playwright install --with-deps --only-shell chromium
+      - name: Exercise large-result browser lifecycle
+        run: npm run test:e2e:large-soak
+      - name: Preserve browser soak data and failure traces
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: clickstudio-browser-large-results
+          path: |
+            clickstudio/benchmarks/results/browser-large-results.json
+            clickstudio/playwright-report
+            clickstudio/test-results
+          if-no-files-found: warn
+          retention-days: 14
