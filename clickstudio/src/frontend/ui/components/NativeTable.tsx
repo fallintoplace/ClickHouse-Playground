@@ -50,7 +50,7 @@ export function NativeTable({ children, ...props }: ComponentPropsWithoutRef<'ta
             mutations.disconnect();
             if (frame) cancelAnimationFrame(frame);
         };
-    }, [children]);
+    }, []);
 
     return (
         <table {...props} ref={table}>
