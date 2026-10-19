@@ -33,7 +33,7 @@ export function renderChartWorkspace({
     heatmapYKeys,
     heatmapMaximum,
     compactNumber,
-    values,
+    hasNumericValues,
     categoricalAxis,
     svg,
     onCategoryViewport,
@@ -127,7 +127,7 @@ export function renderChartWorkspace({
                             break;
                     }
 
-                    if (!values.length) {
+                    if (!hasNumericValues) {
                         return <div className="chart-empty">{chartCopy.chooseNumericMeasure}</div>;
                     }
 

@@ -1,5 +1,7 @@
 import {
     lexSql,
+    selectedStatement,
+    splitSql,
     tokenizedStatements,
     SqlSyntaxError,
     type Statement,
@@ -13,6 +15,29 @@ export interface OutlinedStatement extends Statement {
 export interface StatementOutline {
     statements: OutlinedStatement[];
     error?: string;
+}
+
+/** Keep a document's boundaries while the cursor moves; selections are validated on their own. */
+export function createSqlDocumentContext(text: string) {
+    let statements: Statement[] | undefined;
+    try {
+        statements = splitSql(text);
+    } catch {
+        // A valid selection can still be used when another part of the draft is incomplete.
+    }
+    return {
+        statementCount: statements?.length,
+        selectedStatement(from: number, to = from): Statement | undefined {
+            if (to > from) {
+                try {
+                    return selectedStatement(text, from, to);
+                } catch {
+                    return undefined;
+                }
+            }
+            return statements?.[activeStatementIndex(statements, from)];
+        },
+    };
 }
 
 export type SqlOperation = 'read' | 'insert' | 'update' | 'delete' | 'schema' | 'unknown';

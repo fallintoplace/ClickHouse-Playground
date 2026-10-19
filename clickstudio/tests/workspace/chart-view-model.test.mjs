@@ -323,6 +323,85 @@ test('Saved multi-series charts respect the rendering limit and reuse series col
     assert.equal(view.svg.plotSeries[0].color, view.svg.plotSeries[5].color);
 });
 
+test('Large multi-series bars retain every row and compute the full range without argument limits', () => {
+    const rowCount = 20_000;
+    const measures = Array.from({ length: MAX_CHART_SERIES }, (_, index) => index + 1);
+    const rows = Array.from({ length: rowCount }, (_, index) => [
+        index,
+        ...measures.map(measure => index * measure * (measure % 2 ? 1 : -1)),
+    ]);
+    rows[0][1] = null;
+    rows[1][1] = 'bad';
+    const data = result(
+        [['x', 'UInt64'], ...measures.map(index => [`value_${index}`, 'Nullable(Float64)'])],
+        rows,
+    );
+    const view = prepare(data, { kind: 'bar', ys: measures });
+    const minimum = -(rowCount - 1) * MAX_CHART_SERIES;
+    const maximum = (rowCount - 1) * (MAX_CHART_SERIES - 1);
+
+    assert.equal(view.chartRows, rows);
+    assert.equal(view.hasNumericValues, true);
+    assert.equal(view.svg.plotSeries.length, MAX_CHART_SERIES);
+    for (const series of view.svg.plotSeries) {
+        assert.equal(series.points.length, rowCount);
+        assert.deepEqual(series.points.at(-1), {
+            label: String(rowCount - 1),
+            value: rows.at(-1)[series.columnIndex],
+            index: rowCount - 1,
+        });
+    }
+    assert.equal(view.svg.plotSeries[0].points[0].value, null);
+    assert.equal(view.svg.plotSeries[0].points[1].value, null);
+    assert.deepEqual(
+        view.chartYTicks.map(tick => tick.value),
+        [maximum, (minimum + maximum) / 2, minimum],
+    );
+    assert.equal(view.svg.y(minimum), view.svg.plotBottom);
+    assert.equal(view.svg.y(maximum), view.svg.plotTop);
+    assert.ok(view.svg.zeroY > view.svg.plotTop && view.svg.zeroY < view.svg.plotBottom);
+});
+
+for (const kind of ['line', 'bar']) {
+    test(`${kind} charts keep category labels and valid later measures when the first is empty`, () => {
+        const rows = [
+            ['12', null, 0],
+            ['  category with spaces  ', 'bad', 5],
+            ['e\u0301 and 😀', null, -10],
+        ];
+        const view = prepare(
+            result(
+                [
+                    ['category', 'String'],
+                    ['empty', 'Nullable(Float64)'],
+                    ['value', 'Float64'],
+                ],
+                rows,
+            ),
+            { kind, ys: [1, 2] },
+        );
+        assert.equal(view.hasNumericValues, true);
+        for (const series of view.svg.plotSeries) {
+            assert.deepEqual(
+                series.points.map(point => point.label),
+                rows.map(row => row[0]),
+            );
+        }
+        assert.deepEqual(
+            view.svg.plotSeries[0].points.map(point => point.value),
+            [null, null, null],
+        );
+        assert.deepEqual(
+            view.svg.plotSeries[1].points.map(point => point.value),
+            [0, 5, -10],
+        );
+        assert.deepEqual(
+            view.chartYTicks.map(tick => tick.value),
+            [5, -2.5, -10],
+        );
+    });
+}
+
 test('Scatter charts use one measure and select another numeric column for X', () => {
     const data = result(
         [
@@ -373,7 +452,7 @@ test('NULL and invalid measures keep their gaps without contributing to the valu
             ],
         ),
     );
-    assert.deepEqual(view.values, [5]);
+    assert.equal(view.hasNumericValues, true);
     assert.deepEqual(
         view.svg.plotSeries[0].points.map(point => point.value),
         [null, null, 5],
@@ -391,6 +470,7 @@ for (const rows of [[], [[0, 0]], [[0, null]]]) {
                 rows,
             ),
         );
+        assert.equal(view.hasNumericValues, rows.length > 0 && rows[0][1] !== null);
         assert.equal(view.svg.zeroY, view.svg.plotBottom);
         assert.equal(view.svg.y(0), view.svg.plotBottom);
         assert.ok(view.chartYTicks.every(tick => Number.isFinite(tick.position)));

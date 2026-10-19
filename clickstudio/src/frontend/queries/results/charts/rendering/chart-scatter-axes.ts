@@ -61,7 +61,8 @@ export function prepareScatterAxes({
     plotSeries: ChartSeries[];
     x: (index: number) => number;
 }) {
-    const scatterPoints = chartRows
+    const scatterRows = chartKind === 'scatter' ? chartRows : [];
+    const scatterPoints = scatterRows
         .map(row => ({
             x: chartNumber(row[xIndex]),
             y: chartNumber(row[yIndex]),

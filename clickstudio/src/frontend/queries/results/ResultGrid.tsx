@@ -1,5 +1,5 @@
 import { DEFAULT_RESULT_PAGE_ROWS } from '../../../shared/queries/execution/limits';
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { memo, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
     displayValue,
@@ -122,8 +122,9 @@ function usePinnedColumnOffsets(
     return { tableViewport, pinnedOffsets };
 }
 
-function ResultRows({
-    run,
+const ResultRows = memo(function ResultRows({
+    runId,
+    cloudConnection,
     page,
     visibleRows,
     orderedColumnIndices,
@@ -132,7 +133,8 @@ function ResultRows({
     pinnedOffsets,
     onInspectCell,
 }: {
-    run: Run;
+    runId: string;
+    cloudConnection: boolean;
     page: ResultPage;
     visibleRows: Array<{ row: ResultPage['rows'][number]; index: number }>;
     orderedColumnIndices: number[];
@@ -197,10 +199,9 @@ function ResultRows({
                                             ...(largeCell
                                                 ? {
                                                       largeCellUrl: largeCellUrl(
-                                                          run.id,
+                                                          runId,
                                                           page.queryId,
-                                                          run.connectionId ===
-                                                              CLICKHOUSE_CLOUD_CONNECTION_ID,
+                                                          cloudConnection,
                                                           largeCell.id,
                                                       ),
                                                   }
@@ -226,7 +227,7 @@ function ResultRows({
             ))}
         </tbody>
     );
-}
+});
 
 export function ResultGrid({
     run,
@@ -261,15 +262,45 @@ export function ResultGrid({
     const loadedPage = page;
     const pageLoading = loading || !loadedPage;
     page = loadedPage ?? retainedPage;
-    const orderedColumnIndices = page
-        ? page.columns
-              .map((_, index) => index)
-              .filter(index => pinnedColumns.has(index))
-              .concat(
-                  page.columns.map((_, index) => index).filter(index => !pinnedColumns.has(index)),
-              )
-              .filter(index => !hiddenColumns.has(index))
-        : [];
+    const columns = page?.columns;
+    const rows = page?.rows;
+    const largeCellToken = page?.largeCellToken;
+    const hasFilter = Boolean(filter);
+    const orderedColumnIndices = useMemo(
+        () =>
+            columns
+                ? columns
+                      .map((_, index) => index)
+                      .filter(index => pinnedColumns.has(index))
+                      .concat(
+                          columns
+                              .map((_, index) => index)
+                              .filter(index => !pinnedColumns.has(index)),
+                      )
+                      .filter(index => !hiddenColumns.has(index))
+                : [],
+        [columns, pinnedColumns, hiddenColumns],
+    );
+    const searchableRows = useMemo(
+        () =>
+            hasFilter
+                ? rows?.map(row =>
+                      row
+                          .map(value => displayValue(value, largeCellToken).toLocaleLowerCase())
+                          .join('\u0001'),
+                  )
+                : undefined,
+        [rows, largeCellToken, hasFilter],
+    );
+    const visibleRows = useMemo(() => {
+        if (!rows) return [];
+        const matchingRows = new Set(filterRows(rows, filter, searchableRows, largeCellToken));
+        return rows.flatMap((row, index) => (matchingRows.has(row) ? [{ row, index }] : []));
+    }, [rows, filter, searchableRows, largeCellToken]);
+    const columnGroups = useMemo(
+        () => columns?.map(column => resultTypeGroup(column.type)) ?? [],
+        [columns],
+    );
     const orderedColumnKey = orderedColumnIndices.join(',');
     const { tableViewport, pinnedOffsets } = usePinnedColumnOffsets(
         page,
@@ -327,20 +358,6 @@ export function ResultGrid({
                 <p>No result set was returned.</p>
             </div>
         );
-    const searchableRows = filter
-        ? page.rows.map(row =>
-              row
-                  .map(value => displayValue(value, page.largeCellToken).toLocaleLowerCase())
-                  .join('\u0001'),
-          )
-        : undefined;
-    const matchingRows = new Set(
-        filterRows(page.rows, filter, searchableRows, page.largeCellToken),
-    );
-    const visibleRows = page.rows.flatMap((row, index) =>
-        matchingRows.has(row) ? [{ row, index }] : [],
-    );
-    const columnGroups = page.columns.map(column => resultTypeGroup(column.type));
     const pageCount = Math.max(1, Math.ceil(page.totalRows / DEFAULT_RESULT_PAGE_ROWS));
     const rowRange = page.rows.length
         ? `${(page.offset + 1).toLocaleString()}–${(page.offset + page.rows.length).toLocaleString()}`
@@ -445,7 +462,10 @@ export function ResultGrid({
                                     </tr>
                                 </thead>
                                 <ResultRows
-                                    run={run}
+                                    runId={run.id}
+                                    cloudConnection={
+                                        run.connectionId === CLICKHOUSE_CLOUD_CONNECTION_ID
+                                    }
                                     page={page}
                                     visibleRows={visibleRows}
                                     orderedColumnIndices={orderedColumnIndices}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import type { RunKind } from '../../../shared/queries/execution/status';
 import type { Schema } from '../../../shared/database/schema/types';
 import type { NativeParseSnapshot, NativeParserStatus } from '../../../shared/sql/parser';
@@ -122,8 +122,13 @@ export function WorkspaceQueryPanel({
     const selectedSql =
         active.to > active.from ? active.sql.slice(active.from, active.to) : undefined;
     const queryNameAtFocus = useRef(active.name);
-    const sqlToRun = selectedSql ?? active.sql;
-    const statementsToRun = safeStatementCount(sqlToRun);
+    const statementsToRun = useMemo(
+        () =>
+            selectedSql === undefined
+                ? viewState.sqlStatementCount
+                : safeStatementCount(selectedSql),
+        [selectedSql, viewState.sqlStatementCount],
+    );
     const runRequiresScript = statementsToRun !== undefined && statementsToRun > 1;
     const runDisabled =
         Boolean(state.editorProposal) ||
