@@ -30,6 +30,7 @@ import {
 import { markdownSummary, parseRunOptions, runSuite } from './lib/measure.mjs';
 import { boundaryScenarios } from './boundary-scenarios.mjs';
 import { stressScenarios } from './stress-scenarios.mjs';
+import { pipelineScenarios } from './pipeline-scenarios.mjs';
 import { makeWideResult } from './stress-fixtures.mjs';
 
 function streamCase(count, chunkSize) {
@@ -226,6 +227,7 @@ function scenarios() {
         chartViewCase(5_000, false),
         chartViewCase(5_000, true),
         ...stressScenarios(),
+        ...pipelineScenarios(),
         ...boundaryScenarios(),
     ];
 }
@@ -237,6 +239,7 @@ async function benchmarkFingerprint() {
         'fixtures.mjs',
         'stress-fixtures.mjs',
         'stress-scenarios.mjs',
+        'pipeline-scenarios.mjs',
         'boundary-scenarios.mjs',
         'lib/measure.mjs',
     ]) {
