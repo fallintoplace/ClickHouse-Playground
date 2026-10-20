@@ -342,7 +342,7 @@ test('Real ClickHouse millions-row execution stays usable in the browser', async
         schemaVersion: 2,
         createdAt: new Date().toISOString(),
         gitSha: process.env.GITHUB_SHA ?? null,
-        server: 'Live ClickHouse via ClickStudio HTTP API (CI Docker image: 24.6)',
+        server: 'Live ClickHouse via ClickStudio HTTP API',
         sourceRows: SOURCE_ROWS,
         cycles,
         note: 'Real ClickHouse and browser. Aggregates scan five million rows, and a final unbounded SELECT * tests retained-result capping. Wide SELECT has LIMIT 6000. Heap and frame timings are diagnostic.',
@@ -364,6 +364,13 @@ test('Real ClickHouse millions-row execution stays usable in the browser', async
             data: {},
         });
         expect(tested.ok(), 'The real local ClickHouse connection must pass its test').toBe(true);
+        const testResponse: unknown = await tested.json();
+        const connection = jsonRecord(testResponse, 'Local connection');
+        const manifest = jsonRecord(connection.manifest, 'ClickHouse manifest');
+        const serverVersion = requiredString(manifest, 'serverVersion');
+        report.server = `Live ClickHouse ${serverVersion} via ClickStudio HTTP API`;
+        const expectedVersion = process.env.CLICKHOUSE_EXPECTED_VERSION;
+        if (expectedVersion) expect(serverVersion).toBe(expectedVersion);
         const trusted = await page.request.post('/api/connections/local/trust', {
             headers: intent,
             data: { trusted: true, confirmation: 'local' },

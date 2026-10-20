@@ -79,7 +79,7 @@ jobs:
           cache-dependency-path: clickstudio/package-lock.json
       - name: Install dependencies
         run: npm ci
-      - name: Start ClickHouse 24.6
+      - name: Start ClickHouse 26.9.22.3
         id: database
         run: npm run init:env && docker compose up -d --wait clickhouse && npm run db:setup
       - name: HTTP integration and live ClickHouse checks

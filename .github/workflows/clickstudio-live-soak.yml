@@ -56,6 +56,7 @@ jobs:
     env:
       CLICKHOUSE_INTEGRATION: "1"
       LIVE_BROWSER_SOAK_CYCLES: ${{ github.event_name == 'schedule' && '8' || '4' }}
+      CLICKHOUSE_EXPECTED_VERSION: "26.9.22.3"
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -76,7 +77,7 @@ jobs:
         run: npx tsc --noEmit -p tsconfig.e2e.json
       - name: ESLint browser soak tests
         run: npx eslint 'tests/e2e/live-clickhouse-soak.spec.ts' 'tests/e2e/large-results-soak.spec.ts' --max-warnings=0
-      - name: Start real ClickHouse 24.6
+      - name: Start real ClickHouse 26.9.22.3
         id: database
         run: |
           npm run init:env

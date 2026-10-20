@@ -1,7 +1,7 @@
 name: clickstudio
 services:
   clickhouse:
-    image: clickhouse/clickhouse-server:24.6
+    image: ${CLICKHOUSE_IMAGE:-clickhouse/clickhouse-server:26.9.22.3}
     ports:
       - "127.0.0.1:8123:8123"
     environment:
