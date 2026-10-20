@@ -1,7 +1,16 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { Result } from '../../src/shared/queries/results/types.js';
 import { chooseChartOption } from './chart-control-helpers.js';
-import { openSqlExamples, runButton, trust } from './helpers.js';
+import {
+    arrayValue,
+    currentQueryId,
+    jsonRecord,
+    openSqlExamples,
+    runButton,
+    runIdentity,
+    stringValue,
+    trust,
+} from './helpers.js';
 
 type SnapshotData = Pick<Result, 'columns' | 'rows'>;
 const cities: SnapshotData = {
@@ -37,6 +46,32 @@ async function openChart(page: Page, mode = 'Experimental') {
     await results.getByRole('tab', { name: 'Chart', exact: true }).click();
     await expect(results.locator('.chart-toolbar')).toBeVisible();
     return results;
+}
+
+async function rerunWithFreshSnapshot(page: Page, results: Locator, expectedColumns: string[]) {
+    const previousQueryId = await currentQueryId(page);
+    const nextRun = page.waitForResponse(response => {
+        const request = response.request();
+        return request.method() === 'POST' && new URL(response.url()).pathname === '/api/runs';
+    });
+    await runButton(page).click();
+    const run = runIdentity(await (await nextRun).json());
+    const footer = page.locator('.execution-bar');
+    await expect(footer).toHaveAttribute('data-query-id', run.queryId);
+    await expect(footer).toHaveAttribute('data-run-status', 'succeeded');
+    const nextSnapshot = page.waitForResponse(
+        response =>
+            response.ok() && new URL(response.url()).pathname === `/api/runs/${run.id}/snapshot`,
+    );
+    await results.getByRole('tab', { name: 'Chart', exact: true }).click();
+    const snapshotResponse = await nextSnapshot;
+    const snapshot = jsonRecord(await snapshotResponse.json(), 'Rerun snapshot');
+    const columns = arrayValue(snapshot.columns, 'Rerun snapshot columns');
+    const columnNames = columns.map((column, index) =>
+        stringValue(jsonRecord(column, `Rerun column ${index}`).name, 'Rerun column name'),
+    );
+    expect(columnNames).toEqual(expectedColumns);
+    await expect(footer).not.toHaveAttribute('data-query-id', previousQueryId);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -380,9 +415,7 @@ test('Geography uses a later valid source and falls back when a rerun has no val
             ['B', 2],
         ],
     };
-    await runButton(page).click();
-    await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'succeeded');
-    await results.getByRole('tab', { name: 'Chart', exact: true }).click();
+    await rerunWithFreshSnapshot(page, results, ['category', 'value']);
     await expect(type).toHaveAttribute('data-value', 'bar');
     await expect(results.locator('.geo-map')).toHaveCount(0);
     await type.click();
@@ -438,9 +471,7 @@ test('Coordinate mappings stop applying when a rerun returns unrelated numeric c
             [40, 20],
         ],
     };
-    await runButton(page).click();
-    await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'succeeded');
-    await results.getByRole('tab', { name: 'Chart', exact: true }).click();
+    await rerunWithFreshSnapshot(page, results, ['age', 'orders']);
     await expect(type).toHaveAttribute('data-value', 'bar');
     await type.click();
     await expect(results.getByRole('option', { name: 'Geography', exact: true })).toHaveCount(0);
