@@ -31,6 +31,8 @@ export interface Profile {
     publicPlayground?: boolean;
     /** Only opt in if the readonly ClickHouse profile permits result_overflow_mode=break. */
     previewOverflowMode?: 'break';
+    /** Opt in only if zero result-output limits are allowed in readonly mode. */
+    fullExportUnbounded?: true;
     writer?: {
         username: string;
         password: string;
@@ -98,6 +100,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
         );
         return env[name] ?? '';
     };
+    requireThat(
+        env.CLICKHOUSE_FULL_EXPORT_UNBOUNDED === undefined ||
+            ['true', 'false'].includes(env.CLICKHOUSE_FULL_EXPORT_UNBOUNDED),
+        400,
+        'FULL_EXPORT_CONFIG',
+        'CLICKHOUSE_FULL_EXPORT_UNBOUNDED must be true or false',
+    );
     const raw: unknown = env.CONNECTIONS_FILE
         ? JSON.parse(readFileSync(resolve(env.CONNECTIONS_FILE), 'utf8'))
         : [
@@ -109,6 +118,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
                   username: env.CLICKHOUSE_USER ?? 'default',
                   passwordEnv: 'CLICKHOUSE_PASSWORD',
                   previewOverflowMode: env.CLICKHOUSE_PREVIEW_OVERFLOW_MODE,
+                  ...(env.CLICKHOUSE_FULL_EXPORT_UNBOUNDED === undefined
+                      ? {}
+                      : { fullExportUnbounded: env.CLICKHOUSE_FULL_EXPORT_UNBOUNDED === 'true' }),
                   ...(env.CLICKHOUSE_WRITER_USER && env.CLICKHOUSE_WRITER_PASSWORD
                       ? {
                             writer: {
@@ -149,6 +161,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
             'Preview overflow mode must be break or throw',
         );
         requireThat(
+            v.fullExportUnbounded === undefined || typeof v.fullExportUnbounded === 'boolean',
+            400,
+            'FULL_EXPORT_CONFIG',
+            'fullExportUnbounded must be a boolean',
+        );
+        requireThat(
             local || username !== 'default',
             400,
             'RESTRICTED_IDENTITY',
@@ -170,6 +188,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
                 username === 'clickstudio_reader' &&
                 isLoopbackHost(url.hostname))
                 ? { previewOverflowMode: 'break' as const }
+                : {}),
+            // The bundled loopback reader permits zero output caps for full CSV exports.
+            // Custom connections must explicitly opt in to avoid settings violations.
+            ...(v.fullExportUnbounded === true ||
+            (v.fullExportUnbounded === undefined &&
+                !env.CONNECTIONS_FILE &&
+                username === 'clickstudio_reader' &&
+                isLoopbackHost(url.hostname))
+                ? { fullExportUnbounded: true as const }
                 : {}),
         };
         if (v.writer !== undefined) {

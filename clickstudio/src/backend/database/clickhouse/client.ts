@@ -752,8 +752,11 @@ export class ClickHouseDriver implements QueryDriver, ImportDriver, CreateTableD
                     max_execution_time: run.limits.seconds,
                     max_memory_usage: String(run.limits.memory),
                     max_threads: run.limits.threads,
-                    // Respect the connection profile's result caps. In particular, the local
-                    // read-only profile rejects explicit zero limits, even for streamed exports.
+                    // Only compatible profiles can disable output caps for streaming full exports.
+                    // Normal previews keep their caps, and read/time/memory limits still apply.
+                    ...(this.profile(run.connectionId).fullExportUnbounded
+                        ? { max_result_rows: '0', max_result_bytes: '0' }
+                        : {}),
                     result_overflow_mode: 'throw',
                     max_rows_to_read: '100000000',
                     max_bytes_to_read: '5000000000',

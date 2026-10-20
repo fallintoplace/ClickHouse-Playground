@@ -95,6 +95,35 @@ class FullExportDemoDriver extends DemoDriver {
     }
 }
 
+class AbortableFullExportDemoDriver extends FullExportDemoDriver {
+    exportSignal?: AbortSignal;
+    private resolveCancelled: (run: Run) => void = () => undefined;
+    readonly cancelled = new Promise<Run>(resolve => {
+        this.resolveCancelled = resolve;
+    });
+
+    override async exportFullCsv(run: Run, signal: AbortSignal) {
+        this.exportedRun = run;
+        this.exportSignal = signal;
+        return Readable.from(
+            (async function* () {
+                yield 'day,value\r\n';
+                await new Promise<void>(resolve => {
+                    if (signal.aborted) {
+                        resolve();
+                        return;
+                    }
+                    signal.addEventListener('abort', () => resolve(), { once: true });
+                });
+            })(),
+        );
+    }
+
+    override async cancel(run: Run) {
+        this.resolveCancelled(run);
+    }
+}
+
 test('Full result export reruns the saved query as a streamed CSV download', async t => {
     const driver = new FullExportDemoDriver();
     const app = await start(undefined, undefined, driver);
@@ -118,6 +147,53 @@ test('Full result export reruns the saved query as a streamed CSV download', asy
     assert.equal(driver.exportedRun?.sql, 'SELECT {value:UInt64}');
     assert.deepEqual(driver.exportedRun?.parameters, { value: '42' });
     assert.notEqual(driver.exportedRun?.queryId, run.queryId);
+});
+
+test('Disconnecting a full CSV download cancels its separate query', async t => {
+    const driver = new AbortableFullExportDemoDriver();
+    const app = await start(undefined, undefined, driver);
+    t.after(() => app.stop());
+    await app.call('/connections/demo/trust', { trusted: true, confirmation: 'demo' });
+    const submitted = await app.call('/runs', {
+        clientRequestId: randomUUID(),
+        connectionId: 'demo',
+        sql: 'SELECT 42',
+    });
+    assert.equal(submitted.status, 202);
+    const original = jsonRecord(await submitted.json(), 'Run response');
+    const runId = stringValue(original.id, 'Run id');
+    await app.runs.wait(owner, runId);
+
+    const controller = new AbortController();
+    t.after(() => controller.abort());
+    const response = await fetch(
+        `${app.origin}/api/runs/${encodeURIComponent(runId)}/full-export`,
+        { signal: controller.signal },
+    );
+    assert.equal(response.status, 200);
+    const reader = response.body?.getReader();
+    assert.ok(reader, 'Full CSV export must produce a readable stream');
+    const first = await reader.read();
+    assert.equal(new TextDecoder().decode(first.value), 'day,value\r\n');
+    assert.notEqual(driver.exportedRun?.queryId, original.queryId);
+
+    controller.abort();
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+        const cancelledRun = await Promise.race([
+            driver.cancelled,
+            new Promise<never>((_, reject) => {
+                timeout = setTimeout(() => reject(new Error('Export was not cancelled')), 3_000);
+            }),
+        ]);
+        assert.equal(cancelledRun.queryId, driver.exportedRun?.queryId);
+        assert.equal(driver.exportSignal?.aborted, true);
+    } finally {
+        if (timeout) clearTimeout(timeout);
+    }
+    const after = await app.call(`/runs/${encodeURIComponent(runId)}`);
+    assert.equal(after.status, 200);
+    assert.equal(jsonRecord(await after.json(), 'Original run after abort').status, 'succeeded');
 });
 
 test('Full result export stays unavailable for fixture rows', async t => {

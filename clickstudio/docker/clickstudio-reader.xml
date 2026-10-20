@@ -22,8 +22,9 @@
         <max_execution_time><min>1</min><max>120</max><changeable_in_readonly/></max_execution_time>
         <max_memory_usage><min>1048576</min><max>1073741824</max><changeable_in_readonly/></max_memory_usage>
         <max_threads><min>1</min><max>8</max><changeable_in_readonly/></max_threads>
-        <max_result_rows><min>1</min><max>100000</max><changeable_in_readonly/></max_result_rows>
-        <max_result_bytes><min>1</min><max>50000000</max><changeable_in_readonly/></max_result_bytes>
+        <!-- The app requests zero output caps only for streaming exports; previews stay bounded. -->
+        <max_result_rows><min>0</min><max>100000</max><changeable_in_readonly/></max_result_rows>
+        <max_result_bytes><min>0</min><max>50000000</max><changeable_in_readonly/></max_result_bytes>
         <max_rows_to_read><min>1</min><max>100000000</max><changeable_in_readonly/></max_rows_to_read>
         <max_bytes_to_read><min>1</min><max>5000000000</max><changeable_in_readonly/></max_bytes_to_read>
         <!-- The app uses break for bounded previews and throw for full exports. -->

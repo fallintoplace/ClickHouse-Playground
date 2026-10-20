@@ -29,6 +29,30 @@ test('Bundled reader permits bounded previews without changing remote profiles',
         code: 'PREVIEW_OVERFLOW_MODE',
     });
 });
+test('Unbounded full CSV output is enabled only for compatible or opted-in readers', () => {
+    const bundled = loadConfig({ CLICKHOUSE_USER: 'clickstudio_reader' });
+    assert.equal(bundled.profiles[0].fullExportUnbounded, true);
+    assert.equal(bundled.profiles.find(p => p.publicPlayground)?.fullExportUnbounded, undefined);
+
+    const remote = loadConfig({
+        CLICKHOUSE_USER: 'clickstudio_reader',
+        CLICKHOUSE_URL: 'https://sql.example.com',
+    });
+    assert.equal(remote.profiles[0].fullExportUnbounded, undefined);
+    const optedIn = loadConfig({
+        CLICKHOUSE_USER: 'reader',
+        CLICKHOUSE_FULL_EXPORT_UNBOUNDED: 'true',
+    });
+    assert.equal(optedIn.profiles[0].fullExportUnbounded, true);
+    const optedOut = loadConfig({
+        CLICKHOUSE_USER: 'clickstudio_reader',
+        CLICKHOUSE_FULL_EXPORT_UNBOUNDED: 'false',
+    });
+    assert.equal(optedOut.profiles[0].fullExportUnbounded, undefined);
+    assert.throws(() => loadConfig({ CLICKHOUSE_FULL_EXPORT_UNBOUNDED: 'maybe' }), {
+        code: 'FULL_EXPORT_CONFIG',
+    });
+});
 test('Local startup binds loopback by default', () =>
     assert.equal(loadConfig({}).host, '127.0.0.1'));
 test('The assistant defaults to Luna Fast mode and accepts Standard processing', () => {

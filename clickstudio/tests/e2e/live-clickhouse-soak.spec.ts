@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { appendFile, mkdir, writeFile } from 'node:fs/promises';
 import { performance } from 'node:perf_hooks';
+import { createInterface } from 'node:readline';
 import { DEFAULT_RESULT_PAGE_ROWS } from '../../src/shared/queries/execution/limits.js';
 import { jsonRecord, openBlankSql, openResultFilter, replaceSql, runButton } from './helpers.js';
 
@@ -273,6 +274,43 @@ async function abortFullExport(runId: string) {
     return { bytesReceived, timeToFirst128KiBMs: performance.now() - started };
 }
 
+async function verifyLargeCsvDownload(page: Page) {
+    const sourceRows = 100_001;
+    const sql = 'SELECT number AS export_value FROM numbers(' + sourceRows + ') ORDER BY number';
+    const output = await runSql(page, sql, 'truncated');
+    expect(requiredNumber(output.run, 'rowCount')).toBe(5_000);
+    const queryId = requiredString(output.run, 'queryId');
+
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    const exportDialog = page.getByRole('dialog', { name: 'Export', exact: true });
+    const button = exportDialog.getByRole('button', { name: /Download full result \(\.csv\)/ });
+    await expect(button).toBeEnabled();
+    const [download] = await Promise.all([page.waitForEvent('download'), button.click()]);
+    expect(download.suggestedFilename()).toBe(queryId + '-full.csv');
+
+    const stream = await download.createReadStream();
+    if (!stream) throw new Error('Full CSV download did not produce a readable stream');
+    const lines = createInterface({ input: stream, crlfDelay: Infinity });
+    let lineNumber = 0;
+    for await (const line of lines) {
+        // CSVWithNames quotes headers, while numeric values may be unquoted.
+        const value = line.startsWith('"') && line.endsWith('"') ? line.slice(1, -1) : line;
+        const expected = lineNumber === 0 ? 'export_value' : String(lineNumber - 1);
+        if (value !== expected)
+            throw new Error(
+                'CSV line ' + lineNumber + ': expected ' + expected + ', received ' + line,
+            );
+        lineNumber++;
+    }
+    expect(lineNumber - 1, 'Full export must contain every row past the old 100k cap').toBe(
+        sourceRows,
+    );
+    const original = await page.request.get('/api/runs/' + encodeURIComponent(output.id));
+    expect(original.ok()).toBe(true);
+    const raw: unknown = await original.json();
+    expect(jsonRecord(raw, 'Run after full download').status).toBe('truncated');
+}
+
 test('Real ClickHouse millions-row execution stays usable in the browser', async ({
     page,
 }, info) => {
@@ -450,6 +488,7 @@ test('Real ClickHouse millions-row execution stays usable in the browser', async
             });
         }
 
+        await verifyLargeCsvDownload(page);
         expect(pageRequests.length).toBeGreaterThanOrEqual(cycles);
         expect(
             pageRequests.every(
