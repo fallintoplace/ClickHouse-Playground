@@ -470,24 +470,32 @@ export function filterRows(
           )
         : rows;
 }
-function csvCell(value: Json | undefined, type?: string, largeCellToken?: string): string {
+function csvCell(value: Json | undefined, numeric: boolean, largeCellToken?: string): string {
     let cell = value === null || value === undefined ? '' : displayValue(value, largeCellToken);
     // Formula-prefix escaping is for textual spreadsheet cells. Numeric ClickHouse
     // values such as -42 stay numeric in CSV; JSON remains the exact typed export.
-    if (!type || !numericType(type)) {
-        if (/^[\t\r\n ]*[=+\-@]/.test(cell)) cell = "'" + cell;
-    }
+    if (!numeric && /^[\t\r\n ]*[=+\-@]/.test(cell)) cell = "'" + cell;
     return /[",\r\n]/.test(cell) ? '"' + cell.replace(/"/g, '""') + '"' : cell;
 }
+
 export function exportCsv(result: Pick<Result, 'columns' | 'rows' | 'largeCellToken'>): string {
-    return [
-        result.columns.map(c => csvCell(c.name)).join(','),
-        ...result.rows.map(r =>
-            r
-                .map((value, index) =>
-                    csvCell(value, result.columns[index]?.type, result.largeCellToken),
-                )
-                .join(','),
-        ),
-    ].join('\r\n');
+    // Column types do not change between rows. Resolve nullable/nested wrappers once,
+    // rather than running numericType for every value in a wide retained result.
+    const numericColumns = result.columns.map(column => numericType(column.type));
+    const lines = new Array<string>(result.rows.length + 1);
+    lines[0] = result.columns.map(column => csvCell(column.name, false)).join(',');
+
+    for (let rowIndex = 0; rowIndex < result.rows.length; rowIndex++) {
+        const row = result.rows[rowIndex]!;
+        const cells = new Array<string>(row.length);
+        for (let columnIndex = 0; columnIndex < row.length; columnIndex++) {
+            cells[columnIndex] = csvCell(
+                row[columnIndex],
+                numericColumns[columnIndex] ?? false,
+                result.largeCellToken,
+            );
+        }
+        lines[rowIndex + 1] = cells.join(',');
+    }
+    return lines.join('\r\n');
 }
