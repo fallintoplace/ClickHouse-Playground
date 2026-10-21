@@ -470,24 +470,65 @@ export function filterRows(
           )
         : rows;
 }
-function csvCell(value: Json | undefined, type?: string, largeCellToken?: string): string {
-    let cell = value === null || value === undefined ? '' : displayValue(value, largeCellToken);
-    // Formula-prefix escaping is for textual spreadsheet cells. Numeric ClickHouse
-    // values such as -42 stay numeric in CSV; JSON remains the exact typed export.
-    if (!type || !numericType(type)) {
-        if (/^[\t\r\n ]*[=+\-@]/.test(cell)) cell = "'" + cell;
+const CSV_SHORT_CELL_MAX_LENGTH = 32;
+
+function csvCell(value: Json | undefined, numeric: boolean, largeCellToken?: string): string {
+    let cell: string;
+    if (value === null || value === undefined) cell = '';
+    else if (typeof value === 'string') cell = value;
+    else cell = displayValue(value, largeCellToken);
+    // One scan wins for short cells, but native regexp scanning is faster for long text.
+    if (cell.length > CSV_SHORT_CELL_MAX_LENGTH) {
+        if (!numeric && /^[\t\r\n ]*[=+\-@]/.test(cell)) cell = "'" + cell;
+        return /[",\r\n]/.test(cell) ? '"' + cell.replace(/"/g, '""') + '"' : cell;
     }
-    return /[",\r\n]/.test(cell) ? '"' + cell.replace(/"/g, '""') + '"' : cell;
+
+    let possibleFormula = !numeric;
+    let escapeFormula = false;
+    let needsQuotes = false;
+    let hasQuotes = false;
+
+    // Scan the cell once for spreadsheet formula prefixes and CSV quoting characters.
+    for (let index = 0; index < cell.length; index++) {
+        const char = cell.charCodeAt(index);
+        if (possibleFormula) {
+            // = + - @ may follow spaces, tabs, or line breaks.
+            if (char === 61 || char === 43 || char === 45 || char === 64) {
+                escapeFormula = true;
+                possibleFormula = false;
+            } else if (char !== 9 && char !== 10 && char !== 13 && char !== 32) {
+                possibleFormula = false;
+            }
+        }
+        if (char === 34) {
+            needsQuotes = true;
+            hasQuotes = true;
+            break;
+        }
+        if (char === 44 || char === 13 || char === 10) needsQuotes = true;
+    }
+    if (escapeFormula) cell = "'" + cell;
+    return needsQuotes ? '"' + (hasQuotes ? cell.replace(/"/g, '""') : cell) + '"' : cell;
 }
+
 export function exportCsv(result: Pick<Result, 'columns' | 'rows' | 'largeCellToken'>): string {
-    return [
-        result.columns.map(c => csvCell(c.name)).join(','),
-        ...result.rows.map(r =>
-            r
-                .map((value, index) =>
-                    csvCell(value, result.columns[index]?.type, result.largeCellToken),
-                )
-                .join(','),
-        ),
-    ].join('\r\n');
+    // Column types do not change between rows. Resolve nullable/nested wrappers once,
+    // rather than running numericType for every value in a wide retained result.
+    const numericColumns = result.columns.map(column => numericType(column.type));
+    const lines = new Array<string>(result.rows.length + 1);
+    lines[0] = result.columns.map(column => csvCell(column.name, false)).join(',');
+
+    for (let rowIndex = 0; rowIndex < result.rows.length; rowIndex++) {
+        const row = result.rows[rowIndex]!;
+        const cells = new Array<string>(row.length);
+        for (let columnIndex = 0; columnIndex < row.length; columnIndex++) {
+            cells[columnIndex] = csvCell(
+                row[columnIndex],
+                numericColumns[columnIndex] ?? false,
+                result.largeCellToken,
+            );
+        }
+        lines[rowIndex + 1] = cells.join(',');
+    }
+    return lines.join('\r\n');
 }
