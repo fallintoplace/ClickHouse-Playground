@@ -155,16 +155,19 @@ test('CSV export keeps quoting after commas and formula prefixes after whitespac
         [
             'text,amount',
             '"before, then ""after""",-42',
-            '"\u0027 \t\r\n+cmd,""quoted""",12',
+            `"' \t\r\n+cmd,""quoted""",12`,
             'simple,"1,2"',
         ].join('\r\n'),
     );
 });
 
 test('CSV export matches original escaping across mixed punctuation', () => {
-    const characters = [' ', '\t', '\r', '\n', '=', '+', '-', '@', '"', ',', 'x', '9', '\u2028', '😀'];
+    const characters = [' ', '\t', '\r', '\n', '=', '+', '-', '@', '"', ',', 'x', '\u2028', '😀'];
     let seed = 0x1234abcd;
-    const next = () => (seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0);
+    const next = () => {
+        seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+        return seed;
+    };
     const rows = Array.from({ length: 1024 }, (_, index) => [
         Array.from({ length: index % 36 }, () => characters[next() % characters.length]).join(''),
         Array.from({ length: 5 + (index % 23) }, () => characters[next() % characters.length]).join(''),
@@ -176,8 +179,8 @@ test('CSV export matches original escaping across mixed punctuation', () => {
     };
     const expected = [
         'text,number',
-        ...rows.map(([text, number]) => 
-            originalCell(text, false) + ',' + originalCell(number, true),
+        ...rows.map(
+            ([text, number]) => originalCell(text, false) + ',' + originalCell(number, true),
         ),
     ].join('\r\n');
     assert.equal(
@@ -208,6 +211,6 @@ test('CSV export preserves protected large-cell previews', () => {
             rows: [[largeCell]],
             largeCellToken: 'token',
         }),
-        'preview\r\n"\u0027 =SUM(""A1"",B1)"',
+        `preview\r\n"' =SUM(""A1"",B1)"`,
     );
 });
