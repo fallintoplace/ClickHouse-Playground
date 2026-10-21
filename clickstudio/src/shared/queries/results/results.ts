@@ -130,12 +130,23 @@ export function prepareHeatmap(
         yLabels = new Map<string, string>(),
         cells = new Map<string, number>(),
         present = new Set<string>();
+    const primitiveCategoryKeys = new Map<string | number | boolean | null | undefined, string>();
+    const cellKeysByX = new Map<string, Map<string, string>>();
+    const categoryKey = (value: Json | undefined): string => {
+        if (value !== null && typeof value === 'object')
+            return chartCategoryKey(value, largeCellToken);
+        const cached = primitiveCategoryKeys.get(value);
+        if (cached !== undefined) return cached;
+        const key = chartCategoryKey(value, largeCellToken);
+        primitiveCategoryKeys.set(value, key);
+        return key;
+    };
     let maximum = 0,
         combinedRows = 0,
         processedRows = 0;
     for (const row of rows) {
-        const xKey = chartCategoryKey(row[xIndex], largeCellToken),
-            yKey = chartCategoryKey(row[yIndex], largeCellToken);
+        const xKey = categoryKey(row[xIndex]),
+            yKey = categoryKey(row[yIndex]);
         const xLabel = chartCategoryLabel(row[xIndex], largeCellToken),
             yLabel = chartCategoryLabel(row[yIndex], largeCellToken);
         const nextXLabelCount = xLabels.size + Number(!xLabels.has(xKey));
@@ -155,7 +166,16 @@ export function prepareHeatmap(
             };
         xLabels.set(xKey, xLabel);
         yLabels.set(yKey, yLabel);
-        const key = heatmapCellKey(xKey, yKey);
+        let yKeys = cellKeysByX.get(xKey);
+        if (!yKeys) {
+            yKeys = new Map<string, string>();
+            cellKeysByX.set(xKey, yKeys);
+        }
+        let key = yKeys.get(yKey);
+        if (key === undefined) {
+            key = heatmapCellKey(xKey, yKey);
+            yKeys.set(yKey, key);
+        }
         if (present.has(key)) combinedRows++;
         present.add(key);
         processedRows++;
