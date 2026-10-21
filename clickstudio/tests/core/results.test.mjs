@@ -162,15 +162,36 @@ test('CSV export keeps quoting after commas and formula prefixes after whitespac
 });
 
 test('CSV export matches original escaping across mixed punctuation', () => {
-    const characters = [' ', '\t', '\r', '\n', '=', '+', '-', '@', '"', ',', 'x', '\u2028', '😀'];
+    const characters = [
+        ' ',
+        '\t',
+        '\r',
+        '\n',
+        '=',
+        '+',
+        '-',
+        '@',
+        '"',
+        ',',
+        'x',
+        '\u2028',
+        '😀',
+    ];
     let seed = 0x1234abcd;
     const next = () => {
         seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
         return seed;
     };
+    const randomCell = length => {
+        let cell = '';
+        for (let index = 0; index < length; index++) {
+            cell += characters[next() % characters.length];
+        }
+        return cell;
+    };
     const rows = Array.from({ length: 1024 }, (_, index) => [
-        Array.from({ length: index % 36 }, () => characters[next() % characters.length]).join(''),
-        Array.from({ length: 5 + (index % 23) }, () => characters[next() % characters.length]).join(''),
+        randomCell(index % 36),
+        randomCell(5 + (index % 23)),
     ]);
     const originalCell = (value, numeric) => {
         let cell = value;
