@@ -78,6 +78,56 @@ test('Heatmap category keys distinguish values with the same display label', () 
     assert.equal(prepared.cells.get(heatmapCellKey(prepared.xKeys[1], prepared.yKeys[0])), 5);
 });
 
+test('Heatmap keeps repeated separator-like and typed category pairs distinct', () => {
+    const rows = Array.from({ length: 1_000 }, (_, index) =>
+        index % 2 === 0 ? ['a\\u0000b', 'c', 1] : ['a', 'b\\u0000c', null],
+    );
+    rows.push([1, 'group', 3], ['1', 'group', 5]);
+    const prepared = prepareHeatmap(rows, 0, 1, 2);
+    const pairKey = (x, y) => heatmapCellKey(JSON.stringify(x), JSON.stringify(y));
+
+    assert.equal(prepared.processedRows, 1_002);
+    assert.equal(prepared.combinedRows, 998);
+    assert.equal(prepared.present.size, 4);
+    assert.equal(prepared.cells.get(pairKey('a\\u0000b', 'c')), 500);
+    assert.equal(prepared.cells.has(pairKey('a', 'b\\u0000c')), false);
+    assert.equal(prepared.cells.get(pairKey(1, 'group')), 3);
+    assert.equal(prepared.cells.get(pairKey('1', 'group')), 5);
+    assert.equal(prepared.maximum, 500);
+});
+
+test('Heatmap preserves the latest preview for repeated large-cell fingerprints', () => {
+    const token = 'heatmap-token';
+    const fingerprint = 'a'.repeat(64);
+    const reference = preview => ({
+        __clickstudioLargeCell: token,
+        id: '01234567-89ab-cdef-0123-456789abcdef',
+        bytes: 8,
+        serializedBytes: 8,
+        fingerprint,
+        preview,
+        valueType: 'text',
+    });
+    const prepared = prepareHeatmap(
+        [
+            [reference('first'), 'same', 1],
+            [reference('updated'), 'same', 2],
+        ],
+        0,
+        1,
+        2,
+        1_200,
+        token,
+    );
+
+    assert.deepEqual(prepared.xLabels, ['updated · aaaaaaaaaaaa']);
+    assert.equal(prepared.combinedRows, 1);
+    assert.equal(
+        prepared.cells.get(heatmapCellKey('large:' + fingerprint, JSON.stringify('same'))),
+        3,
+    );
+});
+
 test('Heatmap stops scanning once the rendered grid exceeds its cell budget', () => {
     const poison = [];
     Object.defineProperty(poison, 0, {
