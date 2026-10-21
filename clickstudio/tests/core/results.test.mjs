@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+    exportCsv,
     heatmapCellKey,
     prepareHeatmap,
     previewResultCell,
@@ -94,4 +95,46 @@ test('Heatmap stops scanning once the rendered grid exceeds its cell budget', ()
     assert.equal(prepared.tooLarge, true);
     assert.ok(prepared.xLabels.length * prepared.yLabels.length <= 4);
     assert.equal(prepared.processedRows, 3);
+});
+
+test('CSV export preserves numeric type handling, spreadsheet safety and structured values', () => {
+    const columns = [
+        { name: '=header', type: 'String' },
+        { name: 'number', type: 'LowCardinality(Nullable(Int64))' },
+        { name: 'price', type: 'Nullable(Decimal(10, 2))' },
+        { name: 'text', type: 'Nullable(String)' },
+        { name: 'payload', type: 'JSON' },
+    ];
+    const rows = [
+        [' =SUM(A1)', '-42', '+3.50', 'say "hello",\nworld', { x: [1, 2] }],
+        [null, null, '-7.25', '\t@cmd', [1, null]],
+        ['-42', 7, 9, 'safe', null],
+    ];
+    const originalRows = structuredClone(rows);
+
+    assert.equal(
+        exportCsv({ columns, rows }),
+        [
+            "'=header,number,price,text,payload",
+            "' =SUM(A1),-42,+3.50,\"say \"\"hello\"\",\nworld\",\"{\"\"x\"\":[1,2]}\"",
+            ",,-7.25,'\t@cmd,\"[1,null]\"",
+            "'-42,7,9,safe,",
+        ].join('\r\n'),
+    );
+    assert.deepEqual(rows, originalRows);
+});
+
+test('CSV export treats cells beyond the declared columns as text', () => {
+    assert.equal(
+        exportCsv({
+            columns: [{ name: 'metric', type: 'Nullable(UInt64)' }],
+            rows: [['-2', '=1+1']],
+        }),
+        "metric\r\n-2,'=1+1",
+    );
+});
+
+test('CSV export handles empty results without adding extra row breaks', () => {
+    assert.equal(exportCsv({ columns: [], rows: [] }), '');
+    assert.equal(exportCsv({ columns: [{ name: 'value', type: 'String' }], rows: [] }), 'value');
 });
