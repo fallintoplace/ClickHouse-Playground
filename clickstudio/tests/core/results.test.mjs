@@ -138,3 +138,76 @@ test('CSV export handles empty results without adding extra row breaks', () => {
     assert.equal(exportCsv({ columns: [], rows: [] }), '');
     assert.equal(exportCsv({ columns: [{ name: 'value', type: 'String' }], rows: [] }), 'value');
 });
+
+test('CSV export keeps quoting after commas and formula prefixes after whitespace', () => {
+    assert.equal(
+        exportCsv({
+            columns: [
+                { name: 'text', type: 'String' },
+                { name: 'amount', type: 'Nullable(Int64)' },
+            ],
+            rows: [
+                ['before, then "after"', '-42'],
+                [' \t\r\n+cmd,"quoted"', '12'],
+                ['simple', '1,2'],
+            ],
+        }),
+        [
+            'text,amount',
+            '"before, then ""after""",-42',
+            '"\u0027 \t\r\n+cmd,""quoted""",12',
+            'simple,"1,2"',
+        ].join('\r\n'),
+    );
+});
+
+test('CSV export matches original escaping across mixed punctuation', () => {
+    const characters = [' ', '\t', '\r', '\n', '=', '+', '-', '@', '"', ',', 'x', '9', '\u2028', '😀'];
+    let seed = 0x1234abcd;
+    const next = () => (seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0);
+    const rows = Array.from({ length: 1024 }, (_, index) => [
+        Array.from({ length: index % 36 }, () => characters[next() % characters.length]).join(''),
+        Array.from({ length: 5 + (index % 23) }, () => characters[next() % characters.length]).join(''),
+    ]);
+    const originalCell = (value, numeric) => {
+        let cell = value;
+        if (!numeric && /^[\t\r\n ]*[=+\-@]/.test(cell)) cell = "'" + cell;
+        return /[",\r\n]/.test(cell) ? '"' + cell.replace(/"/g, '""') + '"' : cell;
+    };
+    const expected = [
+        'text,number',
+        ...rows.map(([text, number]) => 
+            originalCell(text, false) + ',' + originalCell(number, true),
+        ),
+    ].join('\r\n');
+    assert.equal(
+        exportCsv({
+            columns: [
+                { name: 'text', type: 'String' },
+                { name: 'number', type: 'Int64' },
+            ],
+            rows,
+        }),
+        expected,
+    );
+});
+
+test('CSV export preserves protected large-cell previews', () => {
+    const largeCell = {
+        __clickstudioLargeCell: 'token',
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        bytes: 128,
+        serializedBytes: 128,
+        fingerprint: 'a'.repeat(64),
+        preview: ' =SUM("A1",B1)',
+        valueType: 'text',
+    };
+    assert.equal(
+        exportCsv({
+            columns: [{ name: 'preview', type: 'String' }],
+            rows: [[largeCell]],
+            largeCellToken: 'token',
+        }),
+        'preview\r\n"\u0027 =SUM(""A1"",B1)"',
+    );
+});

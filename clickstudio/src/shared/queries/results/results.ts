@@ -471,11 +471,38 @@ export function filterRows(
         : rows;
 }
 function csvCell(value: Json | undefined, numeric: boolean, largeCellToken?: string): string {
-    let cell = value === null || value === undefined ? '' : displayValue(value, largeCellToken);
-    // Formula-prefix escaping is for textual spreadsheet cells. Numeric ClickHouse
-    // values such as -42 stay numeric in CSV; JSON remains the exact typed export.
-    if (!numeric && /^[\t\r\n ]*[=+\-@]/.test(cell)) cell = "'" + cell;
-    return /[",\r\n]/.test(cell) ? '"' + cell.replace(/"/g, '""') + '"' : cell;
+    let cell =
+        value === null || value === undefined
+            ? ''
+            : typeof value === 'string'
+              ? value
+              : displayValue(value, largeCellToken);
+    let possibleFormula = !numeric;
+    let escapeFormula = false;
+    let needsQuotes = false;
+    let hasQuotes = false;
+
+    // Scan the cell once for spreadsheet formula prefixes and CSV quoting characters.
+    for (let index = 0; index < cell.length; index++) {
+        const char = cell.charCodeAt(index);
+        if (possibleFormula) {
+            // = + - @ may follow spaces, tabs, or line breaks.
+            if (char === 61 || char === 43 || char === 45 || char === 64) {
+                escapeFormula = true;
+                possibleFormula = false;
+            } else if (char !== 9 && char !== 10 && char !== 13 && char !== 32) {
+                possibleFormula = false;
+            }
+        }
+        if (char === 34) {
+            needsQuotes = true;
+            hasQuotes = true;
+            break;
+        }
+        if (char === 44 || char === 13 || char === 10) needsQuotes = true;
+    }
+    if (escapeFormula) cell = "'" + cell;
+    return needsQuotes ? '"' + (hasQuotes ? cell.replace(/"/g, '""') : cell) + '"' : cell;
 }
 
 export function exportCsv(result: Pick<Result, 'columns' | 'rows' | 'largeCellToken'>): string {

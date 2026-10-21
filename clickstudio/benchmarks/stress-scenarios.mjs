@@ -198,7 +198,9 @@ export function stressScenarios() {
         chartTicksCase(5_000),
         chartFormatCase(5_000),
         csvCase(5_000, 20),
+        csvCase(5_000, 40),
         csvCase(20_000, 12),
+        csvCase(20_000, 40),
         sqlCase(),
     ];
 }
