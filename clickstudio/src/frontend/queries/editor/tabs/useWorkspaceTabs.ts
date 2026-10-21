@@ -91,10 +91,17 @@ export function useWorkspaceTabs(
         if (!scroller || !tab) return;
         const scrollerRect = scroller.getBoundingClientRect();
         const tabRect = tab.getBoundingClientRect();
+        // Interrupt in-flight smooth arrow scrolling when the active tab changes.
         if (tabRect.left < scrollerRect.left)
-            scroller.scrollBy({ left: tabRect.left - scrollerRect.left - 6 });
+            scroller.scrollBy({
+                left: tabRect.left - scrollerRect.left - 6,
+                behavior: 'instant',
+            });
         else if (tabRect.right > scrollerRect.right)
-            scroller.scrollBy({ left: tabRect.right - scrollerRect.right + 6 });
+            scroller.scrollBy({
+                left: tabRect.right - scrollerRect.right + 6,
+                behavior: 'instant',
+            });
         updateTabScrollState();
     }, [active.id, updateTabScrollState]);
 
