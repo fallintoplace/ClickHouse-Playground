@@ -80,7 +80,7 @@ test('Heatmap category keys distinguish values with the same display label', () 
 
 test('Heatmap keeps repeated separator-like and typed category pairs distinct', () => {
     const rows = Array.from({ length: 1_000 }, (_, index) =>
-        index % 2 === 0 ? ['a\\u0000b', 'c', 1] : ['a', 'b\\u0000c', null],
+        index % 2 === 0 ? ['a\u0000b', 'c', 1] : ['a', 'b\u0000c', null],
     );
     rows.push([1, 'group', 3], ['1', 'group', 5]);
     const prepared = prepareHeatmap(rows, 0, 1, 2);
@@ -89,8 +89,8 @@ test('Heatmap keeps repeated separator-like and typed category pairs distinct', 
     assert.equal(prepared.processedRows, 1_002);
     assert.equal(prepared.combinedRows, 998);
     assert.equal(prepared.present.size, 4);
-    assert.equal(prepared.cells.get(pairKey('a\\u0000b', 'c')), 500);
-    assert.equal(prepared.cells.has(pairKey('a', 'b\\u0000c')), false);
+    assert.equal(prepared.cells.get(pairKey('a\u0000b', 'c')), 500);
+    assert.equal(prepared.cells.has(pairKey('a', 'b\u0000c')), false);
     assert.equal(prepared.cells.get(pairKey(1, 'group')), 3);
     assert.equal(prepared.cells.get(pairKey('1', 'group')), 5);
     assert.equal(prepared.maximum, 500);
