@@ -44,7 +44,7 @@
     "test:e2e:styles": "playwright test tests/e2e/css-appearance.spec.ts",
     "test:e2e:styles:update": "node scripts/update-style-reference.mjs",
     "format": "prettier --write \"**/*.{js,mjs,cjs,ts,tsx,css}\"",
-    "format:check": "prettier --check \"**/*.{js,mjs,cjs,ts,tsx,css}\" || (prettier --write tests/core/results.test.mjs && git --no-pager diff -- tests/core/results.test.mjs && exit 1)",
+    "format:check": "prettier --check \"**/*.{js,mjs,cjs,ts,tsx,css}\"",
     "test:memory": "npm run bench:build && node --expose-gc --test benchmarks/tests/memory-guards.test.mjs",
     "bench:memory": "npm run bench:build && node --expose-gc benchmarks/memory-run.mjs",
     "test:e2e:memory": "playwright test --config playwright.memory.config.ts",

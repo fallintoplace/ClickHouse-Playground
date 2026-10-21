@@ -480,9 +480,7 @@ function csvCell(value: Json | undefined, numeric: boolean, largeCellToken?: str
     // One scan wins for short cells, but native regexp scanning is faster for long text.
     if (cell.length > CSV_SHORT_CELL_MAX_LENGTH) {
         if (!numeric && /^[\t\r\n ]*[=+\-@]/.test(cell)) cell = "'" + cell;
-        return /[",\r\n]/.test(cell)
-            ? '"' + cell.replace(/"/g, '""') + '"'
-            : cell;
+        return /[",\r\n]/.test(cell) ? '"' + cell.replace(/"/g, '""') + '"' : cell;
     }
 
     let possibleFormula = !numeric;
