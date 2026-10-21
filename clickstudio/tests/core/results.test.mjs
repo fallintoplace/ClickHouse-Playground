@@ -116,8 +116,8 @@ test('CSV export preserves numeric type handling, spreadsheet safety and structu
         exportCsv({ columns, rows }),
         [
             "'=header,number,price,text,payload",
-            "' =SUM(A1),-42,+3.50,\"say \"\"hello\"\",\nworld\",\"{\"\"x\"\":[1,2]}\"",
-            ",,-7.25,'\t@cmd,\"[1,null]\"",
+            '\' =SUM(A1),-42,+3.50,"say ""hello"",\nworld","{""x"":[1,2]}"',
+            ',,-7.25,\'\t@cmd,"[1,null]"',
             "'-42,7,9,safe,",
         ].join('\r\n'),
     );
