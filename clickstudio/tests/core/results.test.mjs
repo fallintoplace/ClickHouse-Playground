@@ -235,3 +235,33 @@ test('CSV export preserves protected large-cell previews', () => {
         `preview\r\n"' =SUM(""A1"",B1)"`,
     );
 });
+
+test('CSV export keeps long text fast without changing escaping', () => {
+    const long = 'abc123'.repeat(512);
+    const short = 'x'.repeat(32);
+    const beyondCutoff = 'x'.repeat(33);
+    const rows = [
+        [long, '42'],
+        [' \t=SUM(A1)' + long, '-3'],
+        [long + ',"tail"\r\nnext', '7'],
+        [short, '2'],
+        [beyondCutoff, '3'],
+    ];
+    assert.equal(
+        exportCsv({
+            columns: [
+                { name: 'text', type: 'String' },
+                { name: 'number', type: 'Nullable(Int64)' },
+            ],
+            rows,
+        }),
+        [
+            'text,number',
+            long + ',42',
+            "' \t=SUM(A1)" + long + ',-3',
+            '"' + long + ',""tail""\r\nnext",7',
+            short + ',2',
+            beyondCutoff + ',3',
+        ].join('\r\n'),
+    );
+});

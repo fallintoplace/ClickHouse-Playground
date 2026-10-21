@@ -470,11 +470,21 @@ export function filterRows(
           )
         : rows;
 }
+const CSV_SHORT_CELL_MAX_LENGTH = 32;
+
 function csvCell(value: Json | undefined, numeric: boolean, largeCellToken?: string): string {
     let cell: string;
     if (value === null || value === undefined) cell = '';
     else if (typeof value === 'string') cell = value;
     else cell = displayValue(value, largeCellToken);
+    // One scan wins for short cells, but native regexp scanning is faster for long text.
+    if (cell.length > CSV_SHORT_CELL_MAX_LENGTH) {
+        if (!numeric && /^[\t\r\n ]*[=+\-@]/.test(cell)) cell = "'" + cell;
+        return /[",\r\n]/.test(cell)
+            ? '"' + cell.replace(/"/g, '""') + '"'
+            : cell;
+    }
+
     let possibleFormula = !numeric;
     let escapeFormula = false;
     let needsQuotes = false;

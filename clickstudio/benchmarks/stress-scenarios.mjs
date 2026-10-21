@@ -168,6 +168,34 @@ function csvCase(count, width) {
     };
 }
 
+function csvLongTextCase(count) {
+    const paragraph = 'ClickStudio text export '.repeat(100);
+    const result = {
+        columns: [
+            { name: 'plain', type: 'String' },
+            { name: 'quoted', type: 'String' },
+        ],
+        rows: Array.from({ length: count }, (_, index) => [
+            index % 2 ? ' =SUM(A1)' + paragraph : paragraph,
+            index % 2 ? paragraph + ',comma' : paragraph + '"quoted"',
+        ]),
+    };
+    return {
+        id: 'result/csv/' + count + '-rows-long-text',
+        group: 'result',
+        description: 'Serialize retained long text cells to CSV',
+        units: 'cells',
+        unitsPerOperation: count * 2,
+        run: () => exportCsv(result),
+        verify: csv => {
+            assert.ok(csv.startsWith('plain,quoted\r\n'));
+            assert.equal(csv.split('\r\n').length, count + 1);
+            assert.ok(csv.includes('""quoted""'));
+            assert.ok(csv.includes("' =SUM(A1)"));
+        },
+    };
+}
+
 function sqlCase() {
     const sql = makeLargeSqlInput();
     return {
@@ -201,6 +229,7 @@ export function stressScenarios() {
         csvCase(5_000, 40),
         csvCase(20_000, 12),
         csvCase(20_000, 40),
+        csvLongTextCase(1_000),
         sqlCase(),
     ];
 }
