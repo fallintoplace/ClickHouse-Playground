@@ -471,12 +471,10 @@ export function filterRows(
         : rows;
 }
 function csvCell(value: Json | undefined, numeric: boolean, largeCellToken?: string): string {
-    let cell =
-        value === null || value === undefined
-            ? ''
-            : typeof value === 'string'
-              ? value
-              : displayValue(value, largeCellToken);
+    let cell: string;
+    if (value === null || value === undefined) cell = '';
+    else if (typeof value === 'string') cell = value;
+    else cell = displayValue(value, largeCellToken);
     let possibleFormula = !numeric;
     let escapeFormula = false;
     let needsQuotes = false;
