@@ -6,7 +6,7 @@ export type { Theme, ExperienceLevel } from './styles/appearance-types.js';
 
 export const copy = {
     app: {
-        name: 'ClickStudio',
+        name: 'ClickHouse Playground',
         theme: 'Theme',
         darkTheme: 'Dark theme',
         lightTheme: 'Light theme',

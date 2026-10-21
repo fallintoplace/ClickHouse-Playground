@@ -1,10 +1,10 @@
-# ClickStudio
+# ClickHouse Playground
 
 A SQL workspace for ClickHouse. Write queries, explore data, inspect results, build charts, and review query runs.
 
-[Open ClickStudio](https://clickstudio-eight.vercel.app/)
+[Open ClickHouse Playground](https://clickstudio-eight.vercel.app/)
 
-![ClickStudio SQL workspace with a service latency chart and Objects panel](docs/images/clickstudio-workspace-slo-chart.png)
+![ClickHouse Playground SQL workspace with a service latency chart and Objects panel](docs/images/clickstudio-workspace-slo-chart.png)
 
 ## Features
 
