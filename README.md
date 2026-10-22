@@ -28,4 +28,4 @@ Open [http://localhost:5173](http://localhost:5173) and sign in with `CLICKSTUDI
 
 ## CSV exports
 
-Previews are limited to 5,000 rows and 2 MB by default. Full CSV downloads rerun the query, so exported data may differ from the preview. See [full CSV export details](docs/full-csv-exports.md).
+Previews are limited to 5,000 rows and 2 MB by default. Full CSV downloads rerun the query, so exported data may differ from the preview.
