@@ -587,6 +587,9 @@
     gap: 8px;
     line-height: 14px;
   }
+  .result-column-heading-wide {
+    max-width: 100%;
+  }
   .result-column-heading > span,
   .result-column-heading > small {
     display: block;

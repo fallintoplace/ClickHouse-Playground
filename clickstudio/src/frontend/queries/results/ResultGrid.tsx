@@ -35,6 +35,34 @@ function ResultColumnHeader({
     pinned: boolean;
     left?: number;
 }) {
+    const headingRef = useRef<HTMLDivElement>(null);
+
+    useLayoutEffect(() => {
+        const heading = headingRef.current;
+        const cell = heading?.parentElement;
+        const label = heading?.querySelector<HTMLSpanElement>('span');
+        const badge = heading?.querySelector<HTMLElement>('.result-type-badge');
+        if (!heading || !cell || !label || !badge) return;
+
+        const measure = () => {
+            const cellStyle = getComputedStyle(cell);
+            const contentWidth =
+                cell.clientWidth -
+                Number.parseFloat(cellStyle.paddingLeft) -
+                Number.parseFloat(cellStyle.paddingRight);
+            const gap = Number.parseFloat(getComputedStyle(heading).columnGap);
+            const requiredWidth = label.clientWidth + gap + badge.scrollWidth;
+            heading.classList.toggle(
+                'result-column-heading-wide',
+                contentWidth > 300 && requiredWidth > 300,
+            );
+        };
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(cell);
+        return () => observer.disconnect();
+    }, [name, type]);
+
     return (
         <th
             scope="col"
@@ -44,7 +72,7 @@ function ResultColumnHeader({
             style={pinned ? { left: `${left ?? 48}px` } : undefined}
             data-overflow-title={`${name}\n${type}`}
         >
-            <div className="result-column-heading">
+            <div className="result-column-heading" ref={headingRef}>
                 <span data-overflow-text>{name}</span>
                 <small className="result-type-badge" data-overflow-text data-type-group={group}>
                     {type}
