@@ -111,7 +111,7 @@ for (const mode of ['Standard', 'Experimental']) {
         await expect(page.locator('.cm-content')).toHaveText('');
         await expect(page.locator('.cm-content')).toBeFocused();
         await expect(page.locator('#sql-editor-content')).toBeVisible();
-        await expect(page.getByRole('dialog', { name: 'Explore ClickHouse Playground' })).toHaveCount(0);
+        await expect(page.getByRole('dialog', { name: 'Explore ClickHouse' })).toHaveCount(0);
         await expect(page.locator('.execution-bar')).toHaveAttribute('data-run-status', 'ready');
         expect(originalName).not.toBeNull();
         const closeOriginal = originalTab.getByRole('button', { name: /^Close / });

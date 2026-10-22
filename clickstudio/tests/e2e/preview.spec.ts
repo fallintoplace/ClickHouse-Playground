@@ -793,7 +793,7 @@ test('Geo SQL example runs native Point values and renders twenty cities', async
     await page.goto('/experimental');
     await page.getByRole('button', { name: 'Help', exact: true }).click();
 
-    const dialog = page.getByRole('dialog', { name: 'Explore ClickHouse Playground', exact: true });
+    const dialog = page.getByRole('dialog', { name: 'Explore ClickHouse', exact: true });
     await dialog.getByTestId('help-section-examples').click();
     await dialog.getByTestId('sql-example-category-all').click();
     await dialog.getByRole('option', { name: /^Native Point cities / }).click();

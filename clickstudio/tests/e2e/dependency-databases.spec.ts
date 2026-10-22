@@ -73,7 +73,7 @@ test('Help dependencies uses the same searchable database list', async ({ page }
     const requests = await databaseMetadata(page);
     await trust(page);
     await page.getByRole('button', { name: 'Help', exact: true }).click();
-    const help = page.getByRole('dialog', { name: 'Explore ClickHouse Playground', exact: true });
+    const help = page.getByRole('dialog', { name: 'Explore ClickHouse', exact: true });
     await help.getByTestId('help-section-dependencies').click();
     const database = help.getByRole('combobox', { name: 'Lineage database', exact: true });
     await database.click();
