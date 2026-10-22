@@ -1739,7 +1739,7 @@ for (const parserMode of ['native', 'unavailable'] as const) {
         });
         await dialog.getByRole('button', { name: 'Open query', exact: true }).click();
         await expect(dialog).toBeHidden();
-        await expect(editor).toContainText('ClickStudio demo: summer shop traffic.');
+        await expect(editor).toContainText('ClickHouse Playground demo: summer shop traffic.');
         const openingMetrics = await page.evaluate(
             startedAt => ({
                 durationMs: performance.now() - startedAt,
@@ -3227,7 +3227,7 @@ test('A query and its local draft recover after reload without rerunning', async
     await trust(page);
     await page
         .getByRole('textbox', { name: 'SQL document name', exact: true })
-        .fill('ClickStudio demo.sql');
+        .fill('ClickHouse Playground demo.sql');
     await replaceSql(page, "SELECT 'draft survives reload'");
     const results = await runQuery(page);
     const queryId = await currentQueryId(page);
@@ -3235,7 +3235,7 @@ test('A query and its local draft recover after reload without rerunning', async
     await page.reload();
 
     await expect(page.getByRole('textbox', { name: 'SQL document name', exact: true })).toHaveValue(
-        'ClickStudio demo.sql',
+        'ClickHouse Playground demo.sql',
     );
     await expect(page.locator('.cm-content')).toContainText("SELECT 'draft survives reload'");
     await expect(

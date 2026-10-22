@@ -241,7 +241,7 @@ const CURATED_REFERENCE: readonly ClickHouseDocumentationEntry[] = [
         name: 'JSONEachRow',
         type: 'Format',
         description:
-            'A JSON format that represents each result row as one JSON object, with column names as keys. ClickStudio chooses the output format for interactive query results, so do not add a `FORMAT` clause to a workspace query.',
+            'A JSON format that represents each result row as one JSON object, with column names as keys. ClickHouse Playground chooses the output format for interactive query results, so do not add a `FORMAT` clause to a workspace query.',
         serverVersion: 'Demo catalog',
         origin: 'bundled',
     },

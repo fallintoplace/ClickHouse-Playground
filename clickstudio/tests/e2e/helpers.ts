@@ -44,7 +44,7 @@ export async function openBlankSql(page: Page) {
 
 export async function openSqlExamples(page: Page) {
     await page.getByRole('button', { name: 'Help', exact: true }).click();
-    const dialog = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });
+    const dialog = page.getByRole('dialog', { name: 'Explore ClickHouse', exact: true });
     await expect(dialog.getByTestId('help-section-examples')).toHaveAttribute(
         'aria-selected',
         'true',
@@ -54,7 +54,7 @@ export async function openSqlExamples(page: Page) {
 
 export async function openRunComparison(page: Page) {
     await page.getByRole('button', { name: 'Help', exact: true }).click();
-    const dialog = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });
+    const dialog = page.getByRole('dialog', { name: 'Explore ClickHouse', exact: true });
     await dialog.getByTestId('help-section-compare').click();
     return dialog;
 }

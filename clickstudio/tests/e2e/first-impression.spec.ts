@@ -224,7 +224,7 @@ for (const previousTopic of ['reference', 'compare'])
     }, info) => {
         await page.emulateMedia({ reducedMotion: 'reduce' });
         await trust(page);
-        const help = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });
+        const help = page.getByRole('dialog', { name: 'Explore ClickHouse', exact: true });
         const experimentalTopics = [
             'reference',
             'query',

@@ -137,11 +137,11 @@ test('Help section navigation preserves the example selection until the panel is
     );
 });
 
-test('Help tour exposes ClickStudio native workflows from one place', async ({ page }) => {
+test('Help tour exposes ClickHouse native workflows from one place', async ({ page }) => {
     await trust(page);
     await expect(page.getByRole('button', { name: 'Open observability' })).toHaveCount(0);
     await page.getByRole('button', { name: 'Help', exact: true }).click();
-    const dialog = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });
+    const dialog = page.getByRole('dialog', { name: 'Explore ClickHouse', exact: true });
     await expect(dialog).toBeVisible();
     await dialog.getByTestId('help-section-tour').click();
 
@@ -159,7 +159,7 @@ test('Help tour exposes ClickStudio native workflows from one place', async ({ p
         await expect(dialog.getByTestId('help-section-' + section)).toBeVisible();
 
     const tabs = dialog
-        .getByRole('tablist', { name: 'Explore ClickStudio sections' })
+        .getByRole('tablist', { name: 'Explore ClickHouse sections' })
         .getByRole('tab');
     await expect(tabs.first()).toHaveAttribute('data-testid', 'help-section-tour');
     await expect(dialog.getByTestId('help-section-tour')).toHaveAttribute('aria-selected', 'true');

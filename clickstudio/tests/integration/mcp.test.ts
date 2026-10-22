@@ -233,7 +233,7 @@ async function start(
     config.port = serverPort(listener);
     config.origin = `http://127.0.0.1:${config.port}`;
     const client = new Client(
-        { name: 'ClickStudio integration tests', version: '1.0.0' },
+        { name: 'ClickHouse Playground integration tests', version: '1.0.0' },
         options.protocol === 'legacy'
             ? undefined
             : {
@@ -363,7 +363,7 @@ test('MCP remains compatible with a legacy SDK client on the same endpoint', asy
     const token = 'legacy-client-workspace-token',
         s = await start(t, { token });
     const client = new LegacyClient({
-        name: 'ClickStudio legacy integration tests',
+        name: 'ClickHouse Playground legacy integration tests',
         version: '1.0.0',
     });
     t.after(() => client.close());

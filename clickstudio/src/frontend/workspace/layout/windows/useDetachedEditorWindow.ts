@@ -80,7 +80,7 @@ function useDetachedWorkspaceWindow(windowName: string, rootClassName: string, l
             try {
                 const container = prepareWorkspaceWindow(
                     child,
-                    `ClickStudio · ${title}`,
+                    `ClickHouse Playground · ${title}`,
                     experience,
                     rootClassName,
                     label,
@@ -117,7 +117,7 @@ function useDetachedWorkspaceWindow(windowName: string, rootClassName: string, l
         const child = detachedWindow.current;
         if (!child || child.closed) return;
         try {
-            child.document.title = `ClickStudio · ${title}`;
+            child.document.title = `ClickHouse Playground · ${title}`;
         } catch {}
     }, []);
 

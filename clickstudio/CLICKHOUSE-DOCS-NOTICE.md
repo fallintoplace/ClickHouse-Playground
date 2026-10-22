@@ -10,7 +10,7 @@ The app uses this catalog as an offline reference.
 
 The catalog was generated from [ClickHouse/ClickHouse](https://github.com/ClickHouse/ClickHouse) at revision [`5b0395f4d189d9e5a3ee36d7af63f5ffb51ffaa2`](https://github.com/ClickHouse/ClickHouse/commit/5b0395f4d189d9e5a3ee36d7af63f5ffb51ffaa2). This catalog is available under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). A copy of the license is in `CLICKHOUSE-DOCS-LICENSE.txt`.
 
-The CC BY-NC-SA 4.0 license applies to the catalog data. ClickStudio application code has its own license.
+The CC BY-NC-SA 4.0 license applies to the catalog data. ClickHouse Playground application code has its own license.
 
 ## Regenerate the catalog
 

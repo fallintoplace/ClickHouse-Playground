@@ -1008,7 +1008,7 @@ test('ASCII chart labels retain their previous wrapping and geometry', () => {
         ['ABCDEFGHIJK', ['ABCDE', 'FGHIJK']],
         ['ABCDEFGHIJKL', ['ABCDEF', 'GHIJKL']],
         ['Detroit Red Wings', ['Detroit', 'Red Wings']],
-        ['Hello, World From ClickStudio', ['Hello, World', 'From ClickStudio']],
+        ['Hello, World From DataConsole', ['Hello, World', 'From DataConsole']],
         ['A B C D E F', ['A B C', 'D E F']],
         ['ABCDE   FGHIJK', ['ABCDE', 'FGHIJK']],
         ['  Super   Long   Label  ', ['Super', 'Long Label']],

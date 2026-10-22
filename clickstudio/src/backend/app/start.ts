@@ -21,7 +21,7 @@ try {
     server.removeAllListeners('request');
     server.on('request', services.app);
     console.log(
-        `ClickStudio ${config.demo ? 'FIXTURE MODE' : 'server'} listening on ${config.host}:${config.port}`,
+        `ClickHouse Playground ${config.demo ? 'FIXTURE MODE' : 'server'} listening on ${config.host}:${config.port}`,
     );
     const sweep = setInterval(() => {
         try {

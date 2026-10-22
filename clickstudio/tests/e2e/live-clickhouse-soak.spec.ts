@@ -316,7 +316,7 @@ test('Real ClickHouse millions-row execution stays usable in the browser', async
 }, info) => {
     test.skip(
         process.env.CLICKHOUSE_INTEGRATION !== '1',
-        'Requires a running local ClickHouse and a non-demo ClickStudio server.',
+        'Requires a running local ClickHouse and a non-demo ClickHouse Playground server.',
     );
     const cycles = Number(process.env.LIVE_BROWSER_SOAK_CYCLES ?? 4);
     expect(Number.isSafeInteger(cycles) && cycles >= 2 && cycles <= 16).toBe(true);
@@ -380,7 +380,7 @@ test('Real ClickHouse millions-row execution stays usable in the browser', async
         schemaVersion: 2,
         createdAt: new Date().toISOString(),
         gitSha: process.env.GITHUB_SHA ?? null,
-        server: 'Live ClickHouse via ClickStudio HTTP API',
+        server: 'Live ClickHouse via ClickHouse Playground HTTP API',
         sourceRows: SOURCE_ROWS,
         cycles,
         note: 'Real ClickHouse and browser. Aggregates scan five million rows, and a final unbounded SELECT * tests retained-result capping. Wide SELECT has LIMIT 6000. Heap and frame timings are diagnostic.',
@@ -393,7 +393,7 @@ test('Real ClickHouse millions-row execution stays usable in the browser', async
         const healthResponse = await page.request.get('/api/health');
         expect(healthResponse.ok()).toBe(true);
         const healthRaw: unknown = await healthResponse.json();
-        expect(jsonRecord(healthRaw, 'ClickStudio health').demo).toBe(false);
+        expect(jsonRecord(healthRaw, 'ClickHouse Playground health').demo).toBe(false);
         // Prepare an explicitly trusted local connection through the real API.
         // Avoid coupling a performance soak to the connection-picker dialog workflow.
         const intent = { 'x-clickstudio-intent': '1' };
@@ -406,7 +406,7 @@ test('Real ClickHouse millions-row execution stays usable in the browser', async
         const connection = jsonRecord(testResponse, 'Local connection');
         const manifest = jsonRecord(connection.manifest, 'ClickHouse manifest');
         const serverVersion = requiredString(manifest, 'serverVersion');
-        report.server = `Live ClickHouse ${serverVersion} via ClickStudio HTTP API`;
+        report.server = `Live ClickHouse ${serverVersion} via ClickHouse Playground HTTP API`;
         const expectedVersion = process.env.CLICKHOUSE_EXPECTED_VERSION;
         if (expectedVersion) expect(serverVersion).toBe(expectedVersion);
         const trusted = await page.request.post('/api/connections/local/trust', {
@@ -512,7 +512,7 @@ test('Real ClickHouse millions-row execution stays usable in the browser', async
         });
         if (process.env.GITHUB_STEP_SUMMARY) {
             const lines = [
-                '## ClickStudio real ClickHouse browser soak',
+                '## ClickHouse Playground real ClickHouse browser soak',
                 '',
                 'Scans: 5,000,000 source rows. Wide previews: 22 columns, 6,000 source rows, 5,000 retained.',
                 'Unbounded SELECT *: 5,000,000 source rows, with 5,000 retained; scheduled/default runs include this case.',

@@ -1,4 +1,4 @@
-name: ClickStudio memory
+name: ClickHouse Playground memory
 
 on:
   workflow_dispatch:

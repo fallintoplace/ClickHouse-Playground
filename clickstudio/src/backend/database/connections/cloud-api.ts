@@ -1520,7 +1520,7 @@ async function postCloudImport(request: Request): Promise<Response> {
     if (!isSameOrigin(request))
         return fail(
             'ORIGIN',
-            'This endpoint accepts requests from the ClickStudio site only.',
+            'This endpoint accepts requests from the ClickHouse Playground site only.',
             403,
         );
     const length = Number(request.headers.get('content-length'));
@@ -1962,7 +1962,7 @@ async function post(request: Request, runtime?: CloudApiRuntime): Promise<Respon
     if (!isSameOrigin(request))
         return fail(
             'ORIGIN',
-            'This endpoint accepts requests from the ClickStudio site only.',
+            'This endpoint accepts requests from the ClickHouse Playground site only.',
             403,
         );
     if (

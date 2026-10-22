@@ -173,7 +173,7 @@ test(`Light mode keeps workspace and help text readable with brown accent`, asyn
     }
 
     await page.getByRole('button', { name: 'Help', exact: true }).click();
-    const help = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });
+    const help = page.getByRole('dialog', { name: 'Explore ClickHouse', exact: true });
     await expect(help).toBeVisible();
     for (const section of [
         'tour',
