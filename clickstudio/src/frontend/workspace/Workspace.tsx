@@ -28,6 +28,7 @@ import {
 import { PLAYGROUND_CONNECTION_ID } from '../database/connections/playground-client';
 import { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../database/connections/cloud-connection';
 import { closeDraft, newDraft, type Draft } from '../queries/editor/drafts/workspace-state';
+import { useSqlShareImport } from '../queries/editor/share/useSqlShareImport';
 
 import { WorkspaceToast } from './layout/notifications/WorkspaceToast';
 import { WORKSPACE_NOTIFICATION_TIMEOUT_MS } from './layout/notifications/useWorkspaceNotifications';
@@ -98,6 +99,7 @@ export function Workspace({
         if (!model.storageError) setDismissedStorageError('');
     }, [model.storageError]);
     const { active } = model.tabs;
+    useSqlShareImport(model.openSqlDraft, model.setError);
     const editorSessions = useSqlEditorSessions(model.workspace);
     useWorkspaceDocumentSaveShortcut(model.saveDraft, model.detachedEditor.detached?.window);
 
@@ -195,6 +197,11 @@ export function Workspace({
                 onPatch: patch,
                 onDecideProposal: model.assistant.decideAssistantProposal,
                 onOpenAssistant: () => showInspector('assistant'),
+                onShareError: detail =>
+                    model.setError('Could not copy the SQL share link.', {
+                        tone: 'warning',
+                        detail,
+                    }),
                 onSave: saveDraft,
                 onFormat: formatActiveSql,
                 onRun: runFromEditor,

@@ -20,6 +20,7 @@
   },
   "include": [
     "src/frontend/queries/editor/drafts/workspace-state.ts",
+    "src/frontend/queries/editor/share/sql-share-link.ts",
     "src/frontend/assistant/chat/assistant-chat-state.ts",
     "src/frontend/assistant/proposals/random-example-prompts.ts",
     "src/frontend/workspace/layout/workspace-layout.ts",

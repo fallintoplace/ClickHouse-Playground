@@ -424,6 +424,23 @@
     font-size: var(--font-size-control-compact);
     letter-spacing: 0.01em;
   }
+  .editor-heading-actions > .sql-share-button {
+    min-width: 74px;
+    gap: 5px;
+    border-color: var(--line);
+    background: var(--panel);
+    color: var(--text-soft);
+  }
+  .editor-heading-actions > .sql-share-button:hover:not(:disabled) {
+    border-color: var(--line-bright);
+    background: var(--control-hover);
+    color: var(--text);
+  }
+  .editor-heading-actions > .sql-share-button[data-copied="true"] {
+    border-color: color-mix(in srgb, var(--green) 38%, var(--line));
+    background: color-mix(in srgb, var(--green) 9%, var(--panel));
+    color: var(--green);
+  }
   .editor-heading-actions > [role="status"] {
     display: inline-flex;
     align-items: center;
@@ -893,6 +910,14 @@
   }
   .editor-heading-actions {
     padding-right: 0;
+  }
+  .editor-heading-actions > .sql-share-button {
+    width: 29px;
+    min-width: 29px;
+    padding-inline: 0;
+  }
+  .sql-share-label {
+    display: none;
   }
   .editor-heading .panel-collapse-button {
     top: 6px;

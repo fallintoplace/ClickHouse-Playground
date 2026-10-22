@@ -26,6 +26,7 @@ import type { pendingEditorProposal } from '../../assistant/chat/assistant-chat-
 import type { ProposalDecisionAction } from '../../../shared/assistant/actions';
 import { SqlProposalReview } from './components/SqlProposalReview';
 import type { SqlEditorSessions } from './components/editor-session';
+import { SqlShareButton } from './share/SqlShareButton';
 
 export type WorkspaceQueryPanelState = Readonly<{
     active: Draft;
@@ -55,6 +56,7 @@ export type WorkspaceQueryPanelActions = Readonly<{
     onPatch: (values: Partial<Draft>) => void;
     onDecideProposal: (turnId: string, decision: ProposalDecisionAction) => Promise<void>;
     onOpenAssistant: () => void;
+    onShareError: (detail: string) => void;
     onSave: (draft?: Draft) => Promise<void>;
     onFormat: (formatter: WorkspaceFormatter) => Promise<void>;
     onRun: (kind?: RunKind, sqlOverride?: string) => Promise<void>;
@@ -149,6 +151,15 @@ export function WorkspaceQueryPanel({
     const standardFormatter = nativeParserStatus === 'ready' ? 'wasm' : 'builtin';
     const runButtonLabel = getRunButtonLabel(state, executionCanCancel);
     const runSql = () => actions.onRun('query');
+    const shareButton = (
+        <SqlShareButton
+            draftId={active.id}
+            sql={active.sql}
+            name={active.name}
+            disabled={Boolean(state.editorProposal)}
+            onError={actions.onShareError}
+        />
+    );
     const runButton = (
         <Button
             variant={cancelButtonActive ? 'danger' : 'primary'}
@@ -233,6 +244,7 @@ export function WorkspaceQueryPanel({
                 editorRef,
                 standardFormatter,
                 saveButton,
+                shareButton,
                 runButton,
                 detached,
                 panels,
@@ -446,6 +458,7 @@ function renderQueryHeading({
     editorRef,
     standardFormatter,
     saveButton,
+    shareButton,
     runButton,
     detached,
     panels,
@@ -456,6 +469,7 @@ function renderQueryHeading({
     editorRef: RefObject<EditorHandle | null>;
     standardFormatter: 'wasm' | 'builtin';
     saveButton: import('react').ReactElement;
+    shareButton: import('react').ReactElement;
     runButton: import('react').ReactElement;
     detached: boolean;
     panels: WorkspacePanelController;
@@ -482,7 +496,7 @@ function renderQueryHeading({
                             const runButtonFocused =
                                 event.relatedTarget instanceof HTMLElement &&
                                 event.relatedTarget.closest(
-                                    '[data-testid="run-button"], [data-testid^="run-action-"]',
+                                    '[data-testid="run-button"], [data-testid^="run-action-"], [data-testid="share-sql"]',
                                 );
                             if (name && name !== queryNameAtFocus.current) {
                                 actions.onPatch({ name });
@@ -543,6 +557,7 @@ function renderQueryHeading({
                 >
                     {copy.common.format}
                 </Button>
+                {shareButton}
                 {experience === 'expert' && saveButton}
                 {state.draftFeedback.map(feedback => (
                     <DraftFeedbackNotice

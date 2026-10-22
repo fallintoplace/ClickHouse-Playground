@@ -1460,3 +1460,51 @@ for (const mode of ['Standard', 'Experimental']) {
         expect(queryCount).toBe(1);
     });
 }
+
+test('Compressed SELECT 1 link opens an editable draft without executing', async ({ page }) => {
+    let postedExecutions = 0;
+    page.on('request', request => {
+        if (
+            request.method() === 'POST' &&
+            ['/api/runs', '/api/scripts'].includes(new URL(request.url()).pathname)
+        )
+            postedExecutions++;
+    });
+    await page.goto('/?connection=demo#sqlz=v1.C3b1cXUOUTAEAA');
+    await expect(page.getByRole('textbox', { name: 'SQL document name' })).toHaveValue(
+        'Shared SQL.sql',
+    );
+    await expect(page.locator('.cm-content')).toContainText('SELECT 1');
+    await expect(page).toHaveURL(/\/\?connection=demo$/);
+    expect(postedExecutions).toBe(0);
+    await page.reload();
+    await expect(page.locator('.cm-content')).toContainText('SELECT 1');
+});
+
+test('Share button copies a portable SQL-only link', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.goto('/?connection=demo');
+    await openBlankSql(page);
+    const sql = "SELECT 'Grüße 🐱' AS greeting";
+    await replaceSql(page, sql);
+    const originalName = await page
+        .getByRole('textbox', { name: 'SQL document name' })
+        .inputValue();
+    await page.getByTestId('share-sql').click();
+    await expect(page.getByTestId('share-sql')).toContainText('Copied');
+    await expect(page.getByTestId('share-sql')).toHaveAttribute('data-copied', 'true');
+    const link = await page.evaluate(() => navigator.clipboard.readText());
+    expect(link).toContain('#sqlz=v1.');
+    expect(new URL(link).search).toBe('');
+    const recipient = await context.newPage();
+    try {
+        await recipient.goto(link);
+        await expect(recipient.locator('.cm-content')).toContainText(sql);
+        await expect(recipient.getByRole('textbox', { name: 'SQL document name' })).toHaveValue(
+            originalName,
+        );
+        await expect(recipient).not.toHaveURL(/#sqlz=/);
+    } finally {
+        await recipient.close();
+    }
+});

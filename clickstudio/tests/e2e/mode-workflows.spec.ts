@@ -902,11 +902,12 @@ for (const theme of ['Dark', 'Light'])
             'data-testid',
             'format-sql',
         );
-        await expect(header.getByRole('button').nth(1)).toHaveAttribute(
+        await expect(header.getByRole('button').nth(1)).toHaveAttribute('data-testid', 'share-sql');
+        await expect(header.getByRole('button').nth(2)).toHaveAttribute(
             'data-testid',
             'save-query',
         );
-        await expect(header.getByRole('button').nth(2)).toHaveAttribute(
+        await expect(header.getByRole('button').nth(3)).toHaveAttribute(
             'data-testid',
             'run-button',
         );
