@@ -1,11 +1,8 @@
 import { DEFAULT_RESULT_PAGE_ROWS } from '../../../shared/queries/execution/limits';
 import { memo, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import {
-    displayValue,
-    filterRows,
-    previewResultCell,
-} from '../../../shared/queries/results/results';
+import { previewResultCell, searchResultRows } from '../../../shared/queries/results/results';
+import type { ResultRowSearchCacheEntry } from '../../../shared/queries/results/results';
 import type { ResultPage } from '../../../shared/queries/results/types';
 import type { Run } from '../../../shared/queries/execution/types';
 import { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../../shared/database/connections/cloud-policy';
@@ -293,7 +290,6 @@ export function ResultGrid({
     const columns = page?.columns;
     const rows = page?.rows;
     const largeCellToken = page?.largeCellToken;
-    const hasFilter = Boolean(filter);
     const orderedColumnIndices = useMemo(
         () =>
             columns
@@ -309,22 +305,21 @@ export function ResultGrid({
                 : [],
         [columns, pinnedColumns, hiddenColumns],
     );
-    const searchableRows = useMemo(
+    // Keep one search outcome per row, invalidated when rows or large-cell token change.
+    const searchCache = useMemo(
         () =>
-            hasFilter
-                ? rows?.map(row =>
-                      row
-                          .map(value => displayValue(value, largeCellToken).toLocaleLowerCase())
-                          .join('\u0001'),
-                  )
+            rows
+                ? {
+                      token: largeCellToken,
+                      outcomes: new Array<ResultRowSearchCacheEntry | undefined>(rows.length),
+                  }
                 : undefined,
-        [rows, largeCellToken, hasFilter],
+        [rows, largeCellToken],
     );
-    const visibleRows = useMemo(() => {
-        if (!rows) return [];
-        const matchingRows = new Set(filterRows(rows, filter, searchableRows, largeCellToken));
-        return rows.flatMap((row, index) => (matchingRows.has(row) ? [{ row, index }] : []));
-    }, [rows, filter, searchableRows, largeCellToken]);
+    const visibleRows = useMemo(
+        () => (rows ? searchResultRows(rows, filter, largeCellToken, searchCache?.outcomes) : []),
+        [rows, filter, largeCellToken, searchCache],
+    );
     const columnGroups = useMemo(
         () => columns?.map(column => resultTypeGroup(column.type)) ?? [],
         [columns],
