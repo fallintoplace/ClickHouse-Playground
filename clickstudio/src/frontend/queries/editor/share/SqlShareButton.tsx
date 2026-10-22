@@ -53,7 +53,6 @@ export function SqlShareButton({
             onClick={() => void copyShareLink()}
         >
             <Icon name={copied ? 'check' : 'link'} />
-            <span className="sql-share-label">{copied ? 'Copied' : 'Share'}</span>
         </Button>
     );
 }
