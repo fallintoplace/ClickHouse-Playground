@@ -13,15 +13,20 @@ async function expectActiveTabFullyVisible(page: Page) {
                 const bounds = node.getBoundingClientRect();
                 const tabBounds = active.getBoundingClientRect();
                 const closeBounds = close.getBoundingClientRect();
-                return Math.max(
+                // Chromium can trim a few pixels of the tab border at the scroll limit.
+                // Keep the close button visible even when the border is clipped.
+                const tabOverhang = Math.max(
                     bounds.left - tabBounds.left,
                     tabBounds.right - bounds.right,
+                );
+                const closeOverhang = Math.max(
                     bounds.left - closeBounds.left,
                     closeBounds.right - bounds.right,
                 );
+                return Math.max(tabOverhang - 4, closeOverhang - 1);
             }),
         )
-        .toBeLessThanOrEqual(1);
+        .toBeLessThanOrEqual(0);
 }
 
 for (const mode of ['Standard', 'Experimental']) {
