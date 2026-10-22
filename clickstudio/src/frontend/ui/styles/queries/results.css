@@ -581,8 +581,7 @@
   }
   .result-column-heading {
     display: flex;
-    width: max-content;
-    max-width: 300px;
+    width: 100%;
     align-items: baseline;
     gap: 8px;
     line-height: 14px;
