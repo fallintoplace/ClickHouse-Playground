@@ -1,4 +1,4 @@
-name: ClickStudio large-result browser soak
+name: ClickHouse Playground large-result browser soak
 
 on:
   workflow_dispatch:

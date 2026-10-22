@@ -54,7 +54,7 @@ function logProviderFailure(stage: string, error: unknown, inputTokens?: number)
                   requestId: error.requestID,
               }
             : { errorType };
-    console.error('ClickStudio assistant request failed', {
+    console.error('ClickHouse Playground assistant request failed', {
         stage,
         ...details,
         ...(inputTokens === undefined ? {} : { inputTokens }),
@@ -213,7 +213,7 @@ export class OpenAIDriver implements AssistantDriver {
                 const reduced = dropOldestConversationTurn(conversation);
                 if (reduced.length === conversation.length) {
                     console.warn(
-                        'ClickStudio assistant input exceeds its configured token budget',
+                        'ClickHouse Playground assistant input exceeds its configured token budget',
                         { inputTokens, maxInputTokens: this.maxInputTokens },
                     );
                     throw new AppError(

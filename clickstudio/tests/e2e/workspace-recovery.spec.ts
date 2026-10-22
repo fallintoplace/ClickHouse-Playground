@@ -94,7 +94,7 @@ for (const mode of ['Standard', 'Experimental']) {
         await warning.getByRole('button', { name: 'Dismiss error' }).click();
         await expect(warning).toHaveCount(0);
         await page.getByRole('button', { name: 'Help', exact: true }).click();
-        await expect(page.getByRole('dialog', { name: 'Explore ClickStudio' })).toBeVisible();
+        await expect(page.getByRole('dialog', { name: 'Explore ClickHouse Playground' })).toBeVisible();
     });
 
     test(`${mode} hides the browser draft-storage warning after eight seconds`, async ({
@@ -293,7 +293,7 @@ test('An open query can run after its saved document is moved to Trash', async (
     await page.getByTestId('save-query').click();
     const saved = decodeValue(await (await savedResponse).json(), isQueryDocument);
     const trashed = await page.request.delete(`/api/documents/${saved.id}`, {
-        headers: { 'X-ClickStudio-Intent': '1' },
+        headers: { 'X-ClickHouse Playground-Intent': '1' },
         data: { confirmImpact: true },
     });
     expect(trashed.ok()).toBe(true);

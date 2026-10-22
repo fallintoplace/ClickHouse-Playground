@@ -519,7 +519,7 @@ for (const theme of ['Light', 'Dark']) {
         await trust(page);
         await page.getByRole('radio', { name: `${theme} theme`, exact: true }).click();
         await page.getByRole('button', { name: 'Help', exact: true }).click();
-        const help = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });
+        const help = page.getByRole('dialog', { name: 'Explore ClickHouse Playground', exact: true });
         for (const section of [
             'tour',
             'assistant',

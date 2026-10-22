@@ -170,7 +170,7 @@ async function measure(scenario, iterations) {
 function summary(results) {
     const mb = bytes => (bytes / 1_000_000).toFixed(2);
     const lines = [
-        '## ClickStudio memory diagnostics (report only)',
+        '## ClickHouse Playground memory diagnostics (report only)',
         '',
         'Sampled memory is not an exact high-water mark or a reliable leak verdict.',
         '',

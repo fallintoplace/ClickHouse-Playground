@@ -1,5 +1,5 @@
 {
-  "name": "clickstudio",
+  "name": "clickhouse-playground",
   "version": "1.0.0",
   "private": true,
   "scripts": {

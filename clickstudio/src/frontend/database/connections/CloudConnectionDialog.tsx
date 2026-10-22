@@ -97,7 +97,7 @@ export function CloudConnectionDialog({
                     </DialogHeader>
                     <p id="cloud-connect-description" className="cloud-connect-description">
                         Use the HTTPS host and user credentials from the service’s Connect dialog.
-                        ClickStudio checks the connection before opening the workspace.
+                        ClickHouse Playground checks the connection before opening the workspace.
                     </p>
                     <form
                         className="cloud-connect-form"
@@ -153,8 +153,8 @@ export function CloudConnectionDialog({
                             <Icon name="lock" />
                             <span>
                                 {persistInLocalServer
-                                    ? 'The host, database, and username are saved in this browser. Your password stays in this local ClickStudio server’s memory and is restored after refresh. Disconnect, stop the server, or leave it unused for 12 hours to clear it. The server connects to Cloud over HTTPS.'
-                                    : 'The host, database, and username are saved in this browser. The password stays in this tab’s memory and is sent to this ClickStudio server, which connects to Cloud over HTTPS. It is cleared on reload or disconnect.'}{' '}
+                                    ? 'The host, database, and username are saved in this browser. Your password stays in this local ClickHouse Playground server’s memory and is restored after refresh. Disconnect, stop the server, or leave it unused for 12 hours to clear it. The server connects to Cloud over HTTPS.'
+                                    : 'The host, database, and username are saved in this browser. The password stays in this tab’s memory and is sent to this ClickHouse Playground server, which connects to Cloud over HTTPS. It is cleared on reload or disconnect.'}{' '}
                                 Your ClickHouse user’s permissions control what SQL can change.
                             </span>
                         </div>

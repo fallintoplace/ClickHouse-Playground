@@ -113,5 +113,5 @@ export function comparisonMarkdown(rows) {
                 ' |',
         );
     }
-    return '## ClickStudio benchmark comparison\n\n' + lines.join('\n') + '\n';
+    return '## ClickHouse Playground benchmark comparison\n\n' + lines.join('\n') + '\n';
 }

@@ -307,7 +307,7 @@ async function requestCloud<T>(
     const response = await fetch('/api/cloud', {
         method: 'POST',
         credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json', 'X-ClickStudio-Intent': '1' },
+        headers: { 'Content-Type': 'application/json', 'X-ClickHouse Playground-Intent': '1' },
         body: JSON.stringify(requestBody),
         ...(signal ? { signal } : {}),
     });
@@ -325,7 +325,7 @@ async function localCloudSession<T>(
         method,
         credentials: 'same-origin',
         headers: {
-            'X-ClickStudio-Intent': '1',
+            'X-ClickHouse Playground-Intent': '1',
             ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
         },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -339,7 +339,7 @@ async function requestCloudImport<T>(form: FormData, guard: ResponseGuard<T>): P
     const response = await fetch('/api/cloud', {
         method: 'POST',
         credentials: 'same-origin',
-        headers: { 'X-ClickStudio-Intent': '1' },
+        headers: { 'X-ClickHouse Playground-Intent': '1' },
         body: form,
     });
     const payload: unknown = await response.json().catch(() => null);

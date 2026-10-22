@@ -337,7 +337,7 @@ test('Help storage keeps the shared part headings aligned with the data', async 
     await page.setViewportSize({ width: 1440, height: 1000 });
     await trust(page);
     await page.getByRole('button', { name: 'Help', exact: true }).click();
-    const help = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });
+    const help = page.getByRole('dialog', { name: 'Explore ClickHouse Playground', exact: true });
     await help.getByTestId('help-section-storage').click();
     const parts = help.getByRole('region', { name: 'MergeTree parts', exact: true });
     await expect(parts.locator('.parts-map-row')).toHaveCount(2);
@@ -378,7 +378,7 @@ for (const width of [1440, 640]) {
         await page.setViewportSize({ width, height: 1000 });
         await trust(page);
         await page.getByRole('button', { name: 'Help', exact: true }).click();
-        const help = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });
+        const help = page.getByRole('dialog', { name: 'Explore ClickHouse Playground', exact: true });
         await help.getByTestId('help-section-storage').click();
         const parts = help.getByRole('region', { name: 'MergeTree parts', exact: true });
         const viewport = parts.locator('.parts-graph-viewport');

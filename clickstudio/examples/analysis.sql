@@ -1,4 +1,4 @@
--- ClickStudio live-query examples.
+-- ClickHouse Playground live-query examples.
 --
 -- Use Run to execute all SQL, or select SQL to run only that selection.
 -- Multi-statement scripts stop at the first error.

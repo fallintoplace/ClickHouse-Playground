@@ -1,4 +1,4 @@
-name: ClickStudio benchmarks
+name: ClickHouse Playground benchmarks
 
 on:
   workflow_dispatch:

@@ -88,11 +88,11 @@ export const copy = {
                 definition: 'Stores the results of a saved query in a table.',
             },
         },
-        helpCenterTitle: 'Explore ClickStudio',
+        helpCenterTitle: 'Explore ClickHouse Playground',
         helpCenterDescription:
             'Explore SQL examples, query workflows, EXPLAIN views, storage, and reference docs.',
         helpStandardCenterDescription: 'Explore SQL examples, query workflows, and AI assistance.',
-        helpPanelSections: 'Explore ClickStudio sections',
+        helpPanelSections: 'Explore ClickHouse Playground sections',
         helpFeatureLabel: 'STORAGE VISUALIZER',
         helpPartsTitle: 'MergeTree parts',
         helpSelectMergeTreeTable: 'Select a MergeTree table',

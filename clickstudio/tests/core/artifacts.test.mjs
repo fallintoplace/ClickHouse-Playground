@@ -317,7 +317,7 @@ test('Dependency cycles are rejected', async () => {
         { code: 'DEPENDENCY_CYCLE' },
     );
 });
-test('Workspace exports use the ClickStudio format and imports never inherit source ownership, runs or approval', async () => {
+test('Workspace exports use the ClickHouse Playground format and imports never inherit source ownership, runs or approval', async () => {
     const f = await ready();
     f.a.review(owner, f.doc.id, 1);
     const bundle = f.a.export(owner);

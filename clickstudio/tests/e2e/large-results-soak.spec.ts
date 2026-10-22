@@ -258,7 +258,7 @@ function renderSummary(report: {
     }>;
 }): string {
     const lines = [
-        '## ClickStudio large-result browser soak (diagnostic only)',
+        '## ClickHouse Playground large-result browser soak (diagnostic only)',
         '',
         'Real Chromium UI with deterministic mocked API responses. Timings are not CI gates.',
         'The 100,000-row case models a server-side row cap; it does not send 100,000 rows to the browser.',

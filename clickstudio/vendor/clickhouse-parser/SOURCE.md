@@ -13,7 +13,7 @@ This folder contains a local copy of the ClickHouse parser built from the source
 
 ## Local build
 
-ClickStudio built `parser.wasm` from the exact source commit above, using the toolchain listed here.
+ClickHouse Playground built `parser.wasm` from the exact source commit above, using the toolchain listed here.
 
 ## What the checksum identifies
 

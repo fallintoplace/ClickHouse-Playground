@@ -1,4 +1,4 @@
--- ClickStudio demo: summer shop traffic.
+-- ClickHouse Playground demo: summer shop traffic.
 -- Runs on any ClickHouse connection. No tables or CSV imports are needed.
 -- All data is fictional and repeatable. Currency: EUR.
 -- Run the whole query, then try a line chart with day and revenue_eur.

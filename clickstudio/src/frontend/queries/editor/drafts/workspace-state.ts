@@ -33,7 +33,7 @@ export interface Draft extends SaveableDraft {
     from: number;
     to: number;
     invalidatedSource?: InvalidatedSource;
-    /** SQL that received ClickStudio's generated table-preview limit. */
+    /** SQL that received ClickHouse Playground's generated table-preview limit. */
     generatedPreviewSql?: string;
 }
 export interface WorkspaceState {

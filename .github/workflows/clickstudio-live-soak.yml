@@ -1,4 +1,4 @@
-name: ClickStudio live ClickHouse browser soak
+name: ClickHouse Playground live ClickHouse browser soak
 
 on:
   workflow_dispatch:

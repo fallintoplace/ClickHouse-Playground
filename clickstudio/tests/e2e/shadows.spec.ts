@@ -254,7 +254,7 @@ for (const theme of ['Dark', 'Light'])
             expect(menuShadow).not.toBe('none');
             await page.locator('.connection-trigger').click();
             await page.getByRole('button', { name: 'Help', exact: true }).click();
-            const help = page.getByRole('dialog', { name: 'Explore ClickStudio', exact: true });
+            const help = page.getByRole('dialog', { name: 'Explore ClickHouse Playground', exact: true });
             await expect(help).toBeVisible();
             await expect(help).toHaveCSS('border-radius', '4px');
             const dialogShadow = await shadow(help);

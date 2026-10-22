@@ -200,5 +200,5 @@ export function markdownSummary(report) {
                 ' |',
         );
     }
-    return '## ClickStudio microbenchmarks\n\n' + rows.join('\n') + '\n';
+    return '## ClickHouse Playground microbenchmarks\n\n' + rows.join('\n') + '\n';
 }

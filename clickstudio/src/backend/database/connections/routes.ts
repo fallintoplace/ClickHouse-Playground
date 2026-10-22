@@ -127,7 +127,7 @@ export function registerCloudApi(
                 res.status(403).json({
                     error: {
                         code: 'ORIGIN',
-                        message: 'This endpoint accepts requests from the ClickStudio site only.',
+                        message: 'This endpoint accepts requests from the ClickHouse Playground site only.',
                     },
                 });
                 return;
@@ -204,7 +204,7 @@ export function registerCloudApi(
             res.status(403).json({
                 error: {
                     code: 'ORIGIN',
-                    message: 'This endpoint accepts requests from the ClickStudio site only.',
+                    message: 'This endpoint accepts requests from the ClickHouse Playground site only.',
                 },
             });
             return;

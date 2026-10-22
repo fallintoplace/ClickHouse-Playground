@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { StringDecoder } from 'node:string_decoder';
 import { createClient } from '@clickhouse/client';
 
-// Inspect the raw server protocol without passing it through ClickStudio's parser.
+// Inspect the raw server protocol without passing it through ClickHouse Playground's parser.
 // This diagnoses whether a wide-result failure is caused by server output or
 // by application framing and retention logic.
 const sql =

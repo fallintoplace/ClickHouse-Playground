@@ -1,4 +1,4 @@
-name: ClickStudio validation
+name: ClickHouse Playground validation
 
 concurrency:
   group: clickstudio-${{ github.workflow }}-${{ github.ref }}
@@ -96,7 +96,7 @@ jobs:
         run: |
           for attempt in $(seq 1 30); do
             if curl --fail --silent --max-time 3 http://127.0.0.1:8080/api/health > /dev/null; then
-              echo "ClickStudio API is healthy."
+              echo "ClickHouse Playground API is healthy."
               exit 0
             fi
             sleep 2
