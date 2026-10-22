@@ -42,7 +42,7 @@ export function createQueryExportActions({
                 `/api/runs/${encodeURIComponent(run.id)}/export?format=csv`,
                 {
                     credentials: 'same-origin',
-                    headers: { 'X-ClickHouse Playground-Intent': '1' },
+                    headers: { 'X-ClickStudio-Intent': '1' },
                 },
             );
             if (!response.ok) {

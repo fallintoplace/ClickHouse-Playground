@@ -30,8 +30,8 @@ export async function pythonManagement<T>(
         credentials: 'same-origin',
         signal,
         headers: {
-            'X-ClickHouse Playground-Intent': '1',
-            'X-ClickHouse Playground-Connection-Host': getClickHouseCloudConnection()?.host ?? '',
+            'X-ClickStudio-Intent': '1',
+            'X-ClickStudio-Connection-Host': getClickHouseCloudConnection()?.host ?? '',
             ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
         },
         body: body === undefined ? undefined : JSON.stringify(body),

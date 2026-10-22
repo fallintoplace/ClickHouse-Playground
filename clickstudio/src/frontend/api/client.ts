@@ -84,7 +84,7 @@ export async function api<T>(
         credentials: 'same-origin',
         signal: options.signal,
         headers: {
-            'X-ClickHouse Playground-Intent': '1',
+            'X-ClickStudio-Intent': '1',
             ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
         },
         body: options.body === undefined ? undefined : JSON.stringify(options.body),

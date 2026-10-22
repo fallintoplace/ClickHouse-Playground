@@ -87,8 +87,8 @@ async function start() {
             method: body === undefined ? 'GET' : 'POST',
             headers: {
                 cookie: cookies,
-                'X-ClickHouse Playground-Intent': '1',
-                'X-ClickHouse Playground-Connection-Host': expectedHost,
+                'X-ClickStudio-Intent': '1',
+                'X-ClickStudio-Connection-Host': expectedHost,
                 'Content-Type': 'application/json',
             },
             body: body === undefined ? undefined : JSON.stringify(body),

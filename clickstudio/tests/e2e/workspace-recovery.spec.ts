@@ -293,7 +293,7 @@ test('An open query can run after its saved document is moved to Trash', async (
     await page.getByTestId('save-query').click();
     const saved = decodeValue(await (await savedResponse).json(), isQueryDocument);
     const trashed = await page.request.delete(`/api/documents/${saved.id}`, {
-        headers: { 'X-ClickHouse Playground-Intent': '1' },
+        headers: { 'X-ClickStudio-Intent': '1' },
         data: { confirmImpact: true },
     });
     expect(trashed.ok()).toBe(true);
