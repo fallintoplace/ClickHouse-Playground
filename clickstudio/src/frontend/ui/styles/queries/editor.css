@@ -437,7 +437,8 @@
     background: var(--control-hover);
     color: var(--text);
   }
-  .editor-heading-actions > .sql-share-button[data-copied="true"] {
+  .editor-heading-actions > .sql-share-button[data-copied="true"],
+  .editor-heading-actions > .sql-share-button[data-copied="true"]:hover:not(:disabled) {
     color: var(--green);
   }
   .editor-heading-actions > [role="status"] {
