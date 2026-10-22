@@ -96,6 +96,8 @@ for (const theme of themes)
             'fill',
             theme.logoColor,
         );
+        await expect(page.locator('.topbar .brand-name')).toContainText('ClickHouse');
+        await expect(page.locator('.topbar .brand-name')).not.toContainText('Studio');
         await expect(page.locator('.brand-name > span')).toHaveCSS('color', theme.brandAccent);
 
         await page.reload();

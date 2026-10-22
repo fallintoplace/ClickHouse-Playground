@@ -897,7 +897,7 @@ function Brand() {
                 <path d="M115.9,64.6c0-.6.5-1.2,1.2-1.2h8.8c.6,0,1.2.5,1.2,1.2v19.9c0,.6-.5,1.2-1.2,1.2h-8.8c-.6,0-1.2-.5-1.2-1.2V64.6Z" />
             </svg>
             <span className="brand-name">
-                Click<span>Studio</span>
+                Click<span>House</span>
                 <small>CLICKHOUSE WORKSPACE</small>
             </span>
         </div>
