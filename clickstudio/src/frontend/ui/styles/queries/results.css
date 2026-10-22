@@ -581,10 +581,14 @@
   }
   .result-column-heading {
     display: flex;
-    width: 100%;
+    width: max-content;
+    max-width: 300px;
     align-items: baseline;
     gap: 8px;
     line-height: 14px;
+  }
+  .result-column-heading-wide {
+    max-width: 100%;
   }
   .result-column-heading > span,
   .result-column-heading > small {

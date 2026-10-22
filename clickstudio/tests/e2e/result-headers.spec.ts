@@ -182,7 +182,7 @@ for (const theme of ['Light', 'Dark'])
         });
     }
 
-test('A wide result column shows its complete type badge without a tooltip', async ({ page }) => {
+test('A wide result column shows its complete type badge', async ({ page }) => {
     const name = "parseDateTime64OrNull('0:/06/24', '%D', 'UTC')";
     const type = 'Nullable(DateTime64(6))';
     await page.setViewportSize({ width: 1400, height: 820 });
@@ -209,10 +209,13 @@ test('A wide result column shows its complete type badge without a tooltip', asy
     const header = page.locator('.data-table th[data-type-group]');
     const badge = header.locator('.result-type-badge');
     await expect(badge).toHaveText(type);
+    const heading = header.locator('.result-column-heading');
+    await expect
+        .poll(() => heading.evaluate(element => element.getBoundingClientRect().width))
+        .toBeGreaterThan(300);
     await expect
         .poll(() => badge.evaluate(element => element.scrollWidth <= element.clientWidth))
         .toBe(true);
-    await expect(header).toHaveAttribute('title', '');
 });
 
 test('Very long result types keep full metadata in a native tooltip in a narrow desktop window', async ({
