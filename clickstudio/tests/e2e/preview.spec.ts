@@ -1490,9 +1490,14 @@ test('Share button copies a portable SQL-only link', async ({ page, context }) =
     const originalName = await page
         .getByRole('textbox', { name: 'SQL document name' })
         .inputValue();
-    await page.getByTestId('share-sql').click();
-    await expect(page.getByTestId('share-sql')).toContainText('Copied');
-    await expect(page.getByTestId('share-sql')).toHaveAttribute('data-copied', 'true');
+    const shareButton = page.getByTestId('share-sql');
+    await expect(shareButton).toHaveAttribute('aria-label', 'Share SQL');
+    await expect(shareButton).toHaveText('');
+    await expect(shareButton).toHaveCSS('width', '30px');
+    await expect(shareButton.locator('svg')).toBeVisible();
+    await shareButton.click();
+    await expect(shareButton).toHaveAttribute('aria-label', 'Link copied');
+    await expect(shareButton).toHaveAttribute('data-copied', 'true');
     const link = await page.evaluate(() => navigator.clipboard.readText());
     expect(link).toContain('#sqlz=v1.');
     expect(new URL(link).search).toBe('');
