@@ -169,7 +169,7 @@ function csvCase(count, width) {
 }
 
 function csvLongTextCase(count) {
-    const paragraph = 'ClickHouse Playground text export '.repeat(100);
+    const paragraph = 'QueryRunner text export '.repeat(100);
     const result = {
         columns: [
             { name: 'plain', type: 'String' },
