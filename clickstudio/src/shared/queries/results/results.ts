@@ -474,6 +474,58 @@ export function recommendChart(
                 : 'A dimension with numeric measures; no hidden aggregation is performed.',
     };
 }
+export interface ResultRowSearchCacheEntry {
+    term: string;
+    matched: boolean;
+}
+
+/**
+ * Filter the result page without materializing a searchable copy of each row.
+ * A cached hit proves shorter substrings match; a cached miss excludes longer
+ * needles containing the missed term. In all other cases, rescan that row.
+ */
+export function searchResultRows(
+    rows: Row[],
+    term: string,
+    largeCellToken?: string,
+    cache?: Array<ResultRowSearchCacheEntry | undefined>,
+): Array<{ row: Row; index: number }> {
+    const needle = term.toLocaleLowerCase();
+    if (!needle) return rows.map((row, index) => ({ row, index }));
+
+    const matches: Array<{ row: Row; index: number }> = [];
+    const spansColumns = needle.includes('\u0001');
+    for (let index = 0; index < rows.length; index++) {
+        const row = rows[index]!;
+        const previous = cache?.[index];
+        if (
+            previous &&
+            (previous.matched ? previous.term.includes(needle) : needle.includes(previous.term))
+        ) {
+            if (previous.matched) matches.push({ row, index });
+            continue;
+        }
+
+        let matched = false;
+        if (spansColumns) {
+            matched = row
+                .map(value => displayValue(value, largeCellToken).toLocaleLowerCase())
+                .join('\u0001')
+                .includes(needle);
+        } else {
+            for (const value of row) {
+                if (displayValue(value, largeCellToken).toLocaleLowerCase().includes(needle)) {
+                    matched = true;
+                    break;
+                }
+            }
+        }
+        if (cache) cache[index] = { term: needle, matched };
+        if (matched) matches.push({ row, index });
+    }
+    return matches;
+}
+
 export function filterRows(
     rows: Row[],
     term: string,

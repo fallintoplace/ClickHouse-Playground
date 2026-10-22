@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
     exportCsv,
+    filterRows,
+    searchResultRows,
     heatmapCellKey,
     prepareHeatmap,
     previewResultCell,
@@ -300,4 +302,142 @@ test('CSV export keeps long text fast without changing escaping', () => {
             beyondCutoff + ',3',
         ].join('\r\n'),
     );
+});
+
+test('Result grid search preserves empty searches and original row indices', () => {
+    const shared = ['same'];
+    const rows = [shared, ['other'], shared];
+    assert.deepEqual(searchResultRows(rows, ''), [
+        { row: shared, index: 0 },
+        { row: rows[1], index: 1 },
+        { row: shared, index: 2 },
+    ]);
+    assert.deepEqual(
+        searchResultRows(rows, 'same').map(match => match.index),
+        [0, 2],
+    );
+});
+
+test('Result grid search skips trailing cells for early matches and caches misses', () => {
+    const unreachable = {
+        toJSON() {
+            throw new Error('Trailing cells should not be formatted after a match');
+        },
+    };
+    const poisoned = ['needle', unreachable];
+    assert.deepEqual(
+        searchResultRows([poisoned], 'needle').map(match => match.index),
+        [0],
+    );
+    const rows = [
+        ['needle', 'trailing'],
+        ['other', { nested: ['needle'] }],
+        ['untouched', 'value'],
+    ];
+    const cached = new Array(rows.length);
+    assert.deepEqual(
+        searchResultRows(rows, 'needle', undefined, cached).map(match => match.index),
+        [0, 1],
+    );
+    assert.deepEqual(cached[0], { term: 'needle', matched: true });
+    assert.deepEqual(cached[1], { term: 'needle', matched: true });
+    assert.deepEqual(cached[2], { term: 'needle', matched: false });
+    assert.deepEqual(
+        searchResultRows(rows, 'value', undefined, cached).map(match => match.index),
+        [2],
+    );
+});
+
+test('Result grid search keeps separator, Unicode, JSON and large-cell matching', () => {
+    const token = 'result-grid-token';
+    const largeCell = {
+        __clickstudioLargeCell: token,
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        bytes: 128,
+        serializedBytes: 128,
+        fingerprint: 'a'.repeat(64),
+        preview: 'Résumé 🧪',
+        valueType: 'text',
+    };
+    const rows = [
+        ['Alpha', 'Beta'],
+        ['ALPHA\u0001BETA', null],
+        [{ metadata: ['AbC'] }, largeCell],
+        [null, '1'],
+    ];
+    const cache = new Array(rows.length);
+    for (const term of ['alpha', 'alpha\u0001beta', 'abc', 'RÉSUMÉ', '🧪', 'NULL', 'no-match']) {
+        const expected = filterRows(rows, term, undefined, token);
+        const actual = searchResultRows(rows, term, token, cache).map(item => item.row);
+        assert.deepEqual(actual, expected, term);
+    }
+});
+
+test('Result grid search reuses known hits and misses without reading cells again', () => {
+    let inspectedCells = 0;
+    const row = new Proxy(['Alpha', 'Beta'], {
+        get(target, property, receiver) {
+            if (property === '0' || property === '1') inspectedCells++;
+            return Reflect.get(target, property, receiver);
+        },
+    });
+    const rows = [row];
+    const cache = new Array(rows.length);
+
+    assert.deepEqual(
+        searchResultRows(rows, 'alpha', undefined, cache).map(x => x.index),
+        [0],
+    );
+    assert.ok(inspectedCells > 0);
+    inspectedCells = 0;
+    assert.deepEqual(
+        searchResultRows(rows, 'alp', undefined, cache).map(x => x.index),
+        [0],
+    );
+    assert.equal(inspectedCells, 0, 'A known hit also matches its shorter substring');
+
+    assert.deepEqual(searchResultRows(rows, 'not-found', undefined, cache), []);
+    inspectedCells = 0;
+    assert.deepEqual(searchResultRows(rows, 'not-found-longer', undefined, cache), []);
+    assert.equal(inspectedCells, 0, 'A known miss excludes every longer needle containing it');
+
+    inspectedCells = 0;
+    assert.deepEqual(
+        searchResultRows(rows, 'beta', undefined, cache).map(x => x.index),
+        [0],
+    );
+    assert.ok(inspectedCells > 0, 'A different query must inspect the row again');
+});
+
+test('Result grid search cache preserves full-string search through query edits', () => {
+    const rows = [
+        ['Alpha', 'Beta'],
+        ['ALPHA\u0001BETA', null],
+        [{ text: ['İ', 'Σ'] }, 'é'],
+        [null, 'END'],
+        ['a', 'b'],
+    ];
+    const cache = new Array(rows.length);
+    for (const term of [
+        'alpha',
+        'alp',
+        'alpha\u0001beta',
+        '\u0001beta',
+        'a\u0001b',
+        'İ',
+        'i̇',
+        'Σ',
+        'null',
+        'x',
+        'xy',
+        'beta',
+        '',
+        'alpha',
+    ]) {
+        assert.deepEqual(
+            searchResultRows(rows, term, undefined, cache).map(match => match.row),
+            filterRows(rows, term),
+            term,
+        );
+    }
 });
