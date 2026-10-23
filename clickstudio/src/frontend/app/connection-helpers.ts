@@ -31,7 +31,9 @@ export function connectionStatusFor(
     return 'Test needed';
 }
 
-export function cloudProfileDefaults(connection?: Connected): SavedCloudConnectionProfile | undefined {
+export function cloudProfileDefaults(
+    connection?: Connected,
+): SavedCloudConnectionProfile | undefined {
     if (!connection) return undefined;
     try {
         const host = new URL(connection.host);
