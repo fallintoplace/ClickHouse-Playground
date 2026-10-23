@@ -5,7 +5,7 @@ import type { Copy } from '../../ui/copy';
 import type { Connected, Session } from '../../workspace/workspace-types';
 import { connectionLabel, type ConnectionStatus } from '../connection-helpers';
 
-function ConnectionPicker({
+export function ConnectionPicker({
     connectionPicker,
     setConnectionPicker,
     isSampleData,
