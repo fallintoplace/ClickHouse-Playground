@@ -10,10 +10,7 @@ import type {
 import { ChartView, InsightsView, ResultGrid } from './ResultViews';
 import { ExplainAnalyzeView } from '../inspection/performance/ExplainAnalyzeView';
 import { ExplainIndexesView } from '../inspection/plans/ExplainIndexesView';
-import {
-    ExplainPlanView,
-    type ExplainPlanViewMode,
-} from '../inspection/plans/ExplainPlanView';
+import { ExplainPlanView, type ExplainPlanViewMode } from '../inspection/plans/ExplainPlanView';
 import { PipelineGraph } from '../inspection/diagrams/PipelineGraph';
 import { CLICKHOUSE_CLOUD_CONNECTION_ID } from '../../../shared/database/connections/cloud-policy';
 import type { LargeCellRunContext } from './large-cell-actions';
